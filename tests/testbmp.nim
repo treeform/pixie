@@ -13,7 +13,7 @@ block:
   image[2, 1] = rgba(255, 0, 0, 127)
   image[3, 1] = rgba(255, 255, 255, 127)
 
-  writeFile("images/bmp/test4x2.bmp", encodeBmp(image))
+  writeFile("tests/images/bmp/test4x2.bmp", encodeBmp(image))
 
   var image2 = decodeBmp(encodeBmp(image))
   doAssert image2.width == image.width
@@ -23,7 +23,7 @@ block:
 block:
   var image = newImage(16, 16)
   image.fill(rgba(255, 0, 0, 127))
-  writeFile("images/bmp/test16x16.bmp", encodeBmp(image))
+  writeFile("tests/images/bmp/test16x16.bmp", encodeBmp(image))
 
   var image2 = decodeBmp(encodeBmp(image))
   doAssert image2.width == image.width
@@ -32,5 +32,5 @@ block:
 
 block:
   for bits in [32, 24]:
-    var image = decodeBmp(readFile("images/bmp/knight." & $bits & ".master.bmp"))
-    writeFile("images/bmp/knight." & $bits & ".bmp", encodeBmp(image))
+    var image = decodeBmp(readFile("tests/images/bmp/knight." & $bits & ".master.bmp"))
+    writeFile("tests/images/bmp/knight." & $bits & ".bmp", encodeBmp(image))

@@ -228,6 +228,16 @@ proc getRgbaSmooth*(image: Image, x, y: float64): ColorRGBA
 
   return finalMix.rgba()
 
+proc hasEffect*(blendMode: BlendMode, rgba: ColorRGBA): bool =
+  ## Returns true if applying rgba with current blend mode has effect.
+  case blendMode
+  of Mask:
+    rgba.a != 255
+  of COPY:
+    true
+  else:
+    rgba.a > 0
+
 proc draw*(destImage: Image, srcImage: Image, mat: Mat4, blendMode = Normal) =
   ## Draws one image onto another using matrix with color blending.
   var srcImage = srcImage

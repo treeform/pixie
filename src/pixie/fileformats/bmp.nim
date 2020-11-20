@@ -1,4 +1,4 @@
-import ../images, flatty/binny, flatty/hexPrint, chroma, sequtils, print
+import ../images, flatty/binny, chroma
 
 # See: https://en.wikipedia.org/wiki/BMP_file_format
 
