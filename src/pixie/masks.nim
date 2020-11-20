@@ -53,3 +53,8 @@ proc fill*(mask: Mask, alpha: uint8) =
   ## Fills the mask with a solid color.
   for i in 0 ..< mask.data.len:
     mask.data[i] = alpha
+
+proc invert*(mask: Mask) =
+  ## Inverts all of the colors and alpha.
+  for alpha in mask.data.mitems:
+    alpha = 255 - alpha
