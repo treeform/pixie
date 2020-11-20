@@ -23,6 +23,10 @@ proc decodeBmp*(data: string): Image =
   if compression notin [0, 3]:
     raise newException(PixieError, "Invalid BMP data format")
 
+  let channels = if bits == 32: 4 else: 3
+  if width * height * channels + offset > data.len:
+    raise newException(PixieError, "Invalid BMP data size")
+
   result = newImage(width, height)
 
   for y in 0 ..< result.height:
