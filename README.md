@@ -1,7 +1,11 @@
-# You can use this nim template to jump start your nim library or project.
+# Full-featured 2d graphics library for Nim.
 
-This template includes:
-* MIT licence
-* src directory and a private common.nim
-* test directory
-* GitHub Actions to run the tests on GitHub
+Written in pure nim. Basis for the fidget UI library.
+
+Features:
+ * images
+ * paths
+ * masks
+
+Supported File formats reading and writing:
+ * BMP (RGBA Only)

@@ -71,6 +71,14 @@ proc fill*(image: Image, rgba: ColorRgba) =
   for i in 0 ..< image.data.len:
     image.data[i] = rgba
 
+proc invert*(image: Image) =
+  ## Inverts all of the colors and alpha.
+  for rgba in image.data.mitems:
+    rgba.r = 255 - rgba.r
+    rgba.g = 255 - rgba.g
+    rgba.b = 255 - rgba.b
+    rgba.a = 255 - rgba.a
+
 proc subImage*(image: Image, x, y, w, h: int): Image =
   ## Gets a sub image of the main image.
   doAssert x >= 0 and y >= 0
@@ -91,6 +99,24 @@ proc minifyBy2*(image: Image): Image =
         image.getRgbaUnsafe(x * 2 + 1, y * 2 + 1).color / 4.0 +
         image.getRgbaUnsafe(x * 2 + 0, y * 2 + 1).color / 4.0
       result.setRgbaUnsafe(x, y, color.rgba)
+
+proc minifyBy2*(image: Image, scale2x: int): Image =
+  ## Scales the image down by an integer scale.
+  result = image
+  for i in 1 ..< scale2x:
+    result = result.minifyBy2()
+
+proc magnifyBy2*(image: Image, scale2x: int): Image =
+  ## Scales image image up by an integer scale.
+  let scale = 2 ^ scale2x
+  result = newImage(image.width * scale, image.height * scale)
+  for y in 0 ..< result.height:
+    for x in 0 ..< result.width:
+      var rgba = image.getRgbaUnsafe(x div scale, y div scale)
+      result.setRgbaUnsafe(x, y, rgba)
+
+proc magnifyBy2*(image: Image): Image =
+  image.magnifyBy2(2)
 
 proc blitUnsafe*(destImage: Image, srcImage: Image, src, dest: Rect) =
   ## Blits rectangle from one image to the other image.
@@ -260,17 +286,14 @@ proc draw*(
     for x in 0 ..< srcImage.width:
       let
         srcRgba = srcImage.getRgbaUnsafe(x, y)
-      if blendMode == Mask or srcRgba.a > 0 :
+      if blendMode.hasEffect(srcRgba):
         let
           destRgba = destImage.getRgbaUnsafe(x + pos.x.int, y + pos.y.int)
           rgba = blendMode.mix(destRgba, srcRgba)
         # TODO: Make unsafe
         destImage[x + pos.x.int, y + pos.y.int] = rgba
 
-proc invert*(image: Image) =
-  ## Inverts all of the colors and alpha.
-  for rgba in image.data.mitems:
-    rgba.r = 255 - rgba.r
-    rgba.g = 255 - rgba.g
-    rgba.b = 255 - rgba.b
-    rgba.a = 255 - rgba.a
+## Thoughts
+## single draw function that takes a matrix
+## if matrix is simple integer translation -> fast pass
+## if blend mode is copy -> even faster path
