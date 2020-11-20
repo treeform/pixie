@@ -18,7 +18,7 @@ proc decodeBmp*(data: string): Image =
     offset = data.readUInt32(10).int
 
   if bits notin [32, 24]:
-    raise newException(PixieError, "Invalid BMP data format")
+    raise newException(PixieError, "Unsupported BMP data format")
 
   if compression notin [0, 3]:
     raise newException(PixieError, "Invalid BMP data format")
