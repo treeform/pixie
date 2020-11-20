@@ -6,11 +6,6 @@ type
     width*, height*: int
     data*: seq[ColorRGBA]
 
-  Mask* = ref object
-    ## Main image object that holds the mask data.
-    width*, height*: int
-    data*: seq[uint8]
-
 proc newImage*(width, height: int): Image =
   ## Creates a new image with appropriate dimensions.
   result = Image()
