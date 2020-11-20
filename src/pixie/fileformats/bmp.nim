@@ -1,4 +1,4 @@
-import ../images, flatty/binny, flatty/hexPrint, chroma, sequtils
+import ../images, flatty/binny, flatty/hexPrint, chroma, sequtils, print
 
 # See: https://en.wikipedia.org/wiki/BMP_file_format
 
@@ -10,21 +10,32 @@ proc decodeBmp*(data: string): Image =
   let
     width = data.readInt32(0x12).int
     height = data.readInt32(0x16).int
-    # TODO: Handle masks.
+    bits = data.readUint16(0x1C)
+    compression = data.readUint32(0x1E)
   var
     offset = data.readUInt32(0xA).int
+
+  doAssert bits in {32, 24}
+  doAssert compression in {0, 3}
 
   result = newImage(width, height)
 
   for y in 0 ..< result.height:
     for x in 0 ..< result.width:
       var rgba: ColorRGBA
-      rgba.r = data.readUint8(offset+0)
-      rgba.g = data.readUint8(offset+1)
-      rgba.b = data.readUint8(offset+2)
-      rgba.a = data.readUint8(offset+3)
+      if bits == 32:
+        rgba.r = data.readUint8(offset + 0)
+        rgba.g = data.readUint8(offset + 1)
+        rgba.b = data.readUint8(offset + 2)
+        rgba.a = data.readUint8(offset + 3)
+        offset += 4
+      elif bits == 24:
+        rgba.r = data.readUint8(offset + 2)
+        rgba.g = data.readUint8(offset + 1)
+        rgba.b = data.readUint8(offset + 0)
+        rgba.a = 255
+        offset += 3
       result[x, result.height - y - 1] = rgba
-      offset += 4
 
 proc encodeBmp*(image: Image): string =
   ## Encodes an image into bitmap data.

@@ -29,3 +29,8 @@ block:
   doAssert image2.width == image.width
   doAssert image2.height == image.height
   doAssert image2.data == image.data
+
+block:
+  for bits in [32, 24]:
+    var image = decodeBmp(readFile("images/bmp/knight." & $bits & ".master.bmp"))
+    writeFile("images/bmp/knight." & $bits & ".bmp", encodeBmp(image))
