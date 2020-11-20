@@ -296,4 +296,8 @@ proc draw*(
 ## Thoughts
 ## single draw function that takes a matrix
 ## if matrix is simple integer translation -> fast pass
-## if blend mode is copy -> even faster path
+## if matrix is a simple flip -> fast path
+## if blend mode is copy -> fast path
+##
+## Helper function that takes x,y
+## Helper function that takes x,y and rotation.
