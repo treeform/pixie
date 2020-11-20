@@ -1,4 +1,4 @@
-import pixie, pixie/fileformats/bmp, chroma, flatty/hexPrint
+import pixie, pixie/fileformats/bmp, chroma
 
 block:
   var image = newImage(4, 2)
