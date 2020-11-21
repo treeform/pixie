@@ -151,18 +151,12 @@ proc parseImageData(
     uncompressed = try: uncompress(data) except ZippyError: failInvalid()
     valuesPerPixel =
       case header.colorType:
-      of 0:
-        1
-      of 2:
-        3
-      of 3:
-        1
-      of 4:
-        2
-      of 6:
-        4
-      else:
-        0 # Not possible, parseHeader validates
+      of 0: 1
+      of 2: 3
+      of 3: 1
+      of 4: 2
+      of 6: 4
+      else: 0 # Not possible, parseHeader validates
     valuesPerByte = 8 div header.bitDepth.int
     rowBytes = ceil((header.width.int * valuesPerPixel) / valuesPerByte).int
     totalBytes = rowBytes * header.height.int
@@ -367,16 +361,11 @@ proc encodePng*(
   if len != width * height * channels:
     raise newException(PixieError, "Invalid PNG data size")
 
-  let colorType = block:
-    case channels:
-    of 1:
-      0.uint8
-    of 2:
-      4
-    of 3:
-      2
-    of 4:
-      6
+  let colorType = case channels:
+    of 1: 0.uint8
+    of 2: 4
+    of 3: 2
+    of 4: 6
     else:
       raise newException(PixieError, "Invalid PNG number of channels")
 
