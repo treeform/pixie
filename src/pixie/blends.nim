@@ -100,7 +100,7 @@ proc mix*(blendMode: BlendMode, target, blend: Color): Color =
     result.a = target.a * (1 - blend.a)
     return
   elif blendMode == Copy:
-    result = target
+    result = blend
     return
 
   proc multiply(Cb, Cs: float32): float32 =

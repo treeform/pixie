@@ -1,7 +1,7 @@
 ## Public interface to you library.
 
 import pixie/images, pixie/masks, pixie/paths, pixie/common, pixie/blends,
-  pixie/fileformats/bmp, pixie/fileformats/png, flatty/binny
+  pixie/fileformats/bmp, pixie/fileformats/png, flatty/binny, os
 
 export images, masks, paths, PixieError, blends
 
@@ -45,4 +45,12 @@ proc encodeImage*(image: Image, fileFormat: FileFormat): string =
 
 proc writeFile*(image: Image, filePath: string, fileFormat: FileFormat) =
   ## Writes an image to a file.
+  writeFile(filePath, image.encodeImage(fileFormat))
+
+proc writeFile*(image: Image, filePath: string) =
+  ## Writes an image to a file.
+  let fileFormat = case splitFile(filePath).ext:
+    of "png": ffPng
+    of "bmp": ffBmp
+    else: ffPng
   writeFile(filePath, image.encodeImage(fileFormat))
