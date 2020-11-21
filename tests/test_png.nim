@@ -1,4 +1,4 @@
-import pixie/fileformats/png, strformat, pngsuite
+import pixie/fileformats/png, strformat, pngsuite, pixie/common
 
 for file in pngSuiteFiles:
   let
@@ -20,3 +20,10 @@ for channels in 1 .. 4:
           components[i] = (x * 16).uint8
         data.add(components)
   let encoded = encodePng(16, 16, channels, data[0].addr, data.len)
+
+for file in pngSuiteCorruptedFiles:
+  try:
+    discard decodePng(readFile(&"tests/data/pngsuite/{file}.png"))
+    doAssert false
+  except PixieError:
+    discard

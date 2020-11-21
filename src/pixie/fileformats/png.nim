@@ -7,7 +7,7 @@ const
 
 type
   ChunkCounts = object
-    PLTE, IDAT: uint8
+    PLTE, IDAT, tRNS: uint8
 
   PngHeader = object
     width, height: int
@@ -146,7 +146,9 @@ proc unfilter(
       result[unfiteredIdx(x, y)] = value
 
 proc parseImageData(
-  header: PngHeader, palette: seq[array[3, uint8]], data: seq[uint8]
+  header: PngHeader,
+  palette: seq[array[3, uint8]],
+  transparency, data: seq[uint8]
 ): seq[ColorRGBA] =
   result.setLen(header.width * header.height)
 
@@ -178,6 +180,7 @@ proc parseImageData(
 
   case header.colorType:
   of 0:
+    let special = if transparency.len == 2: transparency[1].int else: -1
     var bytePos, bitPos: int
     for y in 0 ..< header.height:
       for x in 0 ..< header.width:
@@ -204,8 +207,9 @@ proc parseImageData(
           inc bytePos
           bitPos = 0
 
+        let alpha = if value.int == special: 0 else: 255
         result[x + y * header.width] = ColorRGBA(
-          r: value, g: value, b: value, a: 255
+          r: value, g: value, b: value, a: alpha.uint8
         )
 
       # If we move to a new row, skip to the next full byte
@@ -213,13 +217,21 @@ proc parseImageData(
         inc bytePos
         bitPos = 0
   of 2:
+    let special =
+      if transparency.len == 6:
+        ColorRGBA(
+          r: transparency[1], g: transparency[3], b: transparency[5], a: 255
+        )
+      else:
+        ColorRGBA()
     var bytePos: int
     for y in 0 ..< header.height:
       for x in 0 ..< header.width:
         let rgb = cast[ptr array[3, uint8]](unfiltered[bytePos].unsafeAddr)[]
-        result[x + y * header.width] = ColorRGBA(
-          r: rgb[0], g: rgb[1], b: rgb[2], a: 255
-        )
+        var rgba = ColorRGBA(r: rgb[0], g: rgb[1], b: rgb[2], a: 255)
+        if rgba == special:
+          rgba.a = 0
+        result[x + y * header.width] = rgba
         bytePos += 3
   of 3:
     var bytePos, bitPos: int
@@ -247,9 +259,15 @@ proc parseImageData(
         if value.int >= palette.len:
           failInvalid()
 
-        let rgb = palette[value]
+        let
+          rgb = palette[value]
+          transparency =
+            if transparency.len > value.int:
+              transparency[value]
+            else:
+              255
         result[x + y * header.width] = ColorRGBA(
-          r: rgb[0], g: rgb[1], b: rgb[2], a: 255
+          r: rgb[0], g: rgb[1], b: rgb[2], a: transparency
         )
 
       # If we move to a new row, skip to the next full byte
@@ -297,7 +315,7 @@ proc decodePng*(data: seq[uint8]): Image =
     counts = ChunkCounts()
     header: PngHeader
     palette: seq[array[3, uint8]]
-    imageData: seq[uint8]
+    transparency, imageData: seq[uint8]
     prevChunkType: string
 
   # First chunk must be IHDR
@@ -333,9 +351,26 @@ proc decodePng*(data: seq[uint8]): Image =
       failInvalid()
     of "PLTE":
       inc counts.PLTE
-      if counts.PLTE > 1 or counts.IDAT > 0:
+      if counts.PLTE > 1 or counts.IDAT > 0 or counts.tRNS > 0:
         failInvalid()
       palette = parsePalette(data[pos ..< pos + chunkLen])
+    of "tRNS":
+      inc counts.tRNS
+      if counts.tRNS > 1 or counts.IDAT > 0:
+        failInvalid()
+      transparency = data[pos ..< pos + chunkLen]
+      case header.colorType:
+      of 0:
+        if transparency.len != 2:
+          failInvalid()
+      of 2:
+        if transparency.len != 6:
+          failInvalid()
+      of 3:
+        if transparency.len > palette.len:
+          failInvalid()
+      else:
+        failInvalid()
     of "IDAT":
       inc counts.IDAT
       if counts.IDAT > 1 and prevChunkType != "IDAT":
@@ -372,7 +407,7 @@ proc decodePng*(data: seq[uint8]): Image =
   result = Image()
   result.width = header.width
   result.height = header.height
-  result.data = parseImageData(header, palette, imageData)
+  result.data = parseImageData(header, palette, transparency, imageData)
 
 proc decodePng*(data: string): Image {.inline.} =
   decodePng(cast[seq[uint8]](data))
