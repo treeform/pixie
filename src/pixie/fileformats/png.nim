@@ -173,12 +173,11 @@ proc parseImageData(
     max(valuesPerPixel div valuesPerByte, 1)
   )
 
-  var bytePos, bitPos: int
-  for y in 0 ..< header.height:
-    for x in 0 ..< header.width:
-      var rgba: array[4, uint8]
-      case header.colorType:
-      of 0:
+  case header.colorType:
+  of 0:
+    var bytePos, bitPos: int
+    for y in 0 ..< header.height:
+      for x in 0 ..< header.width:
         var value = unfiltered[bytePos]
         case header.bitDepth:
         of 1:
@@ -201,12 +200,28 @@ proc parseImageData(
         if bitPos == 8:
           inc bytePos
           bitPos = 0
-        rgba = [value, value, value, 255]
-      of 2:
+
+        result[x + y * header.width] = ColorRGBA(
+          r: value, g: value, b: value, a: 255
+        )
+
+      # If we move to a new row, skip to the next full byte
+      if bitPos > 0:
+        inc bytePos
+        bitPos = 0
+  of 2:
+    var bytePos: int
+    for y in 0 ..< header.height:
+      for x in 0 ..< header.width:
         let rgb = cast[ptr array[3, uint8]](unfiltered[bytePos].unsafeAddr)[]
-        rgba = [rgb[0], rgb[1], rgb[2], 255]
-        inc(bytePos, 3)
-      of 3:
+        result[x + y * header.width] = ColorRGBA(
+          r: rgb[0], g: rgb[1], b: rgb[2], a: 255
+        )
+        bytePos += 3
+  of 3:
+    var bytePos, bitPos: int
+    for y in 0 ..< header.height:
+      for x in 0 ..< header.width:
         var value = unfiltered[bytePos]
         case header.bitDepth:
         of 1:
@@ -228,28 +243,37 @@ proc parseImageData(
           bitPos = 0
         if value.int >= palette.len:
           failInvalid()
+
         let rgb = palette[value]
-        rgba = [rgb[0], rgb[1], rgb[2], 255]
-      of 4:
-        rgba = [
-          unfiltered[bytePos],
-          unfiltered[bytePos],
-          unfiltered[bytePos],
-          unfiltered[bytePos + 1]
-        ]
-        inc(bytePos, 2)
-      of 6:
-        rgba = cast[array[4, uint8]](unfiltered.readUint32(bytePos))
-        inc(bytePos, 4)
-      else:
-        discard # Not possible, parseHeader validates
+        result[x + y * header.width] = ColorRGBA(
+          r: rgb[0], g: rgb[1], b: rgb[2], a: 255
+        )
 
-      result[x + y * header.width] = cast[ColorRGBA](rgba)
-
-    # If we move to a new row, skip to the next full byte
-    if bitPos > 0:
-      inc bytePos
-      bitPos = 0
+      # If we move to a new row, skip to the next full byte
+      if bitPos > 0:
+        inc bytePos
+        bitPos = 0
+  of 4:
+    var bytePos: int
+    for y in 0 ..< header.height:
+      for x in 0 ..< header.width:
+        result[x + y * header.width] = ColorRGBA(
+          r: unfiltered[bytePos],
+          g: unfiltered[bytePos],
+          b: unfiltered[bytePos],
+          a: unfiltered[bytePos + 1]
+        )
+        bytePos += 2
+  of 6:
+    var bytePos: int
+    for y in 0 ..< header.height:
+      for x in 0 ..< header.width:
+        result[x + y * header.width] = cast[ColorRGBA](
+          unfiltered.readUint32(bytePos)
+        )
+        bytePos += 4
+  else:
+    discard # Not possible, parseHeader validates
 
 proc decodePng*(data: seq[uint8]): Image =
   ## Decodes the PNG from the parameter buffer. Check png.channels and
