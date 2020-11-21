@@ -1,7 +1,7 @@
 ## Public interface to you library.
 
-import pixie/images, pixie/masks, pixie/paths
-export images, masks, paths
+import pixie/images, pixie/masks, pixie/paths, pixie/common
+export images, masks, paths, PixieError
 
 proc toMask*(image: Image): Mask =
   ## Converts an Image to a Mask.

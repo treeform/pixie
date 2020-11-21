@@ -1,4 +1,4 @@
-import strformat, chroma, chroma/blends, vmath
+import chroma, chroma/blends, vmath
 
 type
   Image* = ref object
