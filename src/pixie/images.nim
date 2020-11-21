@@ -238,6 +238,21 @@ proc hasEffect*(blendMode: BlendMode, rgba: ColorRGBA): bool =
   else:
     rgba.a > 0
 
+proc drawBlendIntegerPos*(
+  destImage, srcImage: Image, pos = vec2(0, 0), blendMode = Normal,
+) =
+  ## Fast draw of dest + fill using offset with color blending.
+  for y in 0 ..< srcImage.height:
+    for x in 0 ..< srcImage.width:
+      let
+        srcRgba = srcImage.getRgbaUnsafe(x, y)
+      if blendMode.hasEffect(srcRgba):
+        let
+          destRgba = destImage.getRgbaUnsafe(x + pos.x.int, y + pos.y.int)
+          rgba = blendMode.mix(destRgba, srcRgba)
+        # TODO: Make unsafe
+        destImage[x + pos.x.int, y + pos.y.int] = rgba
+
 proc draw*(destImage: Image, srcImage: Image, mat: Mat4, blendMode = Normal) =
   ## Draws one image onto another using matrix with color blending.
   var srcImage = srcImage
@@ -280,28 +295,34 @@ proc draw*(destImage: Image, srcImage: Image, mat: Mat4, blendMode = Normal) =
   for y in yStart ..< yEnd:
     for x in xStart ..< xEnd:
       let srcV = start + stepX * float32(x) + stepY * float32(y)
-      if srcImage.inside(int srcV.x, int srcV.y):
+      if srcImage.inside(int srcV.x.floor, int srcV.y.floor):
         let
           srcRgba = srcImage.getRgbaSmooth(srcV.x - 0.5, srcV.y - 0.5)
-        let
-          destRgba = destImage.getRgbaUnsafe(x, y)
-          color = blendMode.mix(destRgba.color, srcRgba.color)
-        destImage.setRgbaUnsafe(x, y, color.rgba)
+        if blendMode.hasEffect(srcRgba):
+          let
+            destRgba = destImage.getRgbaUnsafe(x, y)
+            color = blendMode.mix(destRgba, srcRgba)
+          destImage.setRgbaUnsafe(x, y, color)
 
-proc draw*(
-  destImage, srcImage: Image, pos = vec2(0, 0), blendMode = Normal,
-) =
-  ## Fast draw of dest + fill using offset with color blending.
-  for y in 0 ..< srcImage.height:
-    for x in 0 ..< srcImage.width:
-      let
-        srcRgba = srcImage.getRgbaUnsafe(x, y)
+proc gpuDraw*(destImage: Image, srcImage: Image, mat: Mat3, blendMode = Normal): Image =
+  ## Draws one image onto another using matrix with color blending.
+  result = newImage(destImage.width, destImage.height)
+  for y in 0 .. result.width:
+    for x in 0 .. result.height:
+      let srcPos = mat * vec2(x.float32, y.float32)
+      var destRgba = destImage.getRgbaUnsafe(x, y)
+      var srcRgba = rgba(0, 0, 0, 0)
+      if srcImage.inside(srcPos.x.floor.int, srcPos.y.floor.int):
+        srcRgba = srcImage.getRgbaSmooth(srcPos.x - 0.5, srcPos.y - 0.5)
       if blendMode.hasEffect(srcRgba):
-        let
-          destRgba = destImage.getRgbaUnsafe(x + pos.x.int, y + pos.y.int)
-          rgba = blendMode.mix(destRgba, srcRgba)
-        # TODO: Make unsafe
-        destImage[x + pos.x.int, y + pos.y.int] = rgba
+        destRgba = blendMode.mix(destRgba, srcRgba)
+      result.setRgbaUnsafe(x, y, destRgba)
+
+proc draw*(destImage: Image, srcImage: Image, pos = vec2(0, 0), blendMode = Normal) =
+  destImage.draw(srcImage, translate(vec3(pos.x, pos.y, 0)), blendMode)
+
+proc gpuDraw*(destImage: Image, srcImage: Image, pos = vec2(0, 0), blendMode = Normal): Image =
+  destImage.gpuDraw(srcImage, translate(-pos), blendMode)
 
 ## Thoughts
 ## single draw function that takes a matrix
