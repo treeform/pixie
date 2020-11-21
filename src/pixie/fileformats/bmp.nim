@@ -1,4 +1,4 @@
-import ../images, flatty/binny, chroma, pixie/common
+import flatty/binny, chroma, pixie/common, pixie/images
 
 # See: https://en.wikipedia.org/wiki/BMP_file_format
 
@@ -6,7 +6,7 @@ proc decodeBmp*(data: string): Image =
   ## Decodes bitmap data into an Image.
 
   # BMP Header
-  if data[0..1] != "BM":
+  if data[0 .. 1] != "BM":
     raise newException(PixieError, "Invalid BMP data")
 
   let
@@ -45,6 +45,9 @@ proc decodeBmp*(data: string): Image =
         rgba.a = 255
         offset += 3
       result[x, result.height - y - 1] = rgba
+
+proc decodeBmp*(data: seq[uint8]): Image {.inline.} =
+  decodeBmp(cast[string](data))
 
 proc encodeBmp*(image: Image): string =
   ## Encodes an image into the BMP file format.

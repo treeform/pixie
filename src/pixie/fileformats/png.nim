@@ -1,6 +1,9 @@
-import chroma, pixie/images, pixie/common, math, zippy, zippy/crc, flatty/binny
+import chroma, pixie/common, math, zippy, zippy/crc, flatty/binny, pixie/images
 
 # See http://www.libpng.org/pub/png/spec/1.2/PNG-Contents.html
+
+const
+  pngSignature* = [137.uint8, 80, 78, 71, 13, 10, 26, 10]
 
 type
   ChunkCounts = object
@@ -286,7 +289,7 @@ proc decodePng*(data: seq[uint8]): Image =
 
   # PNG file signature
   let signature = cast[array[8, uint8]](data.readUint64(0))
-  if signature != [137.uint8, 80, 78, 71, 13, 10, 26, 10]:
+  if signature != pngSignature:
     failInvalid()
 
   var
@@ -370,6 +373,9 @@ proc decodePng*(data: seq[uint8]): Image =
   result.width = header.width
   result.height = header.height
   result.data = parseImageData(header, palette, imageData)
+
+proc decodePng*(data: string): Image {.inline.} =
+  decodePng(cast[seq[uint8]](data))
 
 proc encodePng*(
   width, height, channels: int, data: pointer, len: int
