@@ -304,6 +304,13 @@ proc draw*(destImage: Image, srcImage: Image, mat: Mat4, blendMode = Normal) =
             color = blendMode.mix(destRgba, srcRgba)
           destImage.setRgbaUnsafe(x, y, color)
 
+func translate*(v: Vec2): Mat3 =
+  result[0, 0] = 1
+  result[1, 1] = 1
+  result[2, 0] = v.x
+  result[2, 1] = v.y
+  result[2, 2] = 1
+
 proc gpuDraw*(destImage: Image, srcImage: Image, mat: Mat3, blendMode = Normal): Image =
   ## Draws one image onto another using matrix with color blending.
   result = newImage(destImage.width, destImage.height)
