@@ -288,6 +288,9 @@ proc draw*(destImage: Image, srcImage: Image, mat: Mat4, blendMode = Normal) =
             color = blendMode.mix(destRgba, srcRgba)
           destImage.setRgbaUnsafe(x, y, color)
 
+proc draw*(destImage: Image, srcImage: Image, pos = vec2(0, 0), blendMode = Normal) =
+  destImage.draw(srcImage, translate(vec3(pos.x, pos.y, 0)), blendMode)
+
 func translate*(v: Vec2): Mat3 =
   result[0, 0] = 1
   result[1, 1] = 1
@@ -295,25 +298,40 @@ func translate*(v: Vec2): Mat3 =
   result[2, 1] = v.y
   result[2, 2] = 1
 
-proc gpuDraw*(destImage: Image, srcImage: Image, mat: Mat3, blendMode = Normal): Image =
+proc copyDraw*(destImage: Image, srcImage: Image, mat: Mat3, blendMode = Normal): Image =
   ## Draws one image onto another using matrix with color blending.
   result = newImage(destImage.width, destImage.height)
-  for y in 0 .. result.width:
-    for x in 0 .. result.height:
+  for y in 0 ..< destImage.width:
+    for x in 0 ..< destImage.height:
       let srcPos = mat * vec2(x.float32, y.float32)
-      var destRgba = destImage.getRgbaUnsafe(x, y)
+      let destRgba = destImage.getRgbaUnsafe(x, y)
+      var rgba = destRgba
       var srcRgba = rgba(0, 0, 0, 0)
       if srcImage.inside(srcPos.x.floor.int, srcPos.y.floor.int):
         srcRgba = srcImage.getRgbaSmooth(srcPos.x - 0.5, srcPos.y - 0.5)
       if blendMode.hasEffect(srcRgba):
-        destRgba = blendMode.mix(destRgba, srcRgba)
-      result.setRgbaUnsafe(x, y, destRgba)
+        rgba = blendMode.mix(destRgba, srcRgba)
+      result.setRgbaUnsafe(x, y, rgba)
 
-proc draw*(destImage: Image, srcImage: Image, pos = vec2(0, 0), blendMode = Normal) =
-  destImage.draw(srcImage, translate(vec3(pos.x, pos.y, 0)), blendMode)
+proc copyDraw*(destImage: Image, srcImage: Image, pos = vec2(0, 0), blendMode = Normal): Image =
+  destImage.copyDraw(srcImage, translate(-pos), blendMode)
 
-proc gpuDraw*(destImage: Image, srcImage: Image, pos = vec2(0, 0), blendMode = Normal): Image =
-  destImage.gpuDraw(srcImage, translate(-pos), blendMode)
+proc inplaceDraw*(destImage: Image, srcImage: Image, mat: Mat3, blendMode = Normal) =
+  ## Draws one image onto another using matrix with color blending.
+  for y in 0 ..< destImage.width:
+    for x in 0 ..< destImage.height:
+      let srcPos = mat * vec2(x.float32, y.float32)
+      let destRgba = destImage.getRgbaUnsafe(x, y)
+      var rgba = destRgba
+      var srcRgba = rgba(0, 0, 0, 0)
+      if srcImage.inside(srcPos.x.floor.int, srcPos.y.floor.int):
+        srcRgba = srcImage.getRgbaSmooth(srcPos.x - 0.5, srcPos.y - 0.5)
+      if blendMode.hasEffect(srcRgba):
+        rgba = blendMode.mix(destRgba, srcRgba)
+      destImage.setRgbaUnsafe(x, y, rgba)
+
+proc inplaceDraw*(destImage: Image, srcImage: Image, pos = vec2(0, 0), blendMode = Normal) =
+  destImage.inplaceDraw(srcImage, translate(-pos), blendMode)
 
 ## Thoughts
 ## single draw function that takes a matrix
