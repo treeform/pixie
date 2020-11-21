@@ -21,7 +21,7 @@ proc toImage*(mask: Mask): Image =
   for i in 0 ..< mask.data.len:
     result.data[i].a = mask.data[i]
 
-proc decodeImage(data: string | seq[uint8]): Image =
+proc decodeImage*(data: string | seq[uint8]): Image =
   ## Loads an image from a memory.
   if data.len > 8 and cast[array[8, uint8]](data.readUint64(0)) == pngSignature:
     return decodePng(data)
@@ -35,7 +35,7 @@ proc readImage*(filePath: string): Image =
   ## Loads an image from a file.
   decodeImage(readFile(filePath))
 
-proc encodeImage(image: Image, fileFormat: FileFormat): string =
+proc encodeImage*(image: Image, fileFormat: FileFormat): string =
   ## Encodes an image into a memory.
   case fileFormat:
   of ffPng:
