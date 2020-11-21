@@ -1,11 +1,17 @@
-# Full-featured 2d graphics library for Nim.
+# Pixie - A full-featured 2D graphics library for Nim
 
-Written in pure nim. Basis for the fidget UI library.
+⚠️ WARNING: This library is still in heavy development. ⚠️
 
-Features:
- * images
- * paths
- * masks
+Pixie is a 2D graphics library similar to [Cairo](https://www.cairographics.org/) and [Skia](https://skia.org) written entirely in Nim.
 
-Supported File formats reading and writing:
- * BMP (RGBA Only)
+Features include:
+* Drawing paths, shapes and curves
+* Complex masking
+* Shadows, glows and effects
+* Loading image file formats (PNG, BMP, + more in development)
+
+This library is being actively developed and is not yet ready for use. Since you've managed to stumble onto it, give it a star and check back soon!
+
+## Testing
+
+`nimble test`
