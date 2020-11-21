@@ -47,7 +47,7 @@ proc decodeBmp*(data: string): Image =
       result[x, result.height - y - 1] = rgba
 
 proc encodeBmp*(image: Image): string =
-  ## Encodes an image into bitmap data.
+  ## Encodes an image into the BMP file format.
 
   # BMP Header
   result.add("BM") # The header field used to identify the BMP
