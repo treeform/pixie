@@ -1,1 +1,2 @@
-## Add private variables or functions here that you don't want to export.
+type
+  PixieError* = object of ValueError ## Raised if an operation fails.

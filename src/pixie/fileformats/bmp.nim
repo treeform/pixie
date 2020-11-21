@@ -1,4 +1,4 @@
-import ../images, flatty/binny, chroma
+import ../images, flatty/binny, chroma, pixie/common
 
 # See: https://en.wikipedia.org/wiki/BMP_file_format
 
@@ -6,17 +6,26 @@ proc decodeBmp*(data: string): Image =
   ## Decodes bitmap data into an Image.
 
   # BMP Header
-  doAssert data[0..1] == "BM"
-  let
-    width = data.readInt32(0x12).int
-    height = data.readInt32(0x16).int
-    bits = data.readUint16(0x1C)
-    compression = data.readUint32(0x1E)
-  var
-    offset = data.readUInt32(0xA).int
+  if data[0..1] != "BM":
+    raise newException(PixieError, "Invalid BMP data")
 
-  doAssert bits in {32, 24}
-  doAssert compression in {0, 3}
+  let
+    width = data.readInt32(18).int
+    height = data.readInt32(22).int
+    bits = data.readUint16(28).int
+    compression = data.readUint32(30).int
+  var
+    offset = data.readUInt32(10).int
+
+  if bits notin [32, 24]:
+    raise newException(PixieError, "Unsupported BMP data format")
+
+  if compression notin [0, 3]:
+    raise newException(PixieError, "Unsupported BMP data format")
+
+  let channels = if bits == 32: 4 else: 3
+  if width * height * channels + offset > data.len:
+    raise newException(PixieError, "Invalid BMP data size")
 
   result = newImage(width, height)
 
@@ -38,7 +47,7 @@ proc decodeBmp*(data: string): Image =
       result[x, result.height - y - 1] = rgba
 
 proc encodeBmp*(image: Image): string =
-  ## Encodes an image into bitmap data.
+  ## Encodes an image into the BMP file format.
 
   # BMP Header
   result.add("BM") # The header field used to identify the BMP
