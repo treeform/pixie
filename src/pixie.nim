@@ -1,9 +1,9 @@
 ## Public interface to you library.
 
-import pixie/images, pixie/masks, pixie/paths, pixie/common,
+import pixie/images, pixie/masks, pixie/paths, pixie/common, pixie/blends,
   pixie/fileformats/bmp, pixie/fileformats/png, flatty/binny
 
-export images, masks, paths, PixieError
+export images, masks, paths, PixieError, blends
 
 type
   FileFormat* = enum

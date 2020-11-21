@@ -1,4 +1,4 @@
-import chroma, chroma/blends, vmath
+import chroma, blends, vmath
 
 type
   Image* = ref object
@@ -102,70 +102,6 @@ proc magnifyBy2*(image: Image, scale2x: int): Image =
 proc magnifyBy2*(image: Image): Image =
   image.magnifyBy2(2)
 
-proc blitUnsafe*(destImage: Image, srcImage: Image, src, dest: Rect) =
-  ## Blits rectangle from one image to the other image.
-  ## * No bounds checking *
-  ## Make sure that src and dest rect are in bounds.
-  ## Make sure that channels for images are the same.
-  ## Failure in the assumptions will case unsafe memory writes.
-  ## Note: Does not do alpha or color mixing.
-  for y in 0 ..< int(dest.h):
-    let
-      srcIdx = int(src.x) + (int(src.y) + y) * srcImage.width
-      destIdx = int(dest.x) + (int(dest.y) + y) * destImage.width
-    copyMem(
-      destImage.data[destIdx].addr,
-      srcImage.data[srcIdx].addr,
-      int(dest.w) * 4
-    )
-
-proc blit*(destImage: Image, srcImage: Image, src, dest: Rect) =
-  ## Blits rectangle from one image to the other image.
-  ## Note: Does not do alpha or color mixing.
-  doAssert src.w == dest.w and src.h == dest.h
-  doAssert src.x >= 0 and src.x + src.w <= srcImage.width.float32
-  doAssert src.y >= 0 and src.y + src.h <= srcImage.height.float32
-
-  # See if the image hits the bounds and needs to be adjusted.
-  var
-    src = src
-    dest = dest
-  if dest.x < 0:
-    dest.w += dest.x
-    src.x -= dest.x
-    src.w += dest.x
-    dest.x = 0
-  if dest.x + dest.w > destImage.width.float32:
-    let diff = destImage.width.float32 - (dest.x + dest.w)
-    dest.w += diff
-    src.w += diff
-  if dest.y < 0:
-    dest.h += dest.y
-    src.y -= dest.y
-    src.h += dest.y
-    dest.y = 0
-  if dest.y + dest.h > destImage.height.float32:
-    let diff = destImage.height.float32 - (dest.y + dest.h)
-    dest.h += diff
-    src.h += diff
-
-  # See if image is entirely outside the bounds:
-  if dest.x + dest.w < 0 or dest.x > destImage.width.float32:
-    return
-  if dest.y + dest.h < 0 or dest.y > destImage.height.float32:
-    return
-
-  blitUnsafe(destImage, srcImage, src, dest)
-
-proc blit*(destImage: Image, srcImage: Image, pos: Vec2) =
-  ## Blits rectangle from one image to the other image.
-  ## Note: Does not do alpha or color mixing.
-  destImage.blit(
-    srcImage,
-    rect(0.0, 0.0, srcImage.width.float32, srcImage.height.float32),
-    rect(pos.x, pos.y, srcImage.width.float32, srcImage.height.float32)
-  )
-
 func moduloMod(n, M: int): int {.inline.} =
   ## Computes "mathematical" modulo vs c modulo.
   ((n mod M) + M) mod M
@@ -222,75 +158,6 @@ proc hasEffect*(blendMode: BlendMode, rgba: ColorRGBA): bool =
   else:
     rgba.a > 0
 
-proc drawBlendIntegerPos*(
-  destImage, srcImage: Image, pos = vec2(0, 0), blendMode = Normal,
-) =
-  ## Fast draw of dest + fill using offset with color blending.
-  for y in 0 ..< srcImage.height:
-    for x in 0 ..< srcImage.width:
-      let
-        srcRgba = srcImage.getRgbaUnsafe(x, y)
-      if blendMode.hasEffect(srcRgba):
-        let
-          destRgba = destImage.getRgbaUnsafe(x + pos.x.int, y + pos.y.int)
-          rgba = blendMode.mix(destRgba, srcRgba)
-        # TODO: Make unsafe
-        destImage[x + pos.x.int, y + pos.y.int] = rgba
-
-proc draw*(destImage: Image, srcImage: Image, mat: Mat4, blendMode = Normal) =
-  ## Draws one image onto another using matrix with color blending.
-  var srcImage = srcImage
-  let
-    matInv = mat.inverse()
-    bounds = [
-      mat * vec3(-1, -1, 0),
-      mat * vec3(-1, float32 srcImage.height + 1, 0),
-      mat * vec3(float32 srcImage.width + 1, -1, 0),
-      mat * vec3(float32 srcImage.width + 1, float32 srcImage.height + 1, 0)
-    ]
-  var
-    boundsX: array[4, float32]
-    boundsY: array[4, float32]
-  for i, v in bounds:
-    boundsX[i] = v.x
-    boundsY[i] = v.y
-  let
-    xStart = max(int min(boundsX), 0)
-    yStart = max(int min(boundsY), 0)
-    xEnd = min(int max(boundsX), destImage.width)
-    yEnd = min(int max(boundsY), destImage.height)
-
-  var
-    # compute movement vectors
-    start = matInv * vec3(0.5, 0.5, 0)
-    stepX = matInv * vec3(1.5, 0.5, 0) - start
-    stepY = matInv * vec3(0.5, 1.5, 0) - start
-
-    minFilterBy2 = max(stepX.length, stepY.length)
-
-  while minFilterBy2 > 2.0:
-    srcImage = srcImage.minifyBy2()
-    start /= 2
-    stepX /= 2
-    stepY /= 2
-    minFilterBy2 /= 2
-
-  # fill the bounding rectangle
-  for y in yStart ..< yEnd:
-    for x in xStart ..< xEnd:
-      let srcV = start + stepX * float32(x) + stepY * float32(y)
-      if srcImage.inside(int srcV.x.floor, int srcV.y.floor):
-        let
-          srcRgba = srcImage.getRgbaSmooth(srcV.x - 0.5, srcV.y - 0.5)
-        if blendMode.hasEffect(srcRgba):
-          let
-            destRgba = destImage.getRgbaUnsafe(x, y)
-            color = blendMode.mix(destRgba, srcRgba)
-          destImage.setRgbaUnsafe(x, y, color)
-
-proc draw*(destImage: Image, srcImage: Image, pos = vec2(0, 0), blendMode = Normal) =
-  destImage.draw(srcImage, translate(vec3(pos.x, pos.y, 0)), blendMode)
-
 func translate*(v: Vec2): Mat3 =
   result[0, 0] = 1
   result[1, 1] = 1
@@ -298,8 +165,13 @@ func translate*(v: Vec2): Mat3 =
   result[2, 1] = v.y
   result[2, 2] = 1
 
-proc copyDraw*(destImage: Image, srcImage: Image, mat: Mat3, blendMode = Normal): Image =
+proc draw*(destImage: Image, srcImage: Image, mat: Mat3, blendMode = Normal): Image =
   ## Draws one image onto another using matrix with color blending.
+
+  # Todo: if matrix is simple integer translation -> fast pass
+  # Todo: if matrix is a simple flip -> fast path
+  # Todo: if blend mode is copy -> fast path
+
   result = newImage(destImage.width, destImage.height)
   for y in 0 ..< destImage.width:
     for x in 0 ..< destImage.height:
@@ -313,31 +185,5 @@ proc copyDraw*(destImage: Image, srcImage: Image, mat: Mat3, blendMode = Normal)
         rgba = blendMode.mix(destRgba, srcRgba)
       result.setRgbaUnsafe(x, y, rgba)
 
-proc copyDraw*(destImage: Image, srcImage: Image, pos = vec2(0, 0), blendMode = Normal): Image =
-  destImage.copyDraw(srcImage, translate(-pos), blendMode)
-
-proc inplaceDraw*(destImage: Image, srcImage: Image, mat: Mat3, blendMode = Normal) =
-  ## Draws one image onto another using matrix with color blending.
-  for y in 0 ..< destImage.width:
-    for x in 0 ..< destImage.height:
-      let srcPos = mat * vec2(x.float32, y.float32)
-      let destRgba = destImage.getRgbaUnsafe(x, y)
-      var rgba = destRgba
-      var srcRgba = rgba(0, 0, 0, 0)
-      if srcImage.inside(srcPos.x.floor.int, srcPos.y.floor.int):
-        srcRgba = srcImage.getRgbaSmooth(srcPos.x - 0.5, srcPos.y - 0.5)
-      if blendMode.hasEffect(srcRgba):
-        rgba = blendMode.mix(destRgba, srcRgba)
-      destImage.setRgbaUnsafe(x, y, rgba)
-
-proc inplaceDraw*(destImage: Image, srcImage: Image, pos = vec2(0, 0), blendMode = Normal) =
-  destImage.inplaceDraw(srcImage, translate(-pos), blendMode)
-
-## Thoughts
-## single draw function that takes a matrix
-## if matrix is simple integer translation -> fast pass
-## if matrix is a simple flip -> fast path
-## if blend mode is copy -> fast path
-##
-## Helper function that takes x,y
-## Helper function that takes x,y and rotation.
+proc draw*(destImage: Image, srcImage: Image, pos = vec2(0, 0), blendMode = Normal): Image =
+  destImage.draw(srcImage, translate(-pos), blendMode)
