@@ -22,22 +22,6 @@ proc `$`*(image: Image): string =
   ## Display the image size and channels.
   "<Image " & $image.width & "x" & $image.height & ">"
 
-proc decodeImage(data: seq[uint8]): Image =
-  ## Loads an image from a memory.
-  discard
-
-proc readImage*(filePath: string): Image =
-  ## Loads an image from a file.
-  discard
-
-proc encodeImage(image: Image): seq[uint8] =
-  ## Encodes an image into a memory.
-  discard
-
-proc writeFile*(image: Image, filePath: string): Image =
-  ## Writes an image to a file.
-  discard
-
 proc inside*(image: Image, x, y: int): bool {.inline.} =
   ## Returns true if (x, y) is inside the image.
   x >= 0 and x < image.width and y >= 0 and y < image.height
