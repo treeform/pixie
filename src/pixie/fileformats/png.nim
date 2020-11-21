@@ -22,7 +22,7 @@ template failInvalid() =
 when defined(release):
   {.push checks: off.}
 
-proc parseHeader(data: seq[uint8]): PngHeader =
+proc decodeHeader(data: seq[uint8]): PngHeader =
   result.width = data.readUint32(0).swap().int
   result.height = data.readUint32(4).swap().int
   result.bitDepth = data[8]
@@ -78,7 +78,7 @@ proc parseHeader(data: seq[uint8]): PngHeader =
   if result.interlaceMethod != 0:
     raise newException(PixieError, "Interlaced PNG not yet supported")
 
-proc parsePalette(data: seq[uint8]): seq[array[3, uint8]] =
+proc decodePalette(data: seq[uint8]): seq[array[3, uint8]] =
   if data.len == 0 or data.len mod 3 != 0:
     failInvalid()
 
@@ -145,7 +145,7 @@ proc unfilter(
 
       result[unfiteredIdx(x, y)] = value
 
-proc parseImageData(
+proc decodeImageData(
   header: PngHeader,
   palette: seq[array[3, uint8]],
   transparency, data: seq[uint8]
@@ -297,10 +297,7 @@ proc parseImageData(
     discard # Not possible, parseHeader validates
 
 proc decodePng*(data: seq[uint8]): Image =
-  ## Decodes the PNG from the parameter buffer. Check png.channels and
-  ## png.bitDepth to see how the png.data is formatted.
-  ## The returned png.data is currently always RGBA (4 channels)
-  ## with bitDepth of 8.
+  ## Decodes the PNG into an Image.
 
   if data.len < (8 + (8 + 13 + 4) + 4): # Magic bytes + IHDR + IEND
     failInvalid()
@@ -323,7 +320,7 @@ proc decodePng*(data: seq[uint8]): Image =
     data.readStr(pos + 4, 4) != "IHDR":
     failInvalid()
   inc(pos, 8)
-  header = parseHeader(data[pos ..< pos + 13])
+  header = decodeHeader(data[pos ..< pos + 13])
   prevChunkType = "IHDR"
   inc(pos, 13)
 
@@ -353,7 +350,7 @@ proc decodePng*(data: seq[uint8]): Image =
       inc counts.PLTE
       if counts.PLTE > 1 or counts.IDAT > 0 or counts.tRNS > 0:
         failInvalid()
-      palette = parsePalette(data[pos ..< pos + chunkLen])
+      palette = decodePalette(data[pos ..< pos + chunkLen])
     of "tRNS":
       inc counts.tRNS
       if counts.tRNS > 1 or counts.IDAT > 0:
@@ -407,7 +404,7 @@ proc decodePng*(data: seq[uint8]): Image =
   result = Image()
   result.width = header.width
   result.height = header.height
-  result.data = parseImageData(header, palette, transparency, imageData)
+  result.data = decodeImageData(header, palette, transparency, imageData)
 
 proc decodePng*(data: string): Image {.inline.} =
   decodePng(cast[seq[uint8]](data))
