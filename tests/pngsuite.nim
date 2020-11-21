@@ -73,6 +73,109 @@ const
     "s39n3p04", # 39x39 paletted file, no interlacing
     # "s40i3p04", # 40x40 paletted file, interlaced
     "s40n3p04", # 40x40 paletted file, no interlacing
+
+    # "bgai4a08", # 8 bit grayscale, alpha, no background chunk, interlaced
+    # "bgai4a16", # 16 bit grayscale, alpha, no background chunk, interlaced
+    "bgan6a08", # 3x8 bits rgb color, alpha, no background chunk
+    # "bgan6a16", # 3x16 bits rgb color, alpha, no background chunk
+    "bgbn4a08", # 8 bit grayscale, alpha, black background chunk
+    # "bggn4a16", # 16 bit grayscale, alpha, gray background chunk
+    "bgwn6a08", # 3x8 bits rgb color, alpha, white background chunk
+    # "bgyn6a16", # 3x16 bits rgb color, alpha, yellow background chunk
+
+    # "tbbn0g04", # transparent, black background chunk
+    # # "tbbn2c16", # transparent, blue background chunk
+    "tbbn3p08", # transparent, black background chunk
+    # # "tbgn2c16", # transparent, green background chunk
+    "tbgn3p08", # transparent, light-gray background chunk
+    "tbrn2c08", # transparent, red background chunk
+    # # "tbwn0g16", # transparent, white background chunk
+    "tbwn3p08", # transparent, white background chunk
+    "tbyn3p08", # transparent, yellow background chunk
+    "tp0n0g08", # not transparent for reference (logo on gray)
+    "tp0n2c08", # not transparent for reference (logo on gray)
+    "tp0n3p08", # not transparent for reference (logo on gray)
+    "tp1n3p08", # transparent, but no background chunk
+    "tm3n3p02", # multiple levels of transparency, 3 entries
+
+    # "g03n0g16", # grayscale, file-gamma = 0.35
+    "g03n2c08", # color, file-gamma = 0.35
+    "g03n3p04", # paletted, file-gamma = 0.35
+    # "g04n0g16", # grayscale, file-gamma = 0.45
+    "g04n2c08", # color, file-gamma = 0.45
+    "g04n3p04", # paletted, file-gamma = 0.45
+    # "g05n0g16", # grayscale, file-gamma = 0.55
+    "g05n2c08", # color, file-gamma = 0.55
+    "g05n3p04", # paletted, file-gamma = 0.55
+    # "g07n0g16", # grayscale, file-gamma = 0.70
+    "g07n2c08", # color, file-gamma = 0.70
+    "g07n3p04", # paletted, file-gamma = 0.70
+    # "g10n0g16", # grayscale, file-gamma = 1.00
+    "g10n2c08", # color, file-gamma = 1.00
+    "g10n3p04", # paletted, file-gamma = 1.00
+    # "g25n0g16", # grayscale, file-gamma = 2.50
+    "g25n2c08", # color, file-gamma = 2.50
+    "g25n3p04", # paletted, file-gamma = 2.50
+
+    "f00n0g08", # grayscale, no interlacing, filter-type 0
+    "f00n2c08", # color, no interlacing, filter-type 0
+    "f01n0g08", # grayscale, no interlacing, filter-type 1
+    "f01n2c08", # color, no interlacing, filter-type 1
+    "f02n0g08", # grayscale, no interlacing, filter-type 2
+    "f02n2c08", # color, no interlacing, filter-type 2
+    "f03n0g08", # grayscale, no interlacing, filter-type 3
+    "f03n2c08", # color, no interlacing, filter-type 3
+    "f04n0g08", # grayscale, no interlacing, filter-type 4
+    "f04n2c08", # color, no interlacing, filter-type 4
+    "f99n0g04", # bit-depth 4, filter changing per scanline
+
+    # "pp0n2c16", # six-cube palette-chunk in true-color image
+    "pp0n6a08", # six-cube palette-chunk in true-color+alpha image
+    "ps1n0g08", # six-cube suggested palette (1 byte) in grayscale image
+    # "ps1n2c16", # six-cube suggested palette (1 byte) in true-color image
+    "ps2n0g08", # six-cube suggested palette (2 bytes) in grayscale image
+    # "ps2n2c16", # six-cube suggested palette (2 bytes) in true-color image
+
+    "ccwn2c08", # chroma chunk w:0.3127,0.3290 r:0.64,0.33 g:0.30,0.60 b:0.15,0.06
+    "ccwn3p08", # chroma chunk w:0.3127,0.3290 r:0.64,0.33 g:0.30,0.60 b:0.15,0.06
+    "cdfn2c08", # physical pixel dimensions, 8x32 flat pixels
+    "cdhn2c08", # physical pixel dimensions, 32x8 high pixels
+    "cdsn2c08", # physical pixel dimensions, 8x8 square pixels
+    "cdun2c08", # physical pixel dimensions, 1000 pixels per 1 meter
+    "ch1n3p04", # histogram 15 colors
+    "ch2n3p08", # histogram 256 colors
+    "cm0n0g04", # modification time, 01-jan-2000 12:34:56
+    "cm7n0g04", # modification time, 01-jan-1970 00:00:00
+    "cm9n0g04", # modification time, 31-dec-1999 23:59:59
+    # "cs3n2c16", # color, 13 significant bits
+    "cs3n3p08", # paletted, 3 significant bits
+    "cs5n2c08", # color, 5 significant bits
+    "cs5n3p08", # paletted, 5 significant bits
+    "cs8n2c08", # color, 8 significant bits (reference)
+    "cs8n3p08", # paletted, 8 significant bits (reference)
+    "ct0n0g04", # no textual data
+    "ct1n0g04", # with textual data
+    "ctzn0g04", # with compressed textual data
+    "cten0g04", # international UTF-8, english
+    "ctfn0g04", # international UTF-8, finnish
+    "ctgn0g04", # international UTF-8, greek
+    "cthn0g04", # international UTF-8, hindi
+    "ctjn0g04", # international UTF-8, japanese
+    "exif2c08", # chunk with jpeg exif data
+
+    # "oi1n0g16", # grayscale mother image with 1 idat-chunk
+    # "oi1n2c16", # color mother image with 1 idat-chunk
+    # "oi2n0g16", # grayscale image with 2 idat-chunks
+    # "oi2n2c16", # color image with 2 idat-chunks
+    # "oi4n0g16", # grayscale image with 4 unequal sized idat-chunks
+    # "oi4n2c16", # color image with 4 unequal sized idat-chunks
+    # "oi9n0g16", # grayscale image with all idat-chunks length one
+    # "oi9n2c16", # color image with all idat-chunks length one
+
+    "z00n2c08", # color, no interlacing, compression level 0 (none)
+    "z03n2c08", # color, no interlacing, compression level 3
+    "z06n2c08", # color, no interlacing, compression level 6 (default)
+    "z09n2c08", # color, no interlacing, compression level 9 (maximum)
   ]
 
   pngSuiteCorruptedFiles* = [
