@@ -12,6 +12,7 @@ type
   Jpg = object
     width, height: int
     components: array[3, Component]
+    quantizationTables: array[4, array[64, uint8]]
 
 template failInvalid() =
   raise newException(PixieError, "Invalid JPG buffer, unable to load")
@@ -71,10 +72,59 @@ proc decodeSOF(jpg: var Jpg, data: seq[uint8], pos: var int) =
     pos += 3
 
 proc decodeDHT(data: seq[uint8], pos: var int) =
-  skipSegment(data, pos)
+  # skipSegment(data, pos)
+  # debugEcho pos
+  let
+    segmentLen = readSegmentLen(data, pos)
+    stop = pos + segmentLen
+  pos += 2
 
-proc decodeDQT(data: seq[uint8], pos: var int) =
-  skipSegment(data, pos)
+  while stop - pos >= 17:
+    let info = data[pos]
+    if (info and 0b11100000) != 0:
+      failInvalid()
+
+    var counts: array[17, int]
+    for codeLen in 1 .. 16:
+      counts[codeLen] = data[pos + codeLen].int
+
+    debugEcho counts
+
+    pos += 17
+
+    for codeLen in 1 .. 16:
+      discard
+
+    break
+
+  pos = stop
+
+proc decodeDQT(jpg: var Jpg, data: seq[uint8], pos: var int) =
+  let
+    segmentLen = readSegmentLen(data, pos)
+    stop = pos + segmentLen
+  pos += 2
+
+  while stop - pos >= 65:
+    let
+      info = data[pos]
+      qt = info and 0b00001111
+      precision = info and 0b11110000
+
+    if qt > 3:
+      failInvalid()
+
+    if precision != 0:
+      raise newException(
+        PixieError, "Unsuppored JPG qantization table precision"
+      )
+
+    inc pos
+
+    for i in 0 ..< 64:
+      jpg.quantizationTables[qt][i] = data[pos + i]
+
+    pos += 64
 
 proc decodeSOS(data: seq[uint8], pos: var int) =
   let segmentLen = readSegmentLen(data, pos)
@@ -144,7 +194,7 @@ proc decodeJpg*(data: seq[uint8]): Image =
     of 0xC4: # Define Huffman Tables
       decodeDHT(data, pos)
     of 0xDB: # Define Quantanization Table(s)
-      decodeDQT(data, pos)
+      jpg.decodeDQT(data, pos)
     # of 0xDD: # Define Restart Interval
     of 0xDA: # Start of Scan
       decodeSOS(data, pos)
