@@ -22,7 +22,7 @@ template failInvalid() =
 when defined(release):
   {.push checks: off.}
 
-proc parseHeader(data: seq[uint8]): PngHeader =
+proc decodeHeader(data: seq[uint8]): PngHeader =
   result.width = data.readUint32(0).swap().int
   result.height = data.readUint32(4).swap().int
   result.bitDepth = data[8]
@@ -78,7 +78,7 @@ proc parseHeader(data: seq[uint8]): PngHeader =
   if result.interlaceMethod != 0:
     raise newException(PixieError, "Interlaced PNG not yet supported")
 
-proc parsePalette(data: seq[uint8]): seq[array[3, uint8]] =
+proc decodePalette(data: seq[uint8]): seq[array[3, uint8]] =
   if data.len == 0 or data.len mod 3 != 0:
     failInvalid()
 
@@ -145,7 +145,7 @@ proc unfilter(
 
       result[unfiteredIdx(x, y)] = value
 
-proc parseImageData(
+proc decodeImageData(
   header: PngHeader,
   palette: seq[array[3, uint8]],
   transparency, data: seq[uint8]
@@ -217,22 +217,34 @@ proc parseImageData(
         inc bytePos
         bitPos = 0
   of 2:
-    let special =
-      if transparency.len == 6:
-        ColorRGBA(
-          r: transparency[1], g: transparency[3], b: transparency[5], a: 255
-        )
-      else:
-        ColorRGBA()
-    var bytePos: int
-    for y in 0 ..< header.height:
-      for x in 0 ..< header.width:
-        let rgb = cast[ptr array[3, uint8]](unfiltered[bytePos].unsafeAddr)[]
-        var rgba = ColorRGBA(r: rgb[0], g: rgb[1], b: rgb[2], a: 255)
+    var special: ColorRGBA
+    if transparency.len == 6: # Need to apply transparency check, slower.
+      special.r = transparency[1]
+      special.g = transparency[3]
+      special.b = transparency[5]
+      special.a = 255
+
+      # While we can read an extra byte safely, do so. Much faster.
+      for i in 0 ..< header.height * header.width - 1:
+        var rgba = cast[ptr ColorRGBA](unfiltered[i * 3].unsafeAddr)[]
+        rgba.a = 255
         if rgba == special:
           rgba.a = 0
-        result[x + y * header.width] = rgba
-        bytePos += 3
+        result[i] = rgba
+    else:
+      # While we can read an extra byte safely, do so. Much faster.
+      for i in 0 ..< header.height * header.width - 1:
+        var rgba = cast[ptr ColorRGBA](unfiltered[i * 3].unsafeAddr)[]
+        rgba.a = 255
+        result[i] = rgba
+
+    let
+      lastOffset = header.height * header.width - 1
+      rgb = cast[ptr array[3, uint8]](unfiltered[lastOffset * 3].unsafeAddr)[]
+    var rgba = ColorRGBA(r: rgb[0], g: rgb[1], b: rgb[2], a: 255)
+    if rgba == special:
+      rgba.a = 0
+    result[header.height * header.width - 1] = cast[ColorRGBA](rgba)
   of 3:
     var bytePos, bitPos: int
     for y in 0 ..< header.height:
@@ -275,32 +287,22 @@ proc parseImageData(
         inc bytePos
         bitPos = 0
   of 4:
-    var bytePos: int
-    for y in 0 ..< header.height:
-      for x in 0 ..< header.width:
-        result[x + y * header.width] = ColorRGBA(
-          r: unfiltered[bytePos],
-          g: unfiltered[bytePos],
-          b: unfiltered[bytePos],
-          a: unfiltered[bytePos + 1]
-        )
-        bytePos += 2
+    for i in 0 ..< header.height * header.width:
+      let bytePos = i * 2
+      result[i] = ColorRGBA(
+        r: unfiltered[bytePos],
+        g: unfiltered[bytePos],
+        b: unfiltered[bytePos],
+        a: unfiltered[bytePos + 1]
+      )
   of 6:
-    var bytePos: int
-    for y in 0 ..< header.height:
-      for x in 0 ..< header.width:
-        result[x + y * header.width] = cast[ColorRGBA](
-          unfiltered.readUint32(bytePos)
-        )
-        bytePos += 4
+    for i in 0 ..< header.height * header.width:
+      result[i] = cast[ColorRGBA](unfiltered.readUint32(i * 4))
   else:
     discard # Not possible, parseHeader validates
 
 proc decodePng*(data: seq[uint8]): Image =
-  ## Decodes the PNG from the parameter buffer. Check png.channels and
-  ## png.bitDepth to see how the png.data is formatted.
-  ## The returned png.data is currently always RGBA (4 channels)
-  ## with bitDepth of 8.
+  ## Decodes the PNG into an Image.
 
   if data.len < (8 + (8 + 13 + 4) + 4): # Magic bytes + IHDR + IEND
     failInvalid()
@@ -323,7 +325,7 @@ proc decodePng*(data: seq[uint8]): Image =
     data.readStr(pos + 4, 4) != "IHDR":
     failInvalid()
   inc(pos, 8)
-  header = parseHeader(data[pos ..< pos + 13])
+  header = decodeHeader(data[pos ..< pos + 13])
   prevChunkType = "IHDR"
   inc(pos, 13)
 
@@ -353,7 +355,7 @@ proc decodePng*(data: seq[uint8]): Image =
       inc counts.PLTE
       if counts.PLTE > 1 or counts.IDAT > 0 or counts.tRNS > 0:
         failInvalid()
-      palette = parsePalette(data[pos ..< pos + chunkLen])
+      palette = decodePalette(data[pos ..< pos + chunkLen])
     of "tRNS":
       inc counts.tRNS
       if counts.tRNS > 1 or counts.IDAT > 0:
@@ -407,7 +409,7 @@ proc decodePng*(data: seq[uint8]): Image =
   result = Image()
   result.width = header.width
   result.height = header.height
-  result.data = parseImageData(header, palette, transparency, imageData)
+  result.data = decodeImageData(header, palette, transparency, imageData)
 
 proc decodePng*(data: string): Image {.inline.} =
   decodePng(cast[seq[uint8]](data))

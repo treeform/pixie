@@ -1,13 +1,14 @@
 ## Public interface to you library.
 
 import pixie/images, pixie/masks, pixie/paths, pixie/common, pixie/blends,
-  pixie/fileformats/bmp, pixie/fileformats/png, flatty/binny, os
+  pixie/fileformats/bmp, pixie/fileformats/png, pixie/fileformats/jpg,
+  flatty/binny, os
 
 export images, masks, paths, PixieError, blends
 
 type
   FileFormat* = enum
-    ffPng, ffBmp
+    ffPng, ffBmp, ffJpg
 
 proc toMask*(image: Image): Mask =
   ## Converts an Image to a Mask.
@@ -23,23 +24,26 @@ proc toImage*(mask: Mask): Image =
 
 proc decodeImage*(data: string | seq[uint8]): Image =
   ## Loads an image from a memory.
-  if data.len > 8 and cast[array[8, uint8]](data.readUint64(0)) == pngSignature:
-    return decodePng(data)
-
-  if data.len > 2 and data.readStr(0, 2) == "BM":
-    return decodeBmp(data)
-
-  raise newException(PixieError, "Unsupported image file format")
+  if data.len > 8 and data.readUint64(0) == cast[uint64](pngSignature):
+    decodePng(data)
+  elif data.len > 2 and data.readUint16(0) == cast[uint16](jpgStartOfImage):
+    decodeJpg(data)
+  elif data.len > 2 and data.readStr(0, 2) == "BM":
+    decodeBmp(data)
+  else:
+    raise newException(PixieError, "Unsupported image file format")
 
 proc readImage*(filePath: string): Image =
   ## Loads an image from a file.
   decodeImage(readFile(filePath))
 
 proc encodeImage*(image: Image, fileFormat: FileFormat): string =
-  ## Encodes an image into a memory.
+  ## Encodes an image into memory.
   case fileFormat:
   of ffPng:
     image.encodePng()
+  of ffJpg:
+    image.encodeJpg()
   of ffBmp:
     image.encodeBmp()
 
@@ -50,7 +54,10 @@ proc writeFile*(image: Image, filePath: string, fileFormat: FileFormat) =
 proc writeFile*(image: Image, filePath: string) =
   ## Writes an image to a file.
   let fileFormat = case splitFile(filePath).ext:
-    of "png": ffPng
-    of "bmp": ffBmp
-    else: ffPng
-  writeFile(filePath, image.encodeImage(fileFormat))
+    of ".png": ffPng
+    of ".bmp": ffBmp
+    of ".jpg": ffJpg
+    of ".jpeg": ffJpg
+    else:
+      raise newException(PixieError, "Unsupported image file extension")
+  image.writeFile(filePath, fileformat)
