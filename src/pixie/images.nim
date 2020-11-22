@@ -22,6 +22,12 @@ proc `$`*(image: Image): string =
   ## Display the image size and channels.
   "<Image " & $image.width & "x" & $image.height & ">"
 
+proc fraction(v: float32): float32 =
+  ## Returns unsigned fraction part of the float.
+  ## -13.7868723 -> 0.7868723
+  result = abs(v)
+  result = result - floor(result)
+
 proc inside*(image: Image, x, y: int): bool {.inline.} =
   ## Returns true if (x, y) is inside the image.
   x >= 0 and x < image.width and
@@ -29,8 +35,9 @@ proc inside*(image: Image, x, y: int): bool {.inline.} =
 
 proc inside1px*(image: Image, x, y: float): bool {.inline.} =
   ## Returns true if (x, y) is inside the image.
-  x >= -1 and x < (image.width.float32 + 1) and
-  y >= -1 and y < (image.height.float32 + 1)
+  const px = 1
+  x >= -px and x < (image.width.float32 + px) and
+  y >= -px and y < (image.height.float32 + px)
 
 proc getRgbaUnsafe*(image: Image, x, y: int): ColorRGBA {.inline.} =
   ## Gets a color from (x, y) coordinates.
@@ -116,22 +123,39 @@ func lerp(a, b: Color, v: float): Color {.inline.} =
 
 proc getRgbaSmooth*(image: Image, x, y: float64): ColorRGBA {.inline.} =
   ## Gets a pixel as (x, y) floats.
-  let
-    minX = floor(x).int
-    difX = (x - minX.float32)
-    minY = floor(y).int
-    difY = (y - minY.float32)
 
-    vX0Y0 = image[minX, minY].color()
-    vX1Y0 = image[minX + 1, minY].color()
-    vX0Y1 = image[minX, minY + 1].color()
-    vX1Y1 = image[minX + 1, minY + 1].color()
+  proc toAlphy(c: Color): Color =
+    result.r = c.r * c.a
+    result.g = c.g * c.a
+    result.b = c.b * c.a
+    result.a = c.a
+
+  proc fromAlphy(c: Color): Color =
+    if c.a == 0:
+      return
+    result.r = c.r / c.a
+    result.g = c.g / c.a
+    result.b = c.b / c.a
+    result.a = c.a
+
+  var
+    x = x # TODO: look at maybe +0.5
+    y = y # TODO: look at maybe +0.5
+    minX = x.floor.int
+    difX = x - x.floor
+    minY = y.floor.int
+    difY = y - y.floor
+
+    vX0Y0 = image[minX, minY].color().toAlphy()
+    vX1Y0 = image[minX + 1, minY].color().toAlphy()
+    vX0Y1 = image[minX, minY + 1].color().toAlphy()
+    vX1Y1 = image[minX + 1, minY + 1].color().toAlphy()
 
     bottomMix = lerp(vX0Y0, vX1Y0, difX)
     topMix = lerp(vX0Y1, vX1Y1, difX)
     finalMix = lerp(bottomMix, topMix, difY)
 
-  return finalMix.rgba()
+  return finalMix.fromAlphy().rgba()
 
 proc hasEffect*(blendMode: BlendMode, rgba: ColorRGBA): bool =
   ## Returns true if applying rgba with current blend mode has effect.
@@ -142,10 +166,6 @@ proc hasEffect*(blendMode: BlendMode, rgba: ColorRGBA): bool =
     true
   else:
     rgba.a > 0
-
-proc fraction(v: float32): float32 =
-  result = abs(v)
-  result = result - floor(result)
 
 proc drawFast1*(a: Image, b: Image, mat: Mat3): Image =
   ## Draws one image onto another using integer x,y offset with COPY.

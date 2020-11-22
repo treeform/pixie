@@ -12,6 +12,47 @@ proc writeAndCheck(image: Image, fileName: string) =
   assert image.data == master.data
 
 block:
+  var a = newImage(100, 100)
+  a.fill(rgba(0, 0, 0, 0))
+  var b = newImage(50, 50)
+  b.fill(rgba(255, 92, 0, 255))
+  var c = a.drawFast3(
+    b,
+    translate(vec2(50, 50)) * rotationMat3(0.2789281382) * translate(vec2(-25, -25)),
+    bmNormal
+  )
+  c.writeAndCheck("tests/images/centerRotation.png")
+
+block:
+  var a = newImage(100, 100)
+  a.fill(rgba(255, 255, 255, 255))
+  var b = newImage(50, 50)
+  b.fill(rgba(255, 92, 0, 255))
+  var c = a.drawFast3(
+    b,
+    translate(vec2(50, 50)) * rotationMat3(0.2789281382) * translate(vec2(-25, -25)),
+    bmNormal
+  )
+  c.writeAndCheck("tests/images/centerRotationWhite.png")
+
+
+block:
+  var a = newImage(100, 100)
+  a.fill(rgba(0, 0, 0, 0))
+  var b = newImage(50, 50)
+  b.fill(rgba(255, 92, 0, 255))
+  var c = a.drawFast3(
+    b,
+    translate(vec2(50, 50)) * rotationMat3(0.2789281382) * translate(vec2(-25, -25)),
+    bmNormal
+  )
+  c.writeAndCheck("tests/images/transCompose.c.png")
+  var d = newImage(100, 100)
+  d.fill(rgba(255, 255, 255, 255))
+  var e = d.draw(c)
+  e.writeAndCheck("tests/images/transCompose.png")
+
+block:
   var image = newImage(10, 10)
   image[0, 0] = rgba(255, 255, 255, 255)
   doAssert image[0, 0] == rgba(255, 255, 255, 255)
