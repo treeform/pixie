@@ -217,35 +217,34 @@ proc decodeImageData(
         inc bytePos
         bitPos = 0
   of 2:
-    if transparency.len == 6:
-      # Need to apply transparency check, slower.
-      let special = [transparency[1], transparency[3], transparency[5], 255]
+    var special: ColorRGBA
+    if transparency.len == 6: # Need to apply transparency check, slower.
+      special.r = transparency[1]
+      special.g = transparency[3]
+      special.b = transparency[5]
+      special.a = 255
+
       # While we can read an extra byte safely, do so. Much faster.
       for i in 0 ..< header.height * header.width - 1:
-        var rgba = cast[ptr array[4, uint8]](unfiltered[i * 3].unsafeAddr)[]
-        rgba[3] = 255
+        var rgba = cast[ptr ColorRGBA](unfiltered[i * 3].unsafeAddr)[]
+        rgba.a = 255
         if rgba == special:
-          rgba[3] = 0
-        result[i] = cast[ColorRGBA](rgba)
-      let
-        lastOffset = header.height * header.width - 1
-        rgb = cast[ptr array[3, uint8]](unfiltered[lastOffset * 3].unsafeAddr)[]
-      var rgba = [rgb[0], rgb[1], rgb[2], 255]
-      if rgba == special:
-        rgba[3] = 0
-      result[header.height * header.width - 1] = cast[ColorRGBA](rgba)
+          rgba.a = 0
+        result[i] = rgba
     else:
       # While we can read an extra byte safely, do so. Much faster.
       for i in 0 ..< header.height * header.width - 1:
-        var rgba = cast[ptr array[4, uint8]](unfiltered[i * 3].unsafeAddr)[]
-        rgba[3] = 255
-        result[i] = cast[ColorRGBA](rgba)
-      let
-        lastOffset = header.height * header.width - 1
-        rgb = cast[ptr array[3, uint8]](unfiltered[lastOffset * 3].unsafeAddr)[]
-      result[header.height * header.width - 1] = ColorRGBA(
-        r: rgb[0], g: rgb[1], b: rgb[2], a: 255
-      )
+        var rgba = cast[ptr ColorRGBA](unfiltered[i * 3].unsafeAddr)[]
+        rgba.a = 255
+        result[i] = rgba
+
+    let
+      lastOffset = header.height * header.width - 1
+      rgb = cast[ptr array[3, uint8]](unfiltered[lastOffset * 3].unsafeAddr)[]
+    var rgba = ColorRGBA(r: rgb[0], g: rgb[1], b: rgb[2], a: 255)
+    if rgba == special:
+      rgba.a = 0
+    result[header.height * header.width - 1] = cast[ColorRGBA](rgba)
   of 3:
     var bytePos, bitPos: int
     for y in 0 ..< header.height:
@@ -288,24 +287,17 @@ proc decodeImageData(
         inc bytePos
         bitPos = 0
   of 4:
-    var bytePos: int
-    for y in 0 ..< header.height:
-      for x in 0 ..< header.width:
-        result[x + y * header.width] = ColorRGBA(
-          r: unfiltered[bytePos],
-          g: unfiltered[bytePos],
-          b: unfiltered[bytePos],
-          a: unfiltered[bytePos + 1]
-        )
-        bytePos += 2
+    for i in 0 ..< header.height * header.width:
+      let bytePos = i * 2
+      result[i] = ColorRGBA(
+        r: unfiltered[bytePos],
+        g: unfiltered[bytePos],
+        b: unfiltered[bytePos],
+        a: unfiltered[bytePos + 1]
+      )
   of 6:
-    var bytePos: int
-    for y in 0 ..< header.height:
-      for x in 0 ..< header.width:
-        result[x + y * header.width] = cast[ColorRGBA](
-          unfiltered.readUint32(bytePos)
-        )
-        bytePos += 4
+    for i in 0 ..< header.height * header.width:
+      result[i] = cast[ColorRGBA](unfiltered.readUint32(i * 4))
   else:
     discard # Not possible, parseHeader validates
 
