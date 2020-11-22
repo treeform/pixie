@@ -1,6 +1,6 @@
 import pixie, chroma, vmath, fidget/opengl/perf, pixie/fileformats/bmp
 
-proc inPlaceDraw*(destImage: Image, srcImage: Image, mat: Mat3, blendMode = Normal) =
+proc inPlaceDraw*(destImage: Image, srcImage: Image, mat: Mat3, blendMode = bmNormal) =
   ## Draws one image onto another using matrix with color blending.
   for y in 0 ..< destImage.width:
     for x in 0 ..< destImage.height:
@@ -14,7 +14,7 @@ proc inPlaceDraw*(destImage: Image, srcImage: Image, mat: Mat3, blendMode = Norm
         rgba = blendMode.mix(destRgba, srcRgba)
       destImage.setRgbaUnsafe(x, y, rgba)
 
-proc inPlaceDraw*(destImage: Image, srcImage: Image, pos = vec2(0, 0), blendMode = Normal) =
+proc inPlaceDraw*(destImage: Image, srcImage: Image, pos = vec2(0, 0), blendMode = bmNormal) =
   destImage.inPlaceDraw(srcImage, translate(-pos), blendMode)
 
 block:
@@ -30,7 +30,7 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   var b = newImage(100, 100)
   b.fill(rgba(0, 255, 0, 255))
-  var c = a.draw(b, pos=vec2(25, 25))
+  var c = a.drawFast3(b, translate(vec2(25, 25)), bmNormal)
   writeFile("tests/images/copyDraw.bmp", c.encodeBmp())
 
 timeIt "inPlaceDraw":
@@ -51,6 +51,6 @@ timeIt "copyDraw":
     a.fill(rgba(255, 0, 0, 255))
     var b = newImage(100, 100)
     b.fill(rgba(0, 255, 0, 255))
-    var c = a.draw(b, pos=vec2(25, 25))
+    var c = a.drawFast3(b, translate(vec2(25, 25)), bmNormal)
     tmp += c.width * c.height
   echo tmp

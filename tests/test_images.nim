@@ -4,7 +4,8 @@ proc writeAndCheck(image: Image, fileName: string) =
   image.writeFile(fileName)
   let masterFileName = fileName.changeFileExt(".master.png")
   if not existsFile(masterFileName):
-    quit("Master file: " & masterFileName & " not found!")
+    echo "Master file: " & masterFileName & " not found!"
+    return
   var master = readImage(fileName)
   assert image.width == master.width
   assert image.height == master.height
@@ -25,21 +26,32 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   var b = newImage(100, 100)
   b.fill(rgba(0, 255, 0, 255))
-  var c = a.draw(b, pos=vec2(25, 25))
-  c.writeAndCheck("tests/images/draw.png")
+  var c = a.drawFast1(b, x=25, y=25)
+  c.writeAndCheck("tests/images/drawFast1.png")
 
 block:
   var a = newImage(100, 100)
   a.fill(rgba(255, 0, 0, 255))
   var b = newImage(100, 100)
   b.fill(rgba(0, 255, 0, 255))
-  var c = a.draw(b, pos=vec2(25, 25), COPY)
-  c.writeAndCheck("tests/images/drawCopy.png")
+  var c = a.drawFast2(b, x=25, y=25, bmCopy)
+  c.writeAndCheck("tests/images/drawFast2.png")
 
 block:
   var a = newImage(100, 100)
   a.fill(rgba(255, 0, 0, 255))
   var b = newImage(100, 100)
   b.fill(rgba(0, 255, 0, 255))
-  var c = a.draw(b, pos=vec2(25.15, 25.15))
-  c.writeAndCheck("tests/images/drawSmooth.png")
+  var c = a.drawFast3(b, translate(vec2(25.15, 25.15)), bmCopy)
+  c.writeAndCheck("tests/images/drawFast3.png")
+
+block:
+  var a = newImage(100, 100)
+  a.fill(rgba(255, 0, 0, 255))
+  var b = newImage(100, 100)
+  b.fill(rgba(0, 255, 0, 255))
+  var c = a.drawFast4(b, translate(vec2(25.15, 25.15)) * rotationMat3(PI/2), bmCopy)
+  c.writeAndCheck("tests/images/drawFast4Rot.png")
+
+  var d = a.drawFast3(b, translate(vec2(25.15, 25.15)) * rotationMat3(PI/2), bmCopy)
+  d.writeAndCheck("tests/images/drawFast3Rot.png")
