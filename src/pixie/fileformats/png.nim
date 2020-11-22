@@ -217,22 +217,35 @@ proc decodeImageData(
         inc bytePos
         bitPos = 0
   of 2:
-    let special =
-      if transparency.len == 6:
-        ColorRGBA(
-          r: transparency[1], g: transparency[3], b: transparency[5], a: 255
-        )
-      else:
-        ColorRGBA()
-    var bytePos: int
-    for y in 0 ..< header.height:
-      for x in 0 ..< header.width:
-        let rgb = cast[ptr array[3, uint8]](unfiltered[bytePos].unsafeAddr)[]
-        var rgba = ColorRGBA(r: rgb[0], g: rgb[1], b: rgb[2], a: 255)
+    if transparency.len == 6:
+      # Need to apply transparency check, slower.
+      let special = [transparency[1], transparency[3], transparency[5], 255]
+      # While we can read an extra byte safely, do so. Much faster.
+      for i in 0 ..< header.height * header.width - 1:
+        var rgba = cast[ptr array[4, uint8]](unfiltered[i * 3].unsafeAddr)[]
+        rgba[3] = 255
         if rgba == special:
-          rgba.a = 0
-        result[x + y * header.width] = rgba
-        bytePos += 3
+          rgba[3] = 0
+        result[i] = cast[ColorRGBA](rgba)
+      let
+        lastOffset = header.height * header.width - 1
+        rgb = cast[ptr array[3, uint8]](unfiltered[lastOffset * 3].unsafeAddr)[]
+      var rgba = [rgb[0], rgb[1], rgb[2], 255]
+      if rgba == special:
+        rgba[3] = 0
+      result[header.height * header.width - 1] = cast[ColorRGBA](rgba)
+    else:
+      # While we can read an extra byte safely, do so. Much faster.
+      for i in 0 ..< header.height * header.width - 1:
+        var rgba = cast[ptr array[4, uint8]](unfiltered[i * 3].unsafeAddr)[]
+        rgba[3] = 255
+        result[i] = cast[ColorRGBA](rgba)
+      let
+        lastOffset = header.height * header.width - 1
+        rgb = cast[ptr array[3, uint8]](unfiltered[lastOffset * 3].unsafeAddr)[]
+      result[header.height * header.width - 1] = ColorRGBA(
+        r: rgb[0], g: rgb[1], b: rgb[2], a: 255
+      )
   of 3:
     var bytePos, bitPos: int
     for y in 0 ..< header.height:
