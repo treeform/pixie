@@ -57,6 +57,7 @@ proc writeFile*(image: Image, filePath: string) =
     of ".png": ffPng
     of ".bmp": ffBmp
     of ".jpg": ffJpg
+    of ".jpeg": ffJpg
     else:
-      raise newException(PixieError, "Unrecognized file extension")
+      raise newException(PixieError, "Unsupported image file extension")
   image.writeFile(filePath, fileformat)
