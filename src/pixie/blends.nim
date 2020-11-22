@@ -2,52 +2,52 @@
 import chroma, math, algorithm
 
 type BlendMode* = enum
-  Normal
-  Darken
-  Multiply
-  LinearBurn
-  ColorBurn
-  Lighten
-  Screen
-  LinearDodge
-  ColorDodge
-  Overlay
-  SoftLight
-  HardLight
-  Difference
-  Exclusion
-  Hue
-  Saturation
-  Color
-  Luminosity
-  Mask  ## Special blend mode that is used for masking
-  Copy  ## Special that does not blend but copies the pixels from target.
+  bmNormal
+  bmDarken
+  bmMultiply
+  bmLinearBurn
+  bmColorBurn
+  bmLighten
+  bmScreen
+  bmLinearDodge
+  bmColorDodge
+  bmOverlay
+  bmSoftLight
+  bmHardLight
+  bmDifference
+  bmExclusion
+  bmHue
+  bmSaturation
+  bmColor
+  bmLuminosity
 
-  SubtractMask ## Inverse mask
+  bmMask  ## Special blend mode that is used for masking
+  bmCopy  ## Special that does not blend but copies the pixels from target.
+  bmSubtractMask ## Inverse mask
 
 proc parseBlendMode*(s: string): BlendMode =
   case s:
-    of "NORMAL": Normal
-    of "DARKEN": Darken
-    of "MULTIPLY": Multiply
-    of "LINEAR_BURN": LinearBurn
-    of "COLOR_BURN": ColorBurn
-    of "LIGHTEN": Lighten
-    of "SCREEN": Screen
-    of "LINEAR_DODGE": LinearDodge
-    of "COLOR_DODGE": ColorDodge
-    of "OVERLAY": Overlay
-    of "SOFT_LIGHT": SoftLight
-    of "HARD_LIGHT": HardLight
-    of "DIFFERENCE": Difference
-    of "EXCLUSION": Exclusion
-    of "HUE": Hue
-    of "SATURATION": Saturation
-    of "COLOR": Color
-    of "LUMINOSITY": Luminosity
-    of "MASK": Mask
-    of "COPY": Copy
-    else: Normal
+    of "NORMAL": bmNormal
+    of "DARKEN": bmDarken
+    of "MULTIPLY": bmMultiply
+    of "LINEAR_BURN": bmLinearBurn
+    of "COLOR_BURN": bmColorBurn
+    of "LIGHTEN": bmLighten
+    of "SCREEN": bmScreen
+    of "LINEAR_DODGE": bmLinearDodge
+    of "COLOR_DODGE": bmColorDodge
+    of "OVERLAY": bmOverlay
+    of "SOFT_LIGHT": bmSoftLight
+    of "HARD_LIGHT": bmHardLight
+    of "DIFFERENCE": bmDifference
+    of "EXCLUSION": bmExclusion
+    of "HUE": bmHue
+    of "SATURATION": bmSaturation
+    of "COLOR": bmColor
+    of "LUMINOSITY": bmLuminosity
+    of "MASK": bmMask
+    of "COPY": bmCopy
+    else: bmNormal
 
 proc `+`*(a, b: Color): Color {.inline.} =
   result.r = a.r + b.r
@@ -87,19 +87,19 @@ proc `-`*(c: Color, v: float32): Color {.inline.} =
 
 proc mix*(blendMode: BlendMode, target, blend: Color): Color =
 
-  if blendMode == Mask:
+  if blendMode == bmMask:
     result.r = target.r
     result.g = target.g
     result.b = target.b
     result.a = min(target.a, blend.a)
     return
-  elif blendMode == SubtractMask:
+  elif blendMode == bmSubtractMask:
     result.r = target.r
     result.g = target.g
     result.b = target.b
     result.a = target.a * (1 - blend.a)
     return
-  elif blendMode == Copy:
+  elif blendMode == bmCopy:
     result = blend
     return
 
@@ -208,38 +208,38 @@ proc mix*(blendMode: BlendMode, target, blend: Color): Color =
 
   proc blendChannel(blendMode: BlendMode, Cb, Cs: float32): float32 =
     result = case blendMode
-    of Normal:       Cs
-    of Darken:       min(Cb, Cs)
-    of Multiply:     multiply(Cb, Cs)
-    of LinearBurn:   Cb + Cs - 1
-    of ColorBurn:
+    of bmNormal:       Cs
+    of bmDarken:       min(Cb, Cs)
+    of bmMultiply:     multiply(Cb, Cs)
+    of bmLinearBurn:   Cb + Cs - 1
+    of bmColorBurn:
       if Cb == 1:    1.0
       elif Cs == 0:  0.0
       else:          1.0 - min(1, (1 - Cb) / Cs)
-    of Lighten:      max(Cb, Cs)
-    of Screen:       screen(Cb, Cs)
-    of LinearDodge:  Cb + Cs
-    of ColorDodge:
+    of bmLighten:      max(Cb, Cs)
+    of bmScreen:       screen(Cb, Cs)
+    of bmLinearDodge:  Cb + Cs
+    of bmColorDodge:
       if Cb == 0:    0.0
       elif Cs == 1:  1.0
       else:          min(1, Cb / (1 - Cs))
-    of Overlay:      hardLight(Cs, Cb)
-    of HardLight:    hardLight(Cb, Cs)
-    of SoftLight:    softLight(Cb, Cs)
-    of Difference:   abs(Cb - Cs)
-    of Exclusion:    Cb + Cs - 2 * Cb * Cs
+    of bmOverlay:      hardLight(Cs, Cb)
+    of bmHardLight:    hardLight(Cb, Cs)
+    of bmSoftLight:    softLight(Cb, Cs)
+    of bmDifference:   abs(Cb - Cs)
+    of bmExclusion:    Cb + Cs - 2 * Cb * Cs
     else: 0.0
   let Cb = target
   let Cs = blend
 
   var mixed: Color
-  if blendMode == Color:
+  if blendMode == bmColor:
     mixed = SetLum(Cs, Lum(Cb))
-  elif blendMode == Luminosity:
+  elif blendMode == bmLuminosity:
     mixed = SetLum(Cb, Lum(Cs))
-  elif blendMode == Hue:
+  elif blendMode == bmHue:
     mixed = SetLum(SetSat(Cs, Sat(Cb)), Lum(Cb))
-  elif blendMode == Saturation:
+  elif blendMode == bmSaturation:
     mixed = SetLum(SetSat(Cb, Sat(Cs)), Lum(Cb))
   else:
     mixed.r = blendMode.blendChannel(Cb.r, Cs.r)
