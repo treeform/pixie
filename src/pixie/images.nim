@@ -143,11 +143,18 @@ proc hasEffect*(blendMode: BlendMode, rgba: ColorRGBA): bool =
   else:
     rgba.a > 0
 
+# TODO: Move this to vmath.
 func translate*(v: Vec2): Mat3 =
   result[0, 0] = 1
   result[1, 1] = 1
   result[2, 0] = v.x
   result[2, 1] = v.y
+  result[2, 2] = 1
+
+# TODO: Move this to vmath.
+func scale*(v: Vec2): Mat3 =
+  result[0, 0] = v.x
+  result[1, 1] = v.y
   result[2, 2] = 1
 
 proc fraction(v: float32): float32 =
@@ -158,8 +165,8 @@ proc drawFast1*(a: Image, b: Image, mat: Mat3): Image =
   ## Draws one image onto another using integer x,y offset with COPY.
   result = newImage(a.width, a.height)
   var matInv = mat.inverse()
-  for y in 0 ..< a.width:
-    for x in 0 ..< a.height:
+  for y in 0 ..< a.height:
+    for x in 0 ..< a.width:
       var rgba = a.getRgbaUnsafe(x, y)
       let srcPos = matInv * vec2(x.float32, y.float32)
       if b.inside(srcPos.x.floor.int, srcPos.y.floor.int):
@@ -170,8 +177,9 @@ proc drawFast2*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
   ## Draws one image onto another using matrix with color blending.
   result = newImage(a.width, a.height)
   var matInv = mat.inverse()
-  for y in 0 ..< a.width:
-    for x in 0 ..< a.height:
+  for y in 0 ..< a.height:
+    for x in 0 ..< a.width:
+      #echo x, ", ", y
       var rgba = a.getRgbaUnsafe(x, y)
       let srcPos = matInv * vec2(x.float32, y.float32)
       if b.inside(srcPos.x.floor.int, srcPos.y.floor.int):
@@ -184,8 +192,8 @@ proc drawFast3*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
   ## Draws one image onto another using matrix with color blending.
   result = newImage(a.width, a.height)
   var matInv = mat.inverse()
-  for y in 0 ..< a.width:
-    for x in 0 ..< a.height:
+  for y in 0 ..< a.height:
+    for x in 0 ..< a.width:
       var rgba = a.getRgbaUnsafe(x, y)
       let srcPos = matInv * vec2(x.float32, y.float32)
       if b.inside1px(srcPos.x, srcPos.y):
@@ -212,3 +220,175 @@ proc draw*(a: Image, b: Image, mat: Mat3, blendMode = bmNormal): Image =
 
 proc draw*(a: Image, b: Image, pos = vec2(0, 0), blendMode = bmNormal): Image =
   a.draw(b, translate(pos), blendMode)
+
+
+# TODO: Make methods bellow not be in place.
+
+proc blur*(image: Image, radius: float32): Image =
+  ## Applies Gaussian blur to the image given a radius.
+  let radius = (radius).int
+  if radius == 0:
+    return image.copy()
+
+  # Compute lookup table for 1d Gaussian kernel.
+  var lookup = newSeq[float](radius*2+1)
+  var total = 0.0
+  for xb in -radius .. radius:
+    let s = radius.float32 / 2.2 # 2.2 matches Figma.
+    let x = xb.float32
+    let a = 1/sqrt(2*PI*s^2) * exp(-1*x^2/(2*s^2))
+    lookup[xb + radius] = a
+    total += a
+  for xb in -radius .. radius:
+    lookup[xb + radius] /= total
+
+  # Blur in the X direction.
+  var blurX = newImage(image.width, image.height)
+  for y in 0 ..< image.height:
+    for x in 0 ..< image.width:
+      var c: Color
+      var totalA = 0.0
+      for xb in -radius .. radius:
+        let c2 = image[x + xb, y].color
+        let a = lookup[xb + radius]
+        let aa = c2.a * a
+        totalA += aa
+        c.r += c2.r * aa
+        c.g += c2.g * aa
+        c.b += c2.b * aa
+        c.a += c2.a * a
+      c.r = c.r / totalA
+      c.g = c.g / totalA
+      c.b = c.b / totalA
+      blurX.setRgbaUnsafe(x, y, c.rgba )
+
+  # Blur in the Y direction.
+  var blurY = newImage(image.width, image.height)
+  for y in 0 ..< image.height:
+    for x in 0 ..< image.width:
+      var c: Color
+      var totalA = 0.0
+      for yb in -radius .. radius:
+        let c2 = blurX[x, y + yb].color
+        let a = lookup[yb + radius]
+        let aa = c2.a * a
+        totalA += aa
+        c.r += c2.r * aa
+        c.g += c2.g * aa
+        c.b += c2.b * aa
+        c.a += c2.a * a
+      c.r = c.r / totalA
+      c.g = c.g / totalA
+      c.b = c.b / totalA
+      blurY.setRgbaUnsafe(x, y, c.rgba)
+
+  return blurY
+
+proc resize*(srcImage: Image, width, height: int): Image =
+  result = newImage(width, height)
+  return result.draw(
+    srcImage,
+    scale(vec2(
+      (width + 1).float / srcImage.width.float,
+      (height + 1).float / srcImage.height.float
+    ))
+  )
+
+proc shift(image: Image, offset: Vec2): Image =
+  ## Shifts the image by offset.
+  result = newImage(image.width, image.height)
+  return result.draw(image, offset)
+
+proc spread(image: Image, spread: float32): Image =
+  ## Grows the image as a mask by spread.
+  result = newImage(image.width, image.height)
+  assert spread > 0
+  for y in 0 ..< result.height:
+    for x in 0 ..< result.width:
+      var maxAlpha = 0.uint8
+      for bx in -spread.int .. spread.int:
+        for by in -spread.int .. spread.int:
+          #if vec2(bx.float32, by.float32).length < spread:
+          let alpha = image[x + bx, y + by].a
+          if alpha > maxAlpha:
+            maxAlpha = alpha
+          if maxAlpha == 255:
+            break
+        if maxAlpha == 255:
+            break
+      result[x, y] = rgba(0, 0, 0, maxAlpha)
+
+proc shadow*(
+  mask: Image,
+  offset: Vec2,
+  spread: float,
+  blur: float32,
+  color: Color
+): Image =
+  ## Create a shadow of the image with the offset, spread and blur.
+  var shadow = mask
+  if offset != vec2(0, 0):
+    shadow = shadow.shift(offset)
+  if spread > 0:
+    shadow = shadow.spread(spread)
+  if blur > 0:
+    shadow = shadow.blur(blur)
+  result = newImage(mask.width, mask.height)
+  result.fill(color.rgba)
+  return result.draw(shadow, blendMode = bmMask)
+
+proc invertColor*(image: Image) =
+  ## Flips the image around the Y axis.
+  for y in 0 ..< image.height:
+    for x in 0 ..< image.width:
+      var rgba = image.getRgbaUnsafe(x, y)
+      rgba.r = 255 - rgba.r
+      rgba.g = 255 - rgba.g
+      rgba.b = 255 - rgba.b
+      rgba.a = 255 - rgba.a
+      image.setRgbaUnsafe(x, y, rgba)
+
+proc applyOpacity*(image: Image, opacity: float32) =
+  ## Multiplies alpha of the image by opacity.
+  let op = (255 * opacity).uint8
+  for y in 0 ..< image.height:
+    for x in 0 ..< image.width:
+      var rgba = image.getRgbaUnsafe(x, y)
+      rgba.a = ((rgba.a.uint32 * op.uint32) div 255).clamp(0, 255).uint8
+      image.setRgbaUnsafe(x, y, rgba)
+
+# TODO: Make this method use path's AA lines.
+proc line*(image: Image, at, to: Vec2, rgba: ColorRGBA) =
+  ## Draws a line from one at vec to to vec.
+  let
+    dx = to.x - at.x
+    dy = to.y - at.y
+  var x = at.x
+  while true:
+    if dx == 0:
+      break
+    let y = at.y + dy * (x - at.x) / dx
+    image[int x, int y] =  rgba
+    if at.x < to.x:
+      x += 1
+      if x > to.x:
+        break
+    else:
+      x -= 1
+      if x < to.x:
+        break
+
+  var y = at.y
+  while true:
+    if dy == 0:
+      break
+    let x = at.x + dx * (y - at.y) / dy
+    image[int x, int y] = rgba
+    if at.y < to.y:
+      y += 1
+      if y > to.y:
+        break
+    else:
+      y -= 1
+      if y < to.y:
+        break
