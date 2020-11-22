@@ -154,27 +154,31 @@ proc fraction(v: float32): float32 =
   result = abs(v)
   result = result - floor(result)
 
-proc drawFast1*(a: Image, b: Image, x, y: int): Image =
+proc drawFast1*(a: Image, b: Image, mat: Mat3): Image =
   ## Draws one image onto another using integer x,y offset with COPY.
   result = newImage(a.width, a.height)
-  for yd in 0 ..< a.width:
-    for xd in 0 ..< a.height:
-      var rgba = a.getRgbaUnsafe(xd, yd)
-      if b.inside(xd - x, yd - y):
-        rgba = b.getRgbaUnsafe(xd - x, yd - y)
-      result.setRgbaUnsafe(xd, yd, rgba)
+  var matInv = mat.inverse()
+  for y in 0 ..< a.width:
+    for x in 0 ..< a.height:
+      var rgba = a.getRgbaUnsafe(x, y)
+      let srcPos = matInv * vec2(x.float32, y.float32)
+      if b.inside(srcPos.x.floor.int, srcPos.y.floor.int):
+        rgba = b.getRgbaUnsafe(srcPos.x.floor.int, srcPos.y.floor.int)
+      result.setRgbaUnsafe(x, y, rgba)
 
-proc drawFast2*(a: Image, b: Image, x, y: int, blendMode: BlendMode): Image =
-  ## Draws one image onto another using integer x,y offset with color blending.
+proc drawFast2*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
+  ## Draws one image onto another using matrix with color blending.
   result = newImage(a.width, a.height)
-  for yd in 0 ..< a.width:
-    for xd in 0 ..< a.height:
-      var rgba = a.getRgbaUnsafe(xd, yd)
-      if b.inside(xd - x, yd - y):
-        var rgba2 = b.getRgbaUnsafe(xd - x, yd - y)
+  var matInv = mat.inverse()
+  for y in 0 ..< a.width:
+    for x in 0 ..< a.height:
+      var rgba = a.getRgbaUnsafe(x, y)
+      let srcPos = matInv * vec2(x.float32, y.float32)
+      if b.inside(srcPos.x.floor.int, srcPos.y.floor.int):
+        let rgba2 = b.getRgbaUnsafe(srcPos.x.floor.int, srcPos.y.floor.int)
         if blendMode.hasEffect(rgba2):
           rgba = blendMode.mix(rgba, rgba2)
-      result.setRgbaUnsafe(xd, yd, rgba)
+      result.setRgbaUnsafe(x, y, rgba)
 
 proc drawFast3*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
   ## Draws one image onto another using matrix with color blending.
@@ -190,52 +194,21 @@ proc drawFast3*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
           rgba = blendMode.mix(rgba, rgba2)
       result.setRgbaUnsafe(x, y, rgba)
 
-proc drawFast4*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
-  ## Draws one image onto another using matrix with color blending.
-  result = newImage(a.width, a.height)
-  var matInv = mat.inverse()
-  for y in 0 ..< a.width:
-    for x in 0 ..< a.height:
-      var rgba = a.getRgbaUnsafe(x, y)
-      let srcPos = matInv * vec2(x.float32, y.float32)
-      if b.inside(srcPos.x.floor.int, srcPos.y.floor.int):
-        let rgba2 = b.getRgbaUnsafe(srcPos.x.floor.int, srcPos.y.floor.int)
-        if blendMode.hasEffect(rgba2):
-          rgba = blendMode.mix(rgba, rgba2)
-      result.setRgbaUnsafe(x, y, rgba)
-
 proc draw*(a: Image, b: Image, mat: Mat3, blendMode = bmNormal): Image =
   ## Draws one image onto another using matrix with color blending.
-
-  if mat[0, 0] == 1 and mat[0, 1] == 0 and
-    mat[1, 0] == 0 and mat[1, 1] == 1 and
-    mat[2, 0].fraction == 0.0 and mat[2, 1].fraction == 0.0:
-    # Matrix is simple integer translation fast path:
-    if blendMode == bmCopy:
-      #echo "use 1"
-      return drawFast1(
-        a, b, mat[2, 0].int, mat[2, 1].int
-      )
-    else:
-      #echo "use 2"
-      return drawFast2(
-        a, b, mat[2, 0].int, mat[2, 1].int, blendMode
-      )
-
   let ns = [-1.float32, 0, 1]
   if mat[0, 0] in ns and mat[0, 1] in ns and
     mat[1, 0] in ns and mat[1, 1] in ns and
     mat[2, 0].fraction == 0.0 and mat[2, 1].fraction == 0.0:
-      echo "use 4"
-      return drawFast4(
-        a, b, mat, blendMode
-      )
-
-  # Todo: if matrix is a simple flip -> fast path
-  # 4 rotation x 3 flips = 12 combo
-  #echo "use 3"
+      if blendMode == bmCopy:
+        return drawFast1(
+          a, b, mat
+        )
+      else:
+        return drawFast2(
+          a, b, mat, blendMode
+        )
   return drawFast3(a, b, mat, blendMode)
-
 
 proc draw*(a: Image, b: Image, pos = vec2(0, 0), blendMode = bmNormal): Image =
   a.draw(b, translate(pos), blendMode)

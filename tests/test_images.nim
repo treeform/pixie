@@ -26,7 +26,7 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   var b = newImage(100, 100)
   b.fill(rgba(0, 255, 0, 255))
-  var c = a.drawFast1(b, x=25, y=25)
+  var c = a.drawFast1(b, translate(vec2(25, 25)))
   c.writeAndCheck("tests/images/drawFast1.png")
 
 block:
@@ -34,7 +34,7 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   var b = newImage(100, 100)
   b.fill(rgba(0, 255, 0, 255))
-  var c = a.drawFast2(b, x=25, y=25, bmCopy)
+  var c = a.drawFast2(b, translate(vec2(25, 25)), bmCopy)
   c.writeAndCheck("tests/images/drawFast2.png")
 
 block:
@@ -50,8 +50,6 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   var b = newImage(100, 100)
   b.fill(rgba(0, 255, 0, 255))
-  var c = a.drawFast4(b, translate(vec2(25.15, 25.15)) * rotationMat3(PI/2), bmCopy)
-  c.writeAndCheck("tests/images/drawFast4Rot.png")
 
-  var d = a.drawFast3(b, translate(vec2(25.15, 25.15)) * rotationMat3(PI/2), bmCopy)
-  d.writeAndCheck("tests/images/drawFast3Rot.png")
+  var c = a.drawFast1(b, translate(vec2(25, 25)) * rotationMat3(PI/2))
+  c.writeAndCheck("tests/images/drawFast1Rot.png")
