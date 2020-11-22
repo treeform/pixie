@@ -5,6 +5,14 @@ import flatty/binny, pixie/common, pixie/images
 const
   jpgStartOfImage* = [0xFF.uint8, 0xD8]
 
+type
+  Component = object
+    id, samplingFactors, quantizationTable: uint8
+
+  Jpg = object
+    width, height: int
+    components: array[3, Component]
+
 template failInvalid() =
   raise newException(PixieError, "Invalid JPG buffer, unable to load")
 
@@ -21,7 +29,7 @@ proc readSegmentLen(data: seq[uint8], pos: int): int =
 proc skipSegment(data: seq[uint8], pos: var int) {.inline.} =
   pos += readSegmentLen(data, pos)
 
-proc decodeSOF(data: seq[uint8], pos: var int) =
+proc decodeSOF(jpg: var Jpg, data: seq[uint8], pos: var int) =
   let segmentLen = readSegmentLen(data, pos)
   pos += 2
 
@@ -36,29 +44,36 @@ proc decodeSOF(data: seq[uint8], pos: var int) =
 
   pos += 6
 
+  if width <= 0:
+    raise newException(PixieError, "Invalid JPG width")
+
+  if height <= 0:
+    raise newException(PixieError, "Invalid JPG height")
+
   if precision != 8:
     raise newException(PixieError, "Unsupported JPG bit depth")
 
   if components != 3:
     raise newException(PixieError, "Unsupported JPG channel count")
 
-  debugEcho width, " x ", height
+  jpg.width = width
+  jpg.height = height
 
   if 8 + components * 3 != segmentLen:
     failInvalid()
 
   for i in 0 ..< 3:
-    discard
-
-  pos += components * 3
+    jpg.components[i] = Component(
+      id: data[pos],
+      samplingFactors: data[pos + 1],
+      quantizationTable: data[pos + 2]
+    )
+    pos += 3
 
 proc decodeDHT(data: seq[uint8], pos: var int) =
   skipSegment(data, pos)
 
 proc decodeDQT(data: seq[uint8], pos: var int) =
-  skipSegment(data, pos)
-
-proc decodeDRI(data: seq[uint8], pos: var int) =
   skipSegment(data, pos)
 
 proc decodeSOS(data: seq[uint8], pos: var int) =
@@ -83,16 +98,17 @@ proc decodeSOS(data: seq[uint8], pos: var int) =
       failInvalid()
 
     if data[pos] == 0xFF:
-      inc pos
-      if pos == data.len:
+      if pos + 1 == data.len:
         failInvalid()
-      if data[pos] == 0xD9: # End of Image:
-        inc pos
+      if data[pos + 1] == 0xD9: # End of Image:
+        pos += 2
         break
-      elif data[pos] == 0x00:
-        discard # Skip this byte
+      elif data[pos + 1] == 0x00:
+        discard # Skip the 0x00 byte
       else:
         failInvalid()
+    else:
+      discard
 
     inc pos
 
@@ -105,7 +121,9 @@ proc decodeJpg*(data: seq[uint8]): Image =
   if data.readUint16(0) != cast[uint16](jpgStartOfImage):
     failInvalid()
 
-  var pos: int
+  var
+    jpg: Jpg
+    pos: int
   while true:
     if pos + 2 > data.len:
       failInvalid()
@@ -120,15 +138,14 @@ proc decodeJpg*(data: seq[uint8]): Image =
     of 0xD8: # Start of Image
       discard
     of 0xC0: # Start of Frame
-      decodeSOF(data, pos)
+      jpg.decodeSOF(data, pos)
     of 0xC2: # Start of Frame
       raise newException(PixieError, "Progressive JPG not supported")
     of 0xC4: # Define Huffman Tables
       decodeDHT(data, pos)
     of 0xDB: # Define Quantanization Table(s)
       decodeDQT(data, pos)
-    of 0xDD: # Define Restart Interval
-      decodeDRI(data, pos)
+    # of 0xDD: # Define Restart Interval
     of 0xDA: # Start of Scan
       decodeSOS(data, pos)
       break
@@ -141,7 +158,7 @@ proc decodeJpg*(data: seq[uint8]): Image =
         # Skip APPn segments
         skipSegment(data, pos)
       else:
-        raise newException(PixieError, "Unsupported JPG segemnt")
+        raise newException(PixieError, "Unsupported JPG segment")
 
   raise newException(PixieError, "Decoding JPG not supported yet")
 
