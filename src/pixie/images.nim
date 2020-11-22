@@ -143,20 +143,6 @@ proc hasEffect*(blendMode: BlendMode, rgba: ColorRGBA): bool =
   else:
     rgba.a > 0
 
-# TODO: Move this to vmath.
-func translate*(v: Vec2): Mat3 =
-  result[0, 0] = 1
-  result[1, 1] = 1
-  result[2, 0] = v.x
-  result[2, 1] = v.y
-  result[2, 2] = 1
-
-# TODO: Move this to vmath.
-func scale*(v: Vec2): Mat3 =
-  result[0, 0] = v.x
-  result[1, 1] = v.y
-  result[2, 2] = 1
-
 proc fraction(v: float32): float32 =
   result = abs(v)
   result = result - floor(result)
