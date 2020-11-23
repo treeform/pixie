@@ -13,9 +13,9 @@ proc writeAndCheck(image: Image, fileName: string) =
 
 block:
   var a = newImage(100, 100)
-  a.fill(rgba(0, 0, 0, 0))
+  a = a.fill(rgba(0, 0, 0, 0))
   var b = newImage(50, 50)
-  b.fill(rgba(255, 92, 0, 255))
+  b = b.fill(rgba(255, 92, 0, 255))
   var c = a.drawBlendSmooth(
     b,
     translate(vec2(50, 50)) * rotationMat3(0.2789281382) * translate(vec2(-25, -25)),
@@ -25,9 +25,9 @@ block:
 
 block:
   var a = newImage(100, 100)
-  a.fill(rgba(255, 255, 255, 255))
+  a = a.fill(rgba(255, 255, 255, 255))
   var b = newImage(50, 50)
-  b.fill(rgba(255, 92, 0, 255))
+  b = b.fill(rgba(255, 92, 0, 255))
   var c = a.drawBlendSmooth(
     b,
     translate(vec2(50, 50)) * rotationMat3(0.2789281382) * translate(vec2(-25, -25)),
@@ -38,9 +38,9 @@ block:
 
 block:
   var a = newImage(100, 100)
-  a.fill(rgba(0, 0, 0, 0))
+  a = a.fill(rgba(0, 0, 0, 0))
   var b = newImage(50, 50)
-  b.fill(rgba(255, 92, 0, 255))
+  b = b.fill(rgba(255, 92, 0, 255))
   var c = a.drawBlendSmooth(
     b,
     translate(vec2(50, 50)) * rotationMat3(0.2789281382) * translate(vec2(-25, -25)),
@@ -48,7 +48,7 @@ block:
   )
   c.writeAndCheck("tests/images/transCompose.c.png")
   var d = newImage(100, 100)
-  d.fill(rgba(255, 255, 255, 255))
+  d = d.fill(rgba(255, 255, 255, 255))
   var e = d.draw(c)
   e.writeAndCheck("tests/images/transCompose.png")
 
@@ -59,38 +59,38 @@ block:
 
 block:
   var image = newImage(10, 10)
-  image.fill(rgba(255, 0, 0, 255))
+  image = image.fill(rgba(255, 0, 0, 255))
   doAssert image[0, 0] == rgba(255, 0, 0, 255)
 
 block:
   var a = newImage(100, 100)
-  a.fill(rgba(255, 0, 0, 255))
+  a = a.fill(rgba(255, 0, 0, 255))
   var b = newImage(100, 100)
-  b.fill(rgba(0, 255, 0, 255))
+  b = b.fill(rgba(0, 255, 0, 255))
   var c = a.drawOverwrite(b, translate(vec2(25, 25)))
   c.writeAndCheck("tests/images/drawOverwrite.png")
 
 block:
   var a = newImage(100, 100)
-  a.fill(rgba(255, 0, 0, 255))
+  a = a.fill(rgba(255, 0, 0, 255))
   var b = newImage(100, 100)
-  b.fill(rgba(0, 255, 0, 255))
+  b = b.fill(rgba(0, 255, 0, 255))
   var c = a.drawBlend(b, translate(vec2(25, 25)), bmOverwrite)
   c.writeAndCheck("tests/images/drawBlend.png")
 
 block:
   var a = newImage(100, 100)
-  a.fill(rgba(255, 0, 0, 255))
+  a = a.fill(rgba(255, 0, 0, 255))
   var b = newImage(100, 100)
-  b.fill(rgba(0, 255, 0, 255))
+  b = b.fill(rgba(0, 255, 0, 255))
   var c = a.drawBlendSmooth(b, translate(vec2(25.15, 25.15)), bmOverwrite)
   c.writeAndCheck("tests/images/drawBlendSmooth.png")
 
 block:
   var a = newImage(100, 100)
-  a.fill(rgba(255, 0, 0, 255))
+  a = a.fill(rgba(255, 0, 0, 255))
   var b = newImage(100, 100)
-  b.fill(rgba(0, 255, 0, 255))
+  b = b.fill(rgba(0, 255, 0, 255))
 
   var c = a.drawOverwrite(b, translate(vec2(25, 25)) * rotationMat3(PI/2))
   c.writeAndCheck("tests/images/drawOverwriteRot.png")
