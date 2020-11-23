@@ -1,6 +1,6 @@
 import pixie, chroma, vmath, fidget/opengl/perf, pixie/fileformats/bmp
 
-timeIt "benchDrawFast1 COPY":
+timeIt "drawOverwrite bmOverwrite":
   var tmp = 0
   var c: Image
   for i in 0 ..< 1000:
@@ -8,12 +8,12 @@ timeIt "benchDrawFast1 COPY":
     a.fill(rgba(255, 0, 0, 255))
     var b = newImage(100, 100)
     b.fill(rgba(0, 255, 0, 255))
-    c = a.drawFast1(b, translate(vec2(25, 25))) # Copy
+    c = a.drawOverwrite(b, translate(vec2(25, 25))) # Copy
     tmp += c.width * c.height
-  c.writeFile("tests/images/benchDrawFast1Copy.png")
+  c.writeFile("tests/images/bench.drawOverwrite.bmOverwrite.png")
   echo tmp
 
-timeIt "benchDrawFast2 COPY":
+timeIt "drawBlend bmOverwrite":
   var tmp = 0
   var c: Image
   for i in 0 ..< 1000:
@@ -21,12 +21,12 @@ timeIt "benchDrawFast2 COPY":
     a.fill(rgba(255, 0, 0, 255))
     var b = newImage(100, 100)
     b.fill(rgba(0, 255, 0, 255))
-    c = a.drawFast2(b, translate(vec2(25, 25)), bmCopy)
+    c = a.drawBlend(b, translate(vec2(25, 25)), bmOverwrite)
     tmp += c.width * c.height
-  c.writeFile("tests/images/benchDrawFast2Copy.png")
+  c.writeFile("tests/images/bench.drawBlend.bmOverwrite.png")
   echo tmp
 
-timeIt "benchDrawFast3 COPY":
+timeIt "drawBlendSmooth bmOverwrite":
   var tmp = 0
   var c: Image
   for i in 0 ..< 1000:
@@ -34,12 +34,12 @@ timeIt "benchDrawFast3 COPY":
     a.fill(rgba(255, 0, 0, 255))
     var b = newImage(100, 100)
     b.fill(rgba(0, 255, 0, 255))
-    c = a.drawFast3(b, translate(vec2(25, 25)), bmCopy)
+    c = a.drawBlendSmooth(b, translate(vec2(25, 25)), bmOverwrite)
     tmp += c.width * c.height
-  c.writeFile("tests/images/benchDrawFast3Copy.png")
+  c.writeFile("tests/images/bench.drawBlendSmooth.bmOverwrite.png")
   echo tmp
 
-timeIt "benchDrawFast2 Normal":
+timeIt "drawBlend bmNormal":
   var tmp = 0
   var c: Image
   for i in 0 ..< 1000:
@@ -47,12 +47,12 @@ timeIt "benchDrawFast2 Normal":
     a.fill(rgba(255, 0, 0, 255))
     var b = newImage(100, 100)
     b.fill(rgba(0, 255, 0, 255))
-    c = a.drawFast2(b, translate(vec2(25, 25)), bmNormal)
+    c = a.drawBlend(b, translate(vec2(25, 25)), bmNormal)
     tmp += c.width * c.height
-  c.writeFile("tests/images/benchDrawFast2Normal.png")
+  c.writeFile("tests/images/bench.drawBlend.bmNormal.png")
   echo tmp
 
-timeIt "benchDrawFast3 Normal":
+timeIt "drawBlendSmooth bmNormal":
   var tmp = 0
   var c: Image
   for i in 0 ..< 1000:
@@ -60,12 +60,12 @@ timeIt "benchDrawFast3 Normal":
     a.fill(rgba(255, 0, 0, 255))
     var b = newImage(100, 100)
     b.fill(rgba(0, 255, 0, 255))
-    c = a.drawFast3(b, translate(vec2(25, 25)), bmNormal)
+    c = a.drawBlendSmooth(b, translate(vec2(25, 25)), bmNormal)
     tmp += c.width * c.height
-  c.writeFile("tests/images/benchDrawFast3Normal.png")
+  c.writeFile("tests/images/bench.drawBlendSmooth.bmNormal.png")
   echo tmp
 
-timeIt "benchDrawFast2 Saturation":
+timeIt "drawBlend bmSaturation":
   var tmp = 0
   var c: Image
   for i in 0 ..< 1000:
@@ -73,12 +73,12 @@ timeIt "benchDrawFast2 Saturation":
     a.fill(rgba(255, 0, 0, 255))
     var b = newImage(100, 100)
     b.fill(rgba(0, 0, 0, 255))
-    c = a.drawFast2(b, translate(vec2(25, 25)), bmSaturation)
+    c = a.drawBlend(b, translate(vec2(25, 25)), bmSaturation)
     tmp += c.width * c.height
-  c.writeFile("tests/images/benchDrawFast2Saturation.png")
+  c.writeFile("tests/images/bench.drawBlend.bmSaturation.png")
   echo tmp
 
-timeIt "benchDrawFast3 Saturation":
+timeIt "drawBlendSmooth bmSaturation":
   var tmp = 0
   var c: Image
   for i in 0 ..< 1000:
@@ -86,20 +86,20 @@ timeIt "benchDrawFast3 Saturation":
     a.fill(rgba(255, 0, 0, 255))
     var b = newImage(100, 100)
     b.fill(rgba(0, 0, 0, 255))
-    c = a.drawFast3(b, translate(vec2(25, 25)), bmSaturation)
+    c = a.drawBlendSmooth(b, translate(vec2(25, 25)), bmSaturation)
     tmp += c.width * c.height
-  c.writeFile("tests/images/benchDrawFast3Saturation.png")
+  c.writeFile("tests/images/bench.drawBlendSmooth.bmSaturation.png")
   echo tmp
 
-timeIt "benchDrawFast3 Rotation":
-  var tmp = 0
-  var c: Image
-  for i in 0 ..< 1000:
-    var a = newImage(100, 100)
-    a.fill(rgba(255, 0, 0, 255))
-    var b = newImage(100, 100)
-    b.fill(rgba(0, 0, 0, 255))
-    c = a.drawFast3(b, translate(vec2(25, 25)) * rotationMat3(PI/2), bmNormal)
-    tmp += c.width * c.height
-  c.writeFile("tests/images/benchDrawFast3Rotation.png")
-  echo tmp
+# timeIt "benchDrawFast3 Rotation":
+#   var tmp = 0
+#   var c: Image
+#   for i in 0 ..< 1000:
+#     var a = newImage(100, 100)
+#     a.fill(rgba(255, 0, 0, 255))
+#     var b = newImage(100, 100)
+#     b.fill(rgba(0, 0, 0, 255))
+#     c = a.drawFast3(b, translate(vec2(25, 25)) * rotationMat3(PI/2), bmNormal)
+#     tmp += c.width * c.height
+#   c.writeFile("tests/images/benchDrawFast3Rotation.png")
+#   echo tmp

@@ -41,7 +41,7 @@ proc `$`*(image: Image): string =
   ## Display the image size and channels.
   "<Image " & $image.width & "x" & $image.height & ">"
 
-proc fraction(v: float32): float32 =
+proc fractional(v: float32): float32 =
   ## Returns unsigned fraction part of the float.
   ## -13.7868723 -> 0.7868723
   result = abs(v)
@@ -181,24 +181,26 @@ proc hasEffect*(blendMode: BlendMode, rgba: ColorRGBA): bool =
   case blendMode
   of bmMask:
     rgba.a != 255
-  of bmCopy:
+  of bmOverwrite:
     true
   else:
     rgba.a > 0
 
-proc drawFast1*(a: Image, b: Image, mat: Mat3): Image =
+proc drawOverwrite*(a: Image, b: Image, mat: Mat3): Image =
   ## Draws one image onto another using integer x,y offset with COPY.
   result = newImageNoInit(a.width, a.height)
   var matInv = mat.inverse()
+  # TODO: Alternative mem-copies from a and b as scan down.
   for y in 0 ..< a.height:
     for x in 0 ..< a.width:
       var rgba = a.getRgbaUnsafe(x, y)
       let srcPos = matInv * vec2(x.float32, y.float32)
+
       if b.inside(srcPos.x.floor.int, srcPos.y.floor.int):
         rgba = b.getRgbaUnsafe(srcPos.x.floor.int, srcPos.y.floor.int)
       result.setRgbaUnsafe(x, y, rgba)
 
-proc drawFast2*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
+proc drawBlend*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
   ## Draws one image onto another using matrix with color blending.
   result = newImageNoInit(a.width, a.height)
   var matInv = mat.inverse()
@@ -206,20 +208,25 @@ proc drawFast2*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
     for x in 0 ..< a.width:
       var rgba = a.getRgbaUnsafe(x, y)
       let srcPos = matInv * vec2(x.float32, y.float32)
+
       if b.inside(srcPos.x.floor.int, srcPos.y.floor.int):
         let rgba2 = b.getRgbaUnsafe(srcPos.x.floor.int, srcPos.y.floor.int)
         if blendMode.hasEffect(rgba2):
           rgba = blendMode.mix(rgba, rgba2)
       result.setRgbaUnsafe(x, y, rgba)
 
-proc drawFast3*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
+proc drawBlendSmooth*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
   ## Draws one image onto another using matrix with color blending.
   result = newImageNoInit(a.width, a.height)
+
+  # TODO: Implement mip maps.
+
   var matInv = mat.inverse()
   for y in 0 ..< a.height:
     for x in 0 ..< a.width:
       var rgba = a.getRgbaUnsafe(x, y)
       let srcPos = matInv * vec2(x.float32, y.float32)
+
       if b.inside1px(srcPos.x, srcPos.y):
         let rgba2 = b.getRgbaSmooth(srcPos.x, srcPos.y)
         if blendMode.hasEffect(rgba2):
@@ -228,19 +235,17 @@ proc drawFast3*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
 
 proc draw*(a: Image, b: Image, mat: Mat3, blendMode = bmNormal): Image =
   ## Draws one image onto another using matrix with color blending.
+
+  # Decide which ones of the draws best fit current parameters.
   let ns = [-1.float32, 0, 1]
   if mat[0, 0] in ns and mat[0, 1] in ns and
     mat[1, 0] in ns and mat[1, 1] in ns and
-    mat[2, 0].fraction == 0.0 and mat[2, 1].fraction == 0.0:
-      if blendMode == bmCopy:
-        return drawFast1(
-          a, b, mat
-        )
+    mat[2, 0].fractional == 0.0 and mat[2, 1].fractional == 0.0:
+      if blendMode == bmOverwrite:
+        return drawOverwrite(a, b, mat)
       else:
-        return drawFast2(
-          a, b, mat, blendMode
-        )
-  return drawFast3(a, b, mat, blendMode)
+        return drawBlend(a, b, mat, blendMode)
+  return drawBlendSmooth(a, b, mat, blendMode)
 
 proc draw*(a: Image, b: Image, pos = vec2(0, 0), blendMode = bmNormal): Image =
   a.draw(b, translate(pos), blendMode)

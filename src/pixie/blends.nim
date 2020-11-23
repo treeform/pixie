@@ -22,7 +22,7 @@ type BlendMode* = enum
   bmLuminosity
 
   bmMask  ## Special blend mode that is used for masking
-  bmCopy  ## Special that does not blend but copies the pixels from target.
+  bmOverwrite  ## Special that does not blend but copies the pixels from target.
   bmSubtractMask ## Inverse mask
 
 proc parseBlendMode*(s: string): BlendMode =
@@ -45,8 +45,6 @@ proc parseBlendMode*(s: string): BlendMode =
     of "SATURATION": bmSaturation
     of "COLOR": bmColor
     of "LUMINOSITY": bmLuminosity
-    of "MASK": bmMask
-    of "COPY": bmCopy
     else: bmNormal
 
 proc `+`*(a, b: Color): Color {.inline.} =
@@ -99,7 +97,7 @@ proc mix*(blendMode: BlendMode, target, blend: Color): Color =
     result.b = target.b
     result.a = target.a * (1 - blend.a)
     return
-  elif blendMode == bmCopy:
+  elif blendMode == bmOverwrite:
     result = blend
     return
 
