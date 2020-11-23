@@ -250,9 +250,6 @@ proc draw*(a: Image, b: Image, mat: Mat3, blendMode = bmNormal): Image =
 proc draw*(a: Image, b: Image, pos = vec2(0, 0), blendMode = bmNormal): Image =
   a.draw(b, translate(pos), blendMode)
 
-
-# TODO: Make methods bellow not be in place.
-
 proc blur*(image: Image, radius: float32): Image =
   ## Applies Gaussian blur to the image given a radius.
   let radius = (radius).int
@@ -366,8 +363,9 @@ proc shadow*(
   result.fill(color.rgba)
   return result.draw(shadow, blendMode = bmMask)
 
-proc invertColor*(image: Image) =
+proc invertColor*(image: Image): Image =
   ## Flips the image around the Y axis.
+  result = newImageNoInit(image.width, image.height)
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       var rgba = image.getRgbaUnsafe(x, y)
@@ -375,49 +373,14 @@ proc invertColor*(image: Image) =
       rgba.g = 255 - rgba.g
       rgba.b = 255 - rgba.b
       rgba.a = 255 - rgba.a
-      image.setRgbaUnsafe(x, y, rgba)
+      result.setRgbaUnsafe(x, y, rgba)
 
-proc applyOpacity*(image: Image, opacity: float32) =
+proc applyOpacity*(image: Image, opacity: float32): Image =
   ## Multiplies alpha of the image by opacity.
+  result = newImageNoInit(image.width, image.height)
   let op = (255 * opacity).uint8
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       var rgba = image.getRgbaUnsafe(x, y)
       rgba.a = ((rgba.a.uint32 * op.uint32) div 255).clamp(0, 255).uint8
-      image.setRgbaUnsafe(x, y, rgba)
-
-# TODO: Make this method use path's AA lines.
-proc line*(image: Image, at, to: Vec2, rgba: ColorRGBA) =
-  ## Draws a line from one at vec to to vec.
-  let
-    dx = to.x - at.x
-    dy = to.y - at.y
-  var x = at.x
-  while true:
-    if dx == 0:
-      break
-    let y = at.y + dy * (x - at.x) / dx
-    image[int x, int y] =  rgba
-    if at.x < to.x:
-      x += 1
-      if x > to.x:
-        break
-    else:
-      x -= 1
-      if x < to.x:
-        break
-
-  var y = at.y
-  while true:
-    if dy == 0:
-      break
-    let x = at.x + dx * (y - at.y) / dy
-    image[int x, int y] = rgba
-    if at.y < to.y:
-      y += 1
-      if y > to.y:
-        break
-    else:
-      y -= 1
-      if y < to.y:
-        break
+      result.setRgbaUnsafe(x, y, rgba)
