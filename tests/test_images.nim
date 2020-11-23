@@ -1,11 +1,11 @@
-import pixie, chroma, vmath, os
+import pixie, chroma, vmath, strutils, os
 
 proc writeAndCheck(image: Image, fileName: string) =
   image.writeFile(fileName)
-  let masterFileName = fileName.changeFileExt(".master.png")
+  let masterFileName = fileName.replace("tests/images/", "tests/images/masters/")
   if not existsFile(masterFileName):
     echo "Master file: " & masterFileName & " not found!"
-    return
+    quit(-1)
   var master = readImage(fileName)
   assert image.width == master.width
   assert image.height == master.height
@@ -16,7 +16,7 @@ block:
   a.fill(rgba(0, 0, 0, 0))
   var b = newImage(50, 50)
   b.fill(rgba(255, 92, 0, 255))
-  var c = a.drawFast3(
+  var c = a.drawBlendSmooth(
     b,
     translate(vec2(50, 50)) * rotationMat3(0.2789281382) * translate(vec2(-25, -25)),
     bmNormal
@@ -28,7 +28,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   var b = newImage(50, 50)
   b.fill(rgba(255, 92, 0, 255))
-  var c = a.drawFast3(
+  var c = a.drawBlendSmooth(
     b,
     translate(vec2(50, 50)) * rotationMat3(0.2789281382) * translate(vec2(-25, -25)),
     bmNormal
@@ -41,7 +41,7 @@ block:
   a.fill(rgba(0, 0, 0, 0))
   var b = newImage(50, 50)
   b.fill(rgba(255, 92, 0, 255))
-  var c = a.drawFast3(
+  var c = a.drawBlendSmooth(
     b,
     translate(vec2(50, 50)) * rotationMat3(0.2789281382) * translate(vec2(-25, -25)),
     bmNormal
@@ -67,24 +67,24 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   var b = newImage(100, 100)
   b.fill(rgba(0, 255, 0, 255))
-  var c = a.drawFast1(b, translate(vec2(25, 25)))
-  c.writeAndCheck("tests/images/drawFast1.png")
+  var c = a.drawOverwrite(b, translate(vec2(25, 25)))
+  c.writeAndCheck("tests/images/drawOverwrite.png")
 
 block:
   var a = newImage(100, 100)
   a.fill(rgba(255, 0, 0, 255))
   var b = newImage(100, 100)
   b.fill(rgba(0, 255, 0, 255))
-  var c = a.drawFast2(b, translate(vec2(25, 25)), bmCopy)
-  c.writeAndCheck("tests/images/drawFast2.png")
+  var c = a.drawBlend(b, translate(vec2(25, 25)), bmOverwrite)
+  c.writeAndCheck("tests/images/drawBlend.png")
 
 block:
   var a = newImage(100, 100)
   a.fill(rgba(255, 0, 0, 255))
   var b = newImage(100, 100)
   b.fill(rgba(0, 255, 0, 255))
-  var c = a.drawFast3(b, translate(vec2(25.15, 25.15)), bmCopy)
-  c.writeAndCheck("tests/images/drawFast3.png")
+  var c = a.drawBlendSmooth(b, translate(vec2(25.15, 25.15)), bmOverwrite)
+  c.writeAndCheck("tests/images/drawBlendSmooth.png")
 
 block:
   var a = newImage(100, 100)
@@ -92,5 +92,5 @@ block:
   var b = newImage(100, 100)
   b.fill(rgba(0, 255, 0, 255))
 
-  var c = a.drawFast1(b, translate(vec2(25, 25)) * rotationMat3(PI/2))
-  c.writeAndCheck("tests/images/drawFast1Rot.png")
+  var c = a.drawOverwrite(b, translate(vec2(25, 25)) * rotationMat3(PI/2))
+  c.writeAndCheck("tests/images/drawOverwriteRot.png")
