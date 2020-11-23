@@ -13,6 +13,25 @@ proc newImage*(width, height: int): Image =
   result.height = height
   result.data = newSeq[ColorRGBA](width * height)
 
+proc newSeqNoInit*[T](len: Natural): seq[T] =
+  ## Creates a new sequence of type ``seq[T]`` with length ``len``.
+  ## Skips initialization of memory to zero.
+  result = newSeqOfCap[T](len)
+  when defined(nimSeqsV2):
+    cast[ptr int](addr result)[] = len
+  else:
+    type GenericSeq = ref object
+        len, reserved: int
+    var s = cast[GenericSeq](result)
+    s.len = len
+
+proc newImageNoInit*(width, height: int): Image =
+  ## Creates a new image with appropriate dimensions.
+  result = Image()
+  result.width = width
+  result.height = height
+  result.data = newSeq[ColorRGBA](width * height)
+
 proc copy*(image: Image): Image =
   ## Copies an image creating a new image.
   result = newImage(image.width, image.height)
@@ -169,7 +188,7 @@ proc hasEffect*(blendMode: BlendMode, rgba: ColorRGBA): bool =
 
 proc drawFast1*(a: Image, b: Image, mat: Mat3): Image =
   ## Draws one image onto another using integer x,y offset with COPY.
-  result = newImage(a.width, a.height)
+  result = newImageNoInit(a.width, a.height)
   var matInv = mat.inverse()
   for y in 0 ..< a.height:
     for x in 0 ..< a.width:
@@ -181,11 +200,10 @@ proc drawFast1*(a: Image, b: Image, mat: Mat3): Image =
 
 proc drawFast2*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
   ## Draws one image onto another using matrix with color blending.
-  result = newImage(a.width, a.height)
+  result = newImageNoInit(a.width, a.height)
   var matInv = mat.inverse()
   for y in 0 ..< a.height:
     for x in 0 ..< a.width:
-      #echo x, ", ", y
       var rgba = a.getRgbaUnsafe(x, y)
       let srcPos = matInv * vec2(x.float32, y.float32)
       if b.inside(srcPos.x.floor.int, srcPos.y.floor.int):
@@ -196,7 +214,7 @@ proc drawFast2*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
 
 proc drawFast3*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
   ## Draws one image onto another using matrix with color blending.
-  result = newImage(a.width, a.height)
+  result = newImageNoInit(a.width, a.height)
   var matInv = mat.inverse()
   for y in 0 ..< a.height:
     for x in 0 ..< a.width:
