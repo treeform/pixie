@@ -2,7 +2,7 @@ import pixie/fileformats/png, strformat, pngsuite, pixie/common
 
 for file in pngSuiteFiles:
   let
-    original = cast[seq[uint8]](readFile(&"tests/data/pngsuite/{file}.png"))
+    original = cast[seq[uint8]](readFile(&"tests/images/pngsuite/{file}.png"))
     decoded = decodePng(original)
     encoded = encodePng(decoded)
     decoded2 = decodePng(cast[seq[uint8]](encoded))
@@ -23,7 +23,7 @@ for channels in 1 .. 4:
 
 for file in pngSuiteCorruptedFiles:
   try:
-    discard decodePng(readFile(&"tests/data/pngsuite/{file}.png"))
+    discard decodePng(readFile(&"tests/images/pngsuite/{file}.png"))
     doAssert false
   except PixieError:
     discard

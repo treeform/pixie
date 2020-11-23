@@ -4,7 +4,7 @@ randomize()
 
 for i in 0 ..< 10_000:
   let file = pngSuiteFiles[rand(pngSuiteFiles.len - 1)]
-  var data = cast[seq[uint8]](readFile(&"tests/data/pngsuite/{file}.png"))
+  var data = cast[seq[uint8]](readFile(&"tests/images/pngsuite/{file}.png"))
   let
     pos = 29 + rand(data.len - 30)
     value = rand(255).uint8
