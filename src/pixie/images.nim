@@ -241,6 +241,8 @@ proc drawBlend*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
         if blendMode.allowCopy():
           var rgba = a.getRgbaUnsafe(x, y)
           result.setRgbaUnsafe(x, y, rgba)
+        else:
+          result.setRgbaUnsafe(x, y, rgba(0,0,0,0))
 
 proc drawBlendSmooth*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
   ## Draws one image onto another using matrix with color blending.
@@ -263,6 +265,8 @@ proc drawBlendSmooth*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Imag
         if blendMode.allowCopy():
           var rgba = a.getRgbaUnsafe(x, y)
           result.setRgbaUnsafe(x, y, rgba)
+        else:
+          result.setRgbaUnsafe(x, y, rgba(0,0,0,0))
 
 
 proc draw*(a: Image, b: Image, mat: Mat3, blendMode = bmNormal): Image =
