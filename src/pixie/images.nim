@@ -82,18 +82,31 @@ proc `[]=`*(image: Image, x, y: int, rgba: ColorRGBA) {.inline.} =
   if image.inside(x, y):
     image.setRgbaUnsafe(x, y, rgba)
 
-proc fill*(image: Image, rgba: ColorRgba) =
+proc newImageFill*(width, height: int, rgba: ColorRgba): Image =
   ## Fills the image with a solid color.
-  for i in 0 ..< image.data.len:
-    image.data[i] = rgba
+  result = newImageNoInit(width, height)
+  for y in 0 ..< result.height:
+    for x in 0 ..< result.width:
+      result.setRgbaUnsafe(x, y, rgba)
 
-proc invert*(image: Image) =
+proc fill*(image: Image, rgba: ColorRgba): Image =
+  ## Fills the image with a solid color.
+  result = newImageNoInit(image.width, image.height)
+  for y in 0 ..< result.height:
+    for x in 0 ..< result.width:
+      result.setRgbaUnsafe(x, y, rgba)
+
+proc invert*(image: Image): Image =
   ## Inverts all of the colors and alpha.
-  for rgba in image.data.mitems:
-    rgba.r = 255 - rgba.r
-    rgba.g = 255 - rgba.g
-    rgba.b = 255 - rgba.b
-    rgba.a = 255 - rgba.a
+  result = newImageNoInit(image.width, image.height)
+  for y in 0 ..< image.height:
+    for x in 0 ..< image.width:
+      var rgba = image.getRgbaUnsafe(x, y)
+      rgba.r = 255 - rgba.r
+      rgba.g = 255 - rgba.g
+      rgba.b = 255 - rgba.b
+      rgba.a = 255 - rgba.a
+      result.setRgbaUnsafe(x, y, rgba)
 
 proc subImage*(image: Image, x, y, w, h: int): Image =
   ## Gets a sub image of the main image.
@@ -183,8 +196,18 @@ proc hasEffect*(blendMode: BlendMode, rgba: ColorRGBA): bool =
     rgba.a != 255
   of bmOverwrite:
     true
+  of bmIntersectMask:
+    true
   else:
     rgba.a > 0
+
+proc allowCopy*(blendMode: BlendMode): bool =
+  ## Returns true if applying rgba with current blend mode has effect.
+  case blendMode
+  of bmIntersectMask:
+    false
+  else:
+    true
 
 proc drawOverwrite*(a: Image, b: Image, mat: Mat3): Image =
   ## Draws one image onto another using integer x,y offset with COPY.
@@ -195,7 +218,6 @@ proc drawOverwrite*(a: Image, b: Image, mat: Mat3): Image =
     for x in 0 ..< a.width:
       var rgba = a.getRgbaUnsafe(x, y)
       let srcPos = matInv * vec2(x.float32, y.float32)
-
       if b.inside(srcPos.x.floor.int, srcPos.y.floor.int):
         rgba = b.getRgbaUnsafe(srcPos.x.floor.int, srcPos.y.floor.int)
       result.setRgbaUnsafe(x, y, rgba)
@@ -206,14 +228,19 @@ proc drawBlend*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
   var matInv = mat.inverse()
   for y in 0 ..< a.height:
     for x in 0 ..< a.width:
-      var rgba = a.getRgbaUnsafe(x, y)
-      let srcPos = matInv * vec2(x.float32, y.float32)
 
+      let srcPos = matInv * vec2(x.float32, y.float32)
       if b.inside(srcPos.x.floor.int, srcPos.y.floor.int):
+        var rgba = a.getRgbaUnsafe(x, y)
         let rgba2 = b.getRgbaUnsafe(srcPos.x.floor.int, srcPos.y.floor.int)
         if blendMode.hasEffect(rgba2):
           rgba = blendMode.mix(rgba, rgba2)
-      result.setRgbaUnsafe(x, y, rgba)
+        result.setRgbaUnsafe(x, y, rgba)
+
+      else:
+        if blendMode.allowCopy():
+          var rgba = a.getRgbaUnsafe(x, y)
+          result.setRgbaUnsafe(x, y, rgba)
 
 proc drawBlendSmooth*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
   ## Draws one image onto another using matrix with color blending.
@@ -224,14 +251,19 @@ proc drawBlendSmooth*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Imag
   var matInv = mat.inverse()
   for y in 0 ..< a.height:
     for x in 0 ..< a.width:
-      var rgba = a.getRgbaUnsafe(x, y)
-      let srcPos = matInv * vec2(x.float32, y.float32)
 
+      let srcPos = matInv * vec2(x.float32, y.float32)
       if b.inside1px(srcPos.x, srcPos.y):
+        var rgba = a.getRgbaUnsafe(x, y)
         let rgba2 = b.getRgbaSmooth(srcPos.x, srcPos.y)
         if blendMode.hasEffect(rgba2):
           rgba = blendMode.mix(rgba, rgba2)
-      result.setRgbaUnsafe(x, y, rgba)
+        result.setRgbaUnsafe(x, y, rgba)
+      else:
+        if blendMode.allowCopy():
+          var rgba = a.getRgbaUnsafe(x, y)
+          result.setRgbaUnsafe(x, y, rgba)
+
 
 proc draw*(a: Image, b: Image, mat: Mat3, blendMode = bmNormal): Image =
   ## Draws one image onto another using matrix with color blending.
@@ -359,21 +391,8 @@ proc shadow*(
     shadow = shadow.spread(spread)
   if blur > 0:
     shadow = shadow.blur(blur)
-  result = newImage(mask.width, mask.height)
-  result.fill(color.rgba)
+  result = newImageFill(mask.width, mask.height, color.rgba)
   return result.draw(shadow, blendMode = bmMask)
-
-proc invertColor*(image: Image): Image =
-  ## Flips the image around the Y axis.
-  result = newImageNoInit(image.width, image.height)
-  for y in 0 ..< image.height:
-    for x in 0 ..< image.width:
-      var rgba = image.getRgbaUnsafe(x, y)
-      rgba.r = 255 - rgba.r
-      rgba.g = 255 - rgba.g
-      rgba.b = 255 - rgba.b
-      rgba.a = 255 - rgba.a
-      result.setRgbaUnsafe(x, y, rgba)
 
 proc applyOpacity*(image: Image, opacity: float32): Image =
   ## Multiplies alpha of the image by opacity.

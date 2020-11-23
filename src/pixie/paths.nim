@@ -587,11 +587,10 @@ proc fillPolygons*(
     polys: seq[seq[Vec2]],
     color: ColorRGBA,
     quality = 4,
-  ) =
+  ): Image =
   const ep = 0.0001 * PI
 
-  if polys.len == 0:
-    image.fill(rgba(0, 0, 0, 0))
+  result = newImage(image.width, image.height)
 
   proc scanLineHits(
     polys: seq[seq[Vec2]],
@@ -616,9 +615,9 @@ proc fillPolygons*(
 
   var hits: seq[(float32, bool)]
 
-  var alphas = newSeq[float32](image.width)
-  for y in 0 ..< image.height:
-    for x in 0 ..< image.width:
+  var alphas = newSeq[float32](result.width)
+  for y in 0 ..< result.height:
+    for x in 0 ..< result.width:
       alphas[x] = 0
     for m in 0 ..< quality:
       polys.scanLineHits(hits, y, float32(m)/float32(quality))
@@ -627,7 +626,7 @@ proc fillPolygons*(
       var
         penFill = 0.0
         curHit = 0
-      for x in 0 ..< image.width:
+      for x in 0 ..< result.width:
         var penEdge = penFill
         while true:
           if curHit >= hits.len:
@@ -644,11 +643,11 @@ proc fillPolygons*(
             penEdge -= 1.0 - cover
           inc curHit
         alphas[x] += penEdge
-    for x in 0 ..< image.width:
+    for x in 0 ..< result.width:
       var a = clamp(abs(alphas[x]) / float32(quality), 0.0, 1.0)
       var colorWithAlpha = color
       colorWithAlpha.a = uint8(clamp(a, 0, 1) * 255.0)
-      image[x, y] = colorWithAlpha
+      result[x, y] = colorWithAlpha
 
 {.pop.}
 
@@ -656,7 +655,7 @@ proc fillPath*(
     image: Image,
     path: Path,
     color: ColorRGBA
-  ) =
+  ): Image =
   let polys = commandsToPolygons(path.commands)
   image.fillPolygons(polys, color)
 
@@ -664,7 +663,7 @@ proc fillPath*(
     image: Image,
     path: string,
     color: ColorRGBA
-  ) =
+  ): Image =
   image.fillPath(parsePath(path), color)
 
 proc fillPath*(
@@ -672,7 +671,7 @@ proc fillPath*(
     path: string,
     color: ColorRGBA,
     pos: Vec2
-  ) =
+  ): Image =
   var polys = commandsToPolygons(parsePath(path).commands)
   for poly in polys.mitems:
     for i, p in poly.mpairs:
@@ -684,7 +683,7 @@ proc fillPath*(
     path: Path,
     color: ColorRGBA,
     mat: Mat3
-  ) =
+  ): Image =
   var polys = commandsToPolygons(path.commands)
   for poly in polys.mitems:
     for i, p in poly.mpairs:
@@ -696,7 +695,7 @@ proc fillPath*(
     path: string,
     color: ColorRGBA,
     mat: Mat3
-  ) =
+  ): Image =
   image.fillPath(parsePath(path), color, mat)
 
 proc strokePath*(
@@ -707,7 +706,7 @@ proc strokePath*(
     # strokeLocation: StrokeLocation,
     # strokeCap: StorkeCap,
     # strokeJoin: StorkeJoin
-  ) =
+  ): Image =
   let polys = commandsToPolygons(path.commands)
   let (strokeL, strokeR) = (strokeWidth/2, strokeWidth/2)
   let polys2 = strokePolygons(polys, strokeL, strokeR)
@@ -718,7 +717,7 @@ proc strokePath*(
     path: string,
     color: ColorRGBA,
     strokeWidth: float32
-  ) =
+  ): Image =
   image.strokePath(parsePath(path), color, strokeWidth)
 
 proc strokePath*(
@@ -727,7 +726,7 @@ proc strokePath*(
     color: ColorRGBA,
     strokeWidth: float32,
     pos: Vec2
-  ) =
+  ): Image =
   var polys = commandsToPolygons(parsePath(path).commands)
   let (strokeL, strokeR) = (strokeWidth/2, strokeWidth/2)
   var polys2 = strokePolygons(polys, strokeL, strokeR)
@@ -742,7 +741,7 @@ proc strokePath*(
     color: ColorRGBA,
     strokeWidth: float32,
     mat: Mat3
-  ) =
+  ): Image =
   var polys = commandsToPolygons(parsePath(path).commands)
   let (strokeL, strokeR) = (strokeWidth/2, strokeWidth/2)
   var polys2 = strokePolygons(polys, strokeL, strokeR)
@@ -858,7 +857,6 @@ proc arcTo*(path: Path, x1, y1, x2, y2, r: float32) =
         path.at.y
       ]
     ))
-
 
 proc ellipse*(path: Path) =
   ## Adds an elliptical arc to the path which is centered at (x, y) position with the radii radiusX and radiusY starting at startAngle and ending at endAngle going in the given direction by anticlockwise (defaulting to clockwise).

@@ -24,6 +24,8 @@ type BlendMode* = enum
   bmMask  ## Special blend mode that is used for masking
   bmOverwrite  ## Special that does not blend but copies the pixels from target.
   bmSubtractMask ## Inverse mask
+  bmIntersectMask
+  bmExcludeMask
 
 proc parseBlendMode*(s: string): BlendMode =
   case s:
@@ -96,6 +98,18 @@ proc mix*(blendMode: BlendMode, target, blend: Color): Color =
     result.g = target.g
     result.b = target.b
     result.a = target.a * (1 - blend.a)
+    return
+  elif blendMode == bmIntersectMask:
+    result.r = target.r
+    result.g = target.g
+    result.b = target.b
+    result.a = target.a * blend.a
+    return
+  elif blendMode == bmExcludeMask:
+    result.r = target.r
+    result.g = target.g
+    result.b = target.b
+    result.a = abs(target.a - blend.a)
     return
   elif blendMode == bmOverwrite:
     result = blend
