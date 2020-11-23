@@ -20,10 +20,7 @@ proc newSeqNoInit*[T](len: Natural): seq[T] =
   when defined(nimSeqsV2):
     cast[ptr int](addr result)[] = len
   else:
-    type GenericSeq = ref object
-        len, reserved: int
-    var s = cast[GenericSeq](result)
-    s.len = len
+    cast[ref int](result) = len
 
 proc newImageNoInit*(width, height: int): Image =
   ## Creates a new image with appropriate dimensions.
