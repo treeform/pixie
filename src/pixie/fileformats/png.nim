@@ -469,7 +469,7 @@ proc encodePng*(
 
   let compressed =
     try:
-      compress(filtered, DefaultCompression, dfZlib)
+      compress(filtered, BestSpeed, dfZlib)
     except ZippyError:
       raise newException(
         PixieError, "Unexpected error compressing PNG image data"
