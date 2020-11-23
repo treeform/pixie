@@ -27,28 +27,6 @@ type BlendMode* = enum
   bmIntersectMask
   bmExcludeMask
 
-proc parseBlendMode*(s: string): BlendMode =
-  case s:
-    of "NORMAL": bmNormal
-    of "DARKEN": bmDarken
-    of "MULTIPLY": bmMultiply
-    of "LINEAR_BURN": bmLinearBurn
-    of "COLOR_BURN": bmColorBurn
-    of "LIGHTEN": bmLighten
-    of "SCREEN": bmScreen
-    of "LINEAR_DODGE": bmLinearDodge
-    of "COLOR_DODGE": bmColorDodge
-    of "OVERLAY": bmOverlay
-    of "SOFT_LIGHT": bmSoftLight
-    of "HARD_LIGHT": bmHardLight
-    of "DIFFERENCE": bmDifference
-    of "EXCLUSION": bmExclusion
-    of "HUE": bmHue
-    of "SATURATION": bmSaturation
-    of "COLOR": bmColor
-    of "LUMINOSITY": bmLuminosity
-    else: bmNormal
-
 proc `+`*(a, b: Color): Color {.inline.} =
   result.r = a.r + b.r
   result.g = a.g + b.g
