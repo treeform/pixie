@@ -404,3 +404,15 @@ proc applyOpacity*(image: Image, opacity: float32): Image =
       var rgba = image.getRgbaUnsafe(x, y)
       rgba.a = ((rgba.a.uint32 * op.uint32) div 255).clamp(0, 255).uint8
       result.setRgbaUnsafe(x, y, rgba)
+
+proc sharpOpacity*(image: Image): Image =
+  ## Sharpens the opacity to extreme.
+  ## A = 0 stays 0. Anything else turns into 255.
+  result = newImageNoInit(image.width, image.height)
+  for y in 0 ..< image.height:
+    for x in 0 ..< image.width:
+      var rgba = image.getRgbaUnsafe(x, y)
+      if rgba.a == 0:
+        result.setRgbaUnsafe(x, y, rgba(0, 0, 0, 0))
+      else:
+        result.setRgbaUnsafe(x, y, rgba(255, 255, 255, 255))
