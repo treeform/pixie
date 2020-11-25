@@ -1,10 +1,6 @@
-import vmath, images, chroma, strutils, algorithm
+import vmath, images, chroma, strutils, algorithm, common
 
 type
-  Segment* = object
-    ## A math segment from point "at" to point "to"
-    at*: Vec2
-    to*: Vec2
 
   PathCommandKind* = enum
     ## Type of path commands
@@ -20,10 +16,6 @@ type
   Path* = ref object
     at*: Vec2
     commands*: seq[PathCommand]
-
-proc segment(at, to: Vec2): Segment =
-  result.at = at
-  result.to = to
 
 proc newPath*(): Path =
   result = Path()
@@ -502,27 +494,6 @@ iterator zipwise*[T](s: seq[T]): (T, T) =
     yield(s[i], s[i + 1])
   if s.len > 0:
     yield(s[^1], s[0])
-
-proc intersects*(a, b: Segment, at: var Vec2): bool =
-  ## Checks if the a segment intersects b segment.
-  ## If it returns true, at will have point of intersection
-  var s1x, s1y, s2x, s2y: float32
-  s1x = a.to.x - a.at.x
-  s1y = a.to.y - a.at.y
-  s2x = b.to.x - b.at.x
-  s2y = b.to.y - b.at.y
-
-  var s, t: float32
-  s = (-s1y * (a.at.x - b.at.x) + s1x * (a.at.y - b.at.y)) /
-      (-s2x * s1y + s1x * s2y)
-  t = (s2x * (a.at.y - b.at.y) - s2y * (a.at.x - b.at.x)) /
-      (-s2x * s1y + s1x * s2y)
-
-  if s >= 0 and s < 1 and t >= 0 and t < 1:
-    at.x = a.at.x + (t * s1x)
-    at.y = a.at.y + (t * s1y)
-    return true
-  return false
 
 proc strokePolygons*(ps: seq[seq[Vec2]], strokeWidthR, strokeWidthL: float32): seq[seq[Vec2]] =
   ## Converts simple polygons into stroked versions:

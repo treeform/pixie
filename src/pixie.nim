@@ -4,7 +4,7 @@ import pixie/images, pixie/masks, pixie/paths, pixie/common, pixie/blends,
   pixie/fileformats/bmp, pixie/fileformats/png, pixie/fileformats/jpg,
   flatty/binny, os
 
-export images, masks, paths, PixieError, blends
+export images, masks, paths, common, blends
 
 type
   FileFormat* = enum

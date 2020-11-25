@@ -77,6 +77,16 @@ timeIt "drawStepper bmNormal":
   c.writeFile("tests/images/bench.drawStepper.bmNormal.png")
   echo tmp
 
+timeIt "drawInPlace bmNormal":
+  var tmp = 0
+  for i in 0 ..< 1000:
+    var a = newImageFill(100, 100, rgba(255, 0, 0, 255))
+    var b = newImageFill(100, 100, rgba(0, 255, 0, 255))
+    a.drawInPlace(b, translate(vec2(25, 25)), bmNormal)
+    tmp += a.width * a.height
+  #a.writeFile("tests/images/bench.drawStepper.bmNormal.png")
+  echo tmp
+
 # timeIt "drawBlend bmSaturation":
 #   var tmp = 0
 #   var c: Image
