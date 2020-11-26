@@ -79,12 +79,57 @@ timeIt "drawStepper bmNormal":
 
 timeIt "drawInPlace bmNormal":
   var tmp = 0
+  var a: Image
   for i in 0 ..< 1000:
-    var a = newImageFill(100, 100, rgba(255, 0, 0, 255))
+    a = newImageFill(100, 100, rgba(255, 0, 0, 255))
     var b = newImageFill(100, 100, rgba(0, 255, 0, 255))
     a.drawInPlace(b, translate(vec2(25, 25)), bmNormal)
     tmp += a.width * a.height
-  #a.writeFile("tests/images/bench.drawStepper.bmNormal.png")
+  a.writeFile("tests/images/bench.drawInPlace.bmNormal.png")
+  echo tmp
+
+timeIt "drawUberCopy bmNormal":
+  var tmp = 0
+  var c: Image
+  for i in 0 ..< 1000:
+    var a = newImageFill(100, 100, rgba(255, 0, 0, 255))
+    var b = newImageFill(100, 100, rgba(0, 255, 0, 255))
+    c = a.drawUberCopy(b, translate(vec2(25, 25)), bmNormal)
+    tmp += c.width * c.height
+  c.writeFile("tests/images/bench.drawUberCopy.bmNormal.png")
+  echo tmp
+
+timeIt "drawUberInPlace bmNormal":
+  var tmp = 0
+  var a: Image
+  for i in 0 ..< 1000:
+    a = newImageFill(100, 100, rgba(255, 0, 0, 255))
+    var b = newImageFill(100, 100, rgba(0, 255, 0, 255))
+    a.drawUberInPlace(b, translate(vec2(25, 25)), bmNormal)
+    tmp += a.width * a.height
+  a.writeFile("tests/images/bench.drawUberInPlace.bmNormal.png")
+  echo tmp
+
+timeIt "drawUberCopy Smooth bmNormal":
+  var tmp = 0
+  var c: Image
+  for i in 0 ..< 1000:
+    var a = newImageFill(100, 100, rgba(255, 0, 0, 255))
+    var b = newImageFill(100, 100, rgba(0, 255, 0, 255))
+    c = a.drawUberCopy(b, translate(vec2(25.2, 25.2)), bmNormal)
+    tmp += c.width * c.height
+  c.writeFile("tests/images/bench.drawUberCopy.Smooth.bmNormal.png")
+  echo tmp
+
+timeIt "drawUberInPlace Smooth bmNormal":
+  var tmp = 0
+  var a: Image
+  for i in 0 ..< 1000:
+    a = newImageFill(100, 100, rgba(255, 0, 0, 255))
+    var b = newImageFill(100, 100, rgba(0, 255, 0, 255))
+    a.drawUberInPlace(b, translate(vec2(25.2, 25.2)), bmNormal)
+    tmp += a.width * a.height
+  a.writeFile("tests/images/bench.drawUberInPlace.Smooth.bmNormal.png")
   echo tmp
 
 # timeIt "drawBlend bmSaturation":
