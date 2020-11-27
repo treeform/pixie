@@ -155,29 +155,62 @@ proc magnifyBy2*(image: Image, scale2x: int): Image =
 proc magnifyBy2*(image: Image): Image =
   image.magnifyBy2(2)
 
+proc flipHorizontal*(image: Image): Image =
+  ## Flips the image around the Y axis.
+  result = newImage(image.width, image.height)
+  for y in 0 ..< image.height:
+    for x in 0 ..< image.width:
+      let rgba = image.getRgbaUnsafe(x, y)
+      result.setRgbaUnsafe(image.width - x - 1, y, rgba)
+
+proc flipVertical*(image: Image): Image =
+  ## Flips the image around the X axis.
+  result = newImage(image.width, image.height)
+  for y in 0 ..< image.height:
+    for x in 0 ..< image.width:
+      let rgba = image.getRgbaUnsafe(x, y)
+      result.setRgbaUnsafe(x, image.height - y - 1, rgba)
+
 func lerp(a, b: Color, v: float32): Color {.inline.} =
   result.r = lerp(a.r, b.r, v)
   result.g = lerp(a.g, b.g, v)
   result.b = lerp(a.b, b.b, v)
   result.a = lerp(a.a, b.a, v)
 
+proc toAlphy*(c: Color): Color =
+  ## Converts a color to premultiplied alpha from straight.
+  result.r = c.r * c.a
+  result.g = c.g * c.a
+  result.b = c.b * c.a
+  result.a = c.a
+
+proc fromAlphy*(c: Color): Color =
+  ## Converts a color to from premultiplied alpha to straight.
+  if c.a == 0:
+    return
+  result.r = c.r / c.a
+  result.g = c.g / c.a
+  result.b = c.b / c.a
+  result.a = c.a
+
+proc toAlphy*(image: Image) =
+  ## Converts an image to premultiplied alpha from straight.
+  for c in image.data.mitems:
+    c.g = ((c.r.uint32 * c.a.uint32) div 255).uint8
+    c.r = ((c.r.uint32 * c.a.uint32) div 255).uint8
+    c.b = ((c.r.uint32 * c.a.uint32) div 255).uint8
+
+proc fromAlphy*(image: Image) =
+  ## Converts an image to from premultiplied alpha to straight.
+  for c in image.data.mitems:
+    if c.a == 0:
+      continue
+    c.r = ((c.r.int32 * 255) div c.a.int32).uint8
+    c.g = ((c.g.int32 * 255) div c.a.int32).uint8
+    c.b = ((c.b.int32 * 255) div c.a.int32).uint8
+
 proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA {.inline.} =
   ## Gets a pixel as (x, y) floats.
-
-  proc toAlphy(c: Color): Color =
-    result.r = c.r * c.a
-    result.g = c.g * c.a
-    result.b = c.b * c.a
-    result.a = c.a
-
-  proc fromAlphy(c: Color): Color =
-    if c.a == 0:
-      return
-    result.r = c.r / c.a
-    result.g = c.g / c.a
-    result.b = c.b / c.a
-    result.a = c.a
-
   var
     x = x # TODO: look at maybe +0.5
     y = y # TODO: look at maybe +0.5
