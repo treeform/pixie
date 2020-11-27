@@ -3,7 +3,7 @@ import pixie, chroma, vmath, strutils, os
 proc writeAndCheck(image: Image, fileName: string) =
   image.writeFile(fileName)
   let masterFileName = fileName.replace("tests/images/", "tests/images/masters/")
-  if not existsFile(masterFileName):
+  if not fileExists(masterFileName):
     echo "Master file: " & masterFileName & " not found!"
     quit(-1)
   var master = readImage(fileName)

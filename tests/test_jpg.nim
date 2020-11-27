@@ -1,4 +1,4 @@
-import pixie/fileformats/jpg
+import pixie/fileformats/jpgstb
 
 let original = readFile("tests/images/jpg/jpeg420exif.jpg")
 
