@@ -1,7 +1,7 @@
 import pixie/fileformats/png, stb_image/read as stbi, stb_image/write as stbr,
   fidget/opengl/perf, nimPNG
 
-let data = readFile("tests/data/lenna.png")
+let data = readFile("tests/images/lenna.png")
 
 timeIt "pixie decode":
   for i in 0 ..< 100:
