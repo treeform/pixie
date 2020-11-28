@@ -12,8 +12,8 @@ proc stbDecode*(data: string): Image =
 
 let
   original = readFile("tests/images/jpg/jpeg420exif.jpg")
-  pixieDecoded = decodeJpg(original)
   stbDecoded = stbDecode(original)
+  pixieDecoded = decodeJpg(original)
 
 doAssert pixieDecoded.width == stbDecoded.width
 doAssert pixieDecoded.height == stbDecoded.height
