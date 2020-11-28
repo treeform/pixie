@@ -6,10 +6,8 @@ type
     width*, height*: int
     data*: seq[ColorRGBA]
 
-proc draw*(a: Image, b: Image, mat: Mat3, blendMode = bmNormal): Image
-proc drawInPlace*(a: Image, b: Image, mat: Mat3, blendMode = bmNormal)
-proc draw*(a: Image, b: Image, pos = vec2(0, 0), blendMode = bmNormal): Image
-proc drawInPlace*(a: Image, b: Image, pos = vec2(0, 0), blendMode = bmNormal)
+proc draw*(a: Image, b: Image, mat: Mat3, blendMode = bmNormal)
+proc draw*(a: Image, b: Image, pos = vec2(0, 0), blendMode = bmNormal)
 
 proc newImage*(width, height: int): Image =
   ## Creates a new image with appropriate dimensions.
@@ -96,16 +94,14 @@ proc newImageFill*(width, height: int, rgba: ColorRgba): Image =
     for x in 0 ..< result.width:
       result.setRgbaUnsafe(x, y, rgba)
 
-proc fill*(image: Image, rgba: ColorRgba): Image =
+proc fill*(image: Image, rgba: ColorRgba) =
   ## Fills the image with a solid color.
-  result = newImageNoInit(image.width, image.height)
-  for y in 0 ..< result.height:
-    for x in 0 ..< result.width:
-      result.setRgbaUnsafe(x, y, rgba)
+  for y in 0 ..< image.height:
+    for x in 0 ..< image.width:
+      image.setRgbaUnsafe(x, y, rgba)
 
-proc invert*(image: Image): Image =
+proc invert*(image: Image) =
   ## Inverts all of the colors and alpha.
-  result = newImageNoInit(image.width, image.height)
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       var rgba = image.getRgbaUnsafe(x, y)
@@ -113,14 +109,14 @@ proc invert*(image: Image): Image =
       rgba.g = 255 - rgba.g
       rgba.b = 255 - rgba.b
       rgba.a = 255 - rgba.a
-      result.setRgbaUnsafe(x, y, rgba)
+      image.setRgbaUnsafe(x, y, rgba)
 
 proc subImage*(image: Image, x, y, w, h: int): Image =
   ## Gets a sub image of the main image.
   ## TODO handle images out of bounds faster
   # doAssert x >= 0 and y >= 0
   # doAssert x + w <= image.width and y + h <= image.height
-  result = newImage(w, h)
+  result = newImageNoInit(w, h)
   for y2 in 0 ..< h:
     for x2 in 0 ..< w:
       result.setRgbaUnsafe(x2, y2, image[x2 + x, y2 + y])
@@ -155,21 +151,19 @@ proc magnifyBy2*(image: Image, scale2x: int): Image =
 proc magnifyBy2*(image: Image): Image =
   image.magnifyBy2(2)
 
-proc flipHorizontal*(image: Image): Image =
+proc flipHorizontal*(image: Image) =
   ## Flips the image around the Y axis.
-  result = newImage(image.width, image.height)
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       let rgba = image.getRgbaUnsafe(x, y)
-      result.setRgbaUnsafe(image.width - x - 1, y, rgba)
+      image.setRgbaUnsafe(image.width - x - 1, y, rgba)
 
-proc flipVertical*(image: Image): Image =
+proc flipVertical*(image: Image) =
   ## Flips the image around the X axis.
-  result = newImage(image.width, image.height)
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       let rgba = image.getRgbaUnsafe(x, y)
-      result.setRgbaUnsafe(x, image.height - y - 1, rgba)
+      image.setRgbaUnsafe(x, image.height - y - 1, rgba)
 
 func lerp(a, b: Color, v: float32): Color {.inline.} =
   result.r = lerp(a.r, b.r, v)
@@ -250,379 +244,6 @@ proc allowCopy*(blendMode: BlendMode): bool =
   else:
     true
 
-proc drawOverwrite*(a: Image, b: Image, mat: Mat3): Image =
-  ## Draws one image onto another using integer x,y offset with COPY.
-  result = newImageNoInit(a.width, a.height)
-  var matInv = mat.inverse()
-  # TODO: Alternative mem-copies from a and b as scan down.
-  for y in 0 ..< a.height:
-    for x in 0 ..< a.width:
-      var rgba = a.getRgbaUnsafe(x, y)
-      let srcPos = matInv * vec2(x.float32, y.float32)
-      if b.inside(srcPos.x.floor.int, srcPos.y.floor.int):
-        rgba = b.getRgbaUnsafe(srcPos.x.floor.int, srcPos.y.floor.int)
-      result.setRgbaUnsafe(x, y, rgba)
-
-proc drawBlend*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
-  ## Draws one image onto another using matrix with color blending.
-  result = newImageNoInit(a.width, a.height)
-  var matInv = mat.inverse()
-  for y in 0 ..< a.height:
-    for x in 0 ..< a.width:
-
-      let srcPos = matInv * vec2(x.float32, y.float32)
-      if b.inside(srcPos.x.floor.int, srcPos.y.floor.int):
-        var rgba = a.getRgbaUnsafe(x, y)
-        let rgba2 = b.getRgbaUnsafe(srcPos.x.floor.int, srcPos.y.floor.int)
-        if blendMode.hasEffect(rgba2):
-          rgba = blendMode.mix2(rgba, rgba2)
-        result.setRgbaUnsafe(x, y, rgba)
-
-      else:
-        if blendMode.allowCopy():
-          var rgba = a.getRgbaUnsafe(x, y)
-          result.setRgbaUnsafe(x, y, rgba)
-        else:
-          result.setRgbaUnsafe(x, y, rgba(0,0,0,0))
-
-proc drawBlendSmooth*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
-  ## Draws one image onto another using matrix with color blending.
-  result = newImageNoInit(a.width, a.height)
-
-  # TODO: Implement mip maps.
-
-  var matInv = mat.inverse()
-  for y in 0 ..< a.height:
-    for x in 0 ..< a.width:
-      let srcPos = matInv * vec2(x.float32, y.float32)
-      if b.inside1px(srcPos.x, srcPos.y):
-        var rgba = a.getRgbaUnsafe(x, y)
-        let rgba2 = b.getRgbaSmooth(srcPos.x, srcPos.y)
-        if blendMode.hasEffect(rgba2):
-          rgba = blendMode.mix(rgba, rgba2)
-        result.setRgbaUnsafe(x, y, rgba)
-      else:
-        if blendMode.allowCopy():
-          var rgba = a.getRgbaUnsafe(x, y)
-          result.setRgbaUnsafe(x, y, rgba)
-        else:
-          result.setRgbaUnsafe(x, y, rgba(0,0,0,0))
-
-proc drawCorrect*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
-  ## Draws one image onto another using matrix with color blending.
-  result = newImageNoInit(a.width, a.height)
-
-  var
-    matInv = mat.inverse()
-    # compute movement vectors
-    h = 0.5.float32
-    start = matInv * vec2(0 + h, 0 + h)
-    stepX = matInv * vec2(1 + h, 0 + h) - start
-    stepY = matInv * vec2(0 + h, 1 + h) - start
-    minFilterBy2 = max(stepX.length, stepY.length)
-    b = b
-
-  while minFilterBy2 > 2.0:
-    b = b.minifyBy2()
-    start /= 2
-    stepX /= 2
-    stepY /= 2
-    minFilterBy2 /= 2
-    matInv = matInv * scale(vec2(0.5, 0.5))
-
-  for y in 0 ..< a.height:
-    for x in 0 ..< a.width:
-      let srcPos = matInv * vec2(x.float32 + h, y.float32 + h)
-      var rgba = a.getRgbaUnsafe(x, y)
-      let rgba2 = b.getRgbaSmooth(srcPos.x - h, srcPos.y - h)
-      rgba = blendMode.mix(rgba, rgba2)
-      result.setRgbaUnsafe(x, y, rgba)
-
-proc drawStepper*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
-  ## Draws one image onto another using matrix with color blending.
-  result = newImageNoInit(a.width, a.height)
-
-  var
-    matInv = mat.inverse()
-    # compute movement vectors
-    h = 0.5.float32
-    start = matInv * vec2(0 + h, 0 + h)
-    stepX = matInv * vec2(1 + h, 0 + h) - start
-    stepY = matInv * vec2(0 + h, 1 + h) - start
-    minFilterBy2 = max(stepX.length, stepY.length)
-    b = b
-
-  let corners = [
-    mat * vec2(0, 0),
-    mat * vec2(b.width.float32, 0),
-    mat * vec2(b.width.float32, b.height.float32),
-    mat * vec2(0, b.height.float32)
-  ]
-
-  let lines = [
-    segment(corners[0], corners[1]),
-    segment(corners[1], corners[2]),
-    segment(corners[2], corners[3]),
-    segment(corners[3], corners[0])
-  ]
-
-  while minFilterBy2 > 2.0:
-    b = b.minifyBy2()
-    start /= 2
-    stepX /= 2
-    stepY /= 2
-    minFilterBy2 /= 2
-    matInv = matInv * scale(vec2(0.5, 0.5))
-
-  template forBlend(
-    mixer: proc(a, b: ColorRGBA): ColorRGBA,
-    getRgbaFn: proc(a: Image, x, y: float32): ColorRGBA {.inline.},
-  ) =
-    for y in 0 ..< a.height:
-      var
-        xMin = 0
-        xMax = 0
-        hasIntersection = false
-      for yOffset in [0.float32, 1]:
-        var scanLine = segment(
-          vec2(-100000, y.float32 + yOffset),
-          vec2(10000, y.float32 + yOffset)
-        )
-        for l in lines:
-          var at: Vec2
-          if intersects(l, scanLine, at):
-            if hasIntersection:
-              xMin = min(xMin, at.x.floor.int)
-              xMax = max(xMax, at.x.ceil.int)
-            else:
-              hasIntersection = true
-              xMin = at.x.floor.int
-              xMax = at.x.ceil.int
-
-      xMin = xMin.clamp(0, a.width)
-      xMax = xMax.clamp(0, a.width)
-
-      # for x in 0 ..< xMin:
-      #   result.setRgbaUnsafe(x, y, a.getRgbaUnsafe(x, y))
-      if xMin > 0:
-        copyMem(result.getAddr(0, y), a.getAddr(0, y), 4*xMin)
-
-      for x in xMin ..< xMax:
-        let srcPos = start + stepX * float32(x) + stepY * float32(y)
-        #let srcPos = matInv * vec2(x.float32 + h, y.float32 + h)
-        var rgba = a.getRgbaUnsafe(x, y)
-        let rgba2 = b.getRgbaFn(srcPos.x - h, srcPos.y - h)
-        rgba = mixer(rgba, rgba2)
-        result.setRgbaUnsafe(x, y, rgba)
-
-      #for x in xMax ..< a.width:
-      #  result.setRgbaUnsafe(x, y, a.getRgbaUnsafe(x, y))
-      if a.width - xMax > 0:
-        copyMem(result.getAddr(xMax, y), a.getAddr(xMax, y), 4*(a.width - xMax))
-
-  proc getRgbaUnsafe(a: Image, x, y: float32): ColorRGBA {.inline.} =
-    a.getRgbaUnsafe(x.round.int, y.round.int)
-
-  if stepX.length == 1.0 and stepY.length == 1.0 and
-      mat[2, 0].fractional == 0.0 and mat[2, 1].fractional == 0.0:
-    #echo "copy non-smooth"
-    case blendMode
-    of bmNormal: forBlend(blendNormal, getRgbaUnsafe)
-    of bmDarken: forBlend(blendDarken, getRgbaUnsafe)
-    of bmMultiply: forBlend(blendMultiply, getRgbaUnsafe)
-    of bmLinearBurn: forBlend(blendLinearBurn, getRgbaUnsafe)
-    of bmColorBurn: forBlend(blendColorBurn, getRgbaUnsafe)
-    of bmLighten: forBlend(blendLighten, getRgbaUnsafe)
-    of bmScreen: forBlend(blendScreen, getRgbaUnsafe)
-    of bmLinearDodge: forBlend(blendLinearDodge, getRgbaUnsafe)
-    of bmColorDodge: forBlend(blendColorDodge, getRgbaUnsafe)
-    of bmOverlay: forBlend(blendOverlay, getRgbaUnsafe)
-    of bmSoftLight: forBlend(blendSoftLight, getRgbaUnsafe)
-    of bmHardLight: forBlend(blendHardLight, getRgbaUnsafe)
-    of bmDifference: forBlend(blendDifference, getRgbaUnsafe)
-    of bmExclusion: forBlend(blendExclusion, getRgbaUnsafe)
-    of bmHue: forBlend(blendHue, getRgbaUnsafe)
-    of bmSaturation: forBlend(blendSaturation, getRgbaUnsafe)
-    of bmColor: forBlend(blendColor, getRgbaUnsafe)
-    of bmLuminosity: forBlend(blendLuminosity, getRgbaUnsafe)
-    of bmMask: forBlend(blendMask, getRgbaUnsafe)
-    of bmOverwrite: forBlend(blendOverwrite, getRgbaUnsafe)
-    of bmSubtractMask: forBlend(blendSubtractMask, getRgbaUnsafe)
-    of bmIntersectMask: forBlend(blendIntersectMask, getRgbaUnsafe)
-    of bmExcludeMask: forBlend(blendExcludeMask, getRgbaUnsafe)
-  else:
-    #echo "copy smooth"
-    case blendMode
-    of bmNormal: forBlend(blendNormal, getRgbaSmooth)
-    of bmDarken: forBlend(blendDarken, getRgbaSmooth)
-    of bmMultiply: forBlend(blendMultiply, getRgbaSmooth)
-    of bmLinearBurn: forBlend(blendLinearBurn, getRgbaSmooth)
-    of bmColorBurn: forBlend(blendColorBurn, getRgbaSmooth)
-    of bmLighten: forBlend(blendLighten, getRgbaSmooth)
-    of bmScreen: forBlend(blendScreen, getRgbaSmooth)
-    of bmLinearDodge: forBlend(blendLinearDodge, getRgbaSmooth)
-    of bmColorDodge: forBlend(blendColorDodge, getRgbaSmooth)
-    of bmOverlay: forBlend(blendOverlay, getRgbaSmooth)
-    of bmSoftLight: forBlend(blendSoftLight, getRgbaSmooth)
-    of bmHardLight: forBlend(blendHardLight, getRgbaSmooth)
-    of bmDifference: forBlend(blendDifference, getRgbaSmooth)
-    of bmExclusion: forBlend(blendExclusion, getRgbaSmooth)
-    of bmHue: forBlend(blendHue, getRgbaSmooth)
-    of bmSaturation: forBlend(blendSaturation, getRgbaSmooth)
-    of bmColor: forBlend(blendColor, getRgbaSmooth)
-    of bmLuminosity: forBlend(blendLuminosity, getRgbaSmooth)
-    of bmMask: forBlend(blendMask, getRgbaSmooth)
-    of bmOverwrite: forBlend(blendOverwrite, getRgbaSmooth)
-    of bmSubtractMask: forBlend(blendSubtractMask, getRgbaSmooth)
-    of bmIntersectMask: forBlend(blendIntersectMask, getRgbaSmooth)
-    of bmExcludeMask: forBlend(blendExcludeMask, getRgbaSmooth)
-
-#proc draw*(a: Image, b: Image, mat: Mat3, blendMode = bmNormal): Image =
-  ## Draws one image onto another using matrix with color blending.
-
-  # Decide which ones of the draws best fit current parameters.
-  # let ns = [-1.float32, 0, 1]
-  # if mat[0, 0] in ns and mat[0, 1] in ns and
-  #   mat[1, 0] in ns and mat[1, 1] in ns and
-  #   mat[2, 0].fractional == 0.0 and mat[2, 1].fractional == 0.0:
-  #     if blendMode == bmOverwrite:
-  #       return drawOverwrite(a, b, mat)
-  #     else:
-  #      return drawBlend(a, b, mat, blendMode)
-
-  #return drawCorrect(a, b, mat, blendMode)
-
-  #return drawStepper(a, b, mat, blendMode)
-
-proc drawStepper*(a: Image, b: Image, mat: Mat3, blendMode = bmNormal) =
-  ## Draws one image onto another using matrix with color blending.
-
-  var
-    matInv = mat.inverse()
-    # compute movement vectors
-    h = 0.5.float32
-    start = matInv * vec2(0 + h, 0 + h)
-    stepX = matInv * vec2(1 + h, 0 + h) - start
-    stepY = matInv * vec2(0 + h, 1 + h) - start
-    minFilterBy2 = max(stepX.length, stepY.length)
-    b = b
-
-  let corners = [
-    mat * vec2(0, 0),
-    mat * vec2(b.width.float32, 0),
-    mat * vec2(b.width.float32, b.height.float32),
-    mat * vec2(0, b.height.float32)
-  ]
-
-  let lines = [
-    segment(corners[0], corners[1]),
-    segment(corners[1], corners[2]),
-    segment(corners[2], corners[3]),
-    segment(corners[3], corners[0])
-  ]
-
-  while minFilterBy2 > 2.0:
-    b = b.minifyBy2()
-    start /= 2
-    stepX /= 2
-    stepY /= 2
-    minFilterBy2 /= 2
-    matInv = matInv * scale(vec2(0.5, 0.5))
-
-  template forBlend(
-    mixer: proc(a, b: ColorRGBA): ColorRGBA,
-    getRgbaFn: proc(a: Image, x, y: float32): ColorRGBA {.inline.},
-  ) =
-    for y in 0 ..< a.height:
-      var
-        xMin = 0
-        xMax = 0
-        hasIntersection = false
-      for yOffset in [0.float32, 1]:
-        var scanLine = segment(
-          vec2(-100000, y.float32 + yOffset),
-          vec2(10000, y.float32 + yOffset)
-        )
-        for l in lines:
-          var at: Vec2
-          if intersects(l, scanLine, at):
-            if hasIntersection:
-              xMin = min(xMin, at.x.floor.int)
-              xMax = max(xMax, at.x.ceil.int)
-            else:
-              hasIntersection = true
-              xMin = at.x.floor.int
-              xMax = at.x.ceil.int
-
-      xMin = xMin.clamp(0, a.width)
-      xMax = xMax.clamp(0, a.width)
-
-
-      for x in xMin ..< xMax:
-        let srcPos = start + stepX * float32(x) + stepY * float32(y)
-        #let srcPos = matInv * vec2(x.float32 + h, y.float32 + h)
-        var rgba = a.getRgbaUnsafe(x, y)
-        let rgba2 = b.getRgbaFn(srcPos.x - h, srcPos.y - h)
-        rgba = mixer(rgba, rgba2)
-        a.setRgbaUnsafe(x, y, rgba)
-
-  proc getRgbaUnsafe(a: Image, x, y: float32): ColorRGBA {.inline.} =
-    a.getRgbaUnsafe(x.round.int, y.round.int)
-
-  if stepX.length == 1.0 and stepY.length == 1.0 and
-      mat[2, 0].fractional == 0.0 and mat[2, 1].fractional == 0.0:
-    #echo "inplace non-smooth"
-    case blendMode
-    of bmNormal: forBlend(blendNormal, getRgbaUnsafe)
-    of bmDarken: forBlend(blendDarken, getRgbaUnsafe)
-    of bmMultiply: forBlend(blendMultiply, getRgbaUnsafe)
-    of bmLinearBurn: forBlend(blendLinearBurn, getRgbaUnsafe)
-    of bmColorBurn: forBlend(blendColorBurn, getRgbaUnsafe)
-    of bmLighten: forBlend(blendLighten, getRgbaUnsafe)
-    of bmScreen: forBlend(blendScreen, getRgbaUnsafe)
-    of bmLinearDodge: forBlend(blendLinearDodge, getRgbaUnsafe)
-    of bmColorDodge: forBlend(blendColorDodge, getRgbaUnsafe)
-    of bmOverlay: forBlend(blendOverlay, getRgbaUnsafe)
-    of bmSoftLight: forBlend(blendSoftLight, getRgbaUnsafe)
-    of bmHardLight: forBlend(blendHardLight, getRgbaUnsafe)
-    of bmDifference: forBlend(blendDifference, getRgbaUnsafe)
-    of bmExclusion: forBlend(blendExclusion, getRgbaUnsafe)
-    of bmHue: forBlend(blendHue, getRgbaUnsafe)
-    of bmSaturation: forBlend(blendSaturation, getRgbaUnsafe)
-    of bmColor: forBlend(blendColor, getRgbaUnsafe)
-    of bmLuminosity: forBlend(blendLuminosity, getRgbaUnsafe)
-    of bmMask: forBlend(blendMask, getRgbaUnsafe)
-    of bmOverwrite: forBlend(blendOverwrite, getRgbaUnsafe)
-    of bmSubtractMask: forBlend(blendSubtractMask, getRgbaUnsafe)
-    of bmIntersectMask: forBlend(blendIntersectMask, getRgbaUnsafe)
-    of bmExcludeMask: forBlend(blendExcludeMask, getRgbaUnsafe)
-  else:
-    #echo "inplace smooth"
-    case blendMode
-    of bmNormal: forBlend(blendNormal, getRgbaSmooth)
-    of bmDarken: forBlend(blendDarken, getRgbaSmooth)
-    of bmMultiply: forBlend(blendMultiply, getRgbaSmooth)
-    of bmLinearBurn: forBlend(blendLinearBurn, getRgbaSmooth)
-    of bmColorBurn: forBlend(blendColorBurn, getRgbaSmooth)
-    of bmLighten: forBlend(blendLighten, getRgbaSmooth)
-    of bmScreen: forBlend(blendScreen, getRgbaSmooth)
-    of bmLinearDodge: forBlend(blendLinearDodge, getRgbaSmooth)
-    of bmColorDodge: forBlend(blendColorDodge, getRgbaSmooth)
-    of bmOverlay: forBlend(blendOverlay, getRgbaSmooth)
-    of bmSoftLight: forBlend(blendSoftLight, getRgbaSmooth)
-    of bmHardLight: forBlend(blendHardLight, getRgbaSmooth)
-    of bmDifference: forBlend(blendDifference, getRgbaSmooth)
-    of bmExclusion: forBlend(blendExclusion, getRgbaSmooth)
-    of bmHue: forBlend(blendHue, getRgbaSmooth)
-    of bmSaturation: forBlend(blendSaturation, getRgbaSmooth)
-    of bmColor: forBlend(blendColor, getRgbaSmooth)
-    of bmLuminosity: forBlend(blendLuminosity, getRgbaSmooth)
-    of bmMask: forBlend(blendMask, getRgbaSmooth)
-    of bmOverwrite: forBlend(blendOverwrite, getRgbaSmooth)
-    of bmSubtractMask: forBlend(blendSubtractMask, getRgbaSmooth)
-    of bmIntersectMask: forBlend(blendIntersectMask, getRgbaSmooth)
-    of bmExcludeMask: forBlend(blendExcludeMask, getRgbaSmooth)
-
 proc blur*(image: Image, radius: float32): Image =
   ## Applies Gaussian blur to the image given a radius.
   let radius = (radius).int
@@ -685,7 +306,7 @@ proc blur*(image: Image, radius: float32): Image =
 
 proc resize*(srcImage: Image, width, height: int): Image =
   result = newImage(width, height)
-  return result.draw(
+  result.draw(
     srcImage,
     scale(vec2(
       (width + 1).float / srcImage.width.float,
@@ -696,7 +317,7 @@ proc resize*(srcImage: Image, width, height: int): Image =
 proc shift(image: Image, offset: Vec2): Image =
   ## Shifts the image by offset.
   result = newImage(image.width, image.height)
-  return result.draw(image, offset)
+  result.draw(image, offset)
 
 proc spread(image: Image, spread: float32): Image =
   ## Grows the image as a mask by spread.
@@ -733,7 +354,7 @@ proc shadow*(
   if blur > 0:
     shadow = shadow.blur(blur)
   result = newImageFill(mask.width, mask.height, color.rgba)
-  return result.draw(shadow, blendMode = bmMask)
+  result.draw(shadow, blendMode = bmMask)
 
 proc applyOpacity*(image: Image, opacity: float32): Image =
   ## Multiplies alpha of the image by opacity.
@@ -756,6 +377,36 @@ proc sharpOpacity*(image: Image): Image =
         result.setRgbaUnsafe(x, y, rgba(0, 0, 0, 0))
       else:
         result.setRgbaUnsafe(x, y, rgba(255, 255, 255, 255))
+
+proc drawCorrect*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
+  ## Draws one image onto another using matrix with color blending.
+  result = newImageNoInit(a.width, a.height)
+
+  var
+    matInv = mat.inverse()
+    # compute movement vectors
+    h = 0.5.float32
+    start = matInv * vec2(0 + h, 0 + h)
+    stepX = matInv * vec2(1 + h, 0 + h) - start
+    stepY = matInv * vec2(0 + h, 1 + h) - start
+    minFilterBy2 = max(stepX.length, stepY.length)
+    b = b
+
+  while minFilterBy2 > 2.0:
+    b = b.minifyBy2()
+    start /= 2
+    stepX /= 2
+    stepY /= 2
+    minFilterBy2 /= 2
+    matInv = matInv * scale(vec2(0.5, 0.5))
+
+  for y in 0 ..< a.height:
+    for x in 0 ..< a.width:
+      let srcPos = matInv * vec2(x.float32 + h, y.float32 + h)
+      var rgba = a.getRgbaUnsafe(x, y)
+      let rgba2 = b.getRgbaSmooth(srcPos.x - h, srcPos.y - h)
+      rgba = blendMode.mix(rgba, rgba2)
+      result.setRgbaUnsafe(x, y, rgba)
 
 const h = 0.5.float32
 
@@ -810,9 +461,9 @@ proc drawUberStatic(
       var rgba = a.getRgbaUnsafe(x, y)
       var rgba2 =
         when smooth:
-            b.getRgbaSmooth(xFloat, yFloat)
-          else:
-            b.getRgbaUnsafe(xFloat.round.int, yFloat.round.int)
+          b.getRgbaSmooth(xFloat, yFloat)
+        else:
+          b.getRgbaUnsafe(xFloat.round.int, yFloat.round.int)
       rgba = blendMode.mixStatic(rgba, rgba2)
       c.setRgbaUnsafe(x, y, rgba)
 
@@ -827,7 +478,7 @@ proc drawUberStatic(
           copyMem(c.getAddr(xMax, y), a.getAddr(xMax, y), 4*(a.width - xMax))
 
 
-proc drawUberInner*(a: Image, b: Image, c: Image, mat: Mat3, blendMode: BlendMode, inPlace: bool) =
+proc draw*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode) =
   ## Draws one image onto another using matrix with color blending.
 
   var
@@ -838,6 +489,7 @@ proc drawUberInner*(a: Image, b: Image, c: Image, mat: Mat3, blendMode: BlendMod
     stepY = matInv * vec2(0 + h, 1 + h) - start
     minFilterBy2 = max(stepX.length, stepY.length)
     b = b
+    c = a
 
   let corners = [
     mat * vec2(0, 0),
@@ -862,132 +514,59 @@ proc drawUberInner*(a: Image, b: Image, c: Image, mat: Mat3, blendMode: BlendMod
     matInv = matInv * scale(vec2(0.5, 0.5))
 
   var smooth = not(stepX.length == 1.0 and stepY.length == 1.0 and
-        mat[2, 0].fractional == 0.0 and mat[2, 1].fractional == 0.0)
+    mat[2, 0].fractional == 0.0 and mat[2, 1].fractional == 0.0)
 
-  if inPlace == true:
-
-    if not smooth:
-      #echo "copy non-smooth"
-      case blendMode
-      of bmNormal: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmNormal, true, false)
-      of bmDarken: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmDarken, true, false)
-      of bmMultiply: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmMultiply, true, false)
-      of bmLinearBurn: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLinearBurn, true, false)
-      of bmColorBurn: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmColorBurn, true, false)
-      of bmLighten: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLighten, true, false)
-      of bmScreen: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmScreen, true, false)
-      of bmLinearDodge: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLinearDodge, true, false)
-      of bmColorDodge: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmColorDodge, true, false)
-      of bmOverlay: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmOverlay, true, false)
-      of bmSoftLight: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmSoftLight, true, false)
-      of bmHardLight: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmHardLight, true, false)
-      of bmDifference: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmDifference, true, false)
-      of bmExclusion: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmExclusion, true, false)
-      of bmHue: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmHue, true, false)
-      of bmSaturation: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmSaturation, true, false)
-      of bmColor: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmColor, true, false)
-      of bmLuminosity: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLuminosity, true, false)
-      of bmMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmMask, true, false)
-      of bmOverwrite: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmOverwrite, true, false)
-      of bmSubtractMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmSubtractMask, true, false)
-      of bmIntersectMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmIntersectMask, true, false)
-      of bmExcludeMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmExcludeMask, true, false)
-    else:
-      case blendMode
-      of bmNormal: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmNormal, true, true)
-      of bmDarken: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmDarken, true, true)
-      of bmMultiply: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmMultiply, true, true)
-      of bmLinearBurn: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLinearBurn, true, true)
-      of bmColorBurn: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmColorBurn, true, true)
-      of bmLighten: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLighten, true, true)
-      of bmScreen: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmScreen, true, true)
-      of bmLinearDodge: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLinearDodge, true, true)
-      of bmColorDodge: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmColorDodge, true, true)
-      of bmOverlay: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmOverlay, true, true)
-      of bmSoftLight: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmSoftLight, true, true)
-      of bmHardLight: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmHardLight, true, true)
-      of bmDifference: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmDifference, true, true)
-      of bmExclusion: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmExclusion, true, true)
-      of bmHue: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmHue, true, true)
-      of bmSaturation: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmSaturation, true, true)
-      of bmColor: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmColor, true, true)
-      of bmLuminosity: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLuminosity, true, true)
-      of bmMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmMask, true, true)
-      of bmOverwrite: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmOverwrite, true, true)
-      of bmSubtractMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmSubtractMask, true, true)
-      of bmIntersectMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmIntersectMask, true, true)
-      of bmExcludeMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmExcludeMask, true, true)
-
+  if not smooth:
+    #echo "copy non-smooth"
+    case blendMode
+    of bmNormal: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmNormal, true, false)
+    of bmDarken: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmDarken, true, false)
+    of bmMultiply: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmMultiply, true, false)
+    of bmLinearBurn: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLinearBurn, true, false)
+    of bmColorBurn: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmColorBurn, true, false)
+    of bmLighten: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLighten, true, false)
+    of bmScreen: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmScreen, true, false)
+    of bmLinearDodge: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLinearDodge, true, false)
+    of bmColorDodge: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmColorDodge, true, false)
+    of bmOverlay: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmOverlay, true, false)
+    of bmSoftLight: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmSoftLight, true, false)
+    of bmHardLight: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmHardLight, true, false)
+    of bmDifference: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmDifference, true, false)
+    of bmExclusion: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmExclusion, true, false)
+    of bmHue: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmHue, true, false)
+    of bmSaturation: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmSaturation, true, false)
+    of bmColor: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmColor, true, false)
+    of bmLuminosity: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLuminosity, true, false)
+    of bmMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmMask, true, false)
+    of bmOverwrite: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmOverwrite, true, false)
+    of bmSubtractMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmSubtractMask, true, false)
+    of bmIntersectMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmIntersectMask, true, false)
+    of bmExcludeMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmExcludeMask, true, false)
   else:
+    case blendMode
+    of bmNormal: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmNormal, true, true)
+    of bmDarken: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmDarken, true, true)
+    of bmMultiply: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmMultiply, true, true)
+    of bmLinearBurn: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLinearBurn, true, true)
+    of bmColorBurn: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmColorBurn, true, true)
+    of bmLighten: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLighten, true, true)
+    of bmScreen: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmScreen, true, true)
+    of bmLinearDodge: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLinearDodge, true, true)
+    of bmColorDodge: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmColorDodge, true, true)
+    of bmOverlay: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmOverlay, true, true)
+    of bmSoftLight: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmSoftLight, true, true)
+    of bmHardLight: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmHardLight, true, true)
+    of bmDifference: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmDifference, true, true)
+    of bmExclusion: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmExclusion, true, true)
+    of bmHue: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmHue, true, true)
+    of bmSaturation: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmSaturation, true, true)
+    of bmColor: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmColor, true, true)
+    of bmLuminosity: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLuminosity, true, true)
+    of bmMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmMask, true, true)
+    of bmOverwrite: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmOverwrite, true, true)
+    of bmSubtractMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmSubtractMask, true, true)
+    of bmIntersectMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmIntersectMask, true, true)
+    of bmExcludeMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmExcludeMask, true, true)
 
-    if not smooth:
-      #echo "copy non-smooth"
-      case blendMode
-      of bmNormal: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmNormal, false, false)
-      of bmDarken: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmDarken, false, false)
-      of bmMultiply: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmMultiply, false, false)
-      of bmLinearBurn: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLinearBurn, false, false)
-      of bmColorBurn: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmColorBurn, false, false)
-      of bmLighten: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLighten, false, false)
-      of bmScreen: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmScreen, false, false)
-      of bmLinearDodge: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLinearDodge, false, false)
-      of bmColorDodge: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmColorDodge, false, false)
-      of bmOverlay: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmOverlay, false, false)
-      of bmSoftLight: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmSoftLight, false, false)
-      of bmHardLight: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmHardLight, false, false)
-      of bmDifference: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmDifference, false, false)
-      of bmExclusion: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmExclusion, false, false)
-      of bmHue: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmHue, false, false)
-      of bmSaturation: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmSaturation, false, false)
-      of bmColor: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmColor, false, false)
-      of bmLuminosity: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLuminosity, false, false)
-      of bmMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmMask, false, false)
-      of bmOverwrite: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmOverwrite, false, false)
-      of bmSubtractMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmSubtractMask, false, false)
-      of bmIntersectMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmIntersectMask, false, false)
-      of bmExcludeMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmExcludeMask, false, false)
-    else:
-      case blendMode
-      of bmNormal: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmNormal, false, true)
-      of bmDarken: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmDarken, false, true)
-      of bmMultiply: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmMultiply, false, true)
-      of bmLinearBurn: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLinearBurn, false, true)
-      of bmColorBurn: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmColorBurn, false, true)
-      of bmLighten: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLighten, false, true)
-      of bmScreen: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmScreen, false, true)
-      of bmLinearDodge: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLinearDodge, false, true)
-      of bmColorDodge: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmColorDodge, false, true)
-      of bmOverlay: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmOverlay, false, true)
-      of bmSoftLight: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmSoftLight, false, true)
-      of bmHardLight: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmHardLight, false, true)
-      of bmDifference: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmDifference, false, true)
-      of bmExclusion: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmExclusion, false, true)
-      of bmHue: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmHue, false, true)
-      of bmSaturation: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmSaturation, false, true)
-      of bmColor: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmColor, false, true)
-      of bmLuminosity: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmLuminosity, false, true)
-      of bmMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmMask, false, true)
-      of bmOverwrite: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmOverwrite, false, true)
-      of bmSubtractMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmSubtractMask, false, true)
-      of bmIntersectMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmIntersectMask, false, true)
-      of bmExcludeMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmExcludeMask, false, true)
-
-proc drawUberInPlace*(a: Image, b: Image, mat: Mat3, blendMode = bmNormal) =
-  a.drawUberInner(b, a, mat, blendMode, true)
-
-proc drawUberCopy*(a: Image, b: Image, mat: Mat3, blendMode = bmNormal): Image =
-  var c = newImageNoInit(a.width, a.height)
-  a.drawUberInner(b, c, mat, blendMode, false)
-  return c
-
-proc draw*(a: Image, b: Image, mat: Mat3, blendMode = bmNormal): Image =
-  drawUberCOpy(a, b, mat, blendMode)
-
-proc draw*(a: Image, b: Image, pos = vec2(0, 0), blendMode = bmNormal): Image =
+proc draw*(a: Image, b: Image, pos = vec2(0, 0), blendMode = bmNormal) =
   a.draw(b, translate(pos), blendMode)
-
-proc drawInPlace*(a: Image, b: Image, mat: Mat3, blendMode = bmNormal) =
-  drawUberInPlace(a, b, mat, blendMode)
-
-proc drawInPlace*(a: Image, b: Image, pos = vec2(0, 0), blendMode = bmNormal) =
-  a.drawInPlace(b, translate(pos), blendMode)
