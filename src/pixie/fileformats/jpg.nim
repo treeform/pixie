@@ -30,13 +30,24 @@ type
     deltas: array[17, int]
     maxCodes: array[18, int]
 
+  ResampleProc = proc(dst, line0, line1: ptr UncheckedArray[uint8],
+    widthPreExpansion, horizontalExpansionFactor: int
+  ): ptr UncheckedArray[uint8]
+
+  Resample = object
+    horizontalExpansionFactor, verticalExpansionFactor: int
+    yStep, yPos, widthPreExpansion: int
+    line0, line1: ptr UncheckedArray[uint8]
+    resample: ResampleProc
+
   Component = object
     id, quantizationTable: uint8
-    verticalSamplingFactor, horizontalSamplingFactor: int
+    horizontalSamplingFactor, verticalSamplingFactor: int
     width, height: int
-    w2, h2: int # TODO what are these
+    widthStride, heightStride: int
     huffmanDC, huffmanAC: int
     dcPred: int
+    data, lineBuf: seq[uint8]
 
   DecoderState = object
     buffer: seq[uint8]
@@ -237,10 +248,14 @@ proc decodeSOF(state: var DecoderState) =
       state.maxVerticalSamplingFactor - 1
     ) div state.maxVerticalSamplingFactor
 
-    state.components[i].w2 =
+    state.components[i].widthStride =
       state.numMcuWide * state.components[i].horizontalSamplingFactor * 8
-    state.components[i].h2 =
+    state.components[i].heightStride =
       state.numMcuHigh * state.components[i].verticalSamplingFactor * 8
+
+    state.components[i].data.setLen(
+      state.components[i].widthStride * state.components[i].heightStride
+    )
 
 proc decodeSOS(state: var DecoderState) =
   var len = state.readUint16be() - 2
@@ -316,8 +331,6 @@ proc huffmanDecode(state: var DecoderState, tableCurrent, table: int): uint8 =
   state.bits = state.bits shl i
   state.bitCount -= i
 
-  echo "post-decode: ", state.bitCount, " ", state.bits
-
 template lrot(value: uint32, shift: int): uint32 =
   (value shl shift) or (value shr (32 - shift))
 
@@ -325,21 +338,17 @@ proc extendReceive(state: var DecoderState, t: int): int =
   if state.bitCount < t:
     state.fillBits()
 
-  let sign = (state.bits shr 31).int32
+  let sign = cast[int32](state.bits) shr 31
   var k = lrot(state.bits, t)
   state.bits = k and (not bitmasks[t])
   k = k and bitmasks[t]
   state.bitCount -= t
   result = k.int + (biases[t] and (not sign))
-  echo "sgn: ", sign
-  echo "post: ", state.bits
 
 proc decodeImageBlock(state: var DecoderState, component: int): array[64, int16] =
   let t = state.huffmanDecode(0, state.components[component].huffmanDC).int
   if t < 0:
     failInvalid()
-
-  echo "t: ", t
 
   let
     diff = if t == 0: 0 else: state.extendReceive(t)
@@ -349,7 +358,146 @@ proc decodeImageBlock(state: var DecoderState, component: int): array[64, int16]
     state.components[component].quantizationTable
   ][0].int).int16
 
-  echo "data[0]: ", result[0]
+  var i = 1
+  while i < 64:
+    if state.bitCount < 16:
+      state.fillBits()
+    let
+      rs = state.huffmanDecode(1, state.components[component].huffmanAC)
+      s = rs and 15
+      r = rs shr 4
+    if s == 0:
+      if rs != 0xF0:
+        break
+      i += 16
+    else:
+      i += r.int
+      let zig = deZigZag[i]
+      result[zig] = (state.extendReceive(s.int) * state.quantizationTables[
+        state.components[component].quantizationTable
+      ][zig].int).int16
+      inc i
+
+proc clamp(x: int): uint8 {.inline.} =
+  if cast[uint](x) > 255:
+    if x < 0:
+      return 0
+    if x > 255:
+      return 255
+  x.uint8
+
+template idct1D(s0, s1, s2, s3, s4, s5, s6, s7: int32) =
+  template f2f(x: float32): int32 = (x * 4096 + 0.5).int32
+  template fsh(x: int32): int32 = x * 4096
+  p2 = s2
+  p3 = s6
+  p1 = (p2 + p3) * f2f(0.5411961f)
+  t2 = p1 + p3*f2f(-1.847759065f)
+  t3 = p1 + p2*f2f(0.765366865f)
+  p2 = s0
+  p3 = s4
+  t0 = fsh(p2 + p3)
+  t1 = fsh(p2 - p3)
+  x0 = t0 + t3
+  x3 = t0 - t3
+  x1 = t1 + t2
+  x2 = t1 - t2
+  t0 = s7
+  t1 = s5
+  t2 = s3
+  t3 = s1
+  p3 = t0 + t2
+  p4 = t1 + t3
+  p1 = t0 + t3
+  p2 = t1 + t2
+  p5 = (p3 + p4) * f2f(1.175875602f)
+  t0 = t0 * f2f(0.298631336f)
+  t1 = t1 * f2f(2.053119869f)
+  t2 = t2 * f2f(3.072711026f)
+  t3 = t3 * f2f(1.501321110f)
+  p1 = p5 + p1*f2f(-0.899976223f)
+  p2 = p5 + p2*f2f(-2.562915447f)
+  p3 = p3 * f2f(-1.961570560f)
+  p4 = p4 * f2f(-0.390180644f)
+  t3 += p1 + p4
+  t2 += p2 + p3
+  t1 += p2 + p4
+  t0 += p1 + p3
+
+proc idctBlock(component: var Component, offset: int, data: array[64, int16]) =
+  var values: array[64, int32]
+  for i in 0 ..< 8:
+    if data[i + 8] == 0 and
+      data[i + 16] == 0 and
+      data[i + 24] == 0 and
+      data[i + 32] == 0 and
+      data[i + 40] == 0 and
+      data[i + 48] == 0 and
+      data[i + 56] == 0:
+      let dcterm = data[i] * 4
+      values[i + 0] = dcterm
+      values[i + 8] = dcterm
+      values[i + 16] = dcterm
+      values[i + 24] = dcterm
+      values[i + 32] = dcterm
+      values[i + 40] = dcterm
+      values[i + 48] = dcterm
+      values[i + 56] = dcterm
+    else:
+      var t0, t1, t2, t3, p1, p2, p3, p4, p5, x0, x1, x2, x3: int32
+      idct1D(
+        data[i + 0],
+        data[i + 8],
+        data[i + 16],
+        data[i + 24],
+        data[i + 32],
+        data[i + 40],
+        data[i + 48],
+        data[i + 56]
+      )
+      x0 += 512
+      x1 += 512
+      x2 += 512
+      x3 += 512
+      values[i + 0] = (x0 + t3) shr 10
+      values[i + 56] = (x0 - t3) shr 10
+      values[i + 8] = (x1 + t2) shr 10
+      values[i + 48] = (x1 - t2) shr 10
+      values[i + 16] = (x2 + t1) shr 10
+      values[i + 40] = (x2 - t1) shr 10
+      values[i + 24] = (x3 + t0) shr 10
+      values[i + 32] = (x3 - t0) shr 10
+
+  for i in 0 ..< 8:
+    let
+      valuesPos = i * 8
+      outPos = i * component.widthStride + offset
+
+    var t0, t1, t2, t3, p1, p2, p3, p4, p5, x0, x1, x2, x3: int32
+    idct1D(
+      values[valuesPos + 0],
+      values[valuesPos + 1],
+      values[valuesPos + 2],
+      values[valuesPos + 3],
+      values[valuesPos + 4],
+      values[valuesPos + 5],
+      values[valuesPos + 6],
+      values[valuesPos + 7]
+    )
+
+    x0 += 65536 + (128 shl 17)
+    x1 += 65536 + (128 shl 17)
+    x2 += 65536 + (128 shl 17)
+    x3 += 65536 + (128 shl 17)
+
+    component.data[outPos + 0] = clamp((x0 + t3) shr 17)
+    component.data[outPos + 7] = clamp((x0 - t3) shr 17)
+    component.data[outPos + 1] = clamp((x1 + t2) shr 17)
+    component.data[outPos + 6] = clamp((x1 - t2) shr 17)
+    component.data[outPos + 2] = clamp((x2 + t1) shr 17)
+    component.data[outPos + 5] = clamp((x2 - t1) shr 17)
+    component.data[outPos + 3] = clamp((x3 + t0) shr 17)
+    component.data[outPos + 4] = clamp((x3 - t0) shr 17)
 
 proc decodeImageData(state: var DecoderState) =
   for y in 0 ..< state.numMcuHigh:
@@ -357,8 +505,95 @@ proc decodeImageData(state: var DecoderState) =
       for component in state.componentOrder:
         for j in 0 ..< state.components[component].verticalSamplingFactor:
           for i in 0 ..< state.components[component].horizontalSamplingFactor:
-            let data = state.decodeImageBlock(component)
-            return
+            let
+              data = state.decodeImageBlock(component)
+              rowPos = (
+                x * state.components[component].horizontalSamplingFactor + i
+              ) * 8
+              column = (
+                y * state.components[component].verticalSamplingFactor + j
+              ) * 8
+            state.components[component].idctBlock(
+              state.components[component].widthStride * column + rowPos,
+              data
+            )
+
+proc resampleRowH1V1(
+  dst, a, b: ptr UncheckedArray[uint8],
+  widthPreExpansion, horizontalExpansionFactor: int
+): ptr UncheckedArray[uint8] =
+  a
+
+proc resampleRowH1V2(
+  dst, a, b: ptr UncheckedArray[uint8],
+  widthPreExpansion, horizontalExpansionFactor: int
+): ptr UncheckedArray[uint8] =
+  for i in 0 ..< widthPreExpansion:
+    dst[i] = ((3 * a[i].int + b[i].int + 2) shr 2).uint8
+  dst
+
+proc resampleRowH2V1(
+  dst, a, b: ptr UncheckedArray[uint8],
+  widthPreExpansion, horizontalExpansionFactor: int
+): ptr UncheckedArray[uint8] =
+  if widthPreExpansion == 1:
+    dst[0] = a[0]
+    dst[1] = dst[0]
+  else:
+    dst[0] = a[0]
+    dst[1] = ((a[0].int * 3 + a[1].int + 2) shr 2).uint8
+    for i in 1 ..< widthPreExpansion - 1:
+      let n = 3 * a[i].int + 2
+      dst[i * 2 + 0] = ((n + a[i - 1].int) shr 2).uint8
+      dst[i * 2 + 1] = ((n + a[i + 1].int) shr 2).uint8
+
+    dst[widthPreExpansion * 2 + 0] = ((
+      a[widthPreExpansion - 2].int * 3 + a[widthPreExpansion - 1].int + 2
+    ) shr 2).uint8
+    dst[widthPreExpansion * 2 + 1] = (a[widthPreExpansion - 1]) shr 2
+  dst
+
+proc resampleRowH2V2(
+  dst, a, b: ptr UncheckedArray[uint8],
+  widthPreExpansion, horizontalExpansionFactor: int
+): ptr UncheckedArray[uint8] =
+  if widthPreExpansion == 1:
+    dst[0] = ((3 * a[0].int + b[0].int + 2) shr 2).uint8
+    dst[1] = dst[0]
+  else:
+    var
+      t0: int
+      t1 = 3 * a[0].int + b[0].int
+    dst[0] = ((t1 + 2) shr 2).uint8
+    for i in 1 ..< widthPreExpansion:
+      t0 = t1
+      t1 = 3 * a[i].int + b[i].int
+      dst[i * 2 - 1] = ((3 * t0 + t1 + 8) shr 4).uint8
+      dst[i * 2 + 0] = ((3 * t1 + t0 + 8) shr 4).uint8
+    dst[widthPreExpansion * 2 - 1] = ((t1 + 2) shr 2).uint8
+  dst
+
+proc yCbCrToRgb(dst, py, pcb, pcr: ptr UncheckedArray[uint8], width: int) =
+  template float2Fixed(x: float32): int =
+    (x * 4096 + 0.5).int shl 8
+
+  var pos: int
+  for i in 0 ..< width:
+    let
+      yFixed = (py[][i].int shl 20) + (1 shl 19)
+      cb = pcb[][i].int - 128
+      cr = pcr[][i].int - 128
+    var
+      r = yFixed + cr * float2Fixed(1.40200)
+      g = yFixed +
+        (cr * -float2Fixed(0.71414)) +
+        ((cb * -float2Fixed(0.34414)) and -65536)
+      b = yFixed + cb * float2Fixed(1.77200)
+    dst[pos + 0] = clamp(r shr 20)
+    dst[pos + 1] = clamp(g shr 20)
+    dst[pos + 2] = clamp(b shr 20)
+    dst[pos + 3] = 255
+    pos += 4
 
 proc decodeJpg*(data: seq[uint8]): Image =
   ## Decodes the JPEG into an Image.
@@ -385,7 +620,82 @@ proc decodeJpg*(data: seq[uint8]): Image =
 
   state.decodeImageData()
 
-  # raise newException(PixieError, "Decoding JPG not supported yet")
+  if not state.hitEOI:
+    failInvalid()
+
+  result = newImage(state.imageWidth, state.imageHeight)
+
+  var resamples: array[3, Resample]
+  for i in 0 ..< 3:
+    resamples[i].horizontalExpansionFactor =
+      state.maxHorizontalSamplingFactor div
+      state.components[i].horizontalSamplingFactor
+    resamples[i].verticalExpansionFactor =
+      state.maxVerticalSamplingFactor div
+      state.components[i].verticalSamplingFactor
+    resamples[i].yStep = resamples[i].verticalExpansionFactor shr 1
+    resamples[i].widthPreExpansion = (
+      state.imageWidth + resamples[i].horizontalExpansionFactor - 1
+    ) div resamples[i].horizontalExpansionFactor
+
+    resamples[i].line0 = cast[ptr UncheckedArray[uint8]](
+      state.components[i].data[0].addr
+    )
+    resamples[i].line1 = cast[ptr UncheckedArray[uint8]](
+      state.components[i].data[0].addr
+    )
+    state.components[i].lineBuf.setLen(state.imageWidth + 3)
+
+    if resamples[i].horizontalExpansionFactor == 1 and
+      resamples[i].verticalExpansionFactor == 1:
+      resamples[i].resample = resampleRowH1V1
+    elif resamples[i].horizontalExpansionFactor == 1 and
+      resamples[i].verticalExpansionFactor == 2:
+      resamples[i].resample = resampleRowH1V2
+    elif resamples[i].horizontalExpansionFactor == 2 and
+      resamples[i].verticalExpansionFactor == 1:
+      resamples[i].resample = resampleRowH2V1
+    elif resamples[i].horizontalExpansionFactor == 2 and
+      resamples[i].verticalExpansionFactor == 2:
+      resamples[i].resample = resampleRowH2V2
+    else:
+      failInvalid()
+
+  var componentOutputs: array[3, ptr UncheckedArray[uint8]]
+  for y in 0 ..< state.imageHeight:
+    for i in 0 ..< 3:
+      let yBottom =
+        resamples[i].yStep >= (resamples[i].verticalExpansionFactor shr 1)
+      componentOutputs[i] = resamples[i].resample(
+        cast[ptr UncheckedArray[uint8]](state.components[i].lineBuf[0].addr),
+        if yBottom: resamples[i].line1 else: resamples[i].line0,
+        if yBottom: resamples[i].line0 else: resamples[i].line1,
+        resamples[i].widthPreExpansion,
+        resamples[i].horizontalExpansionFactor
+      )
+
+      inc resamples[i].yStep
+      if resamples[i].yStep >= resamples[i].verticalExpansionFactor:
+        resamples[i].yStep = 0
+        resamples[i].line0 = resamples[i].line1
+        inc resamples[i].yPos
+        if resamples[i].yPos < state.components[i].height:
+          resamples[i].line1 = cast[ptr UncheckedArray[uint8]](
+            state.components[i].data[
+              resamples[i].yPos * state.components[i].widthStride
+            ].addr
+          )
+
+    let dst = cast[ptr UncheckedArray[uint8]](
+      result.data[state.imageWidth * y].addr
+    )
+    yCbCrToRgb(
+      dst,
+      componentOutputs[0],
+      componentOutputs[1],
+      componentOutputs[2],
+      state.imageWidth
+    )
 
 proc decodeJpg*(data: string): Image {.inline.} =
   decodeJpg(cast[seq[uint8]](data))
