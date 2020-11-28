@@ -22,7 +22,7 @@ block:
 
 block:
   var image = newImage(16, 16)
-  image = image.fill(rgba(255, 0, 0, 127))
+  image.fill(rgba(255, 0, 0, 127))
   writeFile("tests/images/bmp/test16x16.bmp", encodeBmp(image))
 
   var image2 = decodeBmp(encodeBmp(image))
