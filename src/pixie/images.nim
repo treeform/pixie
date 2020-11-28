@@ -41,12 +41,6 @@ proc `$`*(image: Image): string =
   ## Display the image size and channels.
   "<Image " & $image.width & "x" & $image.height & ">"
 
-proc fractional(v: float32): float32 =
-  ## Returns unsigned fraction part of the float.
-  ## -13.7868723 -> 0.7868723
-  result = abs(v)
-  result = result - floor(result)
-
 proc inside*(image: Image, x, y: int): bool {.inline.} =
   ## Returns true if (x, y) is inside the image.
   x >= 0 and x < image.width and
@@ -517,7 +511,7 @@ proc draw*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode) =
     mat[2, 0].fractional == 0.0 and mat[2, 1].fractional == 0.0)
 
   if not smooth:
-    #echo "copy non-smooth"
+    #echo "draw ", b.width, "x", b.height, " fast"
     case blendMode
     of bmNormal: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmNormal, true, false)
     of bmDarken: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmDarken, true, false)
@@ -543,6 +537,7 @@ proc draw*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode) =
     of bmIntersectMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmIntersectMask, true, false)
     of bmExcludeMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmExcludeMask, true, false)
   else:
+    #echo "draw ", b.width, "x", b.height, " smooth"
     case blendMode
     of bmNormal: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmNormal, true, true)
     of bmDarken: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmDarken, true, true)

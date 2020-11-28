@@ -32,3 +32,9 @@ proc intersects*(a, b: Segment, at: var Vec2): bool =
     at.y = a.at.y + (t * s1y)
     return true
   return false
+
+proc fractional*(v: float32): float32 =
+  ## Returns unsigned fraction part of the float.
+  ## -13.7868723 -> 0.7868723
+  result = abs(v)
+  result = result - floor(result)
