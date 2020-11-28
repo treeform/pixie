@@ -78,14 +78,14 @@ proc decodeHeader(data: seq[uint8]): PngHeader =
   if result.interlaceMethod != 0:
     raise newException(PixieError, "Interlaced PNG not yet supported")
 
-proc decodePalette(data: seq[uint8]): seq[array[3, uint8]] =
+proc decodePalette(data: seq[uint8]): seq[ColorRGB] =
   if data.len == 0 or data.len mod 3 != 0:
     failInvalid()
 
   result.setLen(data.len div 3)
 
   for i in 0 ..< data.len div 3:
-    result[i] = cast[ptr array[3, uint8]](data[i * 3].unsafeAddr)[]
+    result[i] = cast[ptr ColorRGB](data[i * 3].unsafeAddr)[]
 
 proc unfilter(
   uncompressed: seq[uint8], height, rowBytes, bpp: int
@@ -147,7 +147,7 @@ proc unfilter(
 
 proc decodeImageData(
   header: PngHeader,
-  palette: seq[array[3, uint8]],
+  palette: seq[ColorRGB],
   transparency, data: seq[uint8]
 ): seq[ColorRGBA] =
   result.setLen(header.width * header.height)
@@ -279,7 +279,7 @@ proc decodeImageData(
             else:
               255
         result[x + y * header.width] = ColorRGBA(
-          r: rgb[0], g: rgb[1], b: rgb[2], a: transparency
+          r: rgb.r, g: rgb.g, b: rgb.b, a: transparency
         )
 
       # If we move to a new row, skip to the next full byte
@@ -316,7 +316,7 @@ proc decodePng*(data: seq[uint8]): Image =
     pos = 8 # After signature
     counts = ChunkCounts()
     header: PngHeader
-    palette: seq[array[3, uint8]]
+    palette: seq[ColorRGB]
     transparency, imageData: seq[uint8]
     prevChunkType: string
 
