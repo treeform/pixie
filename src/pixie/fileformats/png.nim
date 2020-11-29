@@ -436,6 +436,8 @@ proc encodePng*(
     else:
       raise newException(PixieError, "Invalid PNG number of channels")
 
+  let data = cast[ptr UncheckedArray[uint8]](data)
+
   # Add the PNG file signature
   result.add([137.uint8, 80, 78, 71, 13, 10, 26, 10])
 
@@ -456,7 +458,6 @@ proc encodePng*(
     for x in 0 ..< width * channels:
       # Move through the image data byte-by-byte
       let
-        data = cast[ptr UncheckedArray[uint8]](data)
         dataPos = y * width * channels + x
         filteredPos = y * width * channels + y + 1 + x
       var left, up: int
