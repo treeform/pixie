@@ -4,6 +4,7 @@ import pixie/common, pixie/images, strutils
 # See http://www.vip.sugovica.hu/Sardi/kepnezo/JPEG%20File%20Layout%20and%20Format.htm
 
 const
+  fastBits = 9
   jpgStartOfImage* = [0xFF.uint8, 0xD8]
   deZigZag = [
     0.uint8, 1, 8, 16, 9, 2, 3, 10,
@@ -26,9 +27,12 @@ const
 
 type
   Huffman = object
+    codes: array[256, uint16]
     symbols: array[256, uint8]
+    sizes: array[257, uint8]
     deltas: array[17, int]
     maxCodes: array[18, int]
+    fast: array[1 shl fastBits, uint8]
 
   ResampleProc = proc(dst, line0, line1: ptr UncheckedArray[uint8],
     widthPreExpansion, horizontalExpansionFactor: int
@@ -113,20 +117,20 @@ proc decodeDQT(state: var DecoderState) =
 
 proc decodeDHT(state: var DecoderState) =
   proc buildHuffman(huffman: var Huffman, counts: array[16, uint8]) =
-    var sizes: array[257, uint8]
     block:
       var k: int
       for i in 0.uint8 ..< 16:
         for j in 0.uint8 ..< counts[i]:
-          sizes[k] = i + 1
+          huffman.sizes[k] = i + 1
           inc k
-      sizes[k] = 0
+      huffman.sizes[k] = 0
 
     var code, j: int
     for i in 1.uint8 .. 16:
       huffman.deltas[i] = j - code
-      if sizes[j] == i:
-        while sizes[j] == i:
+      if huffman.sizes[j] == i:
+        while huffman.sizes[j] == i:
+          huffman.codes[j] = code.uint16
           inc code
           inc j
         if code - 1 >= 1 shl i:
@@ -134,6 +138,16 @@ proc decodeDHT(state: var DecoderState) =
       huffman.maxCodes[i] = code shl (16 - i)
       code = code shl 1
     huffman.maxCodes[17] = int.high
+
+    for i in 0 ..< huffman.fast.len:
+      huffman.fast[i] = 255
+
+    for i in 0 ..< j:
+      let size = huffman.sizes[i]
+      if size <= fastBits:
+        let fast = huffman.codes[i].int shl (fastBits - size)
+        for k in 0 ..< 1 shl (fastBits - size):
+          huffman.fast[fast + k] = i.uint8
 
   var len = state.readUint16be() - 2
   while len > 0:
@@ -313,28 +327,39 @@ proc huffmanDecode(state: var DecoderState, tableCurrent, table: int): uint8 =
   if state.bitCount < 16:
     state.fillBits()
 
-  var
-    tmp = (state.bits shr 16).int
-    i = 1
-  while i < state.huffmanTables[tableCurrent][table].maxCodes.len:
-    if tmp < state.huffmanTables[tableCurrent][table].maxCodes[i]:
-      break
-    inc i
+  let
+    fastId = (state.bits shr (32 - fastBits)) and ((1 shl fastBits) - 1)
+    fast = state.huffmanTables[tableCurrent][table].fast[fastId]
+  if fast < 255:
+    let size = state.huffmanTables[tableCurrent][table].sizes[fast].int
+    if size > state.bitCount:
+      failInvalid()
 
-  if i == 17 or i > state.bitCount:
-    failInvalid()
+    result = state.huffmanTables[tableCurrent][table].symbols[fast]
+    state.bits = state.bits shl size
+    state.bitCount -= size
+  else:
+    var
+      tmp = (state.bits shr 16).int
+      i = fastBits + 1
+    while i < state.huffmanTables[tableCurrent][table].maxCodes.len:
+      if tmp < state.huffmanTables[tableCurrent][table].maxCodes[i]:
+        break
+      inc i
 
-  let symbolId = (state.bits shr (32 - i)).int +
-    state.huffmanTables[tableCurrent][table].deltas[i]
-  result = state.huffmanTables[tableCurrent][table].symbols[symbolId]
+    if i == 17 or i > state.bitCount:
+      failInvalid()
 
-  state.bits = state.bits shl i
-  state.bitCount -= i
+    let symbolId = (state.bits shr (32 - i)).int +
+      state.huffmanTables[tableCurrent][table].deltas[i]
+    result = state.huffmanTables[tableCurrent][table].symbols[symbolId]
+    state.bits = state.bits shl i
+    state.bitCount -= i
 
 template lrot(value: uint32, shift: int): uint32 =
   (value shl shift) or (value shr (32 - shift))
 
-proc extendReceive(state: var DecoderState, t: int): int =
+proc extendReceive(state: var DecoderState, t: int): int {.inline.} =
   if state.bitCount < t:
     state.fillBits()
 
@@ -345,7 +370,9 @@ proc extendReceive(state: var DecoderState, t: int): int =
   state.bitCount -= t
   result = k.int + (biases[t] and (not sign))
 
-proc decodeImageBlock(state: var DecoderState, component: int): array[64, int16] =
+proc decodeImageBlock(
+  state: var DecoderState, component: int
+): array[64, int16] =
   let t = state.huffmanDecode(0, state.components[component].huffmanDC).int
   if t < 0:
     failInvalid()
