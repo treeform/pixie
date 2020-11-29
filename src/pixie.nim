@@ -1,7 +1,7 @@
 ## Public interface to you library.
 
 import pixie/images, pixie/masks, pixie/paths, pixie/common, pixie/blends,
-  pixie/fileformats/bmp, pixie/fileformats/png, pixie/fileformats/jpgstb,
+  pixie/fileformats/bmp, pixie/fileformats/png, pixie/fileformats/jpg,
   flatty/binny, os
 
 export images, masks, paths, common, blends
