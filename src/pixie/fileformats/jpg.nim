@@ -1,7 +1,6 @@
 import pixie/common, pixie/images, strutils
 
 # See https://github.com/nothings/stb/blob/master/stb_image.h
-# See http://www.vip.sugovica.hu/Sardi/kepnezo/JPEG%20File%20Layout%20and%20Format.htm
 
 const
   fastBits = 9
@@ -51,7 +50,8 @@ type
     widthStride, heightStride: int
     huffmanDC, huffmanAC: int
     dcPred: int
-    data, lineBuf: seq[uint8]
+    widthCoeff, heightCoeff: int
+    data, coeff, lineBuf: seq[uint8]
 
   DecoderState = object
     buffer: seq[uint8]
@@ -61,10 +61,13 @@ type
     quantizationTables: array[4, array[64, uint8]]
     huffmanTables: array[2, array[4, Huffman]] # 0 = DC, 1 = AC
     components: array[3, Component]
+    scanComponents: int
+    spectralStart, spectralEnd: int
+    successiveApproxLow, successiveApproxHigh: int
     maxHorizontalSamplingFactor, maxVerticalSamplingFactor: int
     mcuWidth, mcuHeight, numMcuWide, numMcuHigh: int
     componentOrder: array[3, int]
-    hitEOI: bool
+    progressive, hitEOI: bool
 
 template failInvalid() =
   raise newException(PixieError, "Invalid JPG buffer, unable to load")
@@ -271,14 +274,25 @@ proc decodeSOF(state: var DecoderState) =
       state.components[i].widthStride * state.components[i].heightStride
     )
 
+    if state.progressive:
+      state.components[i].widthCoeff = state.components[i].widthStride div 8
+      state.components[i].heightCoeff = state.components[i].heightStride div 8
+      state.components[i].coeff.setLen(
+        state.components[i].widthStride * state.components[i].heightStride
+      )
+
 proc decodeSOS(state: var DecoderState) =
   var len = state.readUint16be() - 2
 
-  let components = state.readUint8()
-  if components != 3:
-    raise newException(PixieError, "Unsupported JPG component count, must be 3")
+  state.scanComponents = state.readUint8().int
 
-  for i in 0 ..< 3:
+  if state.scanComponents notin [1, 3]:
+    raise newException(PixieError, "Unsupported JPG scan component count")
+
+  if not state.progressive and state.scanComponents != 3:
+    raise newException(PixieError, "Unsupported JPG scan component count")
+
+  for i in 0 ..< state.scanComponents:
     let
       id = state.readUint8()
       info = state.readUint8()
@@ -300,11 +314,28 @@ proc decodeSOS(state: var DecoderState) =
     state.components[component].huffmanDC = huffmanDC.int
     state.componentOrder[i] = component
 
-  # Skip 3 bytes
-  for i in 0 ..< 3:
-    discard state.readUint8()
+  state.spectralStart = state.readUint8().int
+  state.spectralEnd = state.readUint8().int
 
-  len -= 10
+  let aa = state.readUint8().int
+  state.successiveApproxLow = aa and 15
+  state.successiveApproxHigh = aa shr 4
+
+  if state.progressive:
+    if state.spectralStart > 63 or state.spectralEnd > 63:
+      failInvalid()
+    if state.spectralEnd > state.spectralEnd:
+      failInvalid()
+    if state.successiveApproxHigh > 13 or state.successiveApproxLow > 13:
+      failInvalid()
+  else:
+    if state.spectralStart != 0:
+      failInvalid()
+    if state.successiveApproxHigh != 0 or state.successiveApproxLow != 0:
+      failInvalid()
+    state.spectralEnd = 63
+
+  len -= 4 + 2 * state.scanComponents.uint16
 
   if len != 0:
     failInvalid()
@@ -370,7 +401,7 @@ proc extendReceive(state: var DecoderState, t: int): int {.inline.} =
   state.bitCount -= t
   result = k.int + (biases[t] and (not sign))
 
-proc decodeImageBlock(
+proc decodeBlock(
   state: var DecoderState, component: int
 ): array[64, int16] =
   let t = state.huffmanDecode(0, state.components[component].huffmanDC).int
@@ -526,24 +557,36 @@ proc idctBlock(component: var Component, offset: int, data: array[64, int16]) =
     component.data[outPos + 3] = clamp((x3 + t0) shr 17)
     component.data[outPos + 4] = clamp((x3 - t0) shr 17)
 
-proc decodeImageData(state: var DecoderState) =
-  for y in 0 ..< state.numMcuHigh:
-    for x in 0 ..< state.numMcuWide:
-      for component in state.componentOrder:
-        for j in 0 ..< state.components[component].verticalSamplingFactor:
-          for i in 0 ..< state.components[component].horizontalSamplingFactor:
-            let
-              data = state.decodeImageBlock(component)
-              rowPos = (
-                x * state.components[component].horizontalSamplingFactor + i
-              ) * 8
-              column = (
-                y * state.components[component].verticalSamplingFactor + j
-              ) * 8
-            state.components[component].idctBlock(
-              state.components[component].widthStride * column + rowPos,
-              data
-            )
+proc idctBlockDC(component: var Component, offset: int) =
+  discard
+
+proc decodeScanData(state: var DecoderState) =
+  if state.progressive:
+    if state.scanComponents == 1:
+      discard
+    else:
+      discard
+  else:
+    for y in 0 ..< state.numMcuHigh:
+      for x in 0 ..< state.numMcuWide:
+        for comp in state.componentOrder:
+          for j in 0 ..< state.components[comp].verticalSamplingFactor:
+            for i in 0 ..< state.components[comp].horizontalSamplingFactor:
+              let
+                data = state.decodeBlock(comp)
+                rowPos = (
+                  x * state.components[comp].horizontalSamplingFactor + i
+                ) * 8
+                column = (
+                  y * state.components[comp].verticalSamplingFactor + j
+                ) * 8
+              state.components[comp].idctBlock(
+                state.components[comp].widthStride * column + rowPos,
+                data
+              )
+
+proc finishProgressive(state: var DecoderState) =
+  discard
 
 proc resampleRowH1V1(
   dst, a, b: ptr UncheckedArray[uint8],
@@ -632,23 +675,26 @@ proc decodeJpg*(data: seq[uint8]): Image =
     failInvalid()
 
   var marker = state.seekToMarker()
-  while marker != 0xC0: # SOF
+  while marker != 0xC0 and marker != 0xC1 and marker != 0xC2:
+    # Baseline DCT or Extended DCT or Progressive DCT
     state.decodeSegment(marker)
     marker = state.seekToMarker()
 
+  state.progressive = marker == 0xC2
   state.decodeSOF()
 
-  marker = state.seekToMarker()
-  while marker != 0xDA: # Start of Scan
-    state.decodeSegment(marker)
+  while true:
     marker = state.seekToMarker()
+    if marker == 0xDA: # Start of Scan
+      state.decodeSOS()
+      state.decodeScanData()
+    else:
+      state.decodeSegment(marker)
+    if state.hitEOI:
+      break
 
-  state.decodeSOS()
-
-  state.decodeImageData()
-
-  if not state.hitEOI:
-    failInvalid()
+  if state.progressive:
+    state.finishProgressive()
 
   result = newImage(state.imageWidth, state.imageHeight)
 
