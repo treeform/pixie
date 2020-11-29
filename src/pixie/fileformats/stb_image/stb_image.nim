@@ -18,7 +18,6 @@ proc stbi_load_from_memory(
 ): ptr cuchar
   {.importc: "stbi_load_from_memory", stbcall.}
 
-
 proc loadFromMemory*(buffer: seq[uint8], width, height: var int): seq[uint8] =
   var outWidth, outHeight, outComponents: cint
   let data = stbi_load_from_memory(
@@ -30,7 +29,7 @@ proc loadFromMemory*(buffer: seq[uint8], width, height: var int): seq[uint8] =
     4
   )
   if data == nil:
-    raise newException(PixieError, "Loading JPG failed")
+    raise newException(PixieError, "Decoding JPG failed")
 
   width = outWidth.int
   height = outHeight.int
