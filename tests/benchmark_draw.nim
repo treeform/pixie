@@ -1,4 +1,4 @@
-import pixie, chroma, vmath, fidget/opengl/perf, pixie/fileformats/bmp
+import pixie, chroma, vmath, fidget/opengl/perf
 
 # timeIt "drawOverwrite bmOverwrite":
 #   var tmp = 0
