@@ -25,36 +25,36 @@ proc `$`*(mask: Mask): string =
   ## Display the mask size and channels.
   "<Mask " & $mask.width & "x" & $mask.height & ">"
 
-proc getRgbaUnsafe*(mask: Mask, x, y: int): uint8 {.inline.} =
-  ## Gets a alpha from (x, y) coordinates.
+proc getUnsafe*(mask: Mask, x, y: int): uint8 {.inline.} =
+  ## Gets a value from (x, y) coordinates.
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will case unsafe memory reads.
   result = mask.data[mask.width * y + x]
 
 proc `[]`*(mask: Mask, x, y: int): uint8 {.inline.} =
-  ## Gets a pixel at (x, y) or returns transparent black if outside of bounds.
+  ## Gets the value at (x, y) or returns transparent black if outside of bounds.
   if mask.inside(x, y):
-    return mask.getRgbaUnsafe(x, y)
+    return mask.getUnsafe(x, y)
 
-proc setRgbaUnsafe*(mask: Mask, x, y: int, alpha: uint8) {.inline.} =
-  ## Sets a color from (x, y) coordinates.
+proc setUnsafe*(mask: Mask, x, y: int, value: uint8) {.inline.} =
+  ## Sets the value from (x, y) coordinates.
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will case unsafe memory writes.
-  mask.data[mask.width * y + x] = alpha
+  mask.data[mask.width * y + x] = value
 
-proc `[]=`*(mask: Mask, x, y: int, alpha: uint8) {.inline.} =
-  ## Sets a pixel at (x, y) or does nothing if outside of bounds.
+proc `[]=`*(mask: Mask, x, y: int, value: uint8) {.inline.} =
+  ## Sets the value at (x, y) or does nothing if outside of bounds.
   if mask.inside(x, y):
-    mask.setRgbaUnsafe(x, y, alpha)
+    mask.setUnsafe(x, y, value)
 
-proc fill*(mask: Mask, alpha: uint8) =
-  ## Fills the mask with a solid color.
+proc fill*(mask: Mask, value: uint8) =
+  ## Fills the mask with the paramter value.
   for i in 0 ..< mask.data.len:
-    mask.data[i] = alpha
+    mask.data[i] = value
 
 proc invert*(mask: Mask) =
-  ## Inverts all of the colors and alpha.
-  for alpha in mask.data.mitems:
-    alpha = 255 - alpha
+  ## Inverts the entire mask value.
+  for value in mask.data.mitems:
+    value = 255 - value
