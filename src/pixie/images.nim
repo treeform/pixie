@@ -32,6 +32,10 @@ proc newImageNoInit*(width, height: int): Image =
   result.height = height
   result.data = newSeq[ColorRGBA](width * height)
 
+proc wh*(image: Image): Vec2 {.inline.} =
+  ## Return with and height as a size vector.
+  vec2(image.width.float32, image.height.float32)
+
 proc copy*(image: Image): Image =
   ## Copies an image creating a new image.
   result = newImage(image.width, image.height)

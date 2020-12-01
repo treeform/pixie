@@ -554,14 +554,14 @@ proc strokePolygons*(ps: seq[seq[Vec2]], strokeWidthR, strokeWidthL: float32): s
 {.push checks: off, stacktrace: off.}
 
 proc fillPolygons*(
-    image: Image,
+    size: Vec2,
     polys: seq[seq[Vec2]],
     color: ColorRGBA,
     quality = 4,
   ): Image =
   const ep = 0.0001 * PI
 
-  result = newImage(image.width, image.height)
+  result = newImage(size.x.int, size.y.int)
 
   proc scanLineHits(
     polys: seq[seq[Vec2]],
@@ -579,7 +579,7 @@ proc fillPolygons*(
         var at: Vec2
         if line.intersects(scan, at):
           let winding = line.at.y > line.to.y
-          let x = at.x.clamp(0, image.width.float32)
+          let x = at.x.clamp(0, size.x)
           hits.add((x, winding))
 
     hits.sort(proc(a, b: (float32, bool)): int = cmp(a[0], b[0]))
@@ -623,103 +623,91 @@ proc fillPolygons*(
 {.pop.}
 
 proc fillPath*(
-    image: Image,
-    path: Path,
-    color: ColorRGBA
-  ): Image =
-  let polys = commandsToPolygons(path.commands)
-  image.fillPolygons(polys, color)
+  image: Image,
+  path: Path,
+  color: ColorRGBA
+) =
+  let
+    polys = commandsToPolygons(path.commands)
+    tmp = fillPolygons(image.wh, polys, color)
+  image.draw(tmp)
 
 proc fillPath*(
-    image: Image,
-    path: string,
-    color: ColorRGBA
-  ): Image =
-  image.fillPath(parsePath(path), color)
-
-proc fillPath*(
-    image: Image,
-    path: string,
-    color: ColorRGBA,
-    pos: Vec2
-  ): Image =
-  var polys = commandsToPolygons(parsePath(path).commands)
-  for poly in polys.mitems:
-    for i, p in poly.mpairs:
-      poly[i] = p + pos
-  image.fillPolygons(polys, color)
-
-proc fillPath*(
-    image: Image,
-    path: Path,
-    color: ColorRGBA,
-    mat: Mat3
-  ): Image =
+  image: Image,
+  path: Path,
+  color: ColorRGBA,
+  mat: Mat3
+) =
   var polys = commandsToPolygons(path.commands)
   for poly in polys.mitems:
     for i, p in poly.mpairs:
       poly[i] = mat * p
-  image.fillPolygons(polys, color)
+  let tmp = fillPolygons(image.wh, polys, color)
+  image.draw(tmp)
 
 proc fillPath*(
-    image: Image,
-    path: string,
-    color: ColorRGBA,
-    mat: Mat3
-  ): Image =
+  image: Image,
+  path: string,
+  color: ColorRGBA,
+  mat: Mat3
+) =
   image.fillPath(parsePath(path), color, mat)
 
 proc strokePath*(
-    image: Image,
-    path: Path,
-    color: ColorRGBA,
-    strokeWidth: float32,
-    # strokeLocation: StrokeLocation,
-    # strokeCap: StorkeCap,
-    # strokeJoin: StorkeJoin
-  ): Image =
-  let polys = commandsToPolygons(path.commands)
-  let (strokeL, strokeR) = (strokeWidth/2, strokeWidth/2)
-  let polys2 = strokePolygons(polys, strokeL, strokeR)
-  image.fillPolygons(polys2, color)
+  image: Image,
+  path: Path,
+  color: ColorRGBA,
+  strokeWidth: float32 = 1.0,
+  # strokeLocation: StrokeLocation,
+  # strokeCap: StorkeCap,
+  # strokeJoin: StorkeJoin
+) =
+  let
+    polys = commandsToPolygons(path.commands)
+    (strokeL, strokeR) = (strokeWidth/2, strokeWidth/2)
+    polys2 = strokePolygons(polys, strokeL, strokeR)
+    tmp = fillPolygons(image.wh, polys2, color)
+  image.draw(tmp)
 
 proc strokePath*(
-    image: Image,
-    path: string,
-    color: ColorRGBA,
-    strokeWidth: float32
-  ): Image =
+  image: Image,
+  path: string,
+  color: ColorRGBA,
+  strokeWidth: float32
+) =
   image.strokePath(parsePath(path), color, strokeWidth)
 
 proc strokePath*(
-    image: Image,
-    path: string,
-    color: ColorRGBA,
-    strokeWidth: float32,
-    pos: Vec2
-  ): Image =
+  image: Image,
+  path: string,
+  color: ColorRGBA,
+  strokeWidth: float32,
+  pos: Vec2
+) =
   var polys = commandsToPolygons(parsePath(path).commands)
   let (strokeL, strokeR) = (strokeWidth/2, strokeWidth/2)
   var polys2 = strokePolygons(polys, strokeL, strokeR)
   for poly in polys2.mitems:
     for i, p in poly.mpairs:
       poly[i] = p + pos
-  image.fillPolygons(polys2, color)
+  let tmp = fillPolygons(image.wh, polys2, color)
+  image.draw(tmp)
 
 proc strokePath*(
-    image: Image,
-    path: string,
-    color: ColorRGBA,
-    strokeWidth: float32,
-    mat: Mat3
-  ): Image =
+  image: Image,
+  path: string,
+  color: ColorRGBA,
+  strokeWidth: float32,
+  mat: Mat3
+) =
   var polys = commandsToPolygons(parsePath(path).commands)
   let (strokeL, strokeR) = (strokeWidth/2, strokeWidth/2)
   var polys2 = strokePolygons(polys, strokeL, strokeR)
   for poly in polys2.mitems:
     for i, p in poly.mpairs:
       poly[i] = mat * p
-  image.fillPolygons(polys2, color)
+  let tmp = fillPolygons(image.wh, polys2, color)
+  image.draw(tmp)
 
 proc addPath*(path: Path, other: Path) =
   ## Adds a path to the current path.
