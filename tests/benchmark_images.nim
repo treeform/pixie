@@ -66,7 +66,7 @@ timeIt "applyOpacityOriginal":
 timeIt "applyOpacity":
   var a = newImage(2560, 1440)
   for i in 0 ..< iterations:
-    a = a.applyOpacity(0.5)
+    a.applyOpacity(0.5)
 
 timeIt "sharpOpacityOriginal":
   var a = newImage(2560, 1440)
@@ -76,4 +76,4 @@ timeIt "sharpOpacityOriginal":
 timeIt "sharpOpacity":
   var a = newImage(2560, 1440)
   for i in 0 ..< iterations:
-    a = a.sharpOpacity()
+    a.sharpOpacity()

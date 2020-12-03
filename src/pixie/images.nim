@@ -347,19 +347,17 @@ proc shadow*(
   result.fill(color)
   result.draw(shadow, blendMode = bmMask)
 
-proc applyOpacity*(image: Image, opacity: float32): Image =
+proc applyOpacity*(image: Image, opacity: float32) =
   ## Multiplies alpha of the image by opacity.
-  result = newImage(image.width, image.height)
   let op = (255 * opacity).uint32
   for i in 0 ..< image.data.len:
     var rgba = image.data[i]
     rgba.a = ((rgba.a.uint32 * op) div 255).clamp(0, 255).uint8
     image.data[i] = rgba
 
-proc sharpOpacity*(image: Image): Image =
+proc sharpOpacity*(image: Image) =
   ## Sharpens the opacity to extreme.
   ## A = 0 stays 0. Anything else turns into 255.
-  result = newImage(image.width, image.height)
   for i in 0 ..< image.data.len:
     var rgba = image.data[i]
     if rgba.a == 0:
