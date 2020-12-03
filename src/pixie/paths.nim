@@ -132,7 +132,7 @@ proc parsePath*(path: string): Path =
           number = $c
       of ' ', ',', '\r', '\n', '\t':
         finishDigit()
-      else: # TODO: ?
+      else: # TODO: still needed?
         if command == Move and numbers.len == 2:
           finishCommand()
           command = Line

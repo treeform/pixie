@@ -50,7 +50,7 @@ proc `[]=`*(mask: Mask, x, y: int, value: uint8) {.inline.} =
     mask.setUnsafe(x, y, value)
 
 proc fill*(mask: Mask, value: uint8) =
-  ## Fills the mask with the paramter value.
+  ## Fills the mask with the parameter value.
   for i in 0 ..< mask.data.len:
     mask.data[i] = value
 
