@@ -46,7 +46,7 @@ block:
     "M 10 10 H 90 V 90 H 10 L 10 10",
     rgba(255, 255, 0, 255)
   )
-  image.writeFile("pathYellowRectangle.png")
+  image.writeFile("tests/images/pathYellowRectangle.png")
 
 block:
   echo "pathRedRectangle"
@@ -61,7 +61,7 @@ block:
     path,
     rgba(255, 0, 0, 255)
   )
-  image.writeFile("pathRedRectangle.png")
+  image.writeFile("tests/images/pathRedRectangle.png")
 
 block:
   echo "pathBottomArc"
@@ -85,7 +85,7 @@ block:
     """,
     parseHtmlColor("#FC427B").rgba
   )
-  image.writeFile("pathHeart.png")
+  image.writeFile("tests/images/pathHeart.png")
 
 block:
   echo "pathRotatedArc"
@@ -94,7 +94,7 @@ block:
     "M 20 50 A 20 10 45 1 1 80 50 L 20 50",
     parseHtmlColor("#FC427B").rgba
   )
-  image.writeFile("pathRotatedArc.png")
+  image.writeFile("tests/images/pathRotatedArc.png")
 
 block:
   echo "pathInvertedCornerArc"
@@ -103,7 +103,7 @@ block:
     "M 0 50 A 50 50 0 0 0 50 0 L 50 50 L 0 50",
     parseHtmlColor("#FC427B").rgba
   )
-  image.writeFile("pathInvertedCornerArc.png")
+  image.writeFile("tests/images/pathInvertedCornerArc.png")
 
 block:
   echo "pathCornerArc"
@@ -112,7 +112,7 @@ block:
     "M 0 50 A 50 50 0 0 1 50 0 L 50 50 L 0 50",
     parseHtmlColor("#FC427B").rgba
   )
-  image.writeFile("pathCornerArc.png")
+  image.writeFile("tests/images/pathCornerArc.png")
 
 block:
   let image = newImage(100, 100)
@@ -132,4 +132,4 @@ block:
     path,
     rgba(255, 0, 0, 255)
   )
-  image.writeFile("pathRoundRect.png")
+  image.writeFile("tests/images/pathRoundRect.png")
