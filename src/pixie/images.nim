@@ -365,14 +365,15 @@ proc spread*(image: Image, spread: float32): Image =
   for y in 0 ..< result.height:
     for x in 0 ..< result.width:
       var maxAlpha = 0.uint8
-      for bx in -spread.int .. spread.int:
-        for by in -spread.int .. spread.int:
-          # if vec2(bx.float32, by.float32).length < spread:
-          let alpha = image[x + bx, y + by].a
-          if alpha > maxAlpha:
-            maxAlpha = alpha
-          if maxAlpha == 255:
-            break
+      block blurBox:
+        for bx in -spread.int .. spread.int:
+          for by in -spread.int .. spread.int:
+            # if vec2(bx.float32, by.float32).length < spread:
+            let alpha = image[x + bx, y + by].a
+            if alpha > maxAlpha:
+              maxAlpha = alpha
+            if maxAlpha == 255:
+              break blurBox
       result[x, y] = rgba(0, 0, 0, maxAlpha)
 
 proc shadow*(
