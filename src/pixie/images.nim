@@ -16,22 +16,6 @@ proc newImage*(width, height: int): Image =
   result.height = height
   result.data = newSeq[ColorRGBA](width * height)
 
-proc newSeqNoInit*[T](len: Natural): seq[T] =
-  ## Creates a new sequence of type ``seq[T]`` with length ``len``.
-  ## Skips initialization of memory to zero.
-  result = newSeqOfCap[T](len)
-  when defined(nimSeqsV2):
-    cast[ptr int](addr result)[] = len
-  else:
-    cast[ref int](result) = len
-
-proc newImageNoInit*(width, height: int): Image =
-  ## Creates a new image with appropriate dimensions.
-  result = Image()
-  result.width = width
-  result.height = height
-  result.data = newSeq[ColorRGBA](width * height)
-
 proc wh*(image: Image): Vec2 {.inline.} =
   ## Return with and height as a size vector.
   vec2(image.width.float32, image.height.float32)
@@ -90,11 +74,6 @@ proc fill*(image: Image, rgba: ColorRgba) =
     for x in 0 ..< image.width:
       image.setRgbaUnsafe(x, y, rgba)
 
-proc newImageFill*(width, height: int, rgba: ColorRgba): Image =
-  ## Fills the image with a solid color.
-  result = newImageNoInit(width, height)
-  result.fill(rgba)
-
 proc invert*(image: Image) =
   ## Inverts all of the colors and alpha.
   for y in 0 ..< image.height:
@@ -111,7 +90,7 @@ proc subImage*(image: Image, x, y, w, h: int): Image =
   ## TODO handle images out of bounds faster
   # doAssert x >= 0 and y >= 0
   # doAssert x + w <= image.width and y + h <= image.height
-  result = newImageNoInit(w, h)
+  result = newImage(w, h)
   for y2 in 0 ..< h:
     for x2 in 0 ..< w:
       result.setRgbaUnsafe(x2, y2, image[x2 + x, y2 + y])
@@ -185,8 +164,8 @@ proc fromAlphy*(c: Color): Color =
 proc toAlphy*(image: Image) =
   ## Converts an image to premultiplied alpha from straight.
   for c in image.data.mitems:
-    c.g = ((c.r.uint32 * c.a.uint32) div 255).uint8
     c.r = ((c.r.uint32 * c.a.uint32) div 255).uint8
+    c.g = ((c.r.uint32 * c.a.uint32) div 255).uint8
     c.b = ((c.r.uint32 * c.a.uint32) div 255).uint8
 
 proc fromAlphy*(image: Image) =
@@ -218,28 +197,6 @@ proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA {.inline.} =
     finalMix = lerp(bottomMix, topMix, difY)
 
   return finalMix.fromAlphy().rgba()
-
-# @andre: unused, delete?
-
-# proc hasEffect*(blendMode: BlendMode, rgba: ColorRGBA): bool =
-#   ## Returns true if applying rgba with current blend mode has effect.
-#   case blendMode
-#   of bmMask:
-#     rgba.a != 255
-#   of bmOverwrite:
-#     true
-#   of bmIntersectMask:
-#     true
-#   else:
-#     rgba.a > 0
-
-# proc allowCopy*(blendMode: BlendMode): bool =
-#   ## Returns true if applying rgba with current blend mode has effect.
-#   case blendMode
-#   of bmIntersectMask:
-#     false
-#   else:
-#     true
 
 proc resize*(srcImage: Image, width, height: int): Image =
   result = newImage(width, height)
@@ -390,12 +347,13 @@ proc shadow*(
     shadow = shadow.spread(spread)
   if blur > 0:
     shadow = shadow.blurAlpha(blur)
-  result = newImageFill(mask.width, mask.height, color)
+  result = newImage(mask.width, mask.height)
+  result.fill(color)
   result.draw(shadow, blendMode = bmMask)
 
 proc applyOpacity*(image: Image, opacity: float32): Image =
   ## Multiplies alpha of the image by opacity.
-  result = newImageNoInit(image.width, image.height)
+  result = newImage(image.width, image.height)
   let op = (255 * opacity).uint32
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
@@ -406,7 +364,7 @@ proc applyOpacity*(image: Image, opacity: float32): Image =
 proc sharpOpacity*(image: Image): Image =
   ## Sharpens the opacity to extreme.
   ## A = 0 stays 0. Anything else turns into 255.
-  result = newImageNoInit(image.width, image.height)
+  result = newImage(image.width, image.height)
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       var rgba = image.getRgbaUnsafe(x, y)
@@ -417,7 +375,7 @@ proc sharpOpacity*(image: Image): Image =
 
 proc drawCorrect*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
   ## Draws one image onto another using matrix with color blending.
-  result = newImageNoInit(a.width, a.height)
+  result = newImage(a.width, a.height)
 
   var
     matInv = mat.inverse()
