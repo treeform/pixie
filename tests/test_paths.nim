@@ -1,6 +1,37 @@
 import pixie, chroma
 
 block:
+  let pathStr = """
+    m 1 2
+    l 3 4
+    h 5
+    v 6
+    c 0 0 0 0 0 0
+    q 1 1 1 1
+    t 2 2
+    a 7 7 7 7 7 7 7
+    z
+  """
+  let path = parsePath(pathStr)
+  doAssert $path == "m1 2 l3 4 h5 v6 c0 0 0 0 0 0 q1 1 1 1 t2 2 a7 7 7 7 7 7 7 Z"
+
+block:
+  let pathStr = """
+    M 1 2
+    L 3 4
+    H 5
+    V 6
+    C 0 0 0 0 0 0
+    Q 1 1 1 1
+    T 2 2
+    A 7 7 7 7 7 7 7
+    z
+  """
+  let path = parsePath(pathStr)
+  doAssert $path == "M1 2 L3 4 H5 V6 C0 0 0 0 0 0 Q1 1 1 1 T2 2 A7 7 7 7 7 7 7 Z"
+
+
+block:
   let pathStr = "M 0.1E-10 0.1e10 L2+2 L3-3 L0.1E+10-1"
   let path = parsePath(pathStr)
 

@@ -48,7 +48,10 @@ proc parsePath*(path: string): Path =
     if command != Start:
       let num = commandNumbers(command)
       if num > 0:
-        assert numbers.len mod num == 0
+        if numbers.len mod num != 0:
+          raise newException(PixieError,
+            "Could not parse path: " & $command & " has wrong number of prams," &
+            " got " & $numbers.len & " but expected " & $num & ".")
         for batch in 0 ..< numbers.len div num:
           result.commands.add PathCommand(
             kind: command,
@@ -145,17 +148,27 @@ proc parsePath*(path: string): Path =
 
 proc `$`*(path: Path): string =
   for command in path.commands:
-    case command.kind:
-      of Move:
-        result.add "M"
-      of Arc:
-        result.add "A"
-      of Line:
-        result.add "L"
-      of End:
-        result.add "Z"
-      else:
-        result.add "?"
+    case command.kind
+    of Move: result.add "M"
+    of Line: result.add "L"
+    of HLine: result.add "H"
+    of VLine: result.add "V"
+    of Cubic: result.add "C"
+    of SCurve: result.add "S"
+    of Quad: result.add "Q"
+    of TQuad: result.add "T"
+    of Arc: result.add "A"
+    of RMove: result.add "m"
+    of RLine: result.add "l"
+    of RHLine: result.add "h"
+    of RVLine: result.add "v"
+    of RCubic: result.add "c"
+    of RSCurve: result.add "s"
+    of RQuad: result.add "q"
+    of RTQuad: result.add "t"
+    of RArc: result.add "a"
+    of End: result.add "Z"
+    of Start: result.add "?"
     for number in command.numbers:
       if floor(number) == number:
         result.add $(number.int)
