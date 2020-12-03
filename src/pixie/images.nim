@@ -70,18 +70,16 @@ proc `[]=`*(image: Image, x, y: int, rgba: ColorRGBA) {.inline.} =
 
 proc fill*(image: Image, rgba: ColorRgba) =
   ## Fills the image with a solid color.
-  for i in 0 ..< image.data.len:
-    image.data[i] = rgba
+  for c in image.data.mitems:
+    c = rgba
 
 proc invert*(image: Image) =
   ## Inverts all of the colors and alpha.
-  for i in 0 ..< image.data.len:
-    var rgba = image.data[i]
+  for rgba in image.data.mitems:
     rgba.r = 255 - rgba.r
     rgba.g = 255 - rgba.g
     rgba.b = 255 - rgba.b
     rgba.a = 255 - rgba.a
-    image.data[i] = rgba
 
 proc subImage*(image: Image, x, y, w, h: int): Image =
   ## Gets a sub image of the main image.
