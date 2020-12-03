@@ -6,8 +6,8 @@ type
     width*, height*: int
     data*: seq[ColorRGBA]
 
-proc draw*(a: Image, b: Image, mat: Mat3, blendMode = bmNormal)
-proc draw*(a: Image, b: Image, pos = vec2(0, 0), blendMode = bmNormal)
+proc draw*(a, b: Image, mat: Mat3, blendMode = bmNormal)
+proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.}
 
 proc newImage*(width, height: int): Image =
   ## Creates a new image with appropriate dimensions.
@@ -47,8 +47,7 @@ proc `$`*(image: Image): string =
 
 proc inside*(image: Image, x, y: int): bool {.inline.} =
   ## Returns true if (x, y) is inside the image.
-  x >= 0 and x < image.width and
-  y >= 0 and y < image.height
+  x >= 0 and x < image.width and y >= 0 and y < image.height
 
 proc inside1px*(image: Image, x, y: float): bool {.inline.} =
   ## Returns true if (x, y) is inside the image.
@@ -66,7 +65,7 @@ proc getRgbaUnsafe*(image: Image, x, y: int): ColorRGBA {.inline.} =
 proc getAddr*(image: Image, x, y: int): pointer {.inline.} =
   ## Gets a address of the color from (x, y) coordinates.
   ## Unsafe make sure x, y are in bounds.
-  addr image.data[image.width * y + x]
+  image.data[image.width * y + x].addr
 
 proc `[]`*(image: Image, x, y: int): ColorRGBA {.inline.} =
   ## Gets a pixel at (x, y) or returns transparent black if outside of bounds.
@@ -85,18 +84,16 @@ proc `[]=`*(image: Image, x, y: int, rgba: ColorRGBA) {.inline.} =
   if image.inside(x, y):
     image.setRgbaUnsafe(x, y, rgba)
 
-proc newImageFill*(width, height: int, rgba: ColorRgba): Image =
-  ## Fills the image with a solid color.
-  result = newImageNoInit(width, height)
-  for y in 0 ..< result.height:
-    for x in 0 ..< result.width:
-      result.setRgbaUnsafe(x, y, rgba)
-
 proc fill*(image: Image, rgba: ColorRgba) =
   ## Fills the image with a solid color.
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       image.setRgbaUnsafe(x, y, rgba)
+
+proc newImageFill*(width, height: int, rgba: ColorRgba): Image =
+  ## Fills the image with a solid color.
+  result = newImageNoInit(width, height)
+  result.fill(rgba)
 
 proc invert*(image: Image) =
   ## Inverts all of the colors and alpha.
@@ -222,25 +219,27 @@ proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA {.inline.} =
 
   return finalMix.fromAlphy().rgba()
 
-proc hasEffect*(blendMode: BlendMode, rgba: ColorRGBA): bool =
-  ## Returns true if applying rgba with current blend mode has effect.
-  case blendMode
-  of bmMask:
-    rgba.a != 255
-  of bmOverwrite:
-    true
-  of bmIntersectMask:
-    true
-  else:
-    rgba.a > 0
+# @andre: unused, delete?
 
-proc allowCopy*(blendMode: BlendMode): bool =
-  ## Returns true if applying rgba with current blend mode has effect.
-  case blendMode
-  of bmIntersectMask:
-    false
-  else:
-    true
+# proc hasEffect*(blendMode: BlendMode, rgba: ColorRGBA): bool =
+#   ## Returns true if applying rgba with current blend mode has effect.
+#   case blendMode
+#   of bmMask:
+#     rgba.a != 255
+#   of bmOverwrite:
+#     true
+#   of bmIntersectMask:
+#     true
+#   else:
+#     rgba.a > 0
+
+# proc allowCopy*(blendMode: BlendMode): bool =
+#   ## Returns true if applying rgba with current blend mode has effect.
+#   case blendMode
+#   of bmIntersectMask:
+#     false
+#   else:
+#     true
 
 proc resize*(srcImage: Image, width, height: int): Image =
   result = newImage(width, height)
@@ -251,7 +250,6 @@ proc resize*(srcImage: Image, width, height: int): Image =
       (height + 1).float / srcImage.height.float
     ))
   )
-
 
 proc blur*(image: Image, radius: float32): Image =
   ## Applies Gaussian blur to the image given a radius.
@@ -369,21 +367,18 @@ proc spread*(image: Image, spread: float32): Image =
       var maxAlpha = 0.uint8
       for bx in -spread.int .. spread.int:
         for by in -spread.int .. spread.int:
-          #if vec2(bx.float32, by.float32).length < spread:
+          # if vec2(bx.float32, by.float32).length < spread:
           let alpha = image[x + bx, y + by].a
           if alpha > maxAlpha:
             maxAlpha = alpha
           if maxAlpha == 255:
-            break
-        if maxAlpha == 255:
             break
       result[x, y] = rgba(0, 0, 0, maxAlpha)
 
 proc shadow*(
   mask: Image,
   offset: Vec2,
-  spread: float32,
-  blur: float32,
+  spread, blur: float32,
   color: ColorRGBA
 ): Image =
   ## Create a shadow of the image with the offset, spread and blur.
@@ -400,11 +395,11 @@ proc shadow*(
 proc applyOpacity*(image: Image, opacity: float32): Image =
   ## Multiplies alpha of the image by opacity.
   result = newImageNoInit(image.width, image.height)
-  let op = (255 * opacity).uint8
+  let op = (255 * opacity).uint32
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       var rgba = image.getRgbaUnsafe(x, y)
-      rgba.a = ((rgba.a.uint32 * op.uint32) div 255).clamp(0, 255).uint8
+      rgba.a = ((rgba.a.uint32 * op) div 255).clamp(0, 255).uint8
       result.setRgbaUnsafe(x, y, rgba)
 
 proc sharpOpacity*(image: Image): Image =
@@ -459,7 +454,6 @@ proc drawUberStatic(
   inPlace: static[bool],
   smooth: static[bool],
 ) =
-
   for y in 0 ..< a.height:
     var
       xMin = 0
@@ -513,13 +507,12 @@ proc drawUberStatic(
         zeroMem(c.getAddr(xMax, y), 4*(a.width - xMax))
     else:
       when not inPlace:
-        #for x in xMax ..< a.width:
+        # for x in xMax ..< a.width:
         #  result.setRgbaUnsafe(x, y, a.getRgbaUnsafe(x, y))
         if a.width - xMax > 0:
           copyMem(c.getAddr(xMax, y), a.getAddr(xMax, y), 4*(a.width - xMax))
 
-
-proc draw*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode) =
+proc draw*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
   ## Draws one image onto another using matrix with color blending.
 
   var
@@ -558,7 +551,6 @@ proc draw*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode) =
     mat[2, 0].fractional == 0.0 and mat[2, 1].fractional == 0.0)
 
   if not smooth:
-    #echo "draw ", b.width, "x", b.height, " fast"
     case blendMode
     of bmNormal: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmNormal, true, false)
     of bmDarken: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmDarken, true, false)
@@ -584,7 +576,6 @@ proc draw*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode) =
     of bmIntersectMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmIntersectMask, true, false)
     of bmExcludeMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmExcludeMask, true, false)
   else:
-    #echo "draw ", b.width, "x", b.height, " smooth"
     case blendMode
     of bmNormal: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmNormal, true, true)
     of bmDarken: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmDarken, true, true)
@@ -610,5 +601,7 @@ proc draw*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode) =
     of bmIntersectMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmIntersectMask, true, true)
     of bmExcludeMask: drawUberStatic(a, b, c, start, stepX, stepY, lines, bmExcludeMask, true, true)
 
-proc draw*(a: Image, b: Image, pos = vec2(0, 0), blendMode = bmNormal) =
+proc draw*(
+  a, b: Image, pos = vec2(0, 0), blendMode = bmNormal
+) {.inline.} =
   a.draw(b, translate(pos), blendMode)

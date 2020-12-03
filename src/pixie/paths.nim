@@ -132,7 +132,7 @@ proc parsePath*(path: string): Path =
           number = $c
       of ' ', ',', '\r', '\n', '\t':
         finishDigit()
-      else:
+      else: # TODO: still needed?
         if command == Move and numbers.len == 2:
           finishCommand()
           command = Line
@@ -619,6 +619,7 @@ proc fillPolygons*(
       var colorWithAlpha = color
       colorWithAlpha.a = uint8(clamp(a, 0, 1) * 255.0)
       result[x, y] = colorWithAlpha
+      # TODO: don't double-clamp and can probably be unsafe?
 
 {.pop.}
 

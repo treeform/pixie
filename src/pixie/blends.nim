@@ -248,7 +248,7 @@ proc mix*(blendMode: BlendMode, target, blend: Color): Color =
   result.b /= result.a
 
 proc mix*(blendMode: BlendMode, dest, src: ColorRGBA): ColorRGBA {.inline.} =
-  return blendMode.mix(dest.color, src.color).rgba
+  blendMode.mix(dest.color, src.color).rgba
 
   # TODO: Fix fast paths
   # if blendMode == Normal:
@@ -271,15 +271,14 @@ proc mix*(blendMode: BlendMode, dest, src: ColorRGBA): ColorRGBA {.inline.} =
   # else:
   #   return blendMode.mix(target.color, blend.color).rgba
 
-proc multiply(Cb, Cs: float32): float32 {.inline.} =
-  Cb * Cs
-
 proc screen(Cb, Cs: float32): float32 {.inline.} =
   1 - (1 - Cb) * (1 - Cs)
 
 proc hardLight(Cb, Cs: float32): float32 {.inline.} =
-  if Cs <= 0.5: multiply(Cb, 2 * Cs)
-  else: screen(Cb, 2 * Cs - 1)
+  if Cs <= 0.5:
+    Cb * 2 * Cs
+  else:
+    screen(Cb, 2 * Cs - 1)
 
 proc softLight(a, b: float32): float32 {.inline.} =
   ## Pegtop
@@ -365,7 +364,7 @@ proc blendDarken(Cb, Cs: float32): float32 {.inline.} =
   min(Cb, Cs)
 
 proc blendMultiply(Cb, Cs: float32): float32 {.inline.} =
-  multiply(Cb, Cs)
+  Cb * Cs
 
 proc blendLinearBurn(Cb, Cs: float32): float32 {.inline.} =
   Cb + Cs - 1
@@ -674,7 +673,6 @@ proc mix2*(blendMode: BlendMode, dest, src: ColorRGBA): ColorRGBA {.inline.} =
   of bmSubtractMask: blendSubtractMask(dest, src)
   of bmIntersectMask: blendIntersectMask(dest, src)
   of bmExcludeMask: blendExcludeMask(dest, src)
-
 
 proc mixStatic*(blendMode: static[BlendMode], dest, src: ColorRGBA): ColorRGBA {.inline.} =
   when blendMOde == bmNormal: blendNormal(dest, src)
