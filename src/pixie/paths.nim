@@ -173,15 +173,15 @@ type ArcParams = object
   theta, delta: float32
 
 proc svgAngle (ux, uy, vx, vy: float32): float32 =
-  var u = vec2(ux, uy);
-  var v = vec2(vx, vy);
+  var u = vec2(ux, uy)
+  var v = vec2(vx, vy)
   # (F.6.5.4)
-  var dot = dot(u,v);
-  var len = length(u) * length(v);
-  var ang = arccos( clamp(dot / len,-1,1) ); # floating point precision, slightly over values appear
+  var dot = dot(u,v)
+  var len = length(u) * length(v)
+  var ang = arccos( clamp(dot / len,-1,1) ) # floating point precision, slightly over values appear
   if (u.x*v.y - u.y*v.x) < 0:
       ang = -ang
-  return ang;
+  return ang
 
 proc endpointToCenterArcParams(
   ax, ay, rx, ry, rotation, large, sweep, bx, by: float32
@@ -199,48 +199,48 @@ proc endpointToCenterArcParams(
   # (F.6.5.1)
   var dx2 = (p1.x - p2.x) / 2.0
   var dy2 = (p1.y - p2.y) / 2.0
-  var x1p = cos(xAngle)*dx2 + sin(xAngle)*dy2;
-  var y1p = -sin(xAngle)*dx2 + cos(xAngle)*dy2;
+  var x1p = cos(xAngle)*dx2 + sin(xAngle)*dy2
+  var y1p = -sin(xAngle)*dx2 + cos(xAngle)*dy2
 
   # (F.6.5.2)
-  var rxs = rX * rX;
-  var rys = rY * rY;
-  var x1ps = x1p * x1p;
-  var y1ps = y1p * y1p;
+  var rxs = rX * rX
+  var rys = rY * rY
+  var x1ps = x1p * x1p
+  var y1ps = y1p * y1p
   #  check if the radius is too small `pq < 0`, when `dq > rxs * rys` (see below)
   #  cr is the ratio (dq : rxs * rys)
-  var cr = x1ps/rxs + y1ps/rys;
+  var cr = x1ps/rxs + y1ps/rys
   var s = 1.0
   if cr > 1:
       # scale up rX,rY equally so cr == 1
-      s = sqrt(cr);
-      rX = s * rX;
-      rY = s * rY;
-      rxs = rX * rX;
-      rys = rY * rY;
+      s = sqrt(cr)
+      rX = s * rX
+      rY = s * rY
+      rxs = rX * rX
+      rys = rY * rY
 
-  var dq = (rxs * y1ps + rys * x1ps);
-  var pq = (rxs*rys - dq) / dq;
-  var q = sqrt(max(0,pq)); # use Max to account for float precision
+  var dq = (rxs * y1ps + rys * x1ps)
+  var pq = (rxs*rys - dq) / dq
+  var q = sqrt(max(0,pq)) # use Max to account for float precision
   if flagA == flagS:
-      q = -q;
-  var cxp = q * rX * y1p / rY;
-  var cyp = - q * rY * x1p / rX;
+      q = -q
+  var cxp = q * rX * y1p / rY
+  var cyp = - q * rY * x1p / rX
 
   # (F.6.5.3)
-  var cx = cos(xAngle)*cxp - sin(xAngle)*cyp + (p1.x + p2.x)/2;
-  var cy = sin(xAngle)*cxp + cos(xAngle)*cyp + (p1.y + p2.y)/2;
+  var cx = cos(xAngle)*cxp - sin(xAngle)*cyp + (p1.x + p2.x)/2
+  var cy = sin(xAngle)*cxp + cos(xAngle)*cyp + (p1.y + p2.y)/2
 
   # (F.6.5.5)
-  var theta = svgAngle( 1,0, (x1p-cxp) / rX, (y1p - cyp)/rY );
+  var theta = svgAngle( 1,0, (x1p-cxp) / rX, (y1p - cyp)/rY )
   # (F.6.5.6)
   var delta = svgAngle(
       (x1p - cxp)/rX, (y1p - cyp)/rY,
-      (-x1p - cxp)/rX, (-y1p-cyp)/rY);
+      (-x1p - cxp)/rX, (-y1p-cyp)/rY)
   delta = delta mod (PI * 2)
 
   if not flagS:
-    delta -= 2 * PI;
+    delta -= 2 * PI
 
   # normalize the delta
   while delta > PI*2:
@@ -248,7 +248,7 @@ proc endpointToCenterArcParams(
   while delta < -PI*2:
     delta += PI*2
 
-  r = vec2(rX, rY);
+  r = vec2(rX, rY)
 
   return ArcParams(
     s: s, rx: rX, rY: ry, rotation: xAngle, cx: cx, cy: cy,
@@ -388,7 +388,6 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
         var a = arc.theta
         var rotMat = rotationMat3(-arc.rotation)
         for i in 0 .. steps:
-          # polygon.add(polygon[^1])
           polygon.add(rotMat * vec2(
             cos(a)*arc.rx,
             sin(a)*arc.ry) + vec2(arc.cx, arc.cy)
@@ -505,10 +504,8 @@ proc strokePolygons*(ps: seq[seq[Vec2]], strokeWidthR, strokeWidthL: float32): s
     var prevLSeg: Segment
     var first = true
     for (at, to) in p.zipline:
-      #echo at, ":", to
       let tangent = (at - to).normalize()
       let normal = vec2(-tangent.y, tangent.x)
-      #print tangent, normal
 
       var
         rSeg = segment(at + normal * strokeWidthR, to + normal * strokeWidthR)
@@ -518,7 +515,6 @@ proc strokePolygons*(ps: seq[seq[Vec2]], strokeWidthR, strokeWidthL: float32): s
         first = false
         # TODO: draw start cap
       else:
-        # as previous lines
         var touch: Vec2
         if intersects(prevRSeg, rSeg, touch):
           rSeg.at = touch
@@ -669,6 +665,7 @@ proc strokePath*(
   path: Path,
   color: ColorRGBA,
   strokeWidth: float32 = 1.0,
+  # TODO: Add more params:
   # strokeLocation: StrokeLocation,
   # strokeCap: StorkeCap,
   # strokeJoin: StorkeJoin
@@ -764,15 +761,10 @@ proc arcTo*(path: Path, x1, y1, x2, y2, r: float32) =
 
   const epsilon: float32 = 1e-6
 
-  # if x1 != path.at.x or y1 != path.at.y:
-  #   path.commands.add(PathCommand(kind: Line, numbers: @[x1, y1]))
-  #   path.at.x = x1
-  #   path.at.y = y1
   var r = r
   if r < 0:
-    # Is the radius negative? Error.
+    # Is the radius negative? Flip it.
     r = -r
-    #raise newException(ValueError, "negative radius: " & $r)
 
   if path.commands.len == 0:
     # Is this path empty? Move to (x1,y1).
@@ -787,7 +779,6 @@ proc arcTo*(path: Path, x1, y1, x2, y2, r: float32) =
     # // Equivalently, is (x1,y1) coincident with (x2,y2)?
     # // Or, is the radius zero? Line to (x1,y1).
 
-    #this._ += "L" + (this._x1 = x1) + "," + (this._y1 = y1);
     path.commands.add(PathCommand(kind: Line, numbers: @[x1, y1]))
     path.at.x = x1
     path.at.y = y1
@@ -807,12 +798,8 @@ proc arcTo*(path: Path, x1, y1, x2, y2, r: float32) =
 
     # If the start tangent is not coincident with (x0,y0), line to.
     if abs(t01 - 1) > epsilon:
-      #this._ += "L" + (x1 + t01 * x01) + "," + (y1 + t01 * y01)
       path.commands.add(PathCommand(kind: Line, numbers: @[x1 + t01 * x01, y1 + t01 * y01]))
       discard
-
-    # this._ += "A" + r + "," + r + ",0,0," + (+(y01 * x20 > x01 * y20)) + "," + (this._x1 = x1 + t21 * x21) + "," + (this._y1 = y1 + t21 * y21);
-
     path.at.x = x1 + t21 * x21
     path.at.y = y1 + t21 * y21
     path.commands.add(PathCommand(
