@@ -206,17 +206,17 @@ proc resize*(srcImage: Image, width, height: int): Image =
 
 proc blur*(image: Image, radius: float32): Image =
   ## Applies Gaussian blur to the image given a radius.
-  let radius = (radius).int
+  let radius = radius.int
   if radius == 0:
     return image.copy()
 
   # Compute lookup table for 1d Gaussian kernel.
-  var lookup = newSeq[float](radius*2+1)
+  var lookup = newSeq[float](radius * 2 + 1)
   var total = 0.0
   for xb in -radius .. radius:
     let s = radius.float32 / 2.2 # 2.2 matches Figma.
     let x = xb.float32
-    let a = 1/sqrt(2*PI*s^2) * exp(-1*x^2/(2*s^2))
+    let a = 1 / sqrt(2 * PI * s^2) * exp(-1 * x^2 / (2 * s^2))
     lookup[xb + radius] = a
     total += a
   for xb in -radius .. radius:
@@ -266,17 +266,18 @@ proc blur*(image: Image, radius: float32): Image =
 
 proc blurAlpha*(image: Image, radius: float32): Image =
   ## Applies Gaussian blur to the image given a radius.
-  let radius = (radius).int
+  let radius = radius.int
   if radius == 0:
     return image.copy()
 
   # Compute lookup table for 1d Gaussian kernel.
-  var lookup = newSeq[float](radius*2+1)
-  var total = 0.0
+  var
+    lookup = newSeq[float](radius * 2 + 1)
+    total = 0.0
   for xb in -radius .. radius:
     let s = radius.float32 / 2.2 # 2.2 matches Figma.
     let x = xb.float32
-    let a = 1/sqrt(2*PI*s^2) * exp(-1*x^2/(2*s^2))
+    let a = 1 / sqrt(2 * PI * s^2) * exp(-1 * x^2 / (2 * s^2))
     lookup[xb + radius] = a
     total += a
   for xb in -radius .. radius:
@@ -291,7 +292,7 @@ proc blurAlpha*(image: Image, radius: float32): Image =
         let c2 = image[x + xb, y]
         let a = lookup[xb + radius]
         alpha += c2.a.float32 * a
-      blurX.setRgbaUnsafe(x, y, rgba(0,0,0, (alpha).uint8))
+      blurX.setRgbaUnsafe(x, y, rgba(0, 0, 0, alpha.uint8))
 
   # Blur in the Y direction.
   var blurY = newImage(image.width, image.height)
@@ -302,7 +303,7 @@ proc blurAlpha*(image: Image, radius: float32): Image =
         let c2 = blurX[x, y + yb]
         let a = lookup[yb + radius]
         alpha += c2.a.float32 * a
-      blurY.setRgbaUnsafe(x, y, rgba(0,0,0, (alpha).uint8))
+      blurY.setRgbaUnsafe(x, y, rgba(0, 0, 0, alpha.uint8))
 
   return blurY
 
