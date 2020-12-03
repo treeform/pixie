@@ -386,7 +386,7 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
         let steps = int(abs(arc.delta)/PI*180/5)
         let step = arc.delta / steps.float32
         var a = arc.theta
-        var rotMat = rotationMat3(arc.rotation)
+        var rotMat = rotationMat3(-arc.rotation)
         for i in 0 .. steps:
           # polygon.add(polygon[^1])
           polygon.add(rotMat * vec2(
@@ -653,6 +653,16 @@ proc fillPath*(
   mat: Mat3
 ) =
   image.fillPath(parsePath(path), color, mat)
+
+proc fillPath*(
+  image: Image,
+  path: string,
+  color: ColorRGBA
+) =
+  let
+    polys = commandsToPolygons(parsePath(path).commands)
+    tmp = fillPolygons(image.wh, polys, color)
+  image.draw(tmp)
 
 proc strokePath*(
   image: Image,
