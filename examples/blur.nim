@@ -6,6 +6,7 @@ image.fill(rgba(255, 255, 255, 255))
 var trees = readImage("examples/data/trees.png")
 var blur = trees.copy()
 blur.blur(10)
+
 var p = newPath()
 let
   size = 80.0

@@ -40,18 +40,16 @@ proc draw(img: Image, matStack: var seq[Mat3], xml: XmlNode) =
 
           if fill != "none" and fill != "":
             let fillColor = parseHtmlColor(fill).rgba
-            tmp.fill(rgba(0,0,0,0))
-            tmp.fillPath(d, fillColor, mat = matStack[^1])
-            img.draw(tmp)
+            var (bounds, fillImg) = fillPathBounds(d, fillColor, mat = matStack[^1])
+            img.draw(fillImg, bounds.xy)
 
           if stroke != "none" and stroke != "":
             let strokeColor = parseHtmlColor(stroke).rgba
             let strokeWidth =
               if strokeWidth == "": 1.0 # Default stroke width is 1px
               else: parseFloat(strokeWidth)
-            tmp.fill(rgba(0,0,0,0))
-            tmp.strokePath(d, strokeColor, strokeWidth, mat = matStack[^1])
-            img.draw(tmp)
+            var (bounds, strokeImg) = strokePathBounds(d, strokeColor, strokeWidth, mat = matStack[^1])
+            img.draw(strokeImg, bounds.xy)
 
         else:
           img.draw(matStack, child)

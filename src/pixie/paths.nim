@@ -559,6 +559,30 @@ proc strokePolygons*(ps: seq[seq[Vec2]], strokeWidthR, strokeWidthL: float32): s
 
     result.add(poly)
 
+proc computeBounds(polys: seq[seq[Vec2]]): Rect =
+  if polys.len == 0 or polys[0].len == 0:
+    return
+  proc min(a, b: Vec2): Vec2 =
+    result.x = min(a.x, b.x)
+    result.y = min(a.y, b.y)
+  proc max(a, b: Vec2): Vec2 =
+    result.x = max(a.x, b.x)
+    result.y = max(a.y, b.y)
+  proc floor(a: Vec2): Vec2 =
+    result.x = a.x.floor
+    result.y = a.y.floor
+  proc ceil(a: Vec2): Vec2 =
+    result.x = a.x.ceil
+    result.y = a.y.ceil
+  var
+    vMin = polys[0][0]
+    vMax = polys[0][0]
+  for poly in polys:
+    for v in poly:
+      vMin = min(v, vMin)
+      vMax = max(v, vMax)
+  result.xy = vMin.floor
+  result.wh = (vMax - vMin).ceil
 
 {.push checks: off, stacktrace: off.}
 
@@ -632,46 +656,70 @@ proc fillPolygons*(
 
 {.pop.}
 
+type SomePath = seq[seq[Vec2]] | string | Path | seq[PathCommand]
+
+proc parseSomePath(path: SomePath): seq[seq[Vec2]] =
+  ## Given some path, turns it into polys.
+  when type(path) is string:
+    commandsToPolygons(parsePath(path).commands)
+  elif type(path) is Path:
+    commandsToPolygons(path.commands)
+  elif type(path) is seq[PathCommand]:
+    commandsToPolygons(path)
+  elif type(path) is seq[seq[Vec2]]:
+    path
+
 proc fillPath*(
   image: Image,
-  path: Path,
+  path: SomePath,
   color: ColorRGBA
 ) =
   let
-    polys = commandsToPolygons(path.commands)
+    polys = parseSomePath(path)
     tmp = fillPolygons(image.wh, polys, color)
   image.draw(tmp)
 
 proc fillPath*(
   image: Image,
-  path: Path,
+  path: SomePath,
+  color: ColorRGBA,
+  pos: Vec2
+) =
+  var polys = parseSomePath(path)
+  for poly in polys.mitems:
+    for i, p in poly.mpairs:
+      poly[i] = p + pos
+  let tmp = fillPolygons(image.wh, polys, color)
+  image.draw(tmp)
+
+proc fillPath*(
+  image: Image,
+  path: SomePath,
   color: ColorRGBA,
   mat: Mat3
 ) =
-  var polys = commandsToPolygons(path.commands)
+  var polys = parseSomePath(path)
   for poly in polys.mitems:
     for i, p in poly.mpairs:
       poly[i] = mat * p
   let tmp = fillPolygons(image.wh, polys, color)
   image.draw(tmp)
 
-proc fillPath*(
-  image: Image,
-  path: string,
-  color: ColorRGBA,
-  mat: Mat3
-) =
-  image.fillPath(parsePath(path), color, mat)
-
-proc fillPath*(
-  image: Image,
-  path: string,
-  color: ColorRGBA
-) =
-  let
-    polys = commandsToPolygons(parsePath(path).commands)
-    tmp = fillPolygons(image.wh, polys, color)
-  image.draw(tmp)
+proc fillPathBounds*(
+    path: SomePath,
+    color: ColorRGBA,
+    mat: Mat3
+  ): (Rect, Image) =
+  var polys = parseSomePath(path)
+  for poly in polys.mitems:
+    for i, p in poly.mpairs:
+      poly[i] = mat * p
+  var bounds = computeBounds(polys)
+  for poly in polys.mitems:
+    for i, p in poly.mpairs:
+      poly[i] = p - bounds.xy
+  var image = fillPolygons(bounds.wh, polys, color)
+  return (bounds, image)
 
 proc strokePath*(
   image: Image,
@@ -684,7 +732,7 @@ proc strokePath*(
   # strokeJoin: StorkeJoin
 ) =
   let
-    polys = commandsToPolygons(path.commands)
+    polys = parseSomePath(path)
     (strokeL, strokeR) = (strokeWidth/2, strokeWidth/2)
     polys2 = strokePolygons(polys, strokeL, strokeR)
     tmp = fillPolygons(image.wh, polys2, color)
@@ -692,7 +740,7 @@ proc strokePath*(
 
 proc strokePath*(
   image: Image,
-  path: string,
+  path: SomePath,
   color: ColorRGBA,
   strokeWidth: float32
 ) =
@@ -700,12 +748,12 @@ proc strokePath*(
 
 proc strokePath*(
   image: Image,
-  path: string,
+  path: SomePath,
   color: ColorRGBA,
   strokeWidth: float32,
   pos: Vec2
 ) =
-  var polys = commandsToPolygons(parsePath(path).commands)
+  var polys = parseSomePath(path)
   let (strokeL, strokeR) = (strokeWidth/2, strokeWidth/2)
   var polys2 = strokePolygons(polys, strokeL, strokeR)
   for poly in polys2.mitems:
@@ -716,12 +764,12 @@ proc strokePath*(
 
 proc strokePath*(
   image: Image,
-  path: string,
+  path: SomePath,
   color: ColorRGBA,
   strokeWidth: float32,
   mat: Mat3
 ) =
-  var polys = commandsToPolygons(parsePath(path).commands)
+  var polys = parseSomePath(path)
   let (strokeL, strokeR) = (strokeWidth/2, strokeWidth/2)
   var polys2 = strokePolygons(polys, strokeL, strokeR)
   for poly in polys2.mitems:
@@ -729,6 +777,17 @@ proc strokePath*(
       poly[i] = mat * p
   let tmp = fillPolygons(image.wh, polys2, color)
   image.draw(tmp)
+
+proc strokePathBounds*(
+  path: SomePath,
+  color: ColorRGBA,
+  strokeWidth: float32,
+  mat: Mat3
+): (Rect, Image) =
+  var polys = parseSomePath(path)
+  let (strokeL, strokeR) = (strokeWidth/2, strokeWidth/2)
+  var polys2 = strokePolygons(polys, strokeL, strokeR)
+  fillPathBounds(polys2, color, mat)
 
 proc addPath*(path: Path, other: Path) =
   ## Adds a path to the current path.

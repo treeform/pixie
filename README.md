@@ -23,6 +23,7 @@ This library is being actively developed and is not yet ready for use. Since you
 var trees = readImage("examples/data/trees.png")
 var blur = trees.copy()
 blur.blur(10)
+
 var p = newPath()
 let
   size = 80.0
@@ -77,6 +78,17 @@ p.lineTo(150, 150)
 p.lineTo(150, 50)
 p.closePath()
 image.fillPath(p, rgba(255, 0, 0, 255))
-#image.strokePath(p, rgba(0, 0, 0, 255), strokeWidth = 5.0)
 ```
 ![example output](examples/square.png)
+
+### examples/tiger.nim
+```nim
+var tiger = readImage("examples/data/tiger.svg")
+image.draw(
+  tiger,
+  translate(vec2(100, 100)) *
+  scale(vec2(0.2, 0.2)) *
+  translate(vec2(-450, -450))
+)
+```
+![example output](examples/tiger.png)
