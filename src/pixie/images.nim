@@ -70,9 +70,11 @@ proc `[]=`*(image: Image, x, y: int, rgba: ColorRGBA) {.inline.} =
 
 proc fill*(image: Image, rgba: ColorRgba) =
   ## Fills the image with a solid color.
-  nimSetMem(image.data[0].addr, cast[int32](rgba), image.data.len)
-  # for c in image.data.mitems:
-  #   c = rgba
+  if rgba.r == rgba.g and rgba.r == rgba.b and rgba.r == rgba.a:
+    nimSetMem(image.data[0].addr, rgba.r.cint, image.data.len * 4)
+  else:
+    for c in image.data.mitems:
+      c = rgba
 
 proc invert*(image: Image) =
   ## Inverts all of the colors and alpha.
