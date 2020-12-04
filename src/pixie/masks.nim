@@ -1,3 +1,4 @@
+import system/memory
 
 type
   Mask* = ref object
@@ -51,8 +52,7 @@ proc `[]=`*(mask: Mask, x, y: int, value: uint8) {.inline.} =
 
 proc fill*(mask: Mask, value: uint8) =
   ## Fills the mask with the parameter value.
-  for i in 0 ..< mask.data.len:
-    mask.data[i] = value
+  nimSetMem(mask.data[0].addr, value.cint, mask.data.len)
 
 proc invert*(mask: Mask) =
   ## Inverts the entire mask value.
