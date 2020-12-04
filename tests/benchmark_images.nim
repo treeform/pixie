@@ -48,6 +48,18 @@ timeIt "fill":
     a.fill(rgba(255, 255, 255, 255))
   doAssert a[0, 0] == rgba(255, 255, 255, 255)
 
+timeIt "fillOriginal rgba(0, 0, 0, 0)":
+  var a = newImage(2560, 1440)
+  for i in 0 ..< iterations:
+    a.fillOriginal(rgba(0, 0, 0, 0))
+  doAssert a[0, 0] == rgba(0, 0, 0, 0)
+
+timeIt "fill rgba(0, 0, 0, 0)":
+  var a = newImage(2560, 1440)
+  for i in 0 ..< iterations:
+    a.fill(rgba(0, 0, 0, 0))
+  doAssert a[0, 0] == rgba(0, 0, 0, 0)
+
 timeIt "invertOriginal":
   var a = newImage(2560, 1440)
   for i in 0 ..< iterations:

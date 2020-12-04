@@ -70,8 +70,11 @@ proc `[]=`*(image: Image, x, y: int, rgba: ColorRGBA) {.inline.} =
 
 proc fill*(image: Image, rgba: ColorRgba) =
   ## Fills the image with a solid color.
-  for c in image.data.mitems:
-    c = rgba
+  if rgba == rgba(0, 0, 0, 0):
+    zeroMem(image.data[0].addr, image.data.len * 4)
+  else:
+    for c in image.data.mitems:
+      c = rgba
 
 proc invert*(image: Image) =
   ## Inverts all of the colors and alpha.
@@ -206,7 +209,7 @@ proc resize*(srcImage: Image, width, height: int): Image =
 
 proc blur*(image: Image, radius: float32): Image =
   ## Applies Gaussian blur to the image given a radius.
-  let radius = radius.int
+  let radius = round(radius).int
   if radius == 0:
     return image.copy()
 
@@ -264,11 +267,11 @@ proc blur*(image: Image, radius: float32): Image =
 
   return blurY
 
-proc blurAlpha*(image: Image, radius: float32): Image =
+proc blurAlpha*(image: Image, radius: float32) =
   ## Applies Gaussian blur to the image given a radius.
-  let radius = radius.int
+  let radius = round(radius).int
   if radius == 0:
-    return image.copy()
+    return
 
   # Compute lookup table for 1d Gaussian kernel.
   var
@@ -294,8 +297,7 @@ proc blurAlpha*(image: Image, radius: float32): Image =
         alpha += c2.a.float32 * a
       blurX.setRgbaUnsafe(x, y, rgba(0, 0, 0, alpha.uint8))
 
-  # Blur in the Y direction.
-  var blurY = newImage(image.width, image.height)
+  # Blur in the Y direction and modify image.
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       var alpha: float32
@@ -303,32 +305,32 @@ proc blurAlpha*(image: Image, radius: float32): Image =
         let c2 = blurX[x, y + yb]
         let a = lookup[yb + radius]
         alpha += c2.a.float32 * a
-      blurY.setRgbaUnsafe(x, y, rgba(0, 0, 0, alpha.uint8))
+      image.setRgbaUnsafe(x, y, rgba(0, 0, 0, alpha.uint8))
 
-  return blurY
-
-proc shift*(image: Image, offset: Vec2): Image =
+proc shift*(image: Image, offset: Vec2) =
   ## Shifts the image by offset.
-  result = newImage(image.width, image.height)
-  result.draw(image, offset)
+  let copy = image.copy() # Copy to read from.
+  image.fill(rgba(0, 0, 0, 0)) # Reset this for being drawn to.
+  image.draw(copy, offset) # Draw copy into image.
 
-proc spread*(image: Image, spread: float32): Image =
+proc spread*(image: Image, spread: float32) =
   ## Grows the image as a mask by spread.
-  result = newImage(image.width, image.height)
+  let
+    copy = image.copy()
+    spread = round(spread).int
   assert spread > 0
-  for y in 0 ..< result.height:
-    for x in 0 ..< result.width:
+  for y in 0 ..< image.height:
+    for x in 0 ..< image.width:
       var maxAlpha = 0.uint8
       block blurBox:
-        for bx in -spread.int .. spread.int:
-          for by in -spread.int .. spread.int:
-            # if vec2(bx.float32, by.float32).length < spread:
-            let alpha = image[x + bx, y + by].a
+        for bx in -spread .. spread:
+          for by in -spread .. spread:
+            let alpha = copy[x + bx, y + by].a
             if alpha > maxAlpha:
               maxAlpha = alpha
             if maxAlpha == 255:
               break blurBox
-      result[x, y] = rgba(0, 0, 0, maxAlpha)
+      image[x, y] = rgba(0, 0, 0, maxAlpha)
 
 proc shadow*(
   mask: Image,
@@ -339,11 +341,11 @@ proc shadow*(
   ## Create a shadow of the image with the offset, spread and blur.
   var shadow = mask
   if offset != vec2(0, 0):
-    shadow = shadow.shift(offset)
+    shadow.shift(offset)
   if spread > 0:
-    shadow = shadow.spread(spread)
+    shadow.spread(spread)
   if blur > 0:
-    shadow = shadow.blurAlpha(blur)
+    shadow.blurAlpha(blur)
   result = newImage(mask.width, mask.height)
   result.fill(color)
   result.draw(shadow, blendMode = bmMask)
