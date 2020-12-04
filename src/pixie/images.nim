@@ -1,4 +1,4 @@
-import chroma, blends, vmath, common
+import chroma, blends, vmath, common, system/memory
 
 type
   Image* = ref object
@@ -70,11 +70,9 @@ proc `[]=`*(image: Image, x, y: int, rgba: ColorRGBA) {.inline.} =
 
 proc fill*(image: Image, rgba: ColorRgba) =
   ## Fills the image with a solid color.
-  if rgba == rgba(0, 0, 0, 0):
-    zeroMem(image.data[0].addr, image.data.len * 4)
-  else:
-    for c in image.data.mitems:
-      c = rgba
+  nimSetMem(image.data[0].addr, cast[int32](rgba), image.data.len)
+  # for c in image.data.mitems:
+  #   c = rgba
 
 proc invert*(image: Image) =
   ## Inverts all of the colors and alpha.
