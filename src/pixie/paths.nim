@@ -899,3 +899,16 @@ proc rect*(path: Path, x, y, w, h: float32) =
   path.lineTo(x,   y+h)
   path.lineTo(x,   y)
   path.closePath()
+
+proc polygon*(path: Path, x, y, size: float32, sides: int) =
+  ## Draws a n sided regular polygon at x,y with size.
+  let
+    size = 80.0
+    x = 100.0
+    y = 100.0
+  path.moveTo(x + size * cos(0.0), y + size * sin(0.0))
+  for side in 0 .. sides:
+    path.lineTo(
+      x + size * cos(side.float32 * 2.0 * PI / sides.float32),
+      y + size * sin(side.float32 * 2.0 * PI / sides.float32)
+    )
