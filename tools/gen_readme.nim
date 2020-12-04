@@ -16,7 +16,9 @@ for k, path in walkDir("examples"):
     let code = readFile(path)
     let innerCode = code.cutBetween("image.fill(rgba(255, 255, 255, 255))", "image.writeFile")
     if innerCode != "":
-      md.add "### " & path.replace("\\", "/")
+      let path = path.replace("\\", "/")
+      md.add "### " & path.splitFile().name.replace("_", " ").capitalizeAscii()
+      md.add "[" & path & "](" & path & ")"
       md.add "```nim"
       md.add innerCode.strip()
       md.add "```"

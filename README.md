@@ -18,7 +18,8 @@ This library is being actively developed and is not yet ready for use. Since you
 
 ## Examples
 
-### examples/blur.nim
+### Blur
+[examples/blur.nim](examples/blur.nim)
 ```nim
 var p = newPath()
 p.polygon(100, 100, 70, sides=6)
@@ -32,7 +33,8 @@ image.draw(blur)
 ```
 ![example output](examples/blur.png)
 
-### examples/rounded_rectangle.nim
+### Rounded rectangle
+[examples/rounded_rectangle.nim](examples/rounded_rectangle.nim)
 ```nim
 var path = newPath()
 let
@@ -51,7 +53,8 @@ image.fillPath(path, rgba(255, 0, 0, 255))
 ```
 ![example output](examples/rounded_rectangle.png)
 
-### examples/square.nim
+### Square
+[examples/square.nim](examples/square.nim)
 ```nim
 var p = newPath()
 p.moveTo(50, 50)
@@ -63,7 +66,8 @@ image.fillPath(p, rgba(255, 0, 0, 255))
 ```
 ![example output](examples/square.png)
 
-### examples/tiger.nim
+### Tiger
+[examples/tiger.nim](examples/tiger.nim)
 ```nim
 var tiger = readImage("examples/data/tiger.svg")
 image.draw(
