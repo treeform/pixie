@@ -5,16 +5,14 @@ import chroma, pixie/images, pixie/common, pixie/paths, vmath, xmlparser, xmltre
 
 const svgSignature* = "<?xml"
 
-var tmp: Image
-
 proc draw(img: Image, matStack: var seq[Mat3], xml: XmlNode) =
   case xml.tag:
-
     of "g":
-      let fill = xml.attr("fill")
-      let stroke = xml.attr("stroke")
-      let strokeWidth = xml.attr("stroke-width")
-      let transform = xml.attr("transform")
+      let
+        fill = xml.attr("fill")
+        stroke = xml.attr("stroke")
+        strokeWidth = xml.attr("stroke-width")
+        transform = xml.attr("transform")
 
       if transform != "":
         if transform.startsWith("matrix("):
@@ -29,10 +27,8 @@ proc draw(img: Image, matStack: var seq[Mat3], xml: XmlNode) =
           m[7] = parseFloat(arr[5])
           matStack.add(matStack[^1] * m)
         else:
-          var m = mat3()
-          matStack.add(m)
           raise newException(
-            PixieError, "Unsupported transform: " & transform & ".")
+            PixieError, "Unsupported SVG transform: " & transform & ".")
 
       for child in xml:
         if child.tag == "path":
@@ -40,7 +36,8 @@ proc draw(img: Image, matStack: var seq[Mat3], xml: XmlNode) =
 
           if fill != "none" and fill != "":
             let fillColor = parseHtmlColor(fill).rgba
-            var (bounds, fillImg) = fillPathBounds(d, fillColor, mat = matStack[^1])
+            let (bounds, fillImg) =
+              fillPathBounds(d, fillColor, mat = matStack[^1])
             img.draw(fillImg, bounds.xy)
 
           if stroke != "none" and stroke != "":
@@ -48,7 +45,8 @@ proc draw(img: Image, matStack: var seq[Mat3], xml: XmlNode) =
             let strokeWidth =
               if strokeWidth == "": 1.0 # Default stroke width is 1px
               else: parseFloat(strokeWidth)
-            var (bounds, strokeImg) = strokePathBounds(d, strokeColor, strokeWidth, mat = matStack[^1])
+            let (bounds, strokeImg) =
+              strokePathBounds(d, strokeColor, strokeWidth, mat = matStack[^1])
             img.draw(strokeImg, bounds.xy)
 
         else:
@@ -58,22 +56,25 @@ proc draw(img: Image, matStack: var seq[Mat3], xml: XmlNode) =
         discard matStack.pop()
 
     else:
-      raise newException(PixieError, "Unsupported tag: " & xml.tag & ".")
+      raise newException(PixieError, "Unsupported SVG tag: " & xml.tag & ".")
 
 proc decodeSvg*(data: string): Image =
   ## Render SVG file and return the image.
-  var xml = parseXml(data)
-  assert xml.tag == "svg"
-  var viewBox = xml.attr "viewBox"
-  let box = viewBox.split(" ")
-  assert parseInt(box[0]) == 0
-  assert parseInt(box[1]) == 0
-  let w = parseInt(box[2])
-  let h = parseInt(box[3])
-  result = newImage(w, h)
+  try:
+    var xml = parseXml(data)
+    assert xml.tag == "svg"
+    var viewBox = xml.attr "viewBox"
+    let box = viewBox.split(" ")
+    assert parseInt(box[0]) == 0
+    assert parseInt(box[1]) == 0
+    let w = parseInt(box[2])
+    let h = parseInt(box[3])
+    result = newImage(w, h)
 
-  tmp = result.copy()
-
-  var matStack = @[mat3()]
-  for n in xml:
-    result.draw(matStack, n)
+    var matStack = @[mat3()]
+    for n in xml:
+      result.draw(matStack, n)
+  except PixieError as e:
+    raise e
+  except:
+     raise newException(PixieError, "Unable to load SVG")
