@@ -1,4 +1,4 @@
-import pixie, chroma, vmath, strutils, os
+import pixie, chroma, strutils, os
 
 proc writeAndCheck(image: Image, fileName: string) =
   image.writeFile(fileName)
