@@ -22,7 +22,7 @@ proc intersects*(a, b: Segment, at: var Vec2): bool =
     s2y = b.to.y - b.at.y
 
   let
-    denominator =  (-s2x * s1y + s1x * s2y)
+    denominator = (-s2x * s1y + s1x * s2y)
     s = (-s1y * (a.at.x - b.at.x) + s1x * (a.at.y - b.at.y)) / denominator
     t = (s2x * (a.at.y - b.at.y) - s2y * (a.at.x - b.at.x)) / denominator
 
