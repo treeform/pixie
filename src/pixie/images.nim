@@ -207,15 +207,16 @@ proc resize*(srcImage: Image, width, height: int): Image =
     ))
   )
 
-proc blur*(image: Image, radius: float32): Image =
+proc blur*(image: Image, radius: float32) =
   ## Applies Gaussian blur to the image given a radius.
   let radius = round(radius).int
   if radius == 0:
-    return image.copy()
+    return
 
   # Compute lookup table for 1d Gaussian kernel.
-  var lookup = newSeq[float](radius * 2 + 1)
-  var total = 0.0
+  var
+    lookup = newSeq[float](radius * 2 + 1)
+    total = 0.0
   for xb in -radius .. radius:
     let s = radius.float32 / 2.2 # 2.2 matches Figma.
     let x = xb.float32
@@ -246,7 +247,6 @@ proc blur*(image: Image, radius: float32): Image =
       blurX.setRgbaUnsafe(x, y, c.rgba)
 
   # Blur in the Y direction.
-  var blurY = newImage(image.width, image.height)
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       var c: Color
@@ -263,9 +263,7 @@ proc blur*(image: Image, radius: float32): Image =
       c.r = c.r / totalA
       c.g = c.g / totalA
       c.b = c.b / totalA
-      blurY.setRgbaUnsafe(x, y, c.rgba)
-
-  return blurY
+      image.setRgbaUnsafe(x, y, c.rgba)
 
 proc blurAlpha*(image: Image, radius: float32) =
   ## Applies Gaussian blur to the image given a radius.
