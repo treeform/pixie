@@ -587,11 +587,11 @@ proc computeBounds(polys: seq[seq[Vec2]]): Rect =
 {.push checks: off, stacktrace: off.}
 
 proc fillPolygons*(
-    size: Vec2,
-    polys: seq[seq[Vec2]],
-    color: ColorRGBA,
-    quality = 4,
-  ): Image =
+  size: Vec2,
+  polys: seq[seq[Vec2]],
+  color: ColorRGBA,
+  quality = 4,
+): Image =
   const ep = 0.0001 * PI
 
   result = newImage(size.x.int, size.y.int)
@@ -648,11 +648,10 @@ proc fillPolygons*(
           inc curHit
         alphas[x] += penEdge
     for x in 0 ..< result.width:
-      var a = clamp(abs(alphas[x]) / float32(quality), 0.0, 1.0)
+      let a = clamp(abs(alphas[x]) / float32(quality), 0.0, 1.0)
       var colorWithAlpha = color
-      colorWithAlpha.a = uint8(clamp(a, 0, 1) * 255.0)
-      result[x, y] = colorWithAlpha
-      # TODO: don't double-clamp and can probably be unsafe?
+      colorWithAlpha.a = uint8(a * 255.0)
+      result.setRgbaUnsafe(x, y, colorWithAlpha)
 
 {.pop.}
 
