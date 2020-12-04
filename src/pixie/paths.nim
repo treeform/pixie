@@ -599,32 +599,38 @@ proc fillPolygons*(
   proc scanLineHits(
     polys: seq[seq[Vec2]],
     hits: var seq[(float32, bool)],
+    size: Vec2,
     y: int,
     shiftY: float32
-  ) =
+  ) {.inline.} =
     hits.setLen(0)
-    var yLine = (float32(y) + ep) + shiftY
-    var scan = Segment(at: vec2(-10000, yLine), to: vec2(100000, yLine))
+
+    let
+      yLine = (float32(y) + ep) + shiftY
+      scan = Segment(at: vec2(-10000, yLine), to: vec2(100000, yLine))
 
     for poly in polys:
-      for (at, to) in poly.zipwise:
-        let line = Segment(at: at, to: to)
+      for e in poly.zipwise:
+        let line = cast[Segment](e)
         var at: Vec2
         if line.intersects(scan, at):
-          let winding = line.at.y > line.to.y
-          let x = at.x.clamp(0, size.x)
+          let
+            winding = line.at.y > line.to.y
+            x = at.x.clamp(0, size.x)
           hits.add((x, winding))
 
     hits.sort(proc(a, b: (float32, bool)): int = cmp(a[0], b[0]))
 
-  var hits: seq[(float32, bool)]
-
-  var alphas = newSeq[float32](result.width)
+  var
+    hits = newSeq[(float32, bool)]()
+    alphas = newSeq[float32](result.width)
   for y in 0 ..< result.height:
-    for x in 0 ..< result.width:
-      alphas[x] = 0
+    # Reset alphas for this row.
+    zeroMem(alphas[0].addr, alphas.len * 4)
+
+    # Do scanlines for this row.
     for m in 0 ..< quality:
-      polys.scanLineHits(hits, y, float32(m)/float32(quality))
+      polys.scanLineHits(hits, size, y, float32(m) / float32(quality))
       if hits.len == 0:
         continue
       var
@@ -633,12 +639,11 @@ proc fillPolygons*(
       for x in 0 ..< result.width:
         var penEdge = penFill
         while true:
-          if curHit >= hits.len:
+          if curHit >= hits.len or x != hits[curHit][0].int:
             break
-          if x != hits[curHit][0].int:
-            break
-          let cover = hits[curHit][0] - x.float32
-          let winding = hits[curHit][1]
+          let
+            cover = hits[curHit][0] - x.float32
+            winding = hits[curHit][1]
           if winding == false:
             penFill += 1.0
             penEdge += 1.0 - cover
@@ -647,6 +652,7 @@ proc fillPolygons*(
             penEdge -= 1.0 - cover
           inc curHit
         alphas[x] += penEdge
+
     for x in 0 ..< result.width:
       let a = clamp(abs(alphas[x]) / float32(quality), 0.0, 1.0)
       var colorWithAlpha = color
