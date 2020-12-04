@@ -368,10 +368,8 @@ proc sharpOpacity*(image: Image) =
     else:
       image.data[i] = rgba(255, 255, 255, 255)
 
-proc drawCorrect*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
+proc drawCorrect*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode) =
   ## Draws one image onto another using matrix with color blending.
-  result = newImage(a.width, a.height)
-
   var
     matInv = mat.inverse()
     # compute movement vectors
@@ -396,7 +394,7 @@ proc drawCorrect*(a: Image, b: Image, mat: Mat3, blendMode: BlendMode): Image =
       var rgba = a.getRgbaUnsafe(x, y)
       let rgba2 = b.getRgbaSmooth(srcPos.x - h, srcPos.y - h)
       rgba = blendMode.mix(rgba, rgba2)
-      result.setRgbaUnsafe(x, y, rgba)
+      a.setRgbaUnsafe(x, y, rgba)
 
 const h = 0.5.float32
 

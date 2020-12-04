@@ -1,6 +1,4 @@
-import chroma, pixie, fidget/opengl/perf
-
-const iterations = 100
+import chroma, pixie, benchy
 
 proc fillOriginal(a: Image, rgba: ColorRGBA) =
   for y in 0 ..< a.height:
@@ -36,44 +34,38 @@ proc sharpOpacityOriginal(a: Image): Image =
       else:
         result.setRgbaUnsafe(x, y, rgba(255, 255, 255, 255))
 
+var a = newImage(2560, 1440)
+
 timeIt "fillOriginal":
-  var a = newImage(2560, 1440)
-  for i in 0 ..< iterations:
-    a.fillOriginal(rgba(255, 255, 255, 255))
+  a.fillOriginal(rgba(255, 255, 255, 255))
   doAssert a[0, 0] == rgba(255, 255, 255, 255)
+  keep(a)
 
 timeIt "fill":
-  var a = newImage(2560, 1440)
-  for i in 0 ..< iterations:
-    a.fill(rgba(255, 255, 255, 255))
+  a.fill(rgba(255, 255, 255, 255))
   doAssert a[0, 0] == rgba(255, 255, 255, 255)
+  keep(a)
 
 timeIt "invertOriginal":
-  var a = newImage(2560, 1440)
-  for i in 0 ..< iterations:
-    a.invertOriginal()
+  a.invertOriginal()
+  keep(a)
 
 timeIt "invert":
-  var a = newImage(2560, 1440)
-  for i in 0 ..< iterations:
-    a.invert()
+  a.invert()
+  keep(a)
 
 timeIt "applyOpacityOriginal":
-  var a = newImage(2560, 1440)
-  for i in 0 ..< iterations:
-    a = a.applyOpacityOriginal(0.5)
+  a = a.applyOpacityOriginal(0.5)
+  keep(a)
 
 timeIt "applyOpacity":
-  var a = newImage(2560, 1440)
-  for i in 0 ..< iterations:
-    a.applyOpacity(0.5)
+  a.applyOpacity(0.5)
+  keep(a)
 
 timeIt "sharpOpacityOriginal":
-  var a = newImage(2560, 1440)
-  for i in 0 ..< iterations:
-    a = a.sharpOpacityOriginal()
+  a = a.sharpOpacityOriginal()
+  keep(a)
 
 timeIt "sharpOpacity":
-  var a = newImage(2560, 1440)
-  for i in 0 ..< iterations:
-    a.sharpOpacity()
+  a.sharpOpacity()
+  keep(a)
