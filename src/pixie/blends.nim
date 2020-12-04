@@ -1,6 +1,9 @@
 ## Blending modes.
 import chroma, math, algorithm
 
+# See https://www.w3.org/TR/compositing-1/
+# See https://www.khronos.org/registry/OpenGL/extensions/KHR/KHR_blend_equation_advanced.txt
+
 type BlendMode* = enum
   bmNormal
   bmDarken
@@ -312,41 +315,9 @@ proc Sat(C: Color): float32 {.inline.} =
   max([C.r, C.g, C.b]) - min([C.r, C.g, C.b])
 
 proc SetSat(C: Color, s: float32): Color {.inline.} =
-  var arr = [(C.r, 0), (C.g, 1), (C.b, 2)]
-  # TODO: Don't rely on sort.
-  arr.sort()
-  var
-    Cmin = arr[0][0]
-    Cmid = arr[1][0]
-    Cmax = arr[2][0]
-  if Cmax > Cmin:
-    Cmid = (((Cmid - Cmin) * s) / (Cmax - Cmin))
-    Cmax = s
-  else:
-    Cmid = 0
-    Cmax = 0
-  Cmin = 0
-
-  if arr[0][1] == 0:
-    result.r = Cmin
-  if arr[1][1] == 0:
-    result.r = Cmid
-  if arr[2][1] == 0:
-    result.r = Cmax
-
-  if arr[0][1] == 1:
-    result.g = Cmin
-  if arr[1][1] == 1:
-    result.g = Cmid
-  if arr[2][1] == 1:
-    result.g = Cmax
-
-  if arr[0][1] == 2:
-    result.b = Cmin
-  if arr[1][1] == 2:
-    result.b = Cmid
-  if arr[2][1] == 2:
-    result.b = Cmax
+  let satC = Sat(C)
+  if satC > 0:
+    result = (C - min([C.r, C.g, C.b])) * s / satC
 
 proc alphaFix(Cb, Cs, mixed: Color): Color {.inline.} =
   let ab = Cb.a
