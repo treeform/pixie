@@ -1,6 +1,9 @@
 ## Blending modes.
 import chroma, math, algorithm
 
+# See https://www.w3.org/TR/compositing-1/
+# See https://www.khronos.org/registry/OpenGL/extensions/KHR/KHR_blend_equation_advanced.txt
+
 type BlendMode* = enum
   bmNormal
   bmDarken
