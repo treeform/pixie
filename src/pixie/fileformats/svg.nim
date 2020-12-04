@@ -60,16 +60,21 @@ proc draw(img: Image, matStack: var seq[Mat3], xml: XmlNode) =
 
 proc decodeSvg*(data: string): Image =
   ## Render SVG file and return the image.
-  var xml = parseXml(data)
-  assert xml.tag == "svg"
-  var viewBox = xml.attr "viewBox"
-  let box = viewBox.split(" ")
-  assert parseInt(box[0]) == 0
-  assert parseInt(box[1]) == 0
-  let w = parseInt(box[2])
-  let h = parseInt(box[3])
-  result = newImage(w, h)
+  try:
+    var xml = parseXml(data)
+    assert xml.tag == "svg"
+    var viewBox = xml.attr "viewBox"
+    let box = viewBox.split(" ")
+    assert parseInt(box[0]) == 0
+    assert parseInt(box[1]) == 0
+    let w = parseInt(box[2])
+    let h = parseInt(box[3])
+    result = newImage(w, h)
 
-  var matStack = @[mat3()]
-  for n in xml:
-    result.draw(matStack, n)
+    var matStack = @[mat3()]
+    for n in xml:
+      result.draw(matStack, n)
+  except PixieError as e:
+    raise e
+  except:
+     raise newException(PixieError, "Unable to load SVG")
