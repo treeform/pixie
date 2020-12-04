@@ -1,62 +1,64 @@
-import pixie, chroma, vmath, fidget/opengl/perf
+import pixie, chroma, vmath, benchy
 
-timeIt "spread":
-  var tmp = 0
-  var spread: Image
-  for i in 0 ..< 100:
-    var a = newImage(100, 100)
-    var b = newImage(50, 50)
+block:
+
+  var a = newImage(100, 100)
+  var b = newImage(50, 50)
+
+  timeIt "spread":
+    a.fill(rgba(0, 0, 0, 0))
     b.fill(rgba(0, 0, 0, 255))
     a.draw(b, vec2(25, 25))
 
-    spread = a.spread(spread = 10)
+    a.spread(spread = 10)
 
-    b = newImage(50, 50)
-    b.fill(rgba(255, 255, 255, 255))
-    spread.draw(b, vec2(25, 25))
+  b = newImage(50, 50)
+  b.fill(rgba(255, 255, 255, 255))
+  a.draw(b, vec2(25, 25))
 
-    tmp += spread.width * spread.height
-  spread.writeFile("tests/images/spread1.png")
-  echo tmp
+  a.writeFile("tests/images/spread1.png")
 
-timeIt "blur":
-  var tmp = 0
-  var blur: Image
-  for i in 0 ..< 100:
-    var a = newImage(100, 100)
-    var b = newImage(50, 50)
+block:
+  var a = newImage(100, 100)
+  var b = newImage(50, 50)
+
+  timeIt "blur":
+    a.fill(rgba(0, 0, 0, 0))
     b.fill(rgba(255, 255, 255, 255))
     a.draw(b, vec2(25, 25))
 
-    blur = a.blur(radius = 10)
+    a.blur(radius = 10)
 
-    b = newImage(50, 50)
-    b.fill(rgba(255, 255, 255, 255))
-    blur.draw(b, vec2(25, 25))
+  b = newImage(50, 50)
+  b.fill(rgba(255, 255, 255, 255))
+  a.draw(b, vec2(25, 25))
 
-    tmp += blur.width * blur.height
-  blur.writeFile("tests/images/blur1.png")
-  echo tmp
+  a.writeFile("tests/images/blur1.png")
 
-timeIt "shadow":
-  var tmp = 0
+block:
   var shadow: Image
-  for i in 0 ..< 100:
-    var a = newImage(100, 100)
-    var b = newImage(50, 50)
+  var a = newImage(100, 100)
+  var b = newImage(50, 50)
+
+  timeIt "shadow":
+    a.fill(rgba(0, 0, 0, 0))
     b.fill(rgba(0, 0, 0, 255))
     a.draw(b, vec2(25, 25))
 
     shadow = a.shadow(
-      offset = vec2(0, 0), spread = 10, blur = 10, color = rgba(0, 0, 0, 255))
+      offset = vec2(0, 0),
+      spread = 10,
+      blur = 10,
+      color = rgba(0, 0, 0, 255)
+    )
 
-    b = newImage(50, 50)
-    b.fill(rgba(255, 255, 255, 255))
-    shadow.draw(b, vec2(25, 25))
+  b = newImage(50, 50)
+  b.fill(rgba(255, 255, 255, 255))
+  shadow.draw(b, vec2(25, 25))
+  keep(shadow)
 
-    tmp += shadow.width * shadow.height
   shadow.writeFile("tests/images/shadow1.png")
-  echo tmp
+
 
 # import print
 # timeIt "Shadow Stops":
