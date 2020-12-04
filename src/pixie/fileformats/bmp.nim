@@ -2,6 +2,8 @@ import flatty/binny, chroma, pixie/common, pixie/images
 
 # See: https://en.wikipedia.org/wiki/BMP_file_format
 
+const bmpSignature* = "BM"
+
 proc decodeBmp*(data: string): Image =
   ## Decodes bitmap data into an Image.
 

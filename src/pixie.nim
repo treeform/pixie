@@ -1,6 +1,6 @@
 import pixie/images, pixie/masks, pixie/paths, pixie/common, pixie/blends,
   pixie/fileformats/bmp, pixie/fileformats/png, pixie/fileformats/jpg,
-  flatty/binny, os
+  pixie/fileformats/svg, flatty/binny, os
 
 export images, masks, paths, common, blends
 
@@ -26,8 +26,10 @@ proc decodeImage*(data: string | seq[uint8]): Image =
     decodePng(data)
   elif data.len > 2 and data.readUint16(0) == cast[uint16](jpgStartOfImage):
     decodeJpg(data)
-  elif data.len > 2 and data.readStr(0, 2) == "BM":
+  elif data.len > 2 and data.readStr(0, 2) == bmpSignature:
     decodeBmp(data)
+  elif data.len > 5 and data.readStr(0, 5) == svgSignature:
+    decodeSvg(data)
   else:
     raise newException(PixieError, "Unsupported image file format")
 

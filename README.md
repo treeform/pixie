@@ -8,7 +8,7 @@ Features include:
 * Drawing paths, shapes and curves
 * Complex masking
 * Shadows, glows and effects
-* Loading image file formats (PNG, BMP, JPG + more in development)
+* Loading image file formats (PNG, BMP, JPG, SVG + more in development)
 
 This library is being actively developed and is not yet ready for use. Since you've managed to stumble onto it, give it a star and check back soon!
 
