@@ -14,7 +14,7 @@ for k, path in walkDir("examples"):
   if path.endsWith(".nim"):
     discard execCmd("nim c -r -d:danger " & path)
     let code = readFile(path)
-    let innerCode = code.cutBetween("var image = newImageFill(200, 200, rgba(255, 255, 255, 255))", "image.writeFile")
+    let innerCode = code.cutBetween("image.fill(rgba(255, 255, 255, 255))", "image.writeFile")
     if innerCode != "":
       md.add "### " & path.replace("\\", "/")
       md.add "```nim"

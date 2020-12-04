@@ -18,6 +18,33 @@ This library is being actively developed and is not yet ready for use. Since you
 
 ## Examples
 
+### examples/blur.nim
+```nim
+var trees = readImage("examples/data/trees.png")
+var blur = trees.copy()
+blur.blur(10)
+var p = newPath()
+let
+  size = 80.0
+  x = 100.0
+  y = 100.0
+p.moveTo(x + size * cos(0.0), y + size * sin(0.0))
+for side in 0 ..< 7:
+  p.lineTo(
+    x + size * cos(side.float32 * 2.0 * PI / 6.0),
+    y + size * sin(side.float32 * 2.0 * PI / 6.0)
+  )
+p.closePath()
+
+var mask = newImage(200, 200)
+mask.fillPath(p, rgba(255, 0, 0, 255))
+mask.sharpOpacity()
+blur.draw(mask, blendMode = bmMask)
+image.draw(trees)
+image.draw(blur)
+```
+![example output](examples/blur.png)
+
 ### examples/rounded_rectangle.nim
 ```nim
 var path = newPath()
@@ -38,7 +65,6 @@ path.arcTo(x,   y,   x+w, y,   nw)
 path.closePath()
 path.closePath()
 image.fillPath(path, rgba(255, 0, 0, 255))
-#image.strokePath(path, rgba(0, 0, 0, 255), strokeWidth = 5.0)
 ```
 ![example output](examples/rounded_rectangle.png)
 
