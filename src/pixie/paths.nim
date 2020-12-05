@@ -495,17 +495,17 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
   if polygon.len > 0:
     result.add(polygon)
 
-iterator zipline*[T](s: seq[T]): (T, T) =
+iterator zipline[T](s: seq[T]): (T, T) =
   ## Return elements in pairs: (1st, 2nd), (2nd, 3rd) ... (nth, last).
   for i in 0 ..< s.len - 1:
     yield(s[i], s[i + 1])
 
-iterator zipwise*[T](s: seq[T]): (T, T) =
+iterator segments(s: seq[Vec2]): Segment =
   ## Return elements in pairs: (1st, 2nd), (2nd, 3rd) ... (last, 1st).
   for i in 0 ..< s.len - 1:
-    yield(s[i], s[i + 1])
+    yield(Segment(at: s[i], to: s[i + 1]))
   if s.len > 0:
-    yield(s[^1], s[0])
+    yield(Segment(at: s[^1], to: s[0]))
 
 proc strokePolygons*(ps: seq[seq[Vec2]], strokeWidthR, strokeWidthL: float32): seq[seq[Vec2]] =
   ## Converts simple polygons into stroked versions:
@@ -587,11 +587,11 @@ proc computeBounds(polys: seq[seq[Vec2]]): Rect =
 {.push checks: off, stacktrace: off.}
 
 proc fillPolygons*(
-    size: Vec2,
-    polys: seq[seq[Vec2]],
-    color: ColorRGBA,
-    quality = 4,
-  ): Image =
+  size: Vec2,
+  polys: seq[seq[Vec2]],
+  color: ColorRGBA,
+  quality = 4,
+): Image =
   const ep = 0.0001 * PI
 
   result = newImage(size.x.int, size.y.int)
@@ -599,32 +599,37 @@ proc fillPolygons*(
   proc scanLineHits(
     polys: seq[seq[Vec2]],
     hits: var seq[(float32, bool)],
+    size: Vec2,
     y: int,
     shiftY: float32
-  ) =
+  ) {.inline.} =
     hits.setLen(0)
-    var yLine = (float32(y) + ep) + shiftY
-    var scan = Segment(at: vec2(-10000, yLine), to: vec2(100000, yLine))
+
+    let
+      yLine = (float32(y) + ep) + shiftY
+      scan = Segment(at: vec2(-10000, yLine), to: vec2(100000, yLine))
 
     for poly in polys:
-      for (at, to) in poly.zipwise:
-        let line = Segment(at: at, to: to)
+      for line in poly.segments:
         var at: Vec2
         if line.intersects(scan, at):
-          let winding = line.at.y > line.to.y
-          let x = at.x.clamp(0, size.x)
+          let
+            winding = line.at.y > line.to.y
+            x = at.x.clamp(0, size.x)
           hits.add((x, winding))
 
     hits.sort(proc(a, b: (float32, bool)): int = cmp(a[0], b[0]))
 
-  var hits: seq[(float32, bool)]
-
-  var alphas = newSeq[float32](result.width)
+  var
+    hits = newSeq[(float32, bool)]()
+    alphas = newSeq[float32](result.width)
   for y in 0 ..< result.height:
-    for x in 0 ..< result.width:
-      alphas[x] = 0
+    # Reset alphas for this row.
+    zeroMem(alphas[0].addr, alphas.len * 4)
+
+    # Do scanlines for this row.
     for m in 0 ..< quality:
-      polys.scanLineHits(hits, y, float32(m)/float32(quality))
+      polys.scanLineHits(hits, size, y, float32(m) / float32(quality))
       if hits.len == 0:
         continue
       var
@@ -633,12 +638,11 @@ proc fillPolygons*(
       for x in 0 ..< result.width:
         var penEdge = penFill
         while true:
-          if curHit >= hits.len:
+          if curHit >= hits.len or x != hits[curHit][0].int:
             break
-          if x != hits[curHit][0].int:
-            break
-          let cover = hits[curHit][0] - x.float32
-          let winding = hits[curHit][1]
+          let
+            cover = hits[curHit][0] - x.float32
+            winding = hits[curHit][1]
           if winding == false:
             penFill += 1.0
             penEdge += 1.0 - cover
@@ -647,12 +651,12 @@ proc fillPolygons*(
             penEdge -= 1.0 - cover
           inc curHit
         alphas[x] += penEdge
+
     for x in 0 ..< result.width:
-      var a = clamp(abs(alphas[x]) / float32(quality), 0.0, 1.0)
+      let a = clamp(abs(alphas[x]) / float32(quality), 0.0, 1.0)
       var colorWithAlpha = color
-      colorWithAlpha.a = uint8(clamp(a, 0, 1) * 255.0)
-      result[x, y] = colorWithAlpha
-      # TODO: don't double-clamp and can probably be unsafe?
+      colorWithAlpha.a = uint8(a * 255.0)
+      result.setRgbaUnsafe(x, y, colorWithAlpha)
 
 {.pop.}
 
