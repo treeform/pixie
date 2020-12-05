@@ -12,7 +12,7 @@ proc segment*(at, to: Vec2): Segment =
   result.at = at
   result.to = to
 
-proc intersects*(a, b: Segment, at: var Vec2): bool =
+proc intersects*(a, b: Segment, at: var Vec2): bool {.inline.} =
   ## Checks if the a segment intersects b segment.
   ## If it returns true, at will have point of intersection
   let
