@@ -495,17 +495,17 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
   if polygon.len > 0:
     result.add(polygon)
 
-iterator zipline*[T](s: seq[T]): (T, T) =
+iterator zipline[T](s: seq[T]): (T, T) =
   ## Return elements in pairs: (1st, 2nd), (2nd, 3rd) ... (nth, last).
   for i in 0 ..< s.len - 1:
     yield(s[i], s[i + 1])
 
-iterator zipwise*[T](s: seq[T]): (T, T) =
+iterator segments(s: seq[Vec2]): Segment =
   ## Return elements in pairs: (1st, 2nd), (2nd, 3rd) ... (last, 1st).
   for i in 0 ..< s.len - 1:
-    yield(s[i], s[i + 1])
+    yield(Segment(at: s[i], to: s[i + 1]))
   if s.len > 0:
-    yield(s[^1], s[0])
+    yield(Segment(at: s[^1], to: s[0]))
 
 proc strokePolygons*(ps: seq[seq[Vec2]], strokeWidthR, strokeWidthL: float32): seq[seq[Vec2]] =
   ## Converts simple polygons into stroked versions:
@@ -610,8 +610,7 @@ proc fillPolygons*(
       scan = Segment(at: vec2(-10000, yLine), to: vec2(100000, yLine))
 
     for poly in polys:
-      for e in poly.zipwise:
-        let line = cast[Segment](e)
+      for line in poly.segments:
         var at: Vec2
         if line.intersects(scan, at):
           let
