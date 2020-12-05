@@ -126,17 +126,23 @@ proc magnifyBy2*(image: Image): Image =
 
 proc flipHorizontal*(image: Image) =
   ## Flips the image around the Y axis.
+  let w = int (image.width / 2)
   for y in 0 ..< image.height:
-    for x in 0 ..< image.width:
-      let rgba = image.getRgbaUnsafe(x, y)
-      image.setRgbaUnsafe(image.width - x - 1, y, rgba)
+    for x in 0 ..< w:
+      let rgba1 = image.getRgbaUnsafe(x, y)
+      let rgba2 = image.getRgbaUnsafe(image.width - x - 1, y)
+      image.setRgbaUnsafe(image.width - x - 1, y, rgba1)
+      image.setRgbaUnsafe(x, y, rgba2)
 
 proc flipVertical*(image: Image) =
   ## Flips the image around the X axis.
-  for y in 0 ..< image.height:
+  let h = int (image.height / 2)
+  for y in 0 ..< h:
     for x in 0 ..< image.width:
-      let rgba = image.getRgbaUnsafe(x, y)
-      image.setRgbaUnsafe(x, image.height - y - 1, rgba)
+      let rgba1 = image.getRgbaUnsafe(x, y)
+      let rgba2 = image.getRgbaUnsafe(x, image.height - y - 1)
+      image.setRgbaUnsafe(x, image.height - y - 1, rgba1)
+      image.setRgbaUnsafe(x, y, rgba2)
 
 func lerp(a, b: Color, v: float32): Color {.inline.} =
   result.r = lerp(a.r, b.r, v)
