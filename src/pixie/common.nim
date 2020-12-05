@@ -8,7 +8,7 @@ type
     at*: Vec2
     to*: Vec2
 
-proc segment*(at, to: Vec2): Segment =
+proc segment*(at, to: Vec2): Segment {.inline.} =
   result.at = at
   result.to = to
 
@@ -27,7 +27,7 @@ proc intersects*(a, b: Segment, at: var Vec2): bool {.inline.} =
     return true
   return false
 
-proc fractional*(v: float32): float32 =
+proc fractional*(v: float32): float32 {.inline.} =
   ## Returns unsigned fraction part of the float.
   ## -13.7868723 -> 0.7868723
   result = abs(v)
