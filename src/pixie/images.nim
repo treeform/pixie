@@ -380,15 +380,15 @@ proc drawCorrect*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
     matInv = mat.inverse()
     # compute movement vectors
     h = 0.5.float32
-    start = matInv * vec2(0 + h, 0 + h)
-    dx = matInv * vec2(1 + h, 0 + h) - start
-    dy = matInv * vec2(0 + h, 1 + h) - start
+    p = matInv * vec2(0 + h, 0 + h)
+    dx = matInv * vec2(1 + h, 0 + h) - p
+    dy = matInv * vec2(0 + h, 1 + h) - p
     minFilterBy2 = max(dx.length, dy.length)
     b = b
 
   while minFilterBy2 > 2.0:
     b = b.minifyBy2()
-    start /= 2
+    p /= 2
     dx /= 2
     dy /= 2
     minFilterBy2 /= 2
@@ -406,10 +406,10 @@ const h = 0.5.float32
 
 proc drawUber(
   a, b: Image,
-  start, dx, dy: Vec2,
+  p, dx, dy: Vec2,
   lines: array[0..3, Segment],
   blendMode: static[BlendMode],
-  smooth: static[bool] = false
+  smooth: static[bool]
 ) =
   for y in 0 ..< a.height:
     var
@@ -440,7 +440,7 @@ proc drawUber(
         zeroMem(a.getAddr(0, y), 4 * xMin)
 
     for x in xMin ..< xMax:
-      let srcPos = start + dx * float32(x) + dy * float32(y)
+      let srcPos = p + dx * float32(x) + dy * float32(y)
       let
         xFloat = srcPos.x - h
         yFloat = srcPos.y - h
@@ -477,15 +477,15 @@ proc draw*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
   var
     matInv = mat.inverse()
     # compute movement vectors
-    start = matInv * vec2(0 + h, 0 + h)
-    dx = matInv * vec2(1 + h, 0 + h) - start
-    dy = matInv * vec2(0 + h, 1 + h) - start
+    p = matInv * vec2(0 + h, 0 + h)
+    dx = matInv * vec2(1 + h, 0 + h) - p
+    dy = matInv * vec2(0 + h, 1 + h) - p
     minFilterBy2 = max(dx.length, dy.length)
     b = b
 
   while minFilterBy2 > 2.0:
     b = b.minifyBy2()
-    start /= 2
+    p /= 2
     dx /= 2
     dy /= 2
     minFilterBy2 /= 2
@@ -496,54 +496,54 @@ proc draw*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
 
   if not smooth:
     case blendMode
-    of bmNormal: a.drawUber(b, start, dx, dy, lines, bmNormal)
-    of bmDarken: a.drawUber(b, start, dx, dy, lines, bmDarken)
-    of bmMultiply: a.drawUber(b, start, dx, dy, lines, bmMultiply)
-    of bmLinearBurn: a.drawUber(b, start, dx, dy, lines, bmLinearBurn)
-    of bmColorBurn: a.drawUber(b, start, dx, dy, lines, bmColorBurn)
-    of bmLighten: a.drawUber(b, start, dx, dy, lines, bmLighten)
-    of bmScreen: a.drawUber(b, start, dx, dy, lines, bmScreen)
-    of bmLinearDodge: a.drawUber(b, start, dx, dy, lines, bmLinearDodge)
-    of bmColorDodge: a.drawUber(b, start, dx, dy, lines, bmColorDodge)
-    of bmOverlay: a.drawUber(b, start, dx, dy, lines, bmOverlay)
-    of bmSoftLight: a.drawUber(b, start, dx, dy, lines, bmSoftLight)
-    of bmHardLight: a.drawUber(b, start, dx, dy, lines, bmHardLight)
-    of bmDifference: a.drawUber(b, start, dx, dy, lines, bmDifference)
-    of bmExclusion: a.drawUber(b, start, dx, dy, lines, bmExclusion)
-    of bmHue: a.drawUber(b, start, dx, dy, lines, bmHue)
-    of bmSaturation: a.drawUber(b, start, dx, dy, lines, bmSaturation)
-    of bmColor: a.drawUber(b, start, dx, dy, lines, bmColor)
-    of bmLuminosity: a.drawUber(b, start, dx, dy, lines, bmLuminosity)
-    of bmMask: a.drawUber(b, start, dx, dy, lines, bmMask)
-    of bmOverwrite: a.drawUber(b, start, dx, dy, lines, bmOverwrite)
-    of bmSubtractMask: a.drawUber(b, start, dx, dy, lines, bmSubtractMask)
-    of bmIntersectMask: a.drawUber(b, start, dx, dy, lines, bmIntersectMask)
-    of bmExcludeMask: a.drawUber(b, start, dx, dy, lines, bmExcludeMask)
+    of bmNormal: a.drawUber(b, p, dx, dy, lines, bmNormal, false)
+    of bmDarken: a.drawUber(b, p, dx, dy, lines, bmDarken, false)
+    of bmMultiply: a.drawUber(b, p, dx, dy, lines, bmMultiply, false)
+    of bmLinearBurn: a.drawUber(b, p, dx, dy, lines, bmLinearBurn, false)
+    of bmColorBurn: a.drawUber(b, p, dx, dy, lines, bmColorBurn, false)
+    of bmLighten: a.drawUber(b, p, dx, dy, lines, bmLighten, false)
+    of bmScreen: a.drawUber(b, p, dx, dy, lines, bmScreen, false)
+    of bmLinearDodge: a.drawUber(b, p, dx, dy, lines, bmLinearDodge, false)
+    of bmColorDodge: a.drawUber(b, p, dx, dy, lines, bmColorDodge, false)
+    of bmOverlay: a.drawUber(b, p, dx, dy, lines, bmOverlay, false)
+    of bmSoftLight: a.drawUber(b, p, dx, dy, lines, bmSoftLight, false)
+    of bmHardLight: a.drawUber(b, p, dx, dy, lines, bmHardLight, false)
+    of bmDifference: a.drawUber(b, p, dx, dy, lines, bmDifference, false)
+    of bmExclusion: a.drawUber(b, p, dx, dy, lines, bmExclusion, false)
+    of bmHue: a.drawUber(b, p, dx, dy, lines, bmHue, false)
+    of bmSaturation: a.drawUber(b, p, dx, dy, lines, bmSaturation, false)
+    of bmColor: a.drawUber(b, p, dx, dy, lines, bmColor, false)
+    of bmLuminosity: a.drawUber(b, p, dx, dy, lines, bmLuminosity, false)
+    of bmMask: a.drawUber(b, p, dx, dy, lines, bmMask, false)
+    of bmOverwrite: a.drawUber(b, p, dx, dy, lines, bmOverwrite, false)
+    of bmSubtractMask: a.drawUber(b, p, dx, dy, lines, bmSubtractMask, false)
+    of bmIntersectMask: a.drawUber(b, p, dx, dy, lines, bmIntersectMask, false)
+    of bmExcludeMask: a.drawUber(b, p, dx, dy, lines, bmExcludeMask, false)
   else:
     case blendMode
-    of bmNormal: a.drawUber(b, start, dx, dy, lines, bmNormal, true)
-    of bmDarken: a.drawUber(b, start, dx, dy, lines, bmDarken, true)
-    of bmMultiply: a.drawUber(b, start, dx, dy, lines, bmMultiply, true)
-    of bmLinearBurn: a.drawUber(b, start, dx, dy, lines, bmLinearBurn, true)
-    of bmColorBurn: a.drawUber(b, start, dx, dy, lines, bmColorBurn, true)
-    of bmLighten: a.drawUber(b, start, dx, dy, lines, bmLighten, true)
-    of bmScreen: a.drawUber(b, start, dx, dy, lines, bmScreen, true)
-    of bmLinearDodge: a.drawUber(b, start, dx, dy, lines, bmLinearDodge, true)
-    of bmColorDodge: a.drawUber(b, start, dx, dy, lines, bmColorDodge, true)
-    of bmOverlay: a.drawUber(b, start, dx, dy, lines, bmOverlay, true)
-    of bmSoftLight: a.drawUber(b, start, dx, dy, lines, bmSoftLight, true)
-    of bmHardLight: a.drawUber(b, start, dx, dy, lines, bmHardLight, true)
-    of bmDifference: a.drawUber(b, start, dx, dy, lines, bmDifference, true)
-    of bmExclusion: a.drawUber(b, start, dx, dy, lines, bmExclusion, true)
-    of bmHue: a.drawUber(b, start, dx, dy, lines, bmHue, true)
-    of bmSaturation: a.drawUber(b, start, dx, dy, lines, bmSaturation, true)
-    of bmColor: a.drawUber(b, start, dx, dy, lines, bmColor, true)
-    of bmLuminosity: a.drawUber(b, start, dx, dy, lines, bmLuminosity, true)
-    of bmMask: a.drawUber(b, start, dx, dy, lines, bmMask, true)
-    of bmOverwrite: a.drawUber(b, start, dx, dy, lines, bmOverwrite, true)
-    of bmSubtractMask: a.drawUber(b, start, dx, dy, lines, bmSubtractMask, true)
-    of bmIntersectMask: a.drawUber(b, start, dx, dy, lines, bmIntersectMask, true)
-    of bmExcludeMask: a.drawUber(b, start, dx, dy, lines, bmExcludeMask, true)
+    of bmNormal: a.drawUber(b, p, dx, dy, lines, bmNormal, true)
+    of bmDarken: a.drawUber(b, p, dx, dy, lines, bmDarken, true)
+    of bmMultiply: a.drawUber(b, p, dx, dy, lines, bmMultiply, true)
+    of bmLinearBurn: a.drawUber(b, p, dx, dy, lines, bmLinearBurn, true)
+    of bmColorBurn: a.drawUber(b, p, dx, dy, lines, bmColorBurn, true)
+    of bmLighten: a.drawUber(b, p, dx, dy, lines, bmLighten, true)
+    of bmScreen: a.drawUber(b, p, dx, dy, lines, bmScreen, true)
+    of bmLinearDodge: a.drawUber(b, p, dx, dy, lines, bmLinearDodge, true)
+    of bmColorDodge: a.drawUber(b, p, dx, dy, lines, bmColorDodge, true)
+    of bmOverlay: a.drawUber(b, p, dx, dy, lines, bmOverlay, true)
+    of bmSoftLight: a.drawUber(b, p, dx, dy, lines, bmSoftLight, true)
+    of bmHardLight: a.drawUber(b, p, dx, dy, lines, bmHardLight, true)
+    of bmDifference: a.drawUber(b, p, dx, dy, lines, bmDifference, true)
+    of bmExclusion: a.drawUber(b, p, dx, dy, lines, bmExclusion, true)
+    of bmHue: a.drawUber(b, p, dx, dy, lines, bmHue, true)
+    of bmSaturation: a.drawUber(b, p, dx, dy, lines, bmSaturation, true)
+    of bmColor: a.drawUber(b, p, dx, dy, lines, bmColor, true)
+    of bmLuminosity: a.drawUber(b, p, dx, dy, lines, bmLuminosity, true)
+    of bmMask: a.drawUber(b, p, dx, dy, lines, bmMask, true)
+    of bmOverwrite: a.drawUber(b, p, dx, dy, lines, bmOverwrite, true)
+    of bmSubtractMask: a.drawUber(b, p, dx, dy, lines, bmSubtractMask, true)
+    of bmIntersectMask: a.drawUber(b, p, dx, dy, lines, bmIntersectMask, true)
+    of bmExcludeMask: a.drawUber(b, p, dx, dy, lines, bmExcludeMask, true)
 
 proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.} =
   a.draw(b, translate(pos), blendMode)
