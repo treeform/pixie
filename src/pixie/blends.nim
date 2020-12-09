@@ -166,7 +166,7 @@ proc blendDifference(Cb, Cs: float32): float32 {.inline.} =
 proc blendExclusion(Cb, Cs: float32): float32 {.inline.} =
   Cb + Cs - 2 * Cb * Cs
 
-proc blendNormal*(Cb, Cs: Color): Color {.inline.} =
+proc blendNormal(Cb, Cs: Color): Color {.inline.} =
   result.r = Cs.r
   result.g = Cs.g
   result.b = Cs.b
@@ -293,31 +293,31 @@ proc blendExcludeMask(target, blend: Color): Color {.inline.} =
 proc blendOverwrite(target, blend: Color): Color {.inline.} =
   result = blend
 
-proc mix*(blendMode: BlendMode, dest, src: Color): Color {.inline.} =
-  case blendMode
-  of bmNormal: blendNormal(dest, src)
-  of bmDarken: blendDarken(dest, src)
-  of bmMultiply: blendMultiply(dest, src)
-  of bmLinearBurn: blendLinearBurn(dest, src)
-  of bmColorBurn: blendColorBurn(dest, src)
-  of bmLighten: blendLighten(dest, src)
-  of bmScreen: blendScreen(dest, src)
-  of bmLinearDodge: blendLinearDodge(dest, src)
-  of bmColorDodge: blendColorDodge(dest, src)
-  of bmOverlay: blendOverlay(dest, src)
-  of bmSoftLight: blendSoftLight(dest, src)
-  of bmHardLight: blendHardLight(dest, src)
-  of bmDifference: blendDifference(dest, src)
-  of bmExclusion: blendExclusion(dest, src)
-  of bmHue: blendHue(dest, src)
-  of bmSaturation: blendSaturation(dest, src)
-  of bmColor: blendColor(dest, src)
-  of bmLuminosity: blendLuminosity(dest, src)
-  of bmMask: blendMask(dest, src)
-  of bmOverwrite: blendOverwrite(dest, src)
-  of bmSubtractMask: blendSubtractMask(dest, src)
-  of bmIntersectMask: blendIntersectMask(dest, src)
-  of bmExcludeMask: blendExcludeMask(dest, src)
+# proc mix*(blendMode: BlendMode, dest, src: Color): Color {.inline.} =
+#   case blendMode
+#   of bmNormal: blendNormal(dest, src)
+#   of bmDarken: blendDarken(dest, src)
+#   of bmMultiply: blendMultiply(dest, src)
+#   of bmLinearBurn: blendLinearBurn(dest, src)
+#   of bmColorBurn: blendColorBurn(dest, src)
+#   of bmLighten: blendLighten(dest, src)
+#   of bmScreen: blendScreen(dest, src)
+#   of bmLinearDodge: blendLinearDodge(dest, src)
+#   of bmColorDodge: blendColorDodge(dest, src)
+#   of bmOverlay: blendOverlay(dest, src)
+#   of bmSoftLight: blendSoftLight(dest, src)
+#   of bmHardLight: blendHardLight(dest, src)
+#   of bmDifference: blendDifference(dest, src)
+#   of bmExclusion: blendExclusion(dest, src)
+#   of bmHue: blendHue(dest, src)
+#   of bmSaturation: blendSaturation(dest, src)
+#   of bmColor: blendColor(dest, src)
+#   of bmLuminosity: blendLuminosity(dest, src)
+#   of bmMask: blendMask(dest, src)
+#   of bmOverwrite: blendOverwrite(dest, src)
+#   of bmSubtractMask: blendSubtractMask(dest, src)
+#   of bmIntersectMask: blendIntersectMask(dest, src)
+#   of bmExcludeMask: blendExcludeMask(dest, src)
 
 proc alphaFix(Cb, Cs, mixed: ColorRGBA): ColorRGBA {.inline.} =
   let ab = Cb.a.int32
@@ -342,73 +342,73 @@ proc blendNormal*(a, b: ColorRGBA): ColorRGBA =
   result.b = b.b
   result = alphaFix(a, b, result)
 
-proc blendDarken*(a, b: ColorRGBA): ColorRGBA =
+proc blendDarken(a, b: ColorRGBA): ColorRGBA =
   blendDarken(a.color, b.color).rgba
 
-proc blendMultiply*(a, b: ColorRGBA): ColorRGBA =
+proc blendMultiply(a, b: ColorRGBA): ColorRGBA =
   blendMultiply(a.color, b.color).rgba
 
-proc blendLinearBurn*(a, b: ColorRGBA): ColorRGBA =
+proc blendLinearBurn(a, b: ColorRGBA): ColorRGBA =
   blendLinearBurn(a.color, b.color).rgba
 
-proc blendColorBurn*(a, b: ColorRGBA): ColorRGBA =
+proc blendColorBurn(a, b: ColorRGBA): ColorRGBA =
   blendColorBurn(a.color, b.color).rgba
 
-proc blendLighten*(a, b: ColorRGBA): ColorRGBA =
+proc blendLighten(a, b: ColorRGBA): ColorRGBA =
   blendLighten(a.color, b.color).rgba
 
-proc blendScreen*(a, b: ColorRGBA): ColorRGBA =
+proc blendScreen(a, b: ColorRGBA): ColorRGBA =
   blendScreen(a.color, b.color).rgba
 
-proc blendLinearDodge*(a, b: ColorRGBA): ColorRGBA =
+proc blendLinearDodge(a, b: ColorRGBA): ColorRGBA =
   blendLinearDodge(a.color, b.color).rgba
 
-proc blendColorDodge*(a, b: ColorRGBA): ColorRGBA =
+proc blendColorDodge(a, b: ColorRGBA): ColorRGBA =
   blendColorDodge(a.color, b.color).rgba
 
-proc blendOverlay*(a, b: ColorRGBA): ColorRGBA =
+proc blendOverlay(a, b: ColorRGBA): ColorRGBA =
   blendOverlay(a.color, b.color).rgba
 
-proc blendHardLight*(a, b: ColorRGBA): ColorRGBA =
+proc blendHardLight(a, b: ColorRGBA): ColorRGBA =
   blendHardLight(a.color, b.color).rgba
 
-proc blendSoftLight*(a, b: ColorRGBA): ColorRGBA =
+proc blendSoftLight(a, b: ColorRGBA): ColorRGBA =
   blendSoftLight(a.color, b.color).rgba
 
-proc blendDifference*(a, b: ColorRGBA): ColorRGBA =
+proc blendDifference(a, b: ColorRGBA): ColorRGBA =
   blendDifference(a.color, b.color).rgba
 
-proc blendExclusion*(a, b: ColorRGBA): ColorRGBA =
+proc blendExclusion(a, b: ColorRGBA): ColorRGBA =
   blendExclusion(a.color, b.color).rgba
 
-proc blendColor*(a, b: ColorRGBA): ColorRGBA =
+proc blendColor(a, b: ColorRGBA): ColorRGBA =
   blendColor(a.color, b.color).rgba
 
-proc blendLuminosity*(a, b: ColorRGBA): ColorRGBA =
+proc blendLuminosity(a, b: ColorRGBA): ColorRGBA =
   blendLuminosity(a.color, b.color).rgba
 
-proc blendHue*(a, b: ColorRGBA): ColorRGBA =
+proc blendHue(a, b: ColorRGBA): ColorRGBA =
   blendHue(a.color, b.color).rgba
 
-proc blendSaturation*(a, b: ColorRGBA): ColorRGBA =
+proc blendSaturation(a, b: ColorRGBA): ColorRGBA =
   blendSaturation(a.color, b.color).rgba
 
-proc blendMask*(a, b: ColorRGBA): ColorRGBA =
+proc blendMask(a, b: ColorRGBA): ColorRGBA =
   result.r = a.r
   result.g = a.g
   result.b = a.b
   result.a = min(a.a, b.a)
 
-proc blendSubtractMask*(a, b: ColorRGBA): ColorRGBA =
+proc blendSubtractMask(a, b: ColorRGBA): ColorRGBA =
   blendSubtractMask(a.color, b.color).rgba
 
-proc blendIntersectMask*(a, b: ColorRGBA): ColorRGBA =
+proc blendIntersectMask(a, b: ColorRGBA): ColorRGBA =
   blendIntersectMask(a.color, b.color).rgba
 
-proc blendExcludeMask*(a, b: ColorRGBA): ColorRGBA =
+proc blendExcludeMask(a, b: ColorRGBA): ColorRGBA =
   blendExcludeMask(a.color, b.color).rgba
 
-proc blendOverwrite*(a, b: ColorRGBA): ColorRGBA =
+proc blendOverwrite(a, b: ColorRGBA): ColorRGBA =
   blendOverwrite(a.color, b.color).rgba
 
 proc mix*(blendMode: BlendMode, dest, src: ColorRGBA): ColorRGBA {.inline.} =
@@ -437,7 +437,9 @@ proc mix*(blendMode: BlendMode, dest, src: ColorRGBA): ColorRGBA {.inline.} =
   of bmIntersectMask: blendIntersectMask(dest, src)
   of bmExcludeMask: blendExcludeMask(dest, src)
 
-proc mixStatic*(blendMode: static[BlendMode], dest, src: ColorRGBA): ColorRGBA {.inline.} =
+proc mixStatic*(
+  blendMode: static[BlendMode], dest, src: ColorRGBA
+): ColorRGBA {.inline.} =
   when blendMOde == bmNormal: blendNormal(dest, src)
   elif blendMOde == bmDarken: blendDarken(dest, src)
   elif blendMOde == bmMultiply: blendMultiply(dest, src)

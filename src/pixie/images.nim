@@ -455,16 +455,17 @@ proc drawUber(
         zeroMem(a.getAddr(0, y), 4 * xMin)
 
     for x in xMin ..< xMax:
-      let srcPos = p + dx * float32(x) + dy * float32(y)
       let
+        srcPos = p + dx * float32(x) + dy * float32(y)
         xFloat = srcPos.x - h
         yFloat = srcPos.y - h
-      var rgba = a.getRgbaUnsafe(x, y)
-      var rgba2 =
-        when smooth:
-          b.getRgbaSmooth(xFloat, yFloat)
-        else:
-          b.getRgbaUnsafe(xFloat.round.int, yFloat.round.int)
+      var
+        rgba = a.getRgbaUnsafe(x, y)
+        rgba2 =
+          when smooth:
+            b.getRgbaSmooth(xFloat, yFloat)
+          else:
+            b.getRgbaUnsafe(xFloat.round.int, yFloat.round.int)
       rgba = blendMode.mixStatic(rgba, rgba2)
       a.setRgbaUnsafe(x, y, rgba)
 
