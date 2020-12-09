@@ -1,73 +1,185 @@
-import benchy, chroma, pixie, vmath
+import benchy, chroma, vmath
+
+include pixie/blends
+
+const iterations = 1_000_000
 
 let
-  a = newImage(1000, 1000)
-  b = newImage(1000, 1000)
+  a = rgba(100, 200, 100, 255)
+  b = rgba(25, 33, 100, 127)
 
-b.fill(rgba(127, 127, 127, 255))
+timeIt "blendNormal":
+  for i in 0 ..< iterations:
+    keep blendNormal(a, b)
 
-timeIt "bmNormal":
-  a.draw(b, vec2(0, 0), bmNormal)
+timeIt "blendNormalFloats":
+  for i in 0 ..< iterations:
+    keep blendNormalFloats(a.color, b.color).rgba
 
-timeIt "bmDarken":
-  a.draw(b, vec2(0, 0), bmDarken)
+timeIt "blendDarken":
+  for i in 0 ..< iterations:
+    keep blendDarken(a, b)
 
-timeIt "bmMultiply":
-  a.draw(b, vec2(0, 0), bmMultiply)
+timeIt "blendDarkenFloats":
+  for i in 0 ..< iterations:
+    keep blendDarkenFloats(a.color, b.color).rgba
 
-timeIt "bmLinearBurn":
-  a.draw(b, vec2(0, 0), bmLinearBurn)
+timeIt "blendMultiply":
+  for i in 0 ..< iterations:
+    keep blendMultiply(a, b)
 
-timeIt "bmColorBurn":
-  a.draw(b, vec2(0, 0), bmColorBurn)
+timeIt "blendMultiplyFloats":
+  for i in 0 ..< iterations:
+    keep blendMultiplyFloats(a.color, b.color).rgba
 
-timeIt "bmLighten":
-  a.draw(b, vec2(0, 0), bmLighten)
+timeIt "blendLinearBurn":
+  for i in 0 ..< iterations:
+    keep blendLinearBurn(a, b)
 
-timeIt "bmScreen":
-  a.draw(b, vec2(0, 0), bmScreen)
+timeIt "blendLinearBurnFloats":
+  for i in 0 ..< iterations:
+    keep blendLinearBurnFloats(a.color, b.color).rgba
 
-timeIt "bmLinearDodge":
-  a.draw(b, vec2(0, 0), bmLinearDodge)
+timeIt "blendColorBurn":
+  for i in 0 ..< iterations:
+    keep blendColorBurn(a, b)
 
-timeIt "bmColorDodge":
-  a.draw(b, vec2(0, 0), bmColorDodge)
+timeIt "blendColorBurnFloats":
+  for i in 0 ..< iterations:
+    keep blendColorBurnFloats(a.color, b.color).rgba
 
-timeIt "bmOverlay":
-  a.draw(b, vec2(0, 0), bmOverlay)
+timeIt "blendLighten":
+  for i in 0 ..< iterations:
+    keep blendLighten(a, b)
 
-timeIt "bmSoftLight":
-  a.draw(b, vec2(0, 0), bmSoftLight)
+timeIt "blendLightenFloats":
+  for i in 0 ..< iterations:
+    keep blendLightenFloats(a.color, b.color).rgba
 
-timeIt "bmHardLight":
-  a.draw(b, vec2(0, 0), bmHardLight)
+timeIt "blendScreen":
+  for i in 0 ..< iterations:
+    keep blendScreen(a, b)
 
-timeIt "bmDifference":
-  a.draw(b, vec2(0, 0), bmDifference)
+timeIt "blendScreenFloats":
+  for i in 0 ..< iterations:
+    keep blendScreenFloats(a.color, b.color).rgba
 
-timeIt "bmExclusion":
-  a.draw(b, vec2(0, 0), bmExclusion)
+timeIt "blendLinearDodge":
+  for i in 0 ..< iterations:
+    keep blendLinearDodge(a, b)
 
-timeIt "bmHue":
-  a.draw(b, vec2(0, 0), bmHue)
+timeIt "blendLinearDodgeFloats":
+  for i in 0 ..< iterations:
+    keep blendLinearDodgeFloats(a.color, b.color).rgba
 
-timeIt "bmSaturation":
-  a.draw(b, vec2(0, 0), bmSaturation)
+timeIt "blendColorDodge":
+  for i in 0 ..< iterations:
+    keep blendColorDodge(a, b)
 
-timeIt "bmColor":
-  a.draw(b, vec2(0, 0), bmColor)
+timeIt "blendColorDodgeFloats":
+  for i in 0 ..< iterations:
+    keep blendColorDodgeFloats(a.color, b.color).rgba
 
-timeIt "bmLuminosity":
-  a.draw(b, vec2(0, 0), bmLuminosity)
+timeIt "blendOverlay":
+  for i in 0 ..< iterations:
+    keep blendOverlay(a, b)
 
-timeIt "bmMask":
-  a.draw(b, vec2(0, 0), bmMask)
+timeIt "blendOverlayFloats":
+  for i in 0 ..< iterations:
+    keep blendOverlayFloats(a.color, b.color).rgba
 
-timeIt "bmSubtractMask":
-  a.draw(b, vec2(0, 0), bmSubtractMask)
+timeIt "blendSoftLight":
+  for i in 0 ..< iterations:
+    keep blendSoftLight(a, b)
 
-timeIt "bmIntersectMask":
-  a.draw(b, vec2(0, 0), bmIntersectMask)
+timeIt "blendSoftLightFloats":
+  for i in 0 ..< iterations:
+    keep blendSoftLightFloats(a.color, b.color).rgba
 
-timeIt "bmExcludeMask":
-  a.draw(b, vec2(0, 0), bmExcludeMask)
+timeIt "blendHardLight":
+  for i in 0 ..< iterations:
+    keep blendHardLight(a, b)
+
+timeIt "blendHardLightFloats":
+  for i in 0 ..< iterations:
+    keep blendHardLightFloats(a.color, b.color).rgba
+
+timeIt "blendDifference":
+  for i in 0 ..< iterations:
+    keep blendDifference(a, b)
+
+timeIt "blendDifferenceFloats":
+  for i in 0 ..< iterations:
+    keep blendDifferenceFloats(a.color, b.color).rgba
+
+timeIt "blendExclusion":
+  for i in 0 ..< iterations:
+    keep blendExclusion(a, b)
+
+timeIt "blendExclusionFloats":
+  for i in 0 ..< iterations:
+    keep blendExclusionFloats(a.color, b.color).rgba
+
+timeIt "blendHue":
+  for i in 0 ..< iterations:
+    keep blendHue(a, b)
+
+timeIt "blendHueFloats":
+  for i in 0 ..< iterations:
+    keep blendHueFloats(a.color, b.color).rgba
+
+timeIt "blendSaturation":
+  for i in 0 ..< iterations:
+    keep blendSaturation(a, b)
+
+timeIt "blendSaturationFloats":
+  for i in 0 ..< iterations:
+    keep blendSaturationFloats(a.color, b.color).rgba
+
+timeIt "blendColor":
+  for i in 0 ..< iterations:
+    keep blendColor(a, b)
+
+timeIt "blendColorFloats":
+  for i in 0 ..< iterations:
+    keep blendColorFloats(a.color, b.color).rgba
+
+timeIt "blendLuminosity":
+  for i in 0 ..< iterations:
+    keep blendLuminosity(a, b)
+
+timeIt "blendLuminosityFloats":
+  for i in 0 ..< iterations:
+    keep blendLuminosityFloats(a.color, b.color).rgba
+
+timeIt "blendMask":
+  for i in 0 ..< iterations:
+    keep blendMask(a, b)
+
+timeIt "blendMaskFloats":
+  for i in 0 ..< iterations:
+    keep blendMaskFloats(a.color, b.color).rgba
+
+timeIt "blendSubtractMask":
+  for i in 0 ..< iterations:
+    keep blendSubtractMask(a, b)
+
+timeIt "blendSubtractMaskFloats":
+  for i in 0 ..< iterations:
+    keep blendSubtractMaskFloats(a.color, b.color).rgba
+
+timeIt "blendIntersectMask":
+  for i in 0 ..< iterations:
+    keep blendIntersectMask(a, b)
+
+timeIt "blendIntersectMaskFloats":
+  for i in 0 ..< iterations:
+    keep blendIntersectMaskFloats(a.color, b.color).rgba
+
+timeIt "blendExcludeMask":
+  for i in 0 ..< iterations:
+    keep blendExcludeMask(a, b)
+
+timeIt "blendExcludeMaskFloats":
+  for i in 0 ..< iterations:
+    keep blendExcludeMaskFloats(a.color, b.color).rgba
