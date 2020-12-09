@@ -1,5 +1,5 @@
 ## Blending modes.
-import chroma, math
+import chroma, math, nimsimd/sse2
 
 # See https://www.w3.org/TR/compositing-1/
 # See https://www.khronos.org/registry/OpenGL/extensions/KHR/KHR_blend_equation_advanced.txt
@@ -260,24 +260,28 @@ proc blendOverwriteFloats(backdrop, source: Color): Color {.inline.} =
 
 proc alphaFix(backdrop, source, mixed: ColorRGBA): ColorRGBA {.inline.} =
   let
-    sa = source.a.int32
-    ba = backdrop.a.int32
-    t0 = sa * (255 - ba)
-    t1 = sa * ba
-    t2 = (255 - sa) * ba
-
-  let
-    r = t0 * source.r.int32 + t1 * mixed.r.int32 + t2 * backdrop.r.int32
-    g = t0 * source.g.int32 + t1 * mixed.g.int32 + t2 * backdrop.g.int32
-    b = t0 * source.b.int32 + t1 * mixed.b.int32 + t2 * backdrop.b.int32
-    a = sa + ba * (255 - sa) div 255
-
-  if a == 0:
+    sa = source.a.float32
+    ba = backdrop.a.float32
+    a = sa + ba * (255 - sa) / 255
+  if a < 1:
     return
 
-  result.r = (r div a div 255).uint8
-  result.g = (g div a div 255).uint8
-  result.b = (b div a div 255).uint8
+  let
+    vb = mm_setr_ps(backdrop.r.float32, backdrop.g.float32, backdrop.b.float32, 0)
+    vs = mm_setr_ps(source.r.float32, source.g.float32, source.b.float32, 0)
+    vm = mm_setr_ps(mixed.r.float32, mixed.g.float32, mixed.b.float32, 0)
+    vt0 = mm_set1_ps(sa * (255 - ba))
+    vt1 = mm_set1_ps(sa * ba)
+    vt2 = mm_set1_ps((255 - sa) * ba)
+    va = mm_set1_ps(a)
+    v255 = mm_set1_ps(255)
+    values = cast[array[4, int32]](
+      mm_cvtps_epi32((vt0 * vs + vt1 * vm + vt2 * vb) / va / v255)
+    )
+
+  result.r = values[0].uint8
+  result.g = values[1].uint8
+  result.b = values[2].uint8
   result.a = a.uint8
 
 proc blendNormal(backdrop, source: ColorRGBA): ColorRGBA =
