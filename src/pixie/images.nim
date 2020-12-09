@@ -433,9 +433,8 @@ proc drawUber(
   let mixer = blendMode.mixer()
   for y in 0 ..< a.height:
     var
-      xMin = 0
+      xMin = a.width
       xMax = 0
-      hasIntersection = false
     for yOffset in [0.float32, 1]:
       var scanLine = segment(
         vec2(-100000, y.float32 + yOffset),
@@ -444,13 +443,8 @@ proc drawUber(
       for l in lines:
         var at: Vec2
         if intersects(l, scanLine, at):
-          if hasIntersection:
-            xMin = min(xMin, at.x.floor.int)
-            xMax = max(xMax, at.x.ceil.int)
-          else:
-            hasIntersection = true
-            xMin = at.x.floor.int
-            xMax = at.x.ceil.int
+          xMin = min(xMin, at.x.floor.int)
+          xMax = max(xMax, at.x.ceil.int)
 
     xMin = xMin.clamp(0, a.width)
     xMax = xMax.clamp(0, a.width)
