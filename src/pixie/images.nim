@@ -1,4 +1,4 @@
-import chroma, blends, vmath, common, system/memory, nimsimd/sse2
+import chroma, blends, vmath, common, nimsimd/sse2
 
 type
   Image* = ref object
