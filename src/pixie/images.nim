@@ -351,10 +351,7 @@ proc spread*(image: Image, spread: float32) =
       image[x, y] = rgba(0, 0, 0, maxAlpha)
 
 proc shadow*(
-  mask: Image,
-  offset: Vec2,
-  spread, blur: float32,
-  color: ColorRGBA
+  mask: Image, offset: Vec2, spread, blur: float32, color: ColorRGBA
 ): Image =
   ## Create a shadow of the image with the offset, spread and blur.
   var shadow = mask

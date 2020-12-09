@@ -326,21 +326,18 @@ proc blendNormal(a, b: ColorRGBA): ColorRGBA =
   result.g = b.g
   result.b = b.b
   result = alphaFix(a, b, result)
-  # blendNormalFloats(a.color, b.color).rgba
 
 proc blendDarken(a, b: ColorRGBA): ColorRGBA =
   result.r = min(a.r, b.r)
   result.g = min(a.g, b.g)
   result.b = min(a.b, b.b)
   result = alphaFix(a, b, result)
-  # blendDarkenFloats(a.color, b.color).rgba
 
 proc blendMultiply(a, b: ColorRGBA): ColorRGBA =
   result.r = ((a.r.uint32 * b.r.uint32) div 255).uint8
   result.g = ((a.g.uint32 * b.g.uint32) div 255).uint8
   result.b = ((a.b.uint32 * b.b.uint32) div 255).uint8
   result = alphaFix(a, b, result)
-  # blendMultiplyFloats(a.color, b.color).rgba
 
 proc blendLinearBurn(a, b: ColorRGBA): ColorRGBA =
   result.r = max(0, a.r.int32 + b.r.int32 - 255).uint8
