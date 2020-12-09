@@ -453,7 +453,7 @@ proc drawUber(
           if smooth:
             b.getRgbaSmooth(xFloat, yFloat)
           else:
-            b.getRgbaUnsafe(xFloat.round.int, yFloat.round.int)
+            b.getRgbaUnsafe(xFloat.int, yFloat.int)
       a.setRgbaUnsafe(x, y, mixer(rgba, rgba2))
 
     if blendMode == bmIntersectMask:
