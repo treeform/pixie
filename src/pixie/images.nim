@@ -1,5 +1,7 @@
 import chroma, blends, vmath, common, nimsimd/sse2
 
+const h = 0.5.float32
+
 type
   Image* = ref object
     ## Main image object that holds the bitmap data in RGBA format.
@@ -198,9 +200,7 @@ proc fromAlphy*(image: Image) =
 
 proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA {.inline.} =
   ## Gets a pixel as (x, y) floats.
-  var
-    x = x # TODO: look at maybe +0.5
-    y = y # TODO: look at maybe +0.5
+  let
     minX = x.floor.int
     difX = x - x.floor
     minY = y.floor.int
@@ -351,10 +351,7 @@ proc spread*(image: Image, spread: float32) =
       image[x, y] = rgba(0, 0, 0, maxAlpha)
 
 proc shadow*(
-  mask: Image,
-  offset: Vec2,
-  spread, blur: float32,
-  color: ColorRGBA
+  mask: Image, offset: Vec2, spread, blur: float32, color: ColorRGBA
 ): Image =
   ## Create a shadow of the image with the offset, spread and blur.
   var shadow = mask
@@ -390,8 +387,7 @@ proc drawCorrect*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
   ## Draws one image onto another using matrix with color blending.
   var
     matInv = mat.inverse()
-    # compute movement vectors
-    h = 0.5.float32
+    # Compute movement vectors
     p = matInv * vec2(0 + h, 0 + h)
     dx = matInv * vec2(1 + h, 0 + h) - p
     dy = matInv * vec2(0 + h, 1 + h) - p
@@ -411,11 +407,11 @@ proc drawCorrect*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
     for x in 0 ..< a.width:
       let
         srcPos = matInv * vec2(x.float32 + h, y.float32 + h)
+        xFloat = srcPos.x - h
+        yFloat = srcPos.y - h
         rgba = a.getRgbaUnsafe(x, y)
-        rgba2 = b.getRgbaSmooth(srcPos.x - h, srcPos.y - h)
+        rgba2 = b.getRgbaSmooth(xFloat, yFloat)
       a.setRgbaUnsafe(x, y, mixer(rgba, rgba2))
-
-const h = 0.5.float32
 
 proc drawUber(
   a, b: Image,
@@ -427,9 +423,8 @@ proc drawUber(
   let mixer = blendMode.mixer()
   for y in 0 ..< a.height:
     var
-      xMin = 0
+      xMin = a.width
       xMax = 0
-      hasIntersection = false
     for yOffset in [0.float32, 1]:
       var scanLine = segment(
         vec2(-100000, y.float32 + yOffset),
@@ -438,13 +433,8 @@ proc drawUber(
       for l in lines:
         var at: Vec2
         if intersects(l, scanLine, at):
-          if hasIntersection:
-            xMin = min(xMin, at.x.floor.int)
-            xMax = max(xMax, at.x.ceil.int)
-          else:
-            hasIntersection = true
-            xMin = at.x.floor.int
-            xMax = at.x.ceil.int
+          xMin = min(xMin, at.x.floor.int)
+          xMax = max(xMax, at.x.ceil.int)
 
     xMin = xMin.clamp(0, a.width)
     xMax = xMax.clamp(0, a.width)
@@ -463,7 +453,7 @@ proc drawUber(
           if smooth:
             b.getRgbaSmooth(xFloat, yFloat)
           else:
-            b.getRgbaUnsafe(xFloat.round.int, yFloat.round.int)
+            b.getRgbaUnsafe(xFloat.int, yFloat.int)
       a.setRgbaUnsafe(x, y, mixer(rgba, rgba2))
 
     if blendMode == bmIntersectMask:
@@ -489,7 +479,7 @@ proc draw*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
 
   var
     matInv = mat.inverse()
-    # compute movement vectors
+    # Compute movement vectors
     p = matInv * vec2(0 + h, 0 + h)
     dx = matInv * vec2(1 + h, 0 + h) - p
     dy = matInv * vec2(0 + h, 1 + h) - p
