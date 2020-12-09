@@ -406,13 +406,22 @@ proc drawCorrect*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
     minFilterBy2 /= 2
     matInv = matInv * scale(vec2(0.5, 0.5))
 
+  let smooth = not(dx.length == 1.0 and dy.length == 1.0 and
+    mat[2, 0].fractional == 0.0 and mat[2, 1].fractional == 0.0)
+
   let mixer = blendMode.mixer()
   for y in 0 ..< a.height:
     for x in 0 ..< a.width:
       let
         srcPos = matInv * vec2(x.float32 + h, y.float32 + h)
+        xFloat = srcPos.x - h
+        yFloat = srcPos.y - h
         rgba = a.getRgbaUnsafe(x, y)
-        rgba2 = b.getRgbaSmooth(srcPos.x - h, srcPos.y - h)
+        rgba2 =
+          if smooth:
+            b.getRgbaSmooth(xFloat, yFloat)
+          else:
+            b[xFloat.round.int, yFloat.round.int]
       a.setRgbaUnsafe(x, y, mixer(rgba, rgba2))
 
 const h = 0.5.float32
@@ -489,7 +498,7 @@ proc draw*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
 
   var
     matInv = mat.inverse()
-    # compute movement vectors
+    # Compute movement vectors
     p = matInv * vec2(0 + h, 0 + h)
     dx = matInv * vec2(1 + h, 0 + h) - p
     dy = matInv * vec2(0 + h, 1 + h) - p
