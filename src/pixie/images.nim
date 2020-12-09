@@ -1,5 +1,7 @@
 import chroma, blends, vmath, common, nimsimd/sse2
 
+const h = 0.5.float32
+
 type
   Image* = ref object
     ## Main image object that holds the bitmap data in RGBA format.
@@ -198,9 +200,7 @@ proc fromAlphy*(image: Image) =
 
 proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA {.inline.} =
   ## Gets a pixel as (x, y) floats.
-  var
-    x = x # TODO: look at maybe +0.5
-    y = y # TODO: look at maybe +0.5
+  let
     minX = x.floor.int
     difX = x - x.floor
     minY = y.floor.int
@@ -387,8 +387,7 @@ proc drawCorrect*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
   ## Draws one image onto another using matrix with color blending.
   var
     matInv = mat.inverse()
-    # compute movement vectors
-    h = 0.5.float32
+    # Compute movement vectors
     p = matInv * vec2(0 + h, 0 + h)
     dx = matInv * vec2(1 + h, 0 + h) - p
     dy = matInv * vec2(0 + h, 1 + h) - p
@@ -420,8 +419,6 @@ proc drawCorrect*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
           else:
             b[xFloat.round.int, yFloat.round.int]
       a.setRgbaUnsafe(x, y, mixer(rgba, rgba2))
-
-const h = 0.5.float32
 
 proc drawUber(
   a, b: Image,
