@@ -285,11 +285,11 @@ proc blendMask(a, b: ColorRGBA): ColorRGBA =
 
 proc blendSubtractMask(a, b: ColorRGBA): ColorRGBA =
   result = a
-  result.a = ((a.a.float32 / 255) * (1 - b.a.float32 / 255) * 255).uint8
+  result.a = max(0, (a.a.int32 * (255 - b.a.int32)) div 255).uint8
 
 proc blendIntersectMask(a, b: ColorRGBA): ColorRGBA =
   result = a
-  result.a = ((a.a.float32 / 255) * (b.a.float32 / 255) * 255).uint8
+  result.a = ((a.a.uint32 * (b.a.uint32)) div 255).uint8
 
 proc blendExcludeMask(a, b: ColorRGBA): ColorRGBA =
   result = a
