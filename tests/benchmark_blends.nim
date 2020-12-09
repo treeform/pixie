@@ -1,21 +1,16 @@
-import benchy, chroma, vmath
-
-include pixie/blends
-
-const iterations = 100_000_000
+import benchy, chroma, pixie, vmath
 
 let
-  a = rgba(100, 200, 100, 255)
-  b = rgba(25, 33, 100, 127)
+  a = newImage(1000, 1000)
+  b = newImage(1000, 1000)
+
+b.fill(rgba(127, 127, 127, 255))
 
 timeIt "bmNormal":
-  for i in 0 ..< iterations:
-    keep blendNormal(a, b)
+  a.draw(b, vec2(0, 0), bmNormal)
 
 timeIt "bmDarken":
-  for i in 0 ..< iterations:
-    keep blendDarken(a, b)
+  a.draw(b, vec2(0, 0), bmDarken)
 
 timeIt "bmMultiply":
-  for i in 0 ..< iterations:
-    keep blendMultiply(a, b)
+  a.draw(b, vec2(0, 0), bmMultiply)
