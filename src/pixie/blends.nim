@@ -69,15 +69,6 @@ proc `-`*(c: Color, v: float32): Color {.inline.} =
   result.b = c.b - v
   result.a = c.a - v
 
-proc screen(Cb, Cs: float32): float32 {.inline.} =
-  1 - (1 - Cb) * (1 - Cs)
-
-proc hardLight(Cb, Cs: float32): float32 {.inline.} =
-  if Cs <= 0.5:
-    Cb * 2 * Cs
-  else:
-    screen(Cb, 2 * Cs - 1)
-
 proc softLight(a, b: float32): float32 {.inline.} =
   ## Pegtop
   (1 - 2 * b) * a ^ 2 + 2 * b * a
@@ -126,59 +117,24 @@ proc alphaFix(Cb, Cs, mixed: Color): Color {.inline.} =
   result.g /= result.a
   result.b /= result.a
 
-proc blendLinearBurnFloat(Cb, Cs: float32): float32 {.inline.} =
-  Cb + Cs - 1
-
 proc blendColorBurnFloat(Cb, Cs: float32): float32 {.inline.} =
   if Cb == 1:    1.0
   elif Cs == 0:  0.0
   else:          1.0 - min(1, (1 - Cb) / Cs)
 
-proc blendScreenFloat(Cb, Cs: float32): float32 {.inline.} =
-  screen(Cb, Cs)
-
-proc blendLinearDodgeFloat(Cb, Cs: float32): float32 {.inline.} =
-  Cb + Cs
 
 proc blendColorDodgeFloat(Cb, Cs: float32): float32 {.inline.} =
   if Cb == 0:    0.0
   elif Cs == 1:  1.0
   else:          min(1, Cb / (1 - Cs))
 
-proc blendOverlayFloat(Cb, Cs: float32): float32 {.inline.} =
-  hardLight(Cs, Cb)
-
-proc blendHardLightFloat(Cb, Cs: float32): float32 {.inline.} =
-  hardLight(Cb, Cs)
-
 proc blendSoftLightFloat(Cb, Cs: float32): float32 {.inline.} =
   softLight(Cb, Cs)
-
-proc blendExclusionFloat(Cb, Cs: float32): float32 {.inline.} =
-  Cb + Cs - 2 * Cb * Cs
-
-proc blendLinearBurnFloats(Cb, Cs: Color): Color {.inline.} =
-  result.r = blendLinearBurnFloat(Cb.r, Cs.r)
-  result.g = blendLinearBurnFloat(Cb.g, Cs.g)
-  result.b = blendLinearBurnFloat(Cb.b, Cs.b)
-  result = alphaFix(Cb, Cs, result)
 
 proc blendColorBurnFloats(Cb, Cs: Color): Color {.inline.} =
   result.r = blendColorBurnFloat(Cb.r, Cs.r)
   result.g = blendColorBurnFloat(Cb.g, Cs.g)
   result.b = blendColorBurnFloat(Cb.b, Cs.b)
-  result = alphaFix(Cb, Cs, result)
-
-proc blendScreenFloats(Cb, Cs: Color): Color {.inline.} =
-  result.r = blendScreenFloat(Cb.r, Cs.r)
-  result.g = blendScreenFloat(Cb.g, Cs.g)
-  result.b = blendScreenFloat(Cb.b, Cs.b)
-  result = alphaFix(Cb, Cs, result)
-
-proc blendLinearDodgeFloats(Cb, Cs: Color): Color {.inline.} =
-  result.r = blendLinearDodgeFloat(Cb.r, Cs.r)
-  result.g = blendLinearDodgeFloat(Cb.g, Cs.g)
-  result.b = blendLinearDodgeFloat(Cb.b, Cs.b)
   result = alphaFix(Cb, Cs, result)
 
 proc blendColorDodgeFloats(Cb, Cs: Color): Color {.inline.} =
@@ -187,28 +143,10 @@ proc blendColorDodgeFloats(Cb, Cs: Color): Color {.inline.} =
   result.b = blendColorDodgeFloat(Cb.b, Cs.b)
   result = alphaFix(Cb, Cs, result)
 
-proc blendOverlayFloats(Cb, Cs: Color): Color {.inline.} =
-  result.r = blendOverlayFloat(Cb.r, Cs.r)
-  result.g = blendOverlayFloat(Cb.g, Cs.g)
-  result.b = blendOverlayFloat(Cb.b, Cs.b)
-  result = alphaFix(Cb, Cs, result)
-
-proc blendHardLightFloats(Cb, Cs: Color): Color {.inline.} =
-  result.r = blendHardLightFloat(Cb.r, Cs.r)
-  result.g = blendHardLightFloat(Cb.g, Cs.g)
-  result.b = blendHardLightFloat(Cb.b, Cs.b)
-  result = alphaFix(Cb, Cs, result)
-
 proc blendSoftLightFloats(Cb, Cs: Color): Color {.inline.} =
   result.r = blendSoftLightFloat(Cb.r, Cs.r)
   result.g = blendSoftLightFloat(Cb.g, Cs.g)
   result.b = blendSoftLightFloat(Cb.b, Cs.b)
-  result = alphaFix(Cb, Cs, result)
-
-proc blendExclusionFloats(Cb, Cs: Color): Color {.inline.} =
-  result.r = blendExclusionFloat(Cb.r, Cs.r)
-  result.g = blendExclusionFloat(Cb.g, Cs.g)
-  result.b = blendExclusionFloat(Cb.b, Cs.b)
   result = alphaFix(Cb, Cs, result)
 
 proc blendColorFloats(Cb, Cs: Color): Color {.inline.} =
@@ -243,6 +181,15 @@ proc alphaFix(Cb, Cs, mixed: ColorRGBA): ColorRGBA {.inline.} =
     result.b = (b div a div 255).uint8
     result.a = a.uint8
 
+proc screen(a, b: uint8): uint8 {.inline.} =
+  (255 - ((255 - a).uint32 * (255 - b).uint32) div 255).uint8
+
+proc hardLight(a, b: uint8): uint8 {.inline.} =
+  if b <= 127:
+    ((a * 2 * b) div 255).uint8
+  else:
+    screen(a, max(0, (2 * b.int32 - 255)).uint8)
+
 proc blendNormal(a, b: ColorRGBA): ColorRGBA =
   result.r = b.r
   result.g = b.g
@@ -256,17 +203,16 @@ proc blendDarken(a, b: ColorRGBA): ColorRGBA =
   result = alphaFix(a, b, result)
 
 proc blendMultiply(a, b: ColorRGBA): ColorRGBA =
-  let
-    ac = a.color
-    bc = b.color
-  var c: Color
-  c.r = ac.r * bc.r
-  c.g = ac.g * bc.g
-  c.b = ac.b * bc.b
-  alphaFix(ac, bc, c).rgba
+  result.r = ((a.r.uint32 * b.r.uint32) div 255).uint8
+  result.g = ((a.g.uint32 * b.g.uint32) div 255).uint8
+  result.b = ((a.b.uint32 * b.b.uint32) div 255).uint8
+  result = alphaFix(a, b, result)
 
 proc blendLinearBurn(a, b: ColorRGBA): ColorRGBA =
-  blendLinearBurnFloats(a.color, b.color).rgba
+  result.r = max(0, a.r.int32 + b.r.int32 - 255).uint8
+  result.g = max(0, a.g.int32 + b.g.int32 - 255).uint8
+  result.b = max(0, a.b.int32 + b.b.int32 - 255).uint8
+  result = alphaFix(a, b, result)
 
 proc blendColorBurn(a, b: ColorRGBA): ColorRGBA =
   blendColorBurnFloats(a.color, b.color).rgba
@@ -278,19 +224,31 @@ proc blendLighten(a, b: ColorRGBA): ColorRGBA =
   result = alphaFix(a, b, result)
 
 proc blendScreen(a, b: ColorRGBA): ColorRGBA =
-  blendScreenFloats(a.color, b.color).rgba
+  result.r = screen(a.r, b.r)
+  result.g = screen(a.g, b.g)
+  result.b = screen(a.b, b.b)
+  result = alphaFix(a, b, result)
 
 proc blendLinearDodge(a, b: ColorRGBA): ColorRGBA =
-  blendLinearDodgeFloats(a.color, b.color).rgba
+  result.r = (a.r.uint32 + b.r).uint8
+  result.r = (a.g.uint32 + b.g).uint8
+  result.r = (a.b.uint32 + b.b).uint8
+  result = alphaFix(a, b, result)
 
 proc blendColorDodge(a, b: ColorRGBA): ColorRGBA =
   blendColorDodgeFloats(a.color, b.color).rgba
 
 proc blendOverlay(a, b: ColorRGBA): ColorRGBA =
-  blendOverlayFloats(a.color, b.color).rgba
+  result.r = hardLight(b.r, a.r)
+  result.g = hardLight(b.g, a.g)
+  result.b = hardLight(b.b, a.b)
+  result = alphaFix(a, b, result)
 
 proc blendHardLight(a, b: ColorRGBA): ColorRGBA =
-  blendHardLightFloats(a.color, b.color).rgba
+  result.r = hardLight(a.r, b.r)
+  result.g = hardLight(a.g, b.g)
+  result.b = hardLight(a.b, b.b)
+  result = alphaFix(a, b, result)
 
 proc blendSoftLight(a, b: ColorRGBA): ColorRGBA =
   blendSoftLightFloats(a.color, b.color).rgba
@@ -302,7 +260,12 @@ proc blendDifference(a, b: ColorRGBA): ColorRGBA =
   result = alphaFix(a, b, result)
 
 proc blendExclusion(a, b: ColorRGBA): ColorRGBA =
-  blendExclusionFloats(a.color, b.color).rgba
+  template blend(a, b: int32): uint8 =
+    max(0, a + b - (2 * a * b) div 255).uint8
+  result.r = blend(a.r.int32, b.r.int32)
+  result.g = blend(a.g.int32, b.g.int32)
+  result.b = blend(a.b.int32, b.b.int32)
+  result = alphaFix(a, b, result)
 
 proc blendColor(a, b: ColorRGBA): ColorRGBA =
   blendColorFloats(a.color, b.color).rgba
