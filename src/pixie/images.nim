@@ -1,4 +1,4 @@
-import chroma, blends, vmath, common, system/memory
+import chroma, blends, vmath, common, system/memory, nimsimd/sse2
 
 type
   Image* = ref object
@@ -73,16 +73,31 @@ proc fill*(image: Image, rgba: ColorRgba) =
   if rgba.r == rgba.g and rgba.r == rgba.b and rgba.r == rgba.a:
     nimSetMem(image.data[0].addr, rgba.r.cint, image.data.len * 4)
   else:
-    for c in image.data.mitems:
-      c = rgba
+    # SIMD fill until we run out of room.
+    let m = mm_set1_epi32(cast[int32](rgba))
+    var i: int
+    while i < image.data.len - 4:
+      mm_store_si128(image.data[i].addr, m)
+      i += 4
+    for j in i ..< image.data.len:
+      image.data[j] = rgba
 
 proc invert*(image: Image) =
   ## Inverts all of the colors and alpha.
-  for rgba in image.data.mitems:
+  let vec255 = mm_set1_epi8(255)
+  var i: int
+  while i < image.data.len - 4:
+    var m = mm_loadu_si128(image.data[i].addr)
+    m = mm_sub_epi8(vec255, m)
+    mm_store_si128(image.data[i].addr, m)
+    i += 4
+  for j in i ..< image.data.len:
+    var rgba = image.data[j]
     rgba.r = 255 - rgba.r
     rgba.g = 255 - rgba.g
     rgba.b = 255 - rgba.b
     rgba.a = 255 - rgba.a
+    image.data[j] = rgba
 
 proc subImage*(image: Image, x, y, w, h: int): Image =
   ## Gets a sub image of the main image.
