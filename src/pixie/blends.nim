@@ -312,6 +312,15 @@ proc alphaFix(Cb, Cs, mixed: ColorRGBA): ColorRGBA {.inline.} =
     result.b = (b div a div 255).uint8
     result.a = a.uint8
 
+proc screen(a, b: uint8): uint8 {.inline.} =
+  (255 - ((255 - a).uint32 * (255 - b).uint32) div 255).uint8
+
+proc hardLight(a, b: uint8): uint8 {.inline.} =
+  if b <= 127:
+    ((a * 2 * b) div 255).uint8
+  else:
+    screen(a, max(0, (2 * b.int32 - 255)).uint8)
+
 proc blendNormal(a, b: ColorRGBA): ColorRGBA =
   result.r = b.r
   result.g = b.g
@@ -319,43 +328,75 @@ proc blendNormal(a, b: ColorRGBA): ColorRGBA =
   result = alphaFix(a, b, result)
 
 proc blendDarken(a, b: ColorRGBA): ColorRGBA =
-  blendDarkenFloats(a.color, b.color).rgba
+  result.r = min(a.r, b.r)
+  result.g = min(a.g, b.g)
+  result.b = min(a.b, b.b)
+  result = alphaFix(a, b, result)
 
 proc blendMultiply(a, b: ColorRGBA): ColorRGBA =
-  blendMultiplyFloats(a.color, b.color).rgba
+  result.r = ((a.r.uint32 * b.r.uint32) div 255).uint8
+  result.g = ((a.g.uint32 * b.g.uint32) div 255).uint8
+  result.b = ((a.b.uint32 * b.b.uint32) div 255).uint8
+  result = alphaFix(a, b, result)
 
 proc blendLinearBurn(a, b: ColorRGBA): ColorRGBA =
-  blendLinearBurnFloats(a.color, b.color).rgba
+  result.r = max(0, a.r.int32 + b.r.int32 - 255).uint8
+  result.g = max(0, a.g.int32 + b.g.int32 - 255).uint8
+  result.b = max(0, a.b.int32 + b.b.int32 - 255).uint8
+  result = alphaFix(a, b, result)
 
 proc blendColorBurn(a, b: ColorRGBA): ColorRGBA =
   blendColorBurnFloats(a.color, b.color).rgba
 
 proc blendLighten(a, b: ColorRGBA): ColorRGBA =
-  blendLightenFloats(a.color, b.color).rgba
+  result.r = max(a.r, b.r)
+  result.g = max(a.g, b.g)
+  result.b = max(a.b, b.b)
+  result = alphaFix(a, b, result)
 
 proc blendScreen(a, b: ColorRGBA): ColorRGBA =
-  blendScreenFloats(a.color, b.color).rgba
+  result.r = screen(a.r, b.r)
+  result.g = screen(a.g, b.g)
+  result.b = screen(a.b, b.b)
+  result = alphaFix(a, b, result)
 
 proc blendLinearDodge(a, b: ColorRGBA): ColorRGBA =
-  blendLinearDodgeFloats(a.color, b.color).rgba
+  result.r = (a.r.uint32 + b.r).uint8
+  result.r = (a.g.uint32 + b.g).uint8
+  result.r = (a.b.uint32 + b.b).uint8
+  result = alphaFix(a, b, result)
 
 proc blendColorDodge(a, b: ColorRGBA): ColorRGBA =
   blendColorDodgeFloats(a.color, b.color).rgba
 
 proc blendOverlay(a, b: ColorRGBA): ColorRGBA =
-  blendOverlayFloats(a.color, b.color).rgba
+  result.r = hardLight(b.r, a.r)
+  result.g = hardLight(b.g, a.g)
+  result.b = hardLight(b.b, a.b)
+  result = alphaFix(a, b, result)
 
 proc blendHardLight(a, b: ColorRGBA): ColorRGBA =
-  blendHardLightFloats(a.color, b.color).rgba
+  result.r = hardLight(a.r, b.r)
+  result.g = hardLight(a.g, b.g)
+  result.b = hardLight(a.b, b.b)
+  result = alphaFix(a, b, result)
 
 proc blendSoftLight(a, b: ColorRGBA): ColorRGBA =
   blendSoftLightFloats(a.color, b.color).rgba
 
 proc blendDifference(a, b: ColorRGBA): ColorRGBA =
-  blendDifferenceFloats(a.color, b.color).rgba
+  result.r = max(a.r, b.r) - min(a.r, b.r)
+  result.g = max(a.g, b.g) - min(a.g, b.g)
+  result.b = max(a.b, b.b) - min(a.b, b.b)
+  result = alphaFix(a, b, result)
 
 proc blendExclusion(a, b: ColorRGBA): ColorRGBA =
-  blendExclusionFloats(a.color, b.color).rgba
+  template blend(a, b: int32): uint8 =
+    max(0, a + b - (2 * a * b) div 255).uint8
+  result.r = blend(a.r.int32, b.r.int32)
+  result.g = blend(a.g.int32, b.g.int32)
+  result.b = blend(a.b.int32, b.b.int32)
+  result = alphaFix(a, b, result)
 
 proc blendColor(a, b: ColorRGBA): ColorRGBA =
   blendColorFloats(a.color, b.color).rgba
@@ -370,22 +411,23 @@ proc blendSaturation(a, b: ColorRGBA): ColorRGBA =
   blendSaturationFloats(a.color, b.color).rgba
 
 proc blendMask(a, b: ColorRGBA): ColorRGBA =
-  result.r = a.r
-  result.g = a.g
-  result.b = a.b
+  result = a
   result.a = min(a.a, b.a)
 
 proc blendSubtractMask(a, b: ColorRGBA): ColorRGBA =
-  blendSubtractMaskFloats(a.color, b.color).rgba
+  result = a
+  result.a = max(0, (a.a.int32 * (255 - b.a.int32)) div 255).uint8
 
 proc blendIntersectMask(a, b: ColorRGBA): ColorRGBA =
-  blendIntersectMaskFloats(a.color, b.color).rgba
+  result = a
+  result.a = ((a.a.uint32 * (b.a.uint32)) div 255).uint8
 
 proc blendExcludeMask(a, b: ColorRGBA): ColorRGBA =
-  blendExcludeMaskFloats(a.color, b.color).rgba
+  result = a
+  result.a = max(a.a, b.a) - min(a.a, b.a)
 
 proc blendOverwrite(a, b: ColorRGBA): ColorRGBA =
-  blendOverwriteFloats(a.color, b.color).rgba
+  b
 
 proc mixer*(blendMode: BlendMode): Mixer =
   case blendMode
