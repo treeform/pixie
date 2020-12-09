@@ -280,9 +280,7 @@ proc blendSaturation(a, b: ColorRGBA): ColorRGBA =
   blendSaturationFloats(a.color, b.color).rgba
 
 proc blendMask(a, b: ColorRGBA): ColorRGBA =
-  result.r = a.r
-  result.g = a.g
-  result.b = a.b
+  result = a
   result.a = min(a.a, b.a)
 
 proc blendSubtractMask(a, b: ColorRGBA): ColorRGBA =
