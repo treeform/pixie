@@ -4,7 +4,7 @@ block:
   var c: Image
   var a = newImage(1000, 1000)
   a.fill(rgba(255, 0, 0, 255))
-  var b = newImage(1000, 1000)
+  var b = newImage(500, 500)
   b.fill(rgba(0, 255, 0, 255))
 
   timeIt "drawCorrect bmNormal":
@@ -14,7 +14,7 @@ block:
 block:
   var a = newImage(1000, 1000)
   a.fill(rgba(255, 0, 0, 255))
-  var b = newImage(1000, 1000)
+  var b = newImage(500, 500)
   b.fill(rgba(0, 255, 0, 255))
 
   timeIt "draw bmNormal":
@@ -24,7 +24,7 @@ block:
 block:
   var a = newImage(1000, 1000)
   a.fill(rgba(255, 0, 0, 255))
-  var b = newImage(1000, 1000)
+  var b = newImage(500, 500)
   b.fill(rgba(0, 255, 0, 255))
 
   timeIt "draw Smooth bmNormal":

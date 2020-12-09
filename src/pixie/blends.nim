@@ -1,34 +1,37 @@
 ## Blending modes.
-import chroma, math, algorithm
+import chroma, math
 
 # See https://www.w3.org/TR/compositing-1/
 # See https://www.khronos.org/registry/OpenGL/extensions/KHR/KHR_blend_equation_advanced.txt
 
-type BlendMode* = enum
-  bmNormal
-  bmDarken
-  bmMultiply
-  bmLinearBurn
-  bmColorBurn
-  bmLighten
-  bmScreen
-  bmLinearDodge
-  bmColorDodge
-  bmOverlay
-  bmSoftLight
-  bmHardLight
-  bmDifference
-  bmExclusion
-  bmHue
-  bmSaturation
-  bmColor
-  bmLuminosity
+type
+  BlendMode* = enum
+    bmNormal
+    bmDarken
+    bmMultiply
+    bmLinearBurn
+    bmColorBurn
+    bmLighten
+    bmScreen
+    bmLinearDodge
+    bmColorDodge
+    bmOverlay
+    bmSoftLight
+    bmHardLight
+    bmDifference
+    bmExclusion
+    bmHue
+    bmSaturation
+    bmColor
+    bmLuminosity
 
-  bmMask  ## Special blend mode that is used for masking
-  bmOverwrite  ## Special that does not blend but copies the pixels from target.
-  bmSubtractMask ## Inverse mask
-  bmIntersectMask
-  bmExcludeMask
+    bmMask  ## Special blend mode that is used for masking
+    bmOverwrite  ## Special that does not blend but copies the pixels from target.
+    bmSubtractMask ## Inverse mask
+    bmIntersectMask
+    bmExcludeMask
+
+  Mixer* = proc(a, b: ColorRGBA): ColorRGBA
 
 proc `+`*(a, b: Color): Color {.inline.} =
   result.r = a.r + b.r
@@ -123,201 +126,175 @@ proc alphaFix(Cb, Cs, mixed: Color): Color {.inline.} =
   result.g /= result.a
   result.b /= result.a
 
-proc blendDarken(Cb, Cs: float32): float32 {.inline.} =
+proc blendDarkenFloat(Cb, Cs: float32): float32 {.inline.} =
   min(Cb, Cs)
 
-proc blendMultiply(Cb, Cs: float32): float32 {.inline.} =
+proc blendMultiplyFloat(Cb, Cs: float32): float32 {.inline.} =
   Cb * Cs
 
-proc blendLinearBurn(Cb, Cs: float32): float32 {.inline.} =
+proc blendLinearBurnFloat(Cb, Cs: float32): float32 {.inline.} =
   Cb + Cs - 1
 
-proc blendColorBurn(Cb, Cs: float32): float32 {.inline.} =
+proc blendColorBurnFloat(Cb, Cs: float32): float32 {.inline.} =
   if Cb == 1:    1.0
   elif Cs == 0:  0.0
   else:          1.0 - min(1, (1 - Cb) / Cs)
 
-proc blendLighten(Cb, Cs: float32): float32 {.inline.} =
+proc blendLightenFloat(Cb, Cs: float32): float32 {.inline.} =
   max(Cb, Cs)
 
-proc blendScreen(Cb, Cs: float32): float32 {.inline.} =
+proc blendScreenFloat(Cb, Cs: float32): float32 {.inline.} =
   screen(Cb, Cs)
 
-proc blendLinearDodge(Cb, Cs: float32): float32 {.inline.} =
+proc blendLinearDodgeFloat(Cb, Cs: float32): float32 {.inline.} =
   Cb + Cs
 
-proc blendColorDodge(Cb, Cs: float32): float32 {.inline.} =
+proc blendColorDodgeFloat(Cb, Cs: float32): float32 {.inline.} =
   if Cb == 0:    0.0
   elif Cs == 1:  1.0
   else:          min(1, Cb / (1 - Cs))
 
-proc blendOverlay(Cb, Cs: float32): float32 {.inline.} =
+proc blendOverlayFloat(Cb, Cs: float32): float32 {.inline.} =
   hardLight(Cs, Cb)
 
-proc blendHardLight(Cb, Cs: float32): float32 {.inline.} =
+proc blendHardLightFloat(Cb, Cs: float32): float32 {.inline.} =
   hardLight(Cb, Cs)
 
-proc blendSoftLight(Cb, Cs: float32): float32 {.inline.} =
+proc blendSoftLightFloat(Cb, Cs: float32): float32 {.inline.} =
   softLight(Cb, Cs)
 
-proc blendDifference(Cb, Cs: float32): float32 {.inline.} =
+proc blendDifferenceFloat(Cb, Cs: float32): float32 {.inline.} =
   abs(Cb - Cs)
 
-proc blendExclusion(Cb, Cs: float32): float32 {.inline.} =
+proc blendExclusionFloat(Cb, Cs: float32): float32 {.inline.} =
   Cb + Cs - 2 * Cb * Cs
 
-proc blendNormal*(Cb, Cs: Color): Color {.inline.} =
+proc blendNormalFloats(Cb, Cs: Color): Color {.inline.} =
   result.r = Cs.r
   result.g = Cs.g
   result.b = Cs.b
   result = alphaFix(Cb, Cs, result)
 
-proc blendDarken(Cb, Cs: Color): Color {.inline.} =
-  result.r = blendDarken(Cb.r, Cs.r)
-  result.g = blendDarken(Cb.g, Cs.g)
-  result.b = blendDarken(Cb.b, Cs.b)
+proc blendDarkenFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendDarkenFloat(Cb.r, Cs.r)
+  result.g = blendDarkenFloat(Cb.g, Cs.g)
+  result.b = blendDarkenFloat(Cb.b, Cs.b)
   result = alphaFix(Cb, Cs, result)
 
-proc blendMultiply(Cb, Cs: Color): Color {.inline.} =
-  result.r = blendMultiply(Cb.r, Cs.r)
-  result.g = blendMultiply(Cb.g, Cs.g)
-  result.b = blendMultiply(Cb.b, Cs.b)
+proc blendMultiplyFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendMultiplyFloat(Cb.r, Cs.r)
+  result.g = blendMultiplyFloat(Cb.g, Cs.g)
+  result.b = blendMultiplyFloat(Cb.b, Cs.b)
   result = alphaFix(Cb, Cs, result)
 
-proc blendLinearBurn(Cb, Cs: Color): Color {.inline.} =
-  result.r = blendLinearBurn(Cb.r, Cs.r)
-  result.g = blendLinearBurn(Cb.g, Cs.g)
-  result.b = blendLinearBurn(Cb.b, Cs.b)
+proc blendLinearBurnFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendLinearBurnFloat(Cb.r, Cs.r)
+  result.g = blendLinearBurnFloat(Cb.g, Cs.g)
+  result.b = blendLinearBurnFloat(Cb.b, Cs.b)
   result = alphaFix(Cb, Cs, result)
 
-proc blendColorBurn(Cb, Cs: Color): Color {.inline.} =
-  result.r = blendColorBurn(Cb.r, Cs.r)
-  result.g = blendColorBurn(Cb.g, Cs.g)
-  result.b = blendColorBurn(Cb.b, Cs.b)
+proc blendColorBurnFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendColorBurnFloat(Cb.r, Cs.r)
+  result.g = blendColorBurnFloat(Cb.g, Cs.g)
+  result.b = blendColorBurnFloat(Cb.b, Cs.b)
   result = alphaFix(Cb, Cs, result)
 
-proc blendLighten(Cb, Cs: Color): Color {.inline.} =
-  result.r = blendLighten(Cb.r, Cs.r)
-  result.g = blendLighten(Cb.g, Cs.g)
-  result.b = blendLighten(Cb.b, Cs.b)
+proc blendLightenFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendLightenFloat(Cb.r, Cs.r)
+  result.g = blendLightenFloat(Cb.g, Cs.g)
+  result.b = blendLightenFloat(Cb.b, Cs.b)
   result = alphaFix(Cb, Cs, result)
 
-proc blendScreen(Cb, Cs: Color): Color {.inline.} =
-  result.r = blendScreen(Cb.r, Cs.r)
-  result.g = blendScreen(Cb.g, Cs.g)
-  result.b = blendScreen(Cb.b, Cs.b)
+proc blendScreenFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendScreenFloat(Cb.r, Cs.r)
+  result.g = blendScreenFloat(Cb.g, Cs.g)
+  result.b = blendScreenFloat(Cb.b, Cs.b)
   result = alphaFix(Cb, Cs, result)
 
-proc blendLinearDodge(Cb, Cs: Color): Color {.inline.} =
-  result.r = blendLinearDodge(Cb.r, Cs.r)
-  result.g = blendLinearDodge(Cb.g, Cs.g)
-  result.b = blendLinearDodge(Cb.b, Cs.b)
+proc blendLinearDodgeFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendLinearDodgeFloat(Cb.r, Cs.r)
+  result.g = blendLinearDodgeFloat(Cb.g, Cs.g)
+  result.b = blendLinearDodgeFloat(Cb.b, Cs.b)
   result = alphaFix(Cb, Cs, result)
 
-proc blendColorDodge(Cb, Cs: Color): Color {.inline.} =
-  result.r = blendColorDodge(Cb.r, Cs.r)
-  result.g = blendColorDodge(Cb.g, Cs.g)
-  result.b = blendColorDodge(Cb.b, Cs.b)
+proc blendColorDodgeFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendColorDodgeFloat(Cb.r, Cs.r)
+  result.g = blendColorDodgeFloat(Cb.g, Cs.g)
+  result.b = blendColorDodgeFloat(Cb.b, Cs.b)
   result = alphaFix(Cb, Cs, result)
 
-proc blendOverlay(Cb, Cs: Color): Color {.inline.} =
-  result.r = blendOverlay(Cb.r, Cs.r)
-  result.g = blendOverlay(Cb.g, Cs.g)
-  result.b = blendOverlay(Cb.b, Cs.b)
+proc blendOverlayFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendOverlayFloat(Cb.r, Cs.r)
+  result.g = blendOverlayFloat(Cb.g, Cs.g)
+  result.b = blendOverlayFloat(Cb.b, Cs.b)
   result = alphaFix(Cb, Cs, result)
 
-proc blendHardLight(Cb, Cs: Color): Color {.inline.} =
-  result.r = blendHardLight(Cb.r, Cs.r)
-  result.g = blendHardLight(Cb.g, Cs.g)
-  result.b = blendHardLight(Cb.b, Cs.b)
+proc blendHardLightFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendHardLightFloat(Cb.r, Cs.r)
+  result.g = blendHardLightFloat(Cb.g, Cs.g)
+  result.b = blendHardLightFloat(Cb.b, Cs.b)
   result = alphaFix(Cb, Cs, result)
 
-proc blendSoftLight(Cb, Cs: Color): Color {.inline.} =
-  result.r = blendSoftLight(Cb.r, Cs.r)
-  result.g = blendSoftLight(Cb.g, Cs.g)
-  result.b = blendSoftLight(Cb.b, Cs.b)
+proc blendSoftLightFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendSoftLightFloat(Cb.r, Cs.r)
+  result.g = blendSoftLightFloat(Cb.g, Cs.g)
+  result.b = blendSoftLightFloat(Cb.b, Cs.b)
   result = alphaFix(Cb, Cs, result)
 
-proc blendDifference(Cb, Cs: Color): Color {.inline.} =
-  result.r = blendDifference(Cb.r, Cs.r)
-  result.g = blendDifference(Cb.g, Cs.g)
-  result.b = blendDifference(Cb.b, Cs.b)
+proc blendDifferenceFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendDifferenceFloat(Cb.r, Cs.r)
+  result.g = blendDifferenceFloat(Cb.g, Cs.g)
+  result.b = blendDifferenceFloat(Cb.b, Cs.b)
   result = alphaFix(Cb, Cs, result)
 
-proc blendExclusion(Cb, Cs: Color): Color {.inline.} =
-  result.r = blendExclusion(Cb.r, Cs.r)
-  result.g = blendExclusion(Cb.g, Cs.g)
-  result.b = blendExclusion(Cb.b, Cs.b)
+proc blendExclusionFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendExclusionFloat(Cb.r, Cs.r)
+  result.g = blendExclusionFloat(Cb.g, Cs.g)
+  result.b = blendExclusionFloat(Cb.b, Cs.b)
   result = alphaFix(Cb, Cs, result)
 
-proc blendColor(Cb, Cs: Color): Color {.inline.} =
+proc blendColorFloats(Cb, Cs: Color): Color {.inline.} =
   let mixed = SetLum(Cs, Lum(Cb))
   alphaFix(Cb, Cs, mixed)
 
-proc blendLuminosity(Cb, Cs: Color): Color {.inline.} =
+proc blendLuminosityFloats(Cb, Cs: Color): Color {.inline.} =
   let mixed = SetLum(Cb, Lum(Cs))
   alphaFix(Cb, Cs, mixed)
 
-proc blendHue(Cb, Cs: Color): Color {.inline.} =
+proc blendHueFloats(Cb, Cs: Color): Color {.inline.} =
   let mixed = SetLum(SetSat(Cs, Sat(Cb)), Lum(Cb))
   alphaFix(Cb, Cs, mixed)
 
-proc blendSaturation(Cb, Cs: Color): Color {.inline.} =
+proc blendSaturationFloats(Cb, Cs: Color): Color {.inline.} =
   let mixed = SetLum(SetSat(Cb, Sat(Cs)), Lum(Cb))
   alphaFix(Cb, Cs, mixed)
 
-proc blendMask(target, blend: Color): Color {.inline.} =
+proc blendMaskFloats(target, blend: Color): Color {.inline.} =
   result.r = target.r
   result.g = target.g
   result.b = target.b
   result.a = min(target.a, blend.a)
 
-proc blendSubtractMask(target, blend: Color): Color {.inline.} =
+proc blendSubtractMaskFloats(target, blend: Color): Color {.inline.} =
   result.r = target.r
   result.g = target.g
   result.b = target.b
   result.a = target.a * (1 - blend.a)
 
-proc blendIntersectMask(target, blend: Color): Color {.inline.} =
+proc blendIntersectMaskFloats(target, blend: Color): Color {.inline.} =
   result.r = target.r
   result.g = target.g
   result.b = target.b
   result.a = target.a * blend.a
 
-proc blendExcludeMask(target, blend: Color): Color {.inline.} =
+proc blendExcludeMaskFloats(target, blend: Color): Color {.inline.} =
   result.r = target.r
   result.g = target.g
   result.b = target.b
   result.a = abs(target.a - blend.a)
 
-proc blendOverwrite(target, blend: Color): Color {.inline.} =
+proc blendOverwriteFloats(target, blend: Color): Color {.inline.} =
   result = blend
-
-proc mix*(blendMode: BlendMode, dest, src: Color): Color {.inline.} =
-  case blendMode
-  of bmNormal: blendNormal(dest, src)
-  of bmDarken: blendDarken(dest, src)
-  of bmMultiply: blendMultiply(dest, src)
-  of bmLinearBurn: blendLinearBurn(dest, src)
-  of bmColorBurn: blendColorBurn(dest, src)
-  of bmLighten: blendLighten(dest, src)
-  of bmScreen: blendScreen(dest, src)
-  of bmLinearDodge: blendLinearDodge(dest, src)
-  of bmColorDodge: blendColorDodge(dest, src)
-  of bmOverlay: blendOverlay(dest, src)
-  of bmSoftLight: blendSoftLight(dest, src)
-  of bmHardLight: blendHardLight(dest, src)
-  of bmDifference: blendDifference(dest, src)
-  of bmExclusion: blendExclusion(dest, src)
-  of bmHue: blendHue(dest, src)
-  of bmSaturation: blendSaturation(dest, src)
-  of bmColor: blendColor(dest, src)
-  of bmLuminosity: blendLuminosity(dest, src)
-  of bmMask: blendMask(dest, src)
-  of bmOverwrite: blendOverwrite(dest, src)
-  of bmSubtractMask: blendSubtractMask(dest, src)
-  of bmIntersectMask: blendIntersectMask(dest, src)
-  of bmExcludeMask: blendExcludeMask(dest, src)
 
 proc alphaFix(Cb, Cs, mixed: ColorRGBA): ColorRGBA {.inline.} =
   let ab = Cb.a.int32
@@ -335,129 +312,103 @@ proc alphaFix(Cb, Cs, mixed: ColorRGBA): ColorRGBA {.inline.} =
     result.b = (b div a div 255).uint8
     result.a = a.uint8
 
-proc blendNormal*(a, b: ColorRGBA): ColorRGBA =
-  # blendNormal(a.color, b.color).rgba
+proc blendNormal(a, b: ColorRGBA): ColorRGBA =
   result.r = b.r
   result.g = b.g
   result.b = b.b
   result = alphaFix(a, b, result)
 
-proc blendDarken*(a, b: ColorRGBA): ColorRGBA =
-  blendDarken(a.color, b.color).rgba
+proc blendDarken(a, b: ColorRGBA): ColorRGBA =
+  blendDarkenFloats(a.color, b.color).rgba
 
-proc blendMultiply*(a, b: ColorRGBA): ColorRGBA =
-  blendMultiply(a.color, b.color).rgba
+proc blendMultiply(a, b: ColorRGBA): ColorRGBA =
+  blendMultiplyFloats(a.color, b.color).rgba
 
-proc blendLinearBurn*(a, b: ColorRGBA): ColorRGBA =
-  blendLinearBurn(a.color, b.color).rgba
+proc blendLinearBurn(a, b: ColorRGBA): ColorRGBA =
+  blendLinearBurnFloats(a.color, b.color).rgba
 
-proc blendColorBurn*(a, b: ColorRGBA): ColorRGBA =
-  blendColorBurn(a.color, b.color).rgba
+proc blendColorBurn(a, b: ColorRGBA): ColorRGBA =
+  blendColorBurnFloats(a.color, b.color).rgba
 
-proc blendLighten*(a, b: ColorRGBA): ColorRGBA =
-  blendLighten(a.color, b.color).rgba
+proc blendLighten(a, b: ColorRGBA): ColorRGBA =
+  blendLightenFloats(a.color, b.color).rgba
 
-proc blendScreen*(a, b: ColorRGBA): ColorRGBA =
-  blendScreen(a.color, b.color).rgba
+proc blendScreen(a, b: ColorRGBA): ColorRGBA =
+  blendScreenFloats(a.color, b.color).rgba
 
-proc blendLinearDodge*(a, b: ColorRGBA): ColorRGBA =
-  blendLinearDodge(a.color, b.color).rgba
+proc blendLinearDodge(a, b: ColorRGBA): ColorRGBA =
+  blendLinearDodgeFloats(a.color, b.color).rgba
 
-proc blendColorDodge*(a, b: ColorRGBA): ColorRGBA =
-  blendColorDodge(a.color, b.color).rgba
+proc blendColorDodge(a, b: ColorRGBA): ColorRGBA =
+  blendColorDodgeFloats(a.color, b.color).rgba
 
-proc blendOverlay*(a, b: ColorRGBA): ColorRGBA =
-  blendOverlay(a.color, b.color).rgba
+proc blendOverlay(a, b: ColorRGBA): ColorRGBA =
+  blendOverlayFloats(a.color, b.color).rgba
 
-proc blendHardLight*(a, b: ColorRGBA): ColorRGBA =
-  blendHardLight(a.color, b.color).rgba
+proc blendHardLight(a, b: ColorRGBA): ColorRGBA =
+  blendHardLightFloats(a.color, b.color).rgba
 
-proc blendSoftLight*(a, b: ColorRGBA): ColorRGBA =
-  blendSoftLight(a.color, b.color).rgba
+proc blendSoftLight(a, b: ColorRGBA): ColorRGBA =
+  blendSoftLightFloats(a.color, b.color).rgba
 
-proc blendDifference*(a, b: ColorRGBA): ColorRGBA =
-  blendDifference(a.color, b.color).rgba
+proc blendDifference(a, b: ColorRGBA): ColorRGBA =
+  blendDifferenceFloats(a.color, b.color).rgba
 
-proc blendExclusion*(a, b: ColorRGBA): ColorRGBA =
-  blendExclusion(a.color, b.color).rgba
+proc blendExclusion(a, b: ColorRGBA): ColorRGBA =
+  blendExclusionFloats(a.color, b.color).rgba
 
-proc blendColor*(a, b: ColorRGBA): ColorRGBA =
-  blendColor(a.color, b.color).rgba
+proc blendColor(a, b: ColorRGBA): ColorRGBA =
+  blendColorFloats(a.color, b.color).rgba
 
-proc blendLuminosity*(a, b: ColorRGBA): ColorRGBA =
-  blendLuminosity(a.color, b.color).rgba
+proc blendLuminosity(a, b: ColorRGBA): ColorRGBA =
+  blendLuminosityFloats(a.color, b.color).rgba
 
-proc blendHue*(a, b: ColorRGBA): ColorRGBA =
-  blendHue(a.color, b.color).rgba
+proc blendHue(a, b: ColorRGBA): ColorRGBA =
+  blendHueFloats(a.color, b.color).rgba
 
-proc blendSaturation*(a, b: ColorRGBA): ColorRGBA =
-  blendSaturation(a.color, b.color).rgba
+proc blendSaturation(a, b: ColorRGBA): ColorRGBA =
+  blendSaturationFloats(a.color, b.color).rgba
 
-proc blendMask*(a, b: ColorRGBA): ColorRGBA =
+proc blendMask(a, b: ColorRGBA): ColorRGBA =
   result.r = a.r
   result.g = a.g
   result.b = a.b
   result.a = min(a.a, b.a)
 
-proc blendSubtractMask*(a, b: ColorRGBA): ColorRGBA =
-  blendSubtractMask(a.color, b.color).rgba
+proc blendSubtractMask(a, b: ColorRGBA): ColorRGBA =
+  blendSubtractMaskFloats(a.color, b.color).rgba
 
-proc blendIntersectMask*(a, b: ColorRGBA): ColorRGBA =
-  blendIntersectMask(a.color, b.color).rgba
+proc blendIntersectMask(a, b: ColorRGBA): ColorRGBA =
+  blendIntersectMaskFloats(a.color, b.color).rgba
 
-proc blendExcludeMask*(a, b: ColorRGBA): ColorRGBA =
-  blendExcludeMask(a.color, b.color).rgba
+proc blendExcludeMask(a, b: ColorRGBA): ColorRGBA =
+  blendExcludeMaskFloats(a.color, b.color).rgba
 
-proc blendOverwrite*(a, b: ColorRGBA): ColorRGBA =
-  blendOverwrite(a.color, b.color).rgba
+proc blendOverwrite(a, b: ColorRGBA): ColorRGBA =
+  blendOverwriteFloats(a.color, b.color).rgba
 
-proc mix*(blendMode: BlendMode, dest, src: ColorRGBA): ColorRGBA {.inline.} =
+proc mixer*(blendMode: BlendMode): Mixer =
   case blendMode
-  of bmNormal: blendNormal(dest, src)
-  of bmDarken: blendDarken(dest, src)
-  of bmMultiply: blendMultiply(dest, src)
-  of bmLinearBurn: blendLinearBurn(dest, src)
-  of bmColorBurn: blendColorBurn(dest, src)
-  of bmLighten: blendLighten(dest, src)
-  of bmScreen: blendScreen(dest, src)
-  of bmLinearDodge: blendLinearDodge(dest, src)
-  of bmColorDodge: blendColorDodge(dest, src)
-  of bmOverlay: blendOverlay(dest, src)
-  of bmSoftLight: blendSoftLight(dest, src)
-  of bmHardLight: blendHardLight(dest, src)
-  of bmDifference: blendDifference(dest, src)
-  of bmExclusion: blendExclusion(dest, src)
-  of bmHue: blendHue(dest, src)
-  of bmSaturation: blendSaturation(dest, src)
-  of bmColor: blendColor(dest, src)
-  of bmLuminosity: blendLuminosity(dest, src)
-  of bmMask: blendMask(dest, src)
-  of bmOverwrite: blendOverwrite(dest, src)
-  of bmSubtractMask: blendSubtractMask(dest, src)
-  of bmIntersectMask: blendIntersectMask(dest, src)
-  of bmExcludeMask: blendExcludeMask(dest, src)
-
-proc mixStatic*(blendMode: static[BlendMode], dest, src: ColorRGBA): ColorRGBA {.inline.} =
-  when blendMOde == bmNormal: blendNormal(dest, src)
-  elif blendMOde == bmDarken: blendDarken(dest, src)
-  elif blendMOde == bmMultiply: blendMultiply(dest, src)
-  elif blendMOde == bmLinearBurn: blendLinearBurn(dest, src)
-  elif blendMOde == bmColorBurn: blendColorBurn(dest, src)
-  elif blendMOde == bmLighten: blendLighten(dest, src)
-  elif blendMOde == bmScreen: blendScreen(dest, src)
-  elif blendMOde == bmLinearDodge: blendLinearDodge(dest, src)
-  elif blendMOde == bmColorDodge: blendColorDodge(dest, src)
-  elif blendMOde == bmOverlay: blendOverlay(dest, src)
-  elif blendMOde == bmSoftLight: blendSoftLight(dest, src)
-  elif blendMOde == bmHardLight: blendHardLight(dest, src)
-  elif blendMOde == bmDifference: blendDifference(dest, src)
-  elif blendMOde == bmExclusion: blendExclusion(dest, src)
-  elif blendMOde == bmHue: blendHue(dest, src)
-  elif blendMOde == bmSaturation: blendSaturation(dest, src)
-  elif blendMOde == bmColor: blendColor(dest, src)
-  elif blendMOde == bmLuminosity: blendLuminosity(dest, src)
-  elif blendMOde == bmMask: blendMask(dest, src)
-  elif blendMOde == bmOverwrite: blendOverwrite(dest, src)
-  elif blendMOde == bmSubtractMask: blendSubtractMask(dest, src)
-  elif blendMOde == bmIntersectMask: blendIntersectMask(dest, src)
-  elif blendMOde == bmExcludeMask: blendExcludeMask(dest, src)
+  of bmNormal: blendNormal
+  of bmDarken: blendDarken
+  of bmMultiply: blendMultiply
+  of bmLinearBurn: blendLinearBurn
+  of bmColorBurn: blendColorBurn
+  of bmLighten: blendLighten
+  of bmScreen: blendScreen
+  of bmLinearDodge: blendLinearDodge
+  of bmColorDodge: blendColorDodge
+  of bmOverlay: blendOverlay
+  of bmSoftLight: blendSoftLight
+  of bmHardLight: blendHardLight
+  of bmDifference: blendDifference
+  of bmExclusion: blendExclusion
+  of bmHue: blendHue
+  of bmSaturation: blendSaturation
+  of bmColor: blendColor
+  of bmLuminosity: blendLuminosity
+  of bmMask: blendMask
+  of bmOverwrite: blendOverwrite
+  of bmSubtractMask: blendSubtractMask
+  of bmIntersectMask: blendIntersectMask
+  of bmExcludeMask: blendExcludeMask
