@@ -69,6 +69,15 @@ proc `-`*(c: Color, v: float32): Color {.inline.} =
   result.b = c.b - v
   result.a = c.a - v
 
+proc screen(Cb, Cs: float32): float32 {.inline.} =
+  1 - (1 - Cb) * (1 - Cs)
+
+proc hardLight(Cb, Cs: float32): float32 {.inline.} =
+  if Cs <= 0.5:
+    Cb * 2 * Cs
+  else:
+    screen(Cb, 2 * Cs - 1)
+
 proc softLight(a, b: float32): float32 {.inline.} =
   ## Pegtop
   (1 - 2 * b) * a ^ 2 + 2 * b * a
@@ -117,24 +126,95 @@ proc alphaFix(Cb, Cs, mixed: Color): Color {.inline.} =
   result.g /= result.a
   result.b /= result.a
 
+proc blendDarkenFloat(Cb, Cs: float32): float32 {.inline.} =
+  min(Cb, Cs)
+
+proc blendMultiplyFloat(Cb, Cs: float32): float32 {.inline.} =
+  Cb * Cs
+
+proc blendLinearBurnFloat(Cb, Cs: float32): float32 {.inline.} =
+  Cb + Cs - 1
+
 proc blendColorBurnFloat(Cb, Cs: float32): float32 {.inline.} =
   if Cb == 1:    1.0
   elif Cs == 0:  0.0
   else:          1.0 - min(1, (1 - Cb) / Cs)
 
+proc blendLightenFloat(Cb, Cs: float32): float32 {.inline.} =
+  max(Cb, Cs)
+
+proc blendScreenFloat(Cb, Cs: float32): float32 {.inline.} =
+  screen(Cb, Cs)
+
+proc blendLinearDodgeFloat(Cb, Cs: float32): float32 {.inline.} =
+  Cb + Cs
 
 proc blendColorDodgeFloat(Cb, Cs: float32): float32 {.inline.} =
   if Cb == 0:    0.0
   elif Cs == 1:  1.0
   else:          min(1, Cb / (1 - Cs))
 
+proc blendOverlayFloat(Cb, Cs: float32): float32 {.inline.} =
+  hardLight(Cs, Cb)
+
+proc blendHardLightFloat(Cb, Cs: float32): float32 {.inline.} =
+  hardLight(Cb, Cs)
+
 proc blendSoftLightFloat(Cb, Cs: float32): float32 {.inline.} =
   softLight(Cb, Cs)
+
+proc blendDifferenceFloat(Cb, Cs: float32): float32 {.inline.} =
+  abs(Cb - Cs)
+
+proc blendExclusionFloat(Cb, Cs: float32): float32 {.inline.} =
+  Cb + Cs - 2 * Cb * Cs
+
+proc blendNormalFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = Cs.r
+  result.g = Cs.g
+  result.b = Cs.b
+  result = alphaFix(Cb, Cs, result)
+
+proc blendDarkenFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendDarkenFloat(Cb.r, Cs.r)
+  result.g = blendDarkenFloat(Cb.g, Cs.g)
+  result.b = blendDarkenFloat(Cb.b, Cs.b)
+  result = alphaFix(Cb, Cs, result)
+
+proc blendMultiplyFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendMultiplyFloat(Cb.r, Cs.r)
+  result.g = blendMultiplyFloat(Cb.g, Cs.g)
+  result.b = blendMultiplyFloat(Cb.b, Cs.b)
+  result = alphaFix(Cb, Cs, result)
+
+proc blendLinearBurnFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendLinearBurnFloat(Cb.r, Cs.r)
+  result.g = blendLinearBurnFloat(Cb.g, Cs.g)
+  result.b = blendLinearBurnFloat(Cb.b, Cs.b)
+  result = alphaFix(Cb, Cs, result)
 
 proc blendColorBurnFloats(Cb, Cs: Color): Color {.inline.} =
   result.r = blendColorBurnFloat(Cb.r, Cs.r)
   result.g = blendColorBurnFloat(Cb.g, Cs.g)
   result.b = blendColorBurnFloat(Cb.b, Cs.b)
+  result = alphaFix(Cb, Cs, result)
+
+proc blendLightenFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendLightenFloat(Cb.r, Cs.r)
+  result.g = blendLightenFloat(Cb.g, Cs.g)
+  result.b = blendLightenFloat(Cb.b, Cs.b)
+  result = alphaFix(Cb, Cs, result)
+
+proc blendScreenFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendScreenFloat(Cb.r, Cs.r)
+  result.g = blendScreenFloat(Cb.g, Cs.g)
+  result.b = blendScreenFloat(Cb.b, Cs.b)
+  result = alphaFix(Cb, Cs, result)
+
+proc blendLinearDodgeFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendLinearDodgeFloat(Cb.r, Cs.r)
+  result.g = blendLinearDodgeFloat(Cb.g, Cs.g)
+  result.b = blendLinearDodgeFloat(Cb.b, Cs.b)
   result = alphaFix(Cb, Cs, result)
 
 proc blendColorDodgeFloats(Cb, Cs: Color): Color {.inline.} =
@@ -143,10 +223,34 @@ proc blendColorDodgeFloats(Cb, Cs: Color): Color {.inline.} =
   result.b = blendColorDodgeFloat(Cb.b, Cs.b)
   result = alphaFix(Cb, Cs, result)
 
+proc blendOverlayFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendOverlayFloat(Cb.r, Cs.r)
+  result.g = blendOverlayFloat(Cb.g, Cs.g)
+  result.b = blendOverlayFloat(Cb.b, Cs.b)
+  result = alphaFix(Cb, Cs, result)
+
+proc blendHardLightFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendHardLightFloat(Cb.r, Cs.r)
+  result.g = blendHardLightFloat(Cb.g, Cs.g)
+  result.b = blendHardLightFloat(Cb.b, Cs.b)
+  result = alphaFix(Cb, Cs, result)
+
 proc blendSoftLightFloats(Cb, Cs: Color): Color {.inline.} =
   result.r = blendSoftLightFloat(Cb.r, Cs.r)
   result.g = blendSoftLightFloat(Cb.g, Cs.g)
   result.b = blendSoftLightFloat(Cb.b, Cs.b)
+  result = alphaFix(Cb, Cs, result)
+
+proc blendDifferenceFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendDifferenceFloat(Cb.r, Cs.r)
+  result.g = blendDifferenceFloat(Cb.g, Cs.g)
+  result.b = blendDifferenceFloat(Cb.b, Cs.b)
+  result = alphaFix(Cb, Cs, result)
+
+proc blendExclusionFloats(Cb, Cs: Color): Color {.inline.} =
+  result.r = blendExclusionFloat(Cb.r, Cs.r)
+  result.g = blendExclusionFloat(Cb.g, Cs.g)
+  result.b = blendExclusionFloat(Cb.b, Cs.b)
   result = alphaFix(Cb, Cs, result)
 
 proc blendColorFloats(Cb, Cs: Color): Color {.inline.} =
@@ -164,6 +268,33 @@ proc blendHueFloats(Cb, Cs: Color): Color {.inline.} =
 proc blendSaturationFloats(Cb, Cs: Color): Color {.inline.} =
   let mixed = SetLum(SetSat(Cb, Sat(Cs)), Lum(Cb))
   alphaFix(Cb, Cs, mixed)
+
+proc blendMaskFloats(target, blend: Color): Color {.inline.} =
+  result.r = target.r
+  result.g = target.g
+  result.b = target.b
+  result.a = min(target.a, blend.a)
+
+proc blendSubtractMaskFloats(target, blend: Color): Color {.inline.} =
+  result.r = target.r
+  result.g = target.g
+  result.b = target.b
+  result.a = target.a * (1 - blend.a)
+
+proc blendIntersectMaskFloats(target, blend: Color): Color {.inline.} =
+  result.r = target.r
+  result.g = target.g
+  result.b = target.b
+  result.a = target.a * blend.a
+
+proc blendExcludeMaskFloats(target, blend: Color): Color {.inline.} =
+  result.r = target.r
+  result.g = target.g
+  result.b = target.b
+  result.a = abs(target.a - blend.a)
+
+proc blendOverwriteFloats(target, blend: Color): Color {.inline.} =
+  result = blend
 
 proc alphaFix(Cb, Cs, mixed: ColorRGBA): ColorRGBA {.inline.} =
   let ab = Cb.a.int32
