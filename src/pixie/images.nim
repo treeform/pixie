@@ -409,13 +409,14 @@ proc drawCorrect*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
     minFilterBy2 /= 2
     matInv = matInv * scale(vec2(0.5, 0.5))
 
+  let mixer = blendMode.mixer()
   for y in 0 ..< a.height:
     for x in 0 ..< a.width:
-      let srcPos = matInv * vec2(x.float32 + h, y.float32 + h)
-      var rgba = a.getRgbaUnsafe(x, y)
-      let rgba2 = b.getRgbaSmooth(srcPos.x - h, srcPos.y - h)
-      rgba = blendMode.mix(rgba, rgba2)
-      a.setRgbaUnsafe(x, y, rgba)
+      let
+        srcPos = matInv * vec2(x.float32 + h, y.float32 + h)
+        rgba = a.getRgbaUnsafe(x, y)
+        rgba2 = b.getRgbaSmooth(srcPos.x - h, srcPos.y - h)
+      a.setRgbaUnsafe(x, y, mixer(rgba, rgba2))
 
 const h = 0.5.float32
 
@@ -423,9 +424,10 @@ proc drawUber(
   a, b: Image,
   p, dx, dy: Vec2,
   lines: array[0..3, Segment],
-  blendMode: static[BlendMode],
-  smooth: static[bool]
+  blendMode: BlendMode,
+  smooth: bool
 ) =
+  let mixer = blendMode.mixer()
   for y in 0 ..< a.height:
     var
       xMin = 0
@@ -450,7 +452,7 @@ proc drawUber(
     xMin = xMin.clamp(0, a.width)
     xMax = xMax.clamp(0, a.width)
 
-    when blendMode == bmIntersectMask:
+    if blendMode == bmIntersectMask:
       if xMin > 0:
         zeroMem(a.getAddr(0, y), 4 * xMin)
 
@@ -459,17 +461,15 @@ proc drawUber(
         srcPos = p + dx * float32(x) + dy * float32(y)
         xFloat = srcPos.x - h
         yFloat = srcPos.y - h
-      var
         rgba = a.getRgbaUnsafe(x, y)
         rgba2 =
-          when smooth:
+          if smooth:
             b.getRgbaSmooth(xFloat, yFloat)
           else:
             b.getRgbaUnsafe(xFloat.round.int, yFloat.round.int)
-      rgba = blendMode.mixStatic(rgba, rgba2)
-      a.setRgbaUnsafe(x, y, rgba)
+      a.setRgbaUnsafe(x, y, mixer(rgba, rgba2))
 
-    when blendMode == bmIntersectMask:
+    if blendMode == bmIntersectMask:
       if a.width - xMax > 0:
         zeroMem(a.getAddr(xMax, y), 4 * (a.width - xMax))
 
@@ -510,56 +510,7 @@ proc draw*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
   let smooth = not(dx.length == 1.0 and dy.length == 1.0 and
     mat[2, 0].fractional == 0.0 and mat[2, 1].fractional == 0.0)
 
-  if not smooth:
-    case blendMode
-    of bmNormal: a.drawUber(b, p, dx, dy, lines, bmNormal, false)
-    of bmDarken: a.drawUber(b, p, dx, dy, lines, bmDarken, false)
-    of bmMultiply: a.drawUber(b, p, dx, dy, lines, bmMultiply, false)
-    of bmLinearBurn: a.drawUber(b, p, dx, dy, lines, bmLinearBurn, false)
-    of bmColorBurn: a.drawUber(b, p, dx, dy, lines, bmColorBurn, false)
-    of bmLighten: a.drawUber(b, p, dx, dy, lines, bmLighten, false)
-    of bmScreen: a.drawUber(b, p, dx, dy, lines, bmScreen, false)
-    of bmLinearDodge: a.drawUber(b, p, dx, dy, lines, bmLinearDodge, false)
-    of bmColorDodge: a.drawUber(b, p, dx, dy, lines, bmColorDodge, false)
-    of bmOverlay: a.drawUber(b, p, dx, dy, lines, bmOverlay, false)
-    of bmSoftLight: a.drawUber(b, p, dx, dy, lines, bmSoftLight, false)
-    of bmHardLight: a.drawUber(b, p, dx, dy, lines, bmHardLight, false)
-    of bmDifference: a.drawUber(b, p, dx, dy, lines, bmDifference, false)
-    of bmExclusion: a.drawUber(b, p, dx, dy, lines, bmExclusion, false)
-    of bmHue: a.drawUber(b, p, dx, dy, lines, bmHue, false)
-    of bmSaturation: a.drawUber(b, p, dx, dy, lines, bmSaturation, false)
-    of bmColor: a.drawUber(b, p, dx, dy, lines, bmColor, false)
-    of bmLuminosity: a.drawUber(b, p, dx, dy, lines, bmLuminosity, false)
-    of bmMask: a.drawUber(b, p, dx, dy, lines, bmMask, false)
-    of bmOverwrite: a.drawUber(b, p, dx, dy, lines, bmOverwrite, false)
-    of bmSubtractMask: a.drawUber(b, p, dx, dy, lines, bmSubtractMask, false)
-    of bmIntersectMask: a.drawUber(b, p, dx, dy, lines, bmIntersectMask, false)
-    of bmExcludeMask: a.drawUber(b, p, dx, dy, lines, bmExcludeMask, false)
-  else:
-    case blendMode
-    of bmNormal: a.drawUber(b, p, dx, dy, lines, bmNormal, true)
-    of bmDarken: a.drawUber(b, p, dx, dy, lines, bmDarken, true)
-    of bmMultiply: a.drawUber(b, p, dx, dy, lines, bmMultiply, true)
-    of bmLinearBurn: a.drawUber(b, p, dx, dy, lines, bmLinearBurn, true)
-    of bmColorBurn: a.drawUber(b, p, dx, dy, lines, bmColorBurn, true)
-    of bmLighten: a.drawUber(b, p, dx, dy, lines, bmLighten, true)
-    of bmScreen: a.drawUber(b, p, dx, dy, lines, bmScreen, true)
-    of bmLinearDodge: a.drawUber(b, p, dx, dy, lines, bmLinearDodge, true)
-    of bmColorDodge: a.drawUber(b, p, dx, dy, lines, bmColorDodge, true)
-    of bmOverlay: a.drawUber(b, p, dx, dy, lines, bmOverlay, true)
-    of bmSoftLight: a.drawUber(b, p, dx, dy, lines, bmSoftLight, true)
-    of bmHardLight: a.drawUber(b, p, dx, dy, lines, bmHardLight, true)
-    of bmDifference: a.drawUber(b, p, dx, dy, lines, bmDifference, true)
-    of bmExclusion: a.drawUber(b, p, dx, dy, lines, bmExclusion, true)
-    of bmHue: a.drawUber(b, p, dx, dy, lines, bmHue, true)
-    of bmSaturation: a.drawUber(b, p, dx, dy, lines, bmSaturation, true)
-    of bmColor: a.drawUber(b, p, dx, dy, lines, bmColor, true)
-    of bmLuminosity: a.drawUber(b, p, dx, dy, lines, bmLuminosity, true)
-    of bmMask: a.drawUber(b, p, dx, dy, lines, bmMask, true)
-    of bmOverwrite: a.drawUber(b, p, dx, dy, lines, bmOverwrite, true)
-    of bmSubtractMask: a.drawUber(b, p, dx, dy, lines, bmSubtractMask, true)
-    of bmIntersectMask: a.drawUber(b, p, dx, dy, lines, bmIntersectMask, true)
-    of bmExcludeMask: a.drawUber(b, p, dx, dy, lines, bmExcludeMask, true)
+  a.drawUber(b, p, dx, dy, lines, blendMode, smooth)
 
 proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.} =
   a.draw(b, translate(pos), blendMode)
