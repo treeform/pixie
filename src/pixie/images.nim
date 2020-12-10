@@ -1,4 +1,4 @@
-import chroma, blends, vmath, common, nimsimd/sse2
+import chroma, blends, bumpy, vmath, common, nimsimd/sse2
 
 const h = 0.5.float32
 

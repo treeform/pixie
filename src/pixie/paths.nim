@@ -1,4 +1,4 @@
-import vmath, images, chroma, strutils, algorithm, common
+import vmath, images, chroma, strutils, algorithm, common, bumpy
 
 type
 
