@@ -9,3 +9,4 @@ nimcache
 *.pdb
 *.ilk
 .*
+*.dll
