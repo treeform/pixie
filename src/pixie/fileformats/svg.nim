@@ -1,7 +1,7 @@
 ## Load and Save SVG files.
 
 import chroma, pixie/images, pixie/common, pixie/paths, vmath, xmlparser, xmltree,
-  strutils, strutils
+  strutils, strutils, bumpy
 
 const svgSignature* = "<?xml"
 
