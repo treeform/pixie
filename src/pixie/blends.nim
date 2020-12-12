@@ -128,29 +128,29 @@ proc alphaFix(backdrop, source, mixed: Color): Color =
   result.g /= result.a
   result.b /= result.a
 
-proc blendNormalFloats(backdrop, source: Color): Color {.inline.} =
+proc blendNormalFloats*(backdrop, source: Color): Color {.inline.} =
   result = source
   result = alphaFix(backdrop, source, result)
 
-proc blendDarkenFloats(backdrop, source: Color): Color {.inline.} =
+proc blendDarkenFloats*(backdrop, source: Color): Color {.inline.} =
   result.r = min(backdrop.r, source.r)
   result.g = min(backdrop.g, source.g)
   result.b = min(backdrop.b, source.b)
   result = alphaFix(backdrop, source, result)
 
-proc blendMultiplyFloats(backdrop, source: Color): Color {.inline.} =
+proc blendMultiplyFloats*(backdrop, source: Color): Color {.inline.} =
   result.r = backdrop.r * source.r
   result.g = backdrop.g * source.g
   result.b = backdrop.b * source.b
   result = alphaFix(backdrop, source, result)
 
-proc blendLinearBurnFloats(backdrop, source: Color): Color {.inline.} =
+proc blendLinearBurnFloats*(backdrop, source: Color): Color {.inline.} =
   result.r = backdrop.r + source.r - 1
   result.g = backdrop.g + source.g - 1
   result.b = backdrop.b + source.b - 1
   result = alphaFix(backdrop, source, result)
 
-proc blendColorBurnFloats(backdrop, source: Color): Color {.inline.} =
+proc blendColorBurnFloats*(backdrop, source: Color): Color {.inline.} =
   proc blend(backdrop, source: float32): float32 {.inline.} =
     if backdrop == 1:
       1.0
@@ -163,25 +163,25 @@ proc blendColorBurnFloats(backdrop, source: Color): Color {.inline.} =
   result.b = blend(backdrop.b, source.b)
   result = alphaFix(backdrop, source, result)
 
-proc blendLightenFloats(backdrop, source: Color): Color {.inline.} =
+proc blendLightenFloats*(backdrop, source: Color): Color {.inline.} =
   result.r = max(backdrop.r, source.r)
   result.g = max(backdrop.g, source.g)
   result.b = max(backdrop.b, source.b)
   result = alphaFix(backdrop, source, result)
 
-proc blendScreenFloats(backdrop, source: Color): Color {.inline.} =
+proc blendScreenFloats*(backdrop, source: Color): Color {.inline.} =
   result.r = screen(backdrop.r, source.r)
   result.g = screen(backdrop.g, source.g)
   result.b = screen(backdrop.b, source.b)
   result = alphaFix(backdrop, source, result)
 
-proc blendLinearDodgeFloats(backdrop, source: Color): Color {.inline.} =
+proc blendLinearDodgeFloats*(backdrop, source: Color): Color {.inline.} =
   result.r = backdrop.r + source.r
   result.g = backdrop.g + source.g
   result.b = backdrop.b + source.b
   result = alphaFix(backdrop, source, result)
 
-proc blendColorDodgeFloats(backdrop, source: Color): Color {.inline.} =
+proc blendColorDodgeFloats*(backdrop, source: Color): Color {.inline.} =
   proc blend(backdrop, source: float32): float32 {.inline.} =
     if backdrop == 0:
       0.0
@@ -194,31 +194,31 @@ proc blendColorDodgeFloats(backdrop, source: Color): Color {.inline.} =
   result.b = blend(backdrop.b, source.b)
   result = alphaFix(backdrop, source, result)
 
-proc blendOverlayFloats(backdrop, source: Color): Color {.inline.} =
+proc blendOverlayFloats*(backdrop, source: Color): Color {.inline.} =
   result.r = hardLight(source.r, backdrop.r)
   result.g = hardLight(source.g, backdrop.g)
   result.b = hardLight(source.b, backdrop.b)
   result = alphaFix(backdrop, source, result)
 
-proc blendHardLightFloats(backdrop, source: Color): Color {.inline.} =
+proc blendHardLightFloats*(backdrop, source: Color): Color {.inline.} =
   result.r = hardLight(backdrop.r, source.r)
   result.g = hardLight(backdrop.g, source.g)
   result.b = hardLight(backdrop.b, source.b)
   result = alphaFix(backdrop, source, result)
 
-proc blendSoftLightFloats(backdrop, source: Color): Color {.inline.} =
+proc blendSoftLightFloats*(backdrop, source: Color): Color {.inline.} =
   result.r = softLight(backdrop.r, source.r)
   result.g = softLight(backdrop.g, source.g)
   result.b = softLight(backdrop.b, source.b)
   result = alphaFix(backdrop, source, result)
 
-proc blendDifferenceFloats(backdrop, source: Color): Color {.inline.} =
+proc blendDifferenceFloats*(backdrop, source: Color): Color {.inline.} =
   result.r = abs(backdrop.r - source.r)
   result.g = abs(backdrop.g - source.g)
   result.b = abs(backdrop.b - source.b)
   result = alphaFix(backdrop, source, result)
 
-proc blendExclusionFloats(backdrop, source: Color): Color {.inline.} =
+proc blendExclusionFloats*(backdrop, source: Color): Color {.inline.} =
   proc blend(backdrop, source: float32): float32 {.inline.} =
     backdrop + source - 2 * backdrop * source
   result.r = blend(backdrop.r, source.r)
@@ -226,39 +226,39 @@ proc blendExclusionFloats(backdrop, source: Color): Color {.inline.} =
   result.b = blend(backdrop.b, source.b)
   result = alphaFix(backdrop, source, result)
 
-proc blendColorFloats(backdrop, source: Color): Color {.inline.} =
+proc blendColorFloats*(backdrop, source: Color): Color {.inline.} =
   result = SetLum(source, Lum(backdrop))
   result = alphaFix(backdrop, source, result)
 
-proc blendLuminosityFloats(backdrop, source: Color): Color {.inline.} =
+proc blendLuminosityFloats*(backdrop, source: Color): Color {.inline.} =
   result = SetLum(backdrop, Lum(source))
   result = alphaFix(backdrop, source, result)
 
-proc blendHueFloats(backdrop, source: Color): Color {.inline.} =
+proc blendHueFloats*(backdrop, source: Color): Color {.inline.} =
   result = SetLum(SetSat(source, Sat(backdrop)), Lum(backdrop))
   result = alphaFix(backdrop, source, result)
 
-proc blendSaturationFloats(backdrop, source: Color): Color {.inline.} =
+proc blendSaturationFloats*(backdrop, source: Color): Color {.inline.} =
   result = SetLum(SetSat(backdrop, Sat(source)), Lum(backdrop))
   result = alphaFix(backdrop, source, result)
 
-proc blendMaskFloats(backdrop, source: Color): Color {.inline.} =
+proc blendMaskFloats*(backdrop, source: Color): Color {.inline.} =
   result = backdrop
   result.a = min(backdrop.a, source.a)
 
-proc blendSubtractMaskFloats(backdrop, source: Color): Color {.inline.} =
+proc blendSubtractMaskFloats*(backdrop, source: Color): Color {.inline.} =
   result = backdrop
   result.a = backdrop.a * (1 - source.a)
 
-proc blendIntersectMaskFloats(backdrop, source: Color): Color {.inline.} =
+proc blendIntersectMaskFloats*(backdrop, source: Color): Color {.inline.} =
   result = backdrop
   result.a = backdrop.a * source.a
 
-proc blendExcludeMaskFloats(backdrop, source: Color): Color {.inline.} =
+proc blendExcludeMaskFloats*(backdrop, source: Color): Color {.inline.} =
   result = backdrop
   result.a = abs(backdrop.a - source.a)
 
-proc blendOverwriteFloats(backdrop, source: Color): Color {.inline.} =
+proc blendOverwriteFloats*(backdrop, source: Color): Color {.inline.} =
   source
 
 proc alphaFix(backdrop, source: ColorRGBA, vb, vs, vm: M128): ColorRGBA =
