@@ -7,6 +7,7 @@ const files = [
   "rect01",
   "rect02",
   "circle01",
+  "ellipse01",
   "triangle01",
   "quad01",
   "Ghostscript_Tiger"
