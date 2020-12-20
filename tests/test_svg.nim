@@ -1,9 +1,15 @@
-import pixie/fileformats/svg, pixie
+import pixie/fileformats/svg, pixie, strformat
 
-let
-  original = readFile("tests/images/svg/Ghostscript_Tiger.svg")
-  image = decodeSvg(original)
-  gold = readImage("tests/images/svg/Ghostscript_Tiger.png")
+const files = [
+  "triangle01",
+  "Ghostscript_Tiger"
+]
 
-doAssert image.data == gold.data
-# image.writeFile("tests/images/svg/Ghostscript_Tiger.png")
+for file in files:
+  let
+    original = readFile(&"tests/images/svg/{file}.svg")
+    image = decodeSvg(original)
+    gold = readImage(&"tests/images/svg/{file}.png")
+
+  doAssert image.data == gold.data
+  # image.writeFile(&"{file}.png")
