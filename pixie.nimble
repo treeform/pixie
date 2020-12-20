@@ -7,7 +7,7 @@ srcDir = "src"
 
 requires "nim >= 1.2.6"
 requires "vmath >= 0.4.0"
-requires "chroma >= 0.1.5"
+requires "chroma >= 0.2.1"
 requires "zippy >= 0.3.5"
 requires "flatty >= 0.1.2"
 requires "nimsimd >= 0.4.6"
