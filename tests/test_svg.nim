@@ -2,6 +2,7 @@ import pixie/fileformats/svg, pixie, strformat
 
 const files = [
   "triangle01",
+  "quad01",
   "Ghostscript_Tiger"
 ]
 

@@ -78,12 +78,14 @@ proc draw(
     discard
   of "desc":
     discard
+
   of "g":
     let ctx = decodeCtx(ctxStack[^1], node)
     ctxStack.add(ctx)
     for child in node:
       img.draw(child, ctxStack)
     discard ctxStack.pop()
+
   of "path":
     let
       d = node.attr("d")
@@ -91,11 +93,12 @@ proc draw(
     if ctx.fill != ColorRGBA():
       let (bounds, fillImg) = fillPathBounds(d, ctx.fill, ctx.transform)
       img.draw(fillImg, bounds.xy)
-    if ctx.stroke != ColorRGBA():
+    if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
       let (bounds, strokeImg) = strokePathBounds(
         d, ctx.stroke, ctx.strokeWidth, ctx.transform
       )
       img.draw(strokeImg, bounds.xy)
+
   of "rect":
     let
       ctx = decodeCtx(ctxStack[^1], node)
@@ -111,8 +114,35 @@ proc draw(
     path.closePath()
     if ctx.fill != ColorRGBA():
       img.fillPath(path, ctx.fill, ctx.transform)
-    if ctx.stroke != ColorRGBA():
+    if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
       img.strokePath(path, ctx.stroke, ctx.strokeWidth, ctx.transform)
+
+  of "circle":
+    # Reference for magic constant:
+    # https://dl3.pushbulletusercontent.com/a3fLVC8boTzRoxevD1OgCzRzERB9z2EZ/unknown.png
+    let
+      ctx = decodeCtx(ctxStack[^1], node)
+      cx = parseFloat(node.attr("cx"))
+      cy = parseFloat(node.attr("cy"))
+      r = parseFloat(node.attr("r"))
+      magic = (4.0 * (-1.0 + sqrt(2.0)) / 3) * r
+      path = newPath()
+    path.moveTo(cx + r, cy)
+    path.bezierCurveTo(cx + r, cy + magic, cx + magic, cy + r, cx, cy + r)
+    path.bezierCurveTo(cx - magic, cy + r, cx - r, cy + magic, cx - r, cy)
+    path.bezierCurveTo(cx - r, cy - magic, cx - magic, cy - r, cx, cy - r)
+    path.bezierCurveTo(cx + magic, cy - r, cx + r, cy - magic, cx + r, cy)
+    path.closePath()
+    let d = $path
+    if ctx.fill != ColorRGBA():
+      let (bounds, fillImg) = fillPathBounds(d, ctx.fill, ctx.transform)
+      img.draw(fillImg, bounds.xy)
+    if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
+      let (bounds, strokeImg) = strokePathBounds(
+        d, ctx.stroke, ctx.strokeWidth, ctx.transform
+      )
+      img.draw(strokeImg, bounds.xy)
+
   else:
     raise newException(PixieError, "Unsupported SVG tag: " & node.tag & ".")
 
