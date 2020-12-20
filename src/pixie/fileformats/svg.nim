@@ -186,22 +186,35 @@ proc draw(
     if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
       img.strokePath(path, ctx.stroke, ctx.strokeWidth, ctx.transform)
 
-  of "circle":
+  of "circle", "ellipse":
     # Reference for magic constant:
     # https://dl3.pushbulletusercontent.com/a3fLVC8boTzRoxevD1OgCzRzERB9z2EZ/unknown.png
-    let
-      ctx = decodeCtx(ctxStack[^1], node)
+    let ctx = decodeCtx(ctxStack[^1], node)
+
+    var cx, cy: float32 # Default to 0.0 unless set by cx and cy on node
+    if node.attr("cx") != "":
       cx = parseFloat(node.attr("cx"))
+    if node.attr("cy") != "":
       cy = parseFloat(node.attr("cy"))
-      r = parseFloat(node.attr("r"))
-      magic = (4.0 * (-1.0 + sqrt(2.0)) / 3) * r
+
+    var rx, ry: float32
+    if node.tag == "circle":
+      rx = parseFloat(node.attr("r"))
+      ry = rx
+    else:
+      rx = parseFloat(node.attr("rx"))
+      ry = parseFloat(node.attr("ry"))
+
+    let
+      magicX = (4.0 * (-1.0 + sqrt(2.0)) / 3) * rx
+      magicY = (4.0 * (-1.0 + sqrt(2.0)) / 3) * ry
 
     let path = newPath()
-    path.moveTo(cx + r, cy)
-    path.bezierCurveTo(cx + r, cy + magic, cx + magic, cy + r, cx, cy + r)
-    path.bezierCurveTo(cx - magic, cy + r, cx - r, cy + magic, cx - r, cy)
-    path.bezierCurveTo(cx - r, cy - magic, cx - magic, cy - r, cx, cy - r)
-    path.bezierCurveTo(cx + magic, cy - r, cx + r, cy - magic, cx + r, cy)
+    path.moveTo(cx + rx, cy)
+    path.bezierCurveTo(cx + rx, cy + magicY, cx + magicX, cy + ry, cx, cy + ry)
+    path.bezierCurveTo(cx - magicX, cy + ry, cx - rx, cy + magicY, cx - rx, cy)
+    path.bezierCurveTo(cx - rx, cy - magicY, cx - magicX, cy - ry, cx, cy - ry)
+    path.bezierCurveTo(cx + magicX, cy - ry, cx + rx, cy - magicY, cx + rx, cy)
     path.closePath()
 
     let d = $path
