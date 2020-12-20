@@ -828,10 +828,16 @@ proc moveTo*(path: Path, x, y: float32) =
   path.commands.add PathCommand(kind: Move, numbers: @[x, y])
   path.at = vec2(x, y)
 
+proc moveTo*(path: Path, pos: Vec2) =
+  path.moveTo(pos.x, pos.y)
+
 proc lineTo*(path: Path, x, y: float32) =
   ## Connects the last point in the subpath to the (x, y) coordinates with a straight line.
   path.commands.add PathCommand(kind: Line, numbers: @[x, y])
   path.at = vec2(x, y)
+
+proc lineTo*(path: Path, pos: Vec2) =
+  path.lineTo(pos.x, pos.y)
 
 proc bezierCurveTo*(path: Path, x1, y1, x2, y2, x3, y3: float32) =
   ## Adds a cubic Bézier curve to the path. It requires three points. The first two points are control points and the third one is the end point. The starting point is the last point in the current path, which can be changed using moveTo() before creating the Bézier curve.
