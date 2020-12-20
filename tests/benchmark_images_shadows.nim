@@ -16,7 +16,7 @@ block:
   b.fill(rgba(255, 255, 255, 255))
   a.draw(b, vec2(25, 25))
 
-  a.writeFile("tests/images/spread1.png")
+  # a.writeFile("tests/images/spread1.png")
 
 block:
   var a = newImage(100, 100)
@@ -33,7 +33,7 @@ block:
   b.fill(rgba(255, 255, 255, 255))
   a.draw(b, vec2(25, 25))
 
-  a.writeFile("tests/images/blur1.png")
+  # a.writeFile("tests/images/blur1.png")
 
 block:
   var shadow: Image
@@ -57,7 +57,7 @@ block:
   shadow.draw(b, vec2(25, 25))
   keep(shadow)
 
-  shadow.writeFile("tests/images/shadow1.png")
+  # shadow.writeFile("tests/images/shadow1.png")
 
 
 # import print

@@ -40,14 +40,14 @@ block:
   let pathStr = "M 10 10 L 90 90"
   let color = rgba(255, 0, 0, 255)
   image.strokePath(pathStr, color, 10)
-  image.writeFile("tests/images/pathStroke1.png")
+  image.writeFile("tests/images/paths/pathStroke1.png")
 
 block:
   let image = newImage(100, 100)
   let pathStr = "M 10 10 L 50 60 90 90"
   let color = rgba(255, 0, 0, 255)
   image.strokePath(pathStr, color, 10)
-  image.writeFile("tests/images/pathStroke2.png")
+  image.writeFile("tests/images/paths/pathStroke2.png")
 
 block:
   let image = newImage(100, 100)
@@ -56,14 +56,14 @@ block:
     rgba(255, 255, 0, 255),
     strokeWidth = 10
   )
-  image.writeFile("tests/images/pathStroke3.png")
+  image.writeFile("tests/images/paths/pathStroke3.png")
 
 block:
   let image = newImage(100, 100)
   let pathStr = "M 10 10 H 90 V 90 H 10 L 10 10"
   let color = rgba(0, 0, 0, 255)
   image.fillPath(pathStr, color)
-  image.writeFile("tests/images/pathBlackRectangle.png")
+  image.writeFile("tests/images/paths/pathBlackRectangle.png")
 
 block:
   let image = newImage(100, 100)
@@ -71,7 +71,7 @@ block:
     "M 10 10 H 90 V 90 H 10 L 10 10",
     rgba(255, 255, 0, 255)
   )
-  image.writeFile("tests/images/pathYellowRectangle.png")
+  image.writeFile("tests/images/paths/pathYellowRectangle.png")
 
 block:
   let image = newImage(100, 100)
@@ -85,7 +85,7 @@ block:
     path,
     rgba(255, 0, 0, 255)
   )
-  image.writeFile("tests/images/pathRedRectangle.png")
+  image.writeFile("tests/images/paths/pathRedRectangle.png")
 
 block:
   let image = newImage(100, 100)
@@ -93,7 +93,7 @@ block:
     "M30 60 A 20 20 0 0 0 90 60 L 30 60",
     parseHtmlColor("#FC427B").rgba
   )
-  image.writeFile("tests/images/pathBottomArc.png")
+  image.writeFile("tests/images/paths/pathBottomArc.png")
 
 block:
   let image = newImage(100, 100)
@@ -107,7 +107,7 @@ block:
     """,
     parseHtmlColor("#FC427B").rgba
   )
-  image.writeFile("tests/images/pathHeart.png")
+  image.writeFile("tests/images/paths/pathHeart.png")
 
 block:
   let image = newImage(100, 100)
@@ -115,7 +115,7 @@ block:
     "M 20 50 A 20 10 45 1 1 80 50 L 20 50",
     parseHtmlColor("#FC427B").rgba
   )
-  image.writeFile("tests/images/pathRotatedArc.png")
+  image.writeFile("tests/images/paths/pathRotatedArc.png")
 
 block:
   let image = newImage(100, 100)
@@ -123,7 +123,7 @@ block:
     "M 0 50 A 50 50 0 0 0 50 0 L 50 50 L 0 50",
     parseHtmlColor("#FC427B").rgba
   )
-  image.writeFile("tests/images/pathInvertedCornerArc.png")
+  image.writeFile("tests/images/paths/pathInvertedCornerArc.png")
 
 block:
   let image = newImage(100, 100)
@@ -131,7 +131,7 @@ block:
     "M 0 50 A 50 50 0 0 1 50 0 L 50 50 L 0 50",
     parseHtmlColor("#FC427B").rgba
   )
-  image.writeFile("tests/images/pathCornerArc.png")
+  image.writeFile("tests/images/paths/pathCornerArc.png")
 
 block:
   let image = newImage(100, 100)
@@ -151,4 +151,4 @@ block:
     path,
     rgba(255, 0, 0, 255)
   )
-  image.writeFile("tests/images/pathRoundRect.png")
+  image.writeFile("tests/images/paths/pathRoundRect.png")
