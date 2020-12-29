@@ -498,12 +498,12 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
   if polygon.len > 0:
     result.add(polygon)
 
-iterator zipline[T](s: seq[T]): (T, T) =
+iterator zipline*[T](s: seq[T]): (T, T) =
   ## Return elements in pairs: (1st, 2nd), (2nd, 3rd) ... (nth, last).
   for i in 0 ..< s.len - 1:
     yield(s[i], s[i + 1])
 
-iterator segments(s: seq[Vec2]): Segment =
+iterator segments*(s: seq[Vec2]): Segment =
   ## Return elements in pairs: (1st, 2nd), (2nd, 3rd) ... (last, 1st).
   for i in 0 ..< s.len - 1:
     yield(Segment(at: s[i], to: s[i + 1]))
