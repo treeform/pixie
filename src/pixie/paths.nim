@@ -508,7 +508,11 @@ iterator segments*(s: seq[Vec2]): Segment =
   for i in 0 ..< s.len - 1:
     yield(Segment(at: s[i], to: s[i + 1]))
   if s.len > 0:
-    yield(Segment(at: s[^1], to: s[0]))
+    let
+      first = s[0]
+      last = s[^1]
+    if first != last:
+      yield(Segment(at: s[^1], to: s[0]))
 
 proc strokePolygons*(ps: seq[seq[Vec2]], strokeWidthR, strokeWidthL: float32): seq[seq[Vec2]] =
   ## Converts simple polygons into stroked versions:
