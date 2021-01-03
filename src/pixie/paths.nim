@@ -150,7 +150,7 @@ proc parsePath*(path: string): Path =
   finishCommand()
 
 proc `$`*(path: Path): string =
-  for command in path.commands:
+  for i, command in path.commands:
     case command.kind
     of Move: result.add "M"
     of Line: result.add "L"
@@ -172,12 +172,13 @@ proc `$`*(path: Path): string =
     of RArc: result.add "a"
     of End: result.add "Z"
     of Start: result.add "?"
-    for number in command.numbers:
+    for j, number in command.numbers:
       if floor(number) == number:
         result.add $(number.int)
       else:
         result.add $number
-      result.add " "
+      if i != path.commands.len - 1 or j != command.numbers.len - 1:
+        result.add " "
 
 ## See https://www.w3.org/TR/SVG/implnote.html#ArcImplementationNotes
 
