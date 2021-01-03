@@ -7,9 +7,9 @@ type
 
   PathCommandKind* = enum
     ## Type of path commands
-    Start, End
-    Move, Line, HLine, VLine, Cubic, SCurve, Quad, TQuad, Arc,
-    RMove, RLine, RHLine, RVLine, RCubic, RSCurve, RQuad, RTQuad, RArc
+    Close,
+    Move, Line, HLine, VLine, Cubic, SCubic, Quad, TQuad, Arc,
+    RMove, RLine, RHLine, RVLine, RCubic, RSCubic, RQuad, RTQuad, RArc
 
   PathCommand* = object
     ## Binary version of an SVG command
@@ -23,131 +23,140 @@ type
 proc newPath*(): Path =
   result = Path()
 
-proc commandNumbers(kind: PathCommandKind): int =
-  ## How many numbers does a command take:
+proc parameterCount(kind: PathCommandKind): int =
   case kind:
-    of Start, End: 0
-    of Move, Line, RMove, RLine: 2
-    of HLine, VLine, RHLine, RVLine: 1
-    of Cubic, RCubic: 6
-    of SCurve, RSCurve, Quad, RQuad: 4
-    of TQuad, RTQuad: 2
-    of Arc, RArc: 7
+  of Close: 0
+  of Move, Line, RMove, RLine: 2
+  of HLine, VLine, RHLine, RVLine: 1
+  of Cubic, RCubic: 6
+  of SCubic, RSCubic, Quad, RQuad: 4
+  of TQuad, RTQuad: 2
+  of Arc, RArc: 7
 
 proc parsePath*(path: string): Path =
   ## Converts a SVG style path into seq of commands.
   result = newPath()
-  var command = Start
-  var number = ""
-  var numbers = newSeq[float32]()
 
-  template finishDigit() =
-    if number.len > 0:
-      numbers.add(parseFloat(number))
-      number = ""
+  if path.len == 0:
+    return
 
-  template finishCommand() =
-    finishDigit()
-    if command != Start:
-      let num = commandNumbers(command)
-      if num > 0:
-        if numbers.len mod num != 0:
-          raise newException(PixieError,
-            "Could not parse path: " & $command & " has wrong number of prams," &
-            " got " & $numbers.len & " but expected " & $num & ".")
-        for batch in 0 ..< numbers.len div num:
-          result.commands.add PathCommand(
-            kind: command,
-            numbers: numbers[batch*num ..< (batch+1)*num]
-          )
-        numbers.setLen(0)
+  var
+    p, numberStart: int
+    armed: bool
+    kind: PathCommandKind
+    numbers: seq[float32]
+
+  proc finishNumber() =
+    if numberStart > 0:
+      try:
+        numbers.add(parseFloat(path[numberStart ..< p]))
+      except ValueError:
+        raise newException(PixieError, "Invalid path, parsing paramter failed")
+    numberStart = 0
+
+  proc finishCommand(result: var Path) =
+    finishNumber()
+
+    if armed: # The first finishCommand() arms
+      let paramCount = parameterCount(kind)
+      if paramCount == 0:
+        if numbers.len != 0:
+          raise newException(PixieError, "Invalid path, unexpected paramters")
+        result.commands.add(PathCommand(kind: kind))
       else:
-        assert numbers.len == 0
-        result.commands.add PathCommand(kind: command)
+        if numbers.len mod paramCount != 0:
+          raise newException(
+            PixieError,
+            "Invalid path, wrong number of parameters"
+          )
+        for batch in 0 ..< numbers.len div paramCount:
+          result.commands.add(PathCommand(
+            kind: kind,
+            numbers: numbers[batch * paramCount ..< (batch + 1) * paramCount]
+          ))
+        numbers.setLen(0)
 
-  for c in path:
-    case c:
-      # Relative.
-      of 'm':
-        finishCommand()
-        command = RMove
-      of 'l':
-        finishCommand()
-        command = RLine
-      of 'h':
-        finishCommand()
-        command = RHLine
-      of 'v':
-        finishCommand()
-        command = RVLine
-      of 'c':
-        finishCommand()
-        command = RCubic
-      of 's':
-        finishCommand()
-        command = RSCurve
-      of 'q':
-        finishCommand()
-        command = RQuad
-      of 't':
-        finishCommand()
-        command = RTQuad
-      of 'a':
-        finishCommand()
-        command = RArc
-      of 'z':
-        finishCommand()
-        command = End
-      # Absolute
-      of 'M':
-        finishCommand()
-        command = Move
-      of 'L':
-        finishCommand()
-        command = Line
-      of 'H':
-        finishCommand()
-        command = HLine
-      of 'V':
-        finishCommand()
-        command = VLine
-      of 'C':
-        finishCommand()
-        command = Cubic
-      of 'S':
-        finishCommand()
-        command = SCurve
-      of 'Q':
-        finishCommand()
-        command = Quad
-      of 'T':
-        finishCommand()
-        command = TQuad
-      of 'A':
-        finishCommand()
-        command = Arc
-      of 'Z':
-        finishCommand()
-        command = End
-      # Punctuation
-      of '-', '+':
-        if number.len > 0 and number[^1] in {'e', 'E'}:
-          number &= c
-        else:
-          finishDigit()
-          number = $c
-      of ' ', ',', '\r', '\n', '\t':
-        finishDigit()
-      else: # TODO: still needed?
-        if command == Move and numbers.len == 2:
-          finishCommand()
-          command = Line
-        elif command == Line and numbers.len == 2:
-          finishCommand()
-          command = Line
-        number &= c
+    armed = true
 
-  finishCommand()
+  while p < path.len:
+    case path[p]:
+    # Relative
+    of 'm':
+      finishCommand(result)
+      kind = RMove
+    of 'l':
+      finishCommand(result)
+      kind = RLine
+    of 'h':
+      finishCommand(result)
+      kind = RHLine
+    of 'v':
+      finishCommand(result)
+      kind = RVLine
+    of 'c':
+      finishCommand(result)
+      kind = RCubic
+    of 's':
+      finishCommand(result)
+      kind = RSCubic
+    of 'q':
+      finishCommand(result)
+      kind = RQuad
+    of 't':
+      finishCommand(result)
+      kind = RTQuad
+    of 'a':
+      finishCommand(result)
+      kind = RArc
+    of 'z':
+      finishCommand(result)
+      kind = Close
+    # Absolute
+    of 'M':
+      finishCommand(result)
+      kind = Move
+    of 'L':
+      finishCommand(result)
+      kind = Line
+    of 'H':
+      finishCommand(result)
+      kind = HLine
+    of 'V':
+      finishCommand(result)
+      kind = VLine
+    of 'C':
+      finishCommand(result)
+      kind = Cubic
+    of 'S':
+      finishCommand(result)
+      kind = SCubic
+    of 'Q':
+      finishCommand(result)
+      kind = Quad
+    of 'T':
+      finishCommand(result)
+      kind = TQuad
+    of 'A':
+      finishCommand(result)
+      kind = Arc
+    of 'Z':
+      finishCommand(result)
+      kind = Close
+    of '-', '+':
+      if numberStart > 0 and path[p - 1] in {'e', 'E'}:
+        discard
+      else:
+        finishNumber()
+        numberStart = p
+    of ' ', ',', '\r', '\n', '\t':
+      finishNumber()
+    else:
+      if numberStart == 0:
+        numberStart = p
+
+    inc p
+
+  finishCommand(result)
 
 proc `$`*(path: Path): string =
   for i, command in path.commands:
@@ -157,7 +166,7 @@ proc `$`*(path: Path): string =
     of HLine: result.add "H"
     of VLine: result.add "V"
     of Cubic: result.add "C"
-    of SCurve: result.add "S"
+    of SCubic: result.add "S"
     of Quad: result.add "Q"
     of TQuad: result.add "T"
     of Arc: result.add "A"
@@ -166,15 +175,14 @@ proc `$`*(path: Path): string =
     of RHLine: result.add "h"
     of RVLine: result.add "v"
     of RCubic: result.add "c"
-    of RSCurve: result.add "s"
+    of RSCubic: result.add "s"
     of RQuad: result.add "q"
     of RTQuad: result.add "t"
     of RArc: result.add "a"
-    of End: result.add "Z"
-    of Start: result.add "?"
+    of Close: result.add "Z"
     for j, number in command.numbers:
       if floor(number) == number:
-        result.add $(number.int)
+        result.add $number.int
       else:
         result.add $number
       if i != path.commands.len - 1 or j != command.numbers.len - 1:
@@ -412,7 +420,7 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
           a += step
         at = polygon[^1]
 
-      of End:
+      of Close:
         assert command.numbers.len == 0
         if at != start:
           if prevCommand == Quad or prevCommand == TQuad:
@@ -481,7 +489,7 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
         drawCurve(@[at, ctr, ctr2, to])
         at = to
 
-      of RSCurve:
+      of RSCubic:
         assert command.numbers.len == 4
         ctr = at
         ctr2.x = at.x + command.numbers[0]
@@ -795,7 +803,7 @@ proc addPath*(path: Path, other: Path) =
 
 proc closePath*(path: Path) =
   ## Causes the point of the pen to move back to the start of the current sub-path. It tries to draw a straight line from the current point to the start. If the shape has already been closed or has only one point, this function does nothing.
-  path.commands.add PathCommand(kind: End)
+  path.commands.add PathCommand(kind: Close)
 
 proc moveTo*(path: Path, x, y: float32) =
   ## Moves the starting point of a new sub-path to the (x, y) coordinates.
