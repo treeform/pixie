@@ -12,6 +12,14 @@ for i in 0 ..< 10_000:
   data[pos] = value
   echo &"{i} {pos} {value}"
   try:
-    discard decodeJpg(data)
+    let img = decodeJpg(data)
+    doAssert img.height > 0 and img.width > 0
+  except PixieError:
+    discard
+
+  data = data[0 ..< pos]
+  try:
+    let img = decodeJpg(data)
+    doAssert img.height > 0 and img.width > 0
   except PixieError:
     discard

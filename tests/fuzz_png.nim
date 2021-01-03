@@ -13,6 +13,14 @@ for i in 0 ..< 10_000:
   data[pos] = value
   echo &"{i} {file} {pos} {value}"
   try:
-    discard decodePng(data)
+    let img = decodePng(data)
+    doAssert img.height > 0 and img.width > 0
+  except PixieError:
+    discard
+
+  data = data[0 ..< pos]
+  try:
+    let img = decodePng(data)
+    doAssert img.height > 0 and img.width > 0
   except PixieError:
     discard
