@@ -20,4 +20,4 @@ for file in files:
     gold = readImage(&"tests/images/svg/{file}.png")
 
   doAssert image.data == gold.data
-  # image.writeFile(&"{file}.png")
+  #image.writeFile(&"tests/images/svg/{file}.png")

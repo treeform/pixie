@@ -1,7 +1,7 @@
 ## Load and Save SVG files.
 
 import chroma, pixie/images, pixie/common, pixie/paths, vmath, xmlparser,
-  xmltree, strutils, strutils, bumpy
+  xmltree, strutils, strutils
 
 const svgSignature* = "<?xml"
 
@@ -111,13 +111,11 @@ proc draw(
       d = node.attr("d")
       ctx = decodeCtx(ctxStack[^1], node)
     if ctx.fill != ColorRGBA():
-      let (bounds, fillImg) = fillPathBounds(d, ctx.fill, ctx.transform)
-      img.draw(fillImg, bounds.xy)
+      img.fillPath(d, ctx.fill, ctx.transform)
     if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
-      let (bounds, strokeImg) = strokePathBounds(
+      img.strokePath(
         d, ctx.stroke, ctx.strokeWidth, ctx.transform
       )
-      img.draw(strokeImg, bounds.xy)
 
   of "line":
     let
@@ -219,13 +217,11 @@ proc draw(
 
     let d = $path
     if ctx.fill != ColorRGBA():
-      let (bounds, fillImg) = fillPathBounds(d, ctx.fill, ctx.transform)
-      img.draw(fillImg, bounds.xy)
+      img.fillPath(d, ctx.fill, ctx.transform)
     if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
-      let (bounds, strokeImg) = strokePathBounds(
+      img.strokePath(
         d, ctx.stroke, ctx.strokeWidth, ctx.transform
       )
-      img.draw(strokeImg, bounds.xy)
 
   else:
     raise newException(PixieError, "Unsupported SVG tag: " & node.tag & ".")

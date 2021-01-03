@@ -1,4 +1,4 @@
-import vmath, images, chroma, strutils, algorithm, common, bumpy
+import vmath, images, chroma, strutils, algorithm, common, bumpy, blends
 
 type
   WindingRule* = enum
@@ -594,15 +594,17 @@ proc computeBounds(polys: seq[seq[Vec2]]): Rect =
 {.push checks: off, stacktrace: off.}
 
 proc fillPolygons*(
+  image: Image,
   size: Vec2,
   polys: seq[seq[Vec2]],
   color: ColorRGBA,
   windingRule: WindingRule,
-  quality = 4,
-): Image =
-  const ep = 0.0001 * PI
+  blendMode: BlendMode = bmNormal,
+  quality = 4
+) =
 
-  result = newImage(size.x.int, size.y.int)
+  const ep = 0.0001 * PI
+  let mixer = blendMode.mixer()
 
   proc scanLineHits(
     polys: seq[seq[Vec2]],
@@ -630,12 +632,12 @@ proc fillPolygons*(
 
   var
     hits = newSeq[(float32, bool)]()
-    alphas = newSeq[float32](result.width)
-  for y in 0 ..< result.height:
+    alphas = newSeq[float32](image.width)
+  for y in 0 ..< image.height:
     # Reset alphas for this row.
     zeroMem(alphas[0].addr, alphas.len * 4)
 
-    # Do scanlines for this row.
+    # Do scan lines for this row.
     for m in 0 ..< quality:
       polys.scanLineHits(hits, size, y, float32(m) / float32(quality))
       if hits.len == 0:
@@ -643,7 +645,7 @@ proc fillPolygons*(
       var
         penFill = 0
         curHit = 0
-      for x in 0 ..< result.width:
+      for x in 0 ..< image.width:
         var penEdge: float32
         case windingRule
         of wrNonZero:
@@ -669,11 +671,13 @@ proc fillPolygons*(
           inc curHit
         alphas[x] += penEdge
 
-    for x in 0 ..< result.width:
+    for x in 0 ..< image.width:
       let a = clamp(abs(alphas[x]) / float32(quality), 0.0, 1.0)
-      var colorWithAlpha = color
-      colorWithAlpha.a = uint8(a * 255.0)
-      result.setRgbaUnsafe(x, y, colorWithAlpha)
+      if a > 0:
+        var colorWithAlpha = color
+        colorWithAlpha.a = uint8(a * 255.0)
+        let rgba = image.getRgbaUnsafe(x, y)
+        image.setRgbaUnsafe(x, y, mixer(rgba, colorWithAlpha))
 
 {.pop.}
 
@@ -698,8 +702,7 @@ proc fillPath*(
 ) =
   let
     polys = parseSomePath(path)
-    tmp = fillPolygons(image.wh, polys, color, windingRule)
-  image.draw(tmp)
+  image.fillPolygons(image.wh, polys, color, windingRule)
 
 proc fillPath*(
   image: Image,
@@ -712,8 +715,7 @@ proc fillPath*(
   for poly in polys.mitems:
     for i, p in poly.mpairs:
       poly[i] = p + pos
-  let tmp = fillPolygons(image.wh, polys, color, windingRule)
-  image.draw(tmp)
+  image.fillPolygons(image.wh, polys, color, windingRule)
 
 proc fillPath*(
   image: Image,
@@ -726,25 +728,7 @@ proc fillPath*(
   for poly in polys.mitems:
     for i, p in poly.mpairs:
       poly[i] = mat * p
-  let tmp = fillPolygons(image.wh, polys, color, windingRule)
-  image.draw(tmp)
-
-proc fillPathBounds*(
-    path: SomePath,
-    color: ColorRGBA,
-    mat: Mat3,
-    windingRule = wrNonZero
-  ): (Rect, Image) =
-  var polys = parseSomePath(path)
-  for poly in polys.mitems:
-    for i, p in poly.mpairs:
-      poly[i] = mat * p
-  var bounds = computeBounds(polys)
-  for poly in polys.mitems:
-    for i, p in poly.mpairs:
-      poly[i] = p - bounds.xy
-  var image = fillPolygons(bounds.wh, polys, color, windingRule)
-  return (bounds, image)
+  image.fillPolygons(image.wh, polys, color, windingRule)
 
 proc strokePath*(
   image: Image,
@@ -761,8 +745,7 @@ proc strokePath*(
     polys = parseSomePath(path)
     (strokeL, strokeR) = (strokeWidth/2, strokeWidth/2)
     polys2 = strokePolygons(polys, strokeL, strokeR)
-    tmp = fillPolygons(image.wh, polys2, color, windingRule)
-  image.draw(tmp)
+  image.fillPath(polys2, color, windingRule)
 
 proc strokePath*(
   image: Image,
@@ -787,8 +770,7 @@ proc strokePath*(
   for poly in polys2.mitems:
     for i, p in poly.mpairs:
       poly[i] = p + pos
-  let tmp = fillPolygons(image.wh, polys2, color, windingRule)
-  image.draw(tmp)
+  image.fillPolygons(image.wh, polys2, color, windingRule)
 
 proc strokePath*(
   image: Image,
@@ -804,20 +786,7 @@ proc strokePath*(
   for poly in polys2.mitems:
     for i, p in poly.mpairs:
       poly[i] = mat * p
-  let tmp = fillPolygons(image.wh, polys2, color, windingRule)
-  image.draw(tmp)
-
-proc strokePathBounds*(
-  path: SomePath,
-  color: ColorRGBA,
-  strokeWidth: float32,
-  mat: Mat3,
-  windingRule = wrNonZero
-): (Rect, Image) =
-  var polys = parseSomePath(path)
-  let (strokeL, strokeR) = (strokeWidth/2, strokeWidth/2)
-  var polys2 = strokePolygons(polys, strokeL, strokeR)
-  fillPathBounds(polys2, color, mat, windingRule)
+  image.fillPolygons(image.wh, polys2, color, windingRule)
 
 proc addPath*(path: Path, other: Path) =
   ## Adds a path to the current path.
