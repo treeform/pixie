@@ -1,4 +1,4 @@
-import chroma, blends, bumpy, vmath, common, nimsimd/sse2
+import chroma, blends, bumpy, vmath, common, nimsimd/sse2, system/memory
 
 const h = 0.5.float32
 
@@ -72,14 +72,30 @@ proc `[]=`*(image: Image, x, y: int, rgba: ColorRGBA) {.inline.} =
 
 proc fill*(image: Image, rgba: ColorRgba) =
   ## Fills the image with a solid color.
-  # SIMD fill until we run out of room.
-  let m = mm_set1_epi32(cast[int32](rgba))
-  var i: int
-  while i < image.data.len - 4:
-    mm_store_si128(image.data[i].addr, m)
-    i += 4
-  for j in i ..< image.data.len:
-    image.data[j] = rgba
+
+  # Use memset whene very byte has the same value
+  if rgba.r == rgba.g and rgba.r == rgba.b and rgba.r == rgba.a:
+    nimSetMem(image.data[0].addr, rgba.r.cint, image.data.len * 4)
+  else:
+    var i: int
+    when defined(amd64):
+      # When supported, SIMD fill until we run out of room.
+      let m = mm_set1_epi32(cast[int32](rgba))
+      while i < image.data.len - 4:
+        mm_store_si128(image.data[i].addr, m)
+        i += 4
+    else:
+      when sizeof(int) == 8:
+        # Fill 8 bytes at a time when possible
+        let
+          u32 = cast[uint32](rgba)
+          u64 = cast[uint64]([u32, u32])
+        while i < image.data.len - 2:
+          cast[ptr uint64](image.data[i].addr)[] = u64
+          i += 2
+    # Fill whatever is left the slow way
+    for j in i ..< image.data.len:
+      image.data[j] = rgba
 
 proc invert*(image: Image) =
   ## Inverts all of the colors and alpha.
