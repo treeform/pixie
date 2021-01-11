@@ -492,6 +492,11 @@ proc encodePng*(
 
 proc encodePng*(image: Image): string =
   ## Encodes the image data into the PNG file format.
+  if image.data.len == 0:
+    raise newException(
+      PixieError,
+      "Image has no data (are height and width 0?)"
+    )
   cast[string](encodePng(
     image.width, image.height, 4, image.data[0].addr, image.data.len * 4
   ))
