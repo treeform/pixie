@@ -516,12 +516,12 @@ iterator segments*(s: seq[Vec2]): Segment =
   ## Return elements in pairs: (1st, 2nd), (2nd, 3rd) ... (last, 1st).
   for i in 0 ..< s.len - 1:
     yield(Segment(at: s[i], to: s[i + 1]))
-  if s.len > 0:
-    let
-      first = s[0]
-      last = s[^1]
-    if first != last:
-      yield(Segment(at: s[^1], to: s[0]))
+  # if s.len > 0:
+  #   let
+  #     first = s[0]
+  #     last = s[^1]
+    # if first != last:
+    #   yield(Segment(at: s[^1], to: s[0]))
 
 proc strokePolygons*(ps: seq[seq[Vec2]], strokeWidthR, strokeWidthL: float32): seq[seq[Vec2]] =
   ## Converts simple polygons into stroked versions:
@@ -625,13 +625,17 @@ proc fillPolygons*(
     hits.setLen(0)
 
     let
-      yLine = (float32(y) + ep) + shiftY
-      scan = Segment(at: vec2(-10000, yLine), to: vec2(100000, yLine))
+      yLine = y.float32 + ep + shiftY
+      scan = Line(a: vec2(-10000, yLine), b: vec2(10000, yLine))
 
     for poly in polys:
       for line in poly.segments:
+        var line2 = line
+        if line2.at.y > line2.to.y: # Sort order doesn't actually matter
+          swap(line2.at, line2.to)
+        # Lines often connect and we need them to not share starts and ends
         var at: Vec2
-        if line.intersects(scan, at):
+        if line2.intersects(scan, at) and line2.to != at:
           let
             winding = line.at.y > line.to.y
             x = at.x.clamp(0, size.x)

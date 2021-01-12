@@ -448,7 +448,7 @@ proc drawUber(
       )
       for l in lines:
         var at: Vec2
-        if intersects(l, scanLine, at):
+        if intersects(l, scanLine, at) and l.to != at:
           xMin = min(xMin, at.x.floor.int)
           xMax = max(xMax, at.x.ceil.int)
 
