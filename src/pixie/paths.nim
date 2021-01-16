@@ -304,15 +304,28 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
       3 * (1 - t) * pow(t, 2) * ctrl2 +
       pow(t, 3) * to
 
-    const steps = 10
+    proc discretize(steps: int): seq[Vec2] =
+      var
+        prev = at
+        totalError: float32
+      for i in 1 .. steps:
+        let
+          tPrev = (i - 1).float32 / steps.float32
+          t = i.float32 / steps.float32
+          next = compute(at, ctrl1, ctrl2, to, t)
+          halfway = compute(at, ctrl1, ctrl2, to, tPrev + (t - tPrev) / 2)
+          error = ((prev + next) / 2 - halfway).length
 
-    var prev = at
-    for i in 1 .. steps:
-      let
-        t = i.float32 / steps.float32
-        next = compute(at, ctrl1, ctrl2, to, t)
-      drawLine(prev, next)
-      prev = next
+        totalError += error
+        if totalError >= 0.25 * steps.float32:
+          return discretize(steps * 2)
+
+        result.add([prev, next])
+        prev = next
+
+    let discretized = discretize(2)
+    for i in countup(0, discretized.len - 1, 2):
+      drawLine(discretized[i], discretized[i + 1])
 
   proc drawQuad(p0, p1, p2: Vec2) =
     let devx = p0.x - 2.0 * p1.x + p2.x
