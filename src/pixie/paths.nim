@@ -296,22 +296,23 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
         polygon.add(at)
       polygon.add(to)
 
-  proc getCurvePoint(points: seq[Vec2], t: float32): Vec2 =
-    if points.len == 1:
-      return points[0]
-    else:
-      var newPoints = newSeq[Vec2](points.len - 1)
-      for i in 0 ..< newPoints.len:
-        newPoints[i] = points[i] * (1-t) + points[i + 1] * t
-      return getCurvePoint(newPoints, t)
+  proc drawCurve(at, ctrl1, ctrl2, to: Vec2) =
 
-  proc drawCurve(points: seq[Vec2]) =
-    let n = 10
-    var a = at
-    for t in 1..n:
-      var b = getCurvePoint(points, float32(t) / float32(n))
-      drawLine(a, b)
-      a = b
+    proc compute(at, ctrl1, ctrl2, to: Vec2, t: float32): Vec2 {.inline.} =
+      pow(1 - t, 3) * at +
+      3 * pow(1 - t, 2) * t * ctrl1 +
+      3 * (1 - t) * pow(t, 2) * ctrl2 +
+      pow(t, 3) * to
+
+    const steps = 10
+
+    var prev = at
+    for i in 1 .. steps:
+      let
+        t = i.float32 / steps.float32
+        next = compute(at, ctrl1, ctrl2, to, t)
+      drawLine(prev, next)
+      prev = next
 
   proc drawQuad(p0, p1, p2: Vec2) =
     let devx = p0.x - 2.0 * p1.x + p2.x
@@ -393,7 +394,7 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
         ctr2.y = command.numbers[3]
         to.x = command.numbers[4]
         to.y = command.numbers[5]
-        drawCurve(@[at, ctr, ctr2, to])
+        drawCurve(at, ctr, ctr2, to)
         at = to
 
       of Arc:
@@ -486,7 +487,7 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
         ctr2.y = at.y + command.numbers[3]
         to.x = at.x + command.numbers[4]
         to.y = at.y + command.numbers[5]
-        drawCurve(@[at, ctr, ctr2, to])
+        drawCurve(at, ctr, ctr2, to)
         at = to
 
       of RSCubic:
@@ -496,7 +497,7 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
         ctr2.y = at.y + command.numbers[1]
         to.x = at.x + command.numbers[2]
         to.y = at.y + command.numbers[3]
-        drawCurve(@[at, ctr, ctr2, to])
+        drawCurve(at, ctr, ctr2, to)
         at = to
 
       else:
