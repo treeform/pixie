@@ -312,7 +312,8 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
         t = i.float32 / steps.float32
         next = compute(at, ctrl1, ctrl2, to, t)
         halfway = compute(at, ctrl1, ctrl2, to, tPrev + (t - tPrev) / 2)
-        error = ((prev + next) / 2 - halfway).length
+        midpoint = (prev + next) / 2
+        error = (midpoint - halfway).length
 
       if error >= 0.25:
         # Error too large, double precision for this step
@@ -322,8 +323,7 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
         drawLine(prev, next)
         prev = next
 
-    for i in 1 .. 2:
-      discretize(i, 2)
+    discretize(1, 1)
 
   proc drawQuad(p0, p1, p2: Vec2) =
     let devx = p0.x - 2.0 * p1.x + p2.x
@@ -587,8 +587,8 @@ proc strokePolygons*(ps: seq[seq[Vec2]], strokeWidthR, strokeWidthL: float32): s
 
     result.add(poly)
 
-proc computeBounds(polys: seq[seq[Vec2]]): Rect =
-  if polys.len == 0 or polys[0].len == 0:
+proc computeBounds(poly: seq[Vec2]): Rect =
+  if poly.len == 0:
     return
   proc min(a, b: Vec2): Vec2 =
     result.x = min(a.x, b.x)
@@ -603,12 +603,11 @@ proc computeBounds(polys: seq[seq[Vec2]]): Rect =
     result.x = a.x.ceil
     result.y = a.y.ceil
   var
-    vMin = polys[0][0]
-    vMax = polys[0][0]
-  for poly in polys:
-    for v in poly:
-      vMin = min(v, vMin)
-      vMax = max(v, vMax)
+    vMin = poly[0]
+    vMax = poly[0]
+  for v in poly:
+    vMin = min(v, vMin)
+    vMax = max(v, vMax)
   result.xy = vMin.floor
   result.wh = (vMax - vMin).ceil
 
@@ -623,12 +622,16 @@ proc fillPolygons*(
   blendMode: BlendMode = bmNormal,
   quality = 4
 ) =
+  var bounds = newSeq[Rect](polys.len)
+  for i, poly in polys:
+    bounds[i] = computeBounds(poly)
 
   const ep = 0.0001 * PI
   let mixer = blendMode.mixer()
 
   proc scanLineHits(
     polys: seq[seq[Vec2]],
+    bounds: seq[Rect],
     hits: var seq[(float32, bool)],
     size: Vec2,
     y: int,
@@ -640,7 +643,10 @@ proc fillPolygons*(
       yLine = y.float32 + ep + shiftY
       scan = Line(a: vec2(-10000, yLine), b: vec2(10000, yLine))
 
-    for poly in polys:
+    for i, poly in polys:
+      let bounds = bounds[i]
+      if bounds.y > y.float32 or bounds.y + bounds.h < y.float32:
+        continue
       for line in poly.segments:
         var line2 = line
         if line2.at.y > line2.to.y: # Sort order doesn't actually matter
@@ -664,7 +670,7 @@ proc fillPolygons*(
 
     # Do scan lines for this row.
     for m in 0 ..< quality:
-      polys.scanLineHits(hits, size, y, float32(m) / float32(quality))
+      polys.scanLineHits(bounds, hits, size, y, float32(m) / float32(quality))
       if hits.len == 0:
         continue
       var
