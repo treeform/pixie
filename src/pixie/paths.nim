@@ -648,6 +648,8 @@ proc fillPolygons*(
       if bounds.y > y.float32 or bounds.y + bounds.h < y.float32:
         continue
       for line in poly.segments:
+        if line.at.y == line.to.y: # Skip horizontal lines
+          continue
         var line2 = line
         if line2.at.y > line2.to.y: # Sort order doesn't actually matter
           swap(line2.at, line2.to)
