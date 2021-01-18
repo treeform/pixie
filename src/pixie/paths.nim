@@ -503,7 +503,10 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
 
       of RSCubic:
         assert command.numbers.len == 4
-        ctr = at
+        if prevCommand in {Cubic, SCubic, RCubic, RSCubic}:
+          ctr = 2 * at - ctr2
+        else:
+          ctr = at
         ctr2.x = at.x + command.numbers[0]
         ctr2.y = at.y + command.numbers[1]
         to.x = at.x + command.numbers[2]
