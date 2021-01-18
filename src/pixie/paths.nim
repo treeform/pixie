@@ -503,7 +503,10 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
 
       of RSCubic:
         assert command.numbers.len == 4
-        ctr = at
+        if prevCommand in {Cubic, SCubic, RCubic, RSCubic}:
+          ctr = 2 * at - ctr2
+        else:
+          ctr = at
         ctr2.x = at.x + command.numbers[0]
         ctr2.y = at.y + command.numbers[1]
         to.x = at.x + command.numbers[2]
@@ -648,6 +651,8 @@ proc fillPolygons*(
       if bounds.y > y.float32 or bounds.y + bounds.h < y.float32:
         continue
       for line in poly.segments:
+        if line.at.y == line.to.y: # Skip horizontal lines
+          continue
         var line2 = line
         if line2.at.y > line2.to.y: # Sort order doesn't actually matter
           swap(line2.at, line2.to)
