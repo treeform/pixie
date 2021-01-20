@@ -62,6 +62,18 @@ block:
   image.fill(rgba(255, 0, 0, 255))
   doAssert image[0, 0] == rgba(255, 0, 0, 255)
 
+block:
+  var image = newImage(10, 10)
+  image.fill(rgba(255, 0, 0, 128))
+  image.toAlphy()
+  doAssert image[9, 9] == rgba(128, 0, 0, 128)
+
+block:
+  var image = newImage(10, 10)
+  image.fill(rgba(128, 0, 0, 128))
+  image.fromAlphy()
+  doAssert image[9, 9] == rgba(255, 0, 0, 128)
+
 # block:
 #   var a = newImage(100, 100)
 #   a.fill(rgba(255, 0, 0, 255))

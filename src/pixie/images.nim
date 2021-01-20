@@ -202,17 +202,17 @@ proc toAlphy*(image: Image) =
   ## Converts an image to premultiplied alpha from straight.
   for c in image.data.mitems:
     c.r = ((c.r.uint32 * c.a.uint32) div 255).uint8
-    c.g = ((c.r.uint32 * c.a.uint32) div 255).uint8
-    c.b = ((c.r.uint32 * c.a.uint32) div 255).uint8
+    c.g = ((c.g.uint32 * c.a.uint32) div 255).uint8
+    c.b = ((c.b.uint32 * c.a.uint32) div 255).uint8
 
 proc fromAlphy*(image: Image) =
   ## Converts an image to from premultiplied alpha to straight.
   for c in image.data.mitems:
     if c.a == 0:
       continue
-    c.r = ((c.r.int32 * 255) div c.a.int32).uint8
-    c.g = ((c.g.int32 * 255) div c.a.int32).uint8
-    c.b = ((c.b.int32 * 255) div c.a.int32).uint8
+    c.r = ((c.r.uint32 * 255) div c.a.uint32).uint8
+    c.g = ((c.g.uint32 * 255) div c.a.uint32).uint8
+    c.b = ((c.b.uint32 * 255) div c.a.uint32).uint8
 
 proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA {.inline.} =
   ## Gets a pixel as (x, y) floats.
