@@ -200,10 +200,45 @@ proc fromAlphy*(c: Color): Color =
 
 proc toAlphy*(image: Image) =
   ## Converts an image to premultiplied alpha from straight.
-  for c in image.data.mitems:
+  var i: int
+  when defined(amd64):
+    # When supported, SIMD convert as much as possible
+    let
+      alphaMask = mm_set1_epi32(cast[int32](0xff000000))
+      alphaMaskComp = mm_set1_epi32(0x00ffffff)
+      oddMask = mm_set1_epi16(cast[int16](0xff00))
+      div255 = mm_set1_epi16(cast[int16](0x8081))
+
+    for j in countup(i, image.data.len - 4, 4):
+      var
+        color = mm_load_si128(image.data[j].addr)
+        alpha = mm_and_si128(color, alphaMask)
+      alpha = mm_or_si128(alpha, mm_srli_epi32(alpha, 16))
+
+      var
+        colorEven = mm_slli_epi16(color, 8)
+        colorOdd = mm_and_si128(color, oddMask)
+
+      colorEven = mm_mulhi_epu16(colorEven, alpha)
+      colorOdd = mm_mulhi_epu16(colorOdd, alpha)
+
+      colorEven = mm_srli_epi16(mm_mulhi_epu16(colorEven, div255), 7)
+      colorOdd = mm_srli_epi16(mm_mulhi_epu16(colorOdd, div255), 7)
+
+      color = mm_or_si128(colorEven, mm_slli_epi16(colorOdd, 8))
+      color = mm_or_si128(
+        mm_and_si128(alpha, alphaMask), mm_and_si128(color, alphaMaskComp)
+      )
+
+      mm_store_si128(image.data[j].addr, color)
+      i += 4
+  # Convert whatever is left
+  for j in i ..< image.data.len:
+    var c = image.data[j]
     c.r = ((c.r.uint32 * c.a.uint32) div 255).uint8
     c.g = ((c.g.uint32 * c.a.uint32) div 255).uint8
     c.b = ((c.b.uint32 * c.a.uint32) div 255).uint8
+    image.data[j] = c
 
 proc fromAlphy*(image: Image) =
   ## Converts an image to from premultiplied alpha to straight.
