@@ -233,34 +233,25 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
 
     discretize(1, 1)
 
-  proc drawQuad(at, ctrl, to: Vec2) =
+  proc drawQuad(p0, p1, p2: Vec2) =
+    let devx = p0.x - 2.0 * p1.x + p2.x
+    let devy = p0.y - 2.0 * p1.y + p2.y
+    let devsq = devx * devx + devy * devy
+    if devsq < 0.333:
+      drawLine(p0, p2)
+      return
+    let tol = 3.0
+    let n = 1 + (tol * (devsq)).sqrt().sqrt().floor()
+    var p = p0
+    let nrecip = 1 / n
+    var t = 0.0
+    for i in 0 ..< int(n):
+      t += nrecip
+      let pn = lerp(lerp(p0, p1, t), lerp(p1, p2, t), t)
+      drawLine(p, pn)
+      p = pn
 
-    proc compute(at, ctrl, to: Vec2, t: float32): Vec2 {.inline.} =
-      pow(1 - t, 2) * at +
-      2 * (1 - t) * t * ctrl +
-      pow(t, 2) * to
-
-    var prev = at
-
-    proc discretize(i, steps: int) =
-      # Closure captures at, ctrl, to and prev
-      let
-        tPrev = (i - 1).float32 / steps.float32
-        t = i.float32 / steps.float32
-        next = compute(at, ctrl, to, t)
-        halfway = compute(at, ctrl, to, tPrev + (t - tPrev) / 2)
-        midpoint = (prev + next) / 2
-        error = (midpoint - halfway).length
-
-      if error >= 0.25:
-        # Error too large, double precision for this step
-        discretize(i * 2 - 1, steps * 2)
-        discretize(i * 2, steps * 2)
-      else:
-        drawLine(prev, next)
-        prev = next
-
-    discretize(1, 1)
+    drawLine(p, p2)
 
   proc drawArc(
     at, radii: Vec2,
