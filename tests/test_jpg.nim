@@ -1,5 +1,6 @@
-import pixie/fileformats/jpg
+when defined(pixieUseStb):
+  import pixie/fileformats/jpg
 
-let
-  original = readFile("tests/images/jpg/jpeg420exif.jpg")
-  stbDecoded = decodeJpg(original)
+  let
+    original = readFile("tests/images/jpg/jpeg420exif.jpg")
+    stbDecoded = decodeJpg(original)
