@@ -1,6 +1,6 @@
 import pixie/images, pixie/common
 
-when defined(useStb):
+when defined(pixieUseStb):
   import pixie/fileformats/stb_image/stb_image
 
 const
@@ -8,8 +8,8 @@ const
 
 proc decodeJpg*(data: seq[uint8]): Image =
   ## Decodes the JPEG into an Image.
-  when not defined(useStb):
-    raise newException(PixieError, "Decoding JPG requires -d:useStb")
+  when not defined(pixieUseStb):
+    raise newException(PixieError, "Decoding JPG requires -d:pixieUseStb")
   else:
     var
       width: int

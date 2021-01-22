@@ -1,4 +1,4 @@
-when defined(useStb):
+when defined(pixieUseStb):
   import pixie/fileformats/jpg
 
   let
