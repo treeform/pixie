@@ -188,82 +188,6 @@ proc `$`*(path: Path): string =
       if i != path.commands.len - 1 or j != command.numbers.len - 1:
         result.add " "
 
-## See https://www.w3.org/TR/SVG/implnote.html#ArcImplementationNotes
-
-type ArcParams = object
-  radii: Vec2
-  rotMat: Mat3
-  center: Vec2
-  theta, delta: float32
-
-proc endpointToCenterArcParams(
-  at, radii: Vec2, rotation: float32, large, sweep: bool, to: Vec2
-): ArcParams =
-  var
-    radii = vec2(abs(radii.x), abs(radii.y))
-    radiiSq = vec2(radii.x * radii.x, radii.y * radii.y)
-
-  let
-    radians = rotation / 180 * PI
-    d = vec2((at.x - to.x) / 2.0, (at.y - to.y) / 2.0)
-    p = vec2(
-      cos(radians) * d.x + sin(radians) * d.y,
-      -sin(radians) * d.x + cos(radians) * d.y
-    )
-    pSq = vec2(p.x * p.x, p.y * p.y)
-
-  let cr = pSq.x / radiiSq.x + pSq.y / radiiSq.y
-  if cr > 1:
-    radii *= sqrt(cr)
-    radiiSq = vec2(radii.x * radii.x, radii.y * radii.y)
-
-  let
-    dq = radiiSq.x * pSq.y + radiiSq.y * pSq.x
-    pq = (radiiSq.x * radiiSq.y - dq) / dq
-
-  var q = sqrt(max(0, pq))
-  if large == sweep:
-      q = -q
-
-  proc svgAngle(u, v: Vec2): float32 =
-    let
-      dot = dot(u,v)
-      len = length(u) * length(v)
-    result = arccos(clamp(dot / len, -1, 1))
-    if (u.x * v.y - u.y * v.x) < 0:
-        result = -result
-
-  let
-    cp = vec2(q * radii.x * p.y / radii.y, -q * radii.y * p.x / radii.x)
-    center = vec2(
-      cos(radians) * cp.x - sin(radians) * cp.y + (at.x + to.x) / 2,
-      sin(radians) * cp.x + cos(radians) * cp.y + (at.y + to.y) / 2
-    )
-    theta = svgAngle(vec2(1, 0), vec2((p.x-cp.x) / radii.x, (p.y - cp.y) / radii.y))
-
-  var delta = svgAngle(
-      vec2((p.x - cp.x) / radii.x, (p.y - cp.y) / radii.y),
-      vec2((-p.x - cp.x) / radii.x, (-p.y - cp.y) / radii.y)
-    )
-  delta = delta mod (PI * 2)
-
-  if not sweep:
-    delta -= 2 * PI
-
-  # Normalize the delta
-  while delta > PI * 2:
-    delta -= PI * 2
-  while delta < -PI * 2:
-    delta += PI * 2
-
-  ArcParams(
-    radii: radii,
-    rotMat: rotationMat3(-radians),
-    center: center,
-    theta: theta,
-    delta: delta
-  )
-
 proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
   ## Converts SVG-like commands to simpler polygon
 
@@ -338,6 +262,114 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
 
     discretize(1, 1)
 
+  proc drawArc(
+    at, radii: Vec2,
+    rotation: float32,
+    large, sweep: bool,
+    to: Vec2
+  ) =
+    type ArcParams = object
+      radii: Vec2
+      rotMat: Mat3
+      center: Vec2
+      theta, delta: float32
+
+    proc endpointToCenterArcParams(
+      at, radii: Vec2, rotation: float32, large, sweep: bool, to: Vec2
+    ): ArcParams =
+      var
+        radii = vec2(abs(radii.x), abs(radii.y))
+        radiiSq = vec2(radii.x * radii.x, radii.y * radii.y)
+
+      let
+        radians = rotation / 180 * PI
+        d = vec2((at.x - to.x) / 2.0, (at.y - to.y) / 2.0)
+        p = vec2(
+          cos(radians) * d.x + sin(radians) * d.y,
+          -sin(radians) * d.x + cos(radians) * d.y
+        )
+        pSq = vec2(p.x * p.x, p.y * p.y)
+
+      let cr = pSq.x / radiiSq.x + pSq.y / radiiSq.y
+      if cr > 1:
+        radii *= sqrt(cr)
+        radiiSq = vec2(radii.x * radii.x, radii.y * radii.y)
+
+      let
+        dq = radiiSq.x * pSq.y + radiiSq.y * pSq.x
+        pq = (radiiSq.x * radiiSq.y - dq) / dq
+
+      var q = sqrt(max(0, pq))
+      if large == sweep:
+          q = -q
+
+      proc svgAngle(u, v: Vec2): float32 =
+        let
+          dot = dot(u,v)
+          len = length(u) * length(v)
+        result = arccos(clamp(dot / len, -1, 1))
+        if (u.x * v.y - u.y * v.x) < 0:
+            result = -result
+
+      let
+        cp = vec2(q * radii.x * p.y / radii.y, -q * radii.y * p.x / radii.x)
+        center = vec2(
+          cos(radians) * cp.x - sin(radians) * cp.y + (at.x + to.x) / 2,
+          sin(radians) * cp.x + cos(radians) * cp.y + (at.y + to.y) / 2
+        )
+        theta = svgAngle(vec2(1, 0), vec2((p.x-cp.x) / radii.x, (p.y - cp.y) / radii.y))
+
+      var delta = svgAngle(
+          vec2((p.x - cp.x) / radii.x, (p.y - cp.y) / radii.y),
+          vec2((-p.x - cp.x) / radii.x, (-p.y - cp.y) / radii.y)
+        )
+      delta = delta mod (PI * 2)
+
+      if not sweep:
+        delta -= 2 * PI
+
+      # Normalize the delta
+      while delta > PI * 2:
+        delta -= PI * 2
+      while delta < -PI * 2:
+        delta += PI * 2
+
+      ArcParams(
+        radii: radii,
+        rotMat: rotationMat3(-radians),
+        center: center,
+        theta: theta,
+        delta: delta
+      )
+
+    proc compute(arc: ArcParams, a: float32): Vec2 =
+      result = vec2(cos(a) * arc.radii.x, sin(a) * arc.radii.y)
+      result = arc.rotMat * result + arc.center
+
+    proc discretize(arc: ArcParams, steps: int) =
+      let
+        initialShapeLen = polygon.len
+        step = arc.delta / steps.float32
+      var prev = at
+      for i in 1 .. steps:
+        let
+          aPrev = arc.theta + step * (i - 1).float32
+          a = arc.theta + step * i.float32
+          next = arc.compute(a)
+          halfway = arc.compute(aPrev + (a - aPrev) / 2)
+          midpoint = (prev + next) / 2
+          error = (midpoint - halfway).length
+        if error >= 0.25:
+          # Error too large, try again with doubled precision
+          polygon.setLen(initialShapeLen)
+          discretize(arc, steps * 2)
+          return
+        drawLine(prev, next)
+        prev = next
+
+    let arc = endpointToCenterArcParams(at, radii, rotation, large, sweep, to)
+    discretize(arc, 4)
+
   for command in commands:
     case command.kind
       of Move:
@@ -403,25 +435,13 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
 
       of Arc:
         let
-          arc = endpointToCenterArcParams(
-            at,
-            vec2(command.numbers[0], command.numbers[1]),
-            command.numbers[2],
-            command.numbers[3] == 1,
-            command.numbers[4] == 1,
-            vec2(command.numbers[5], command.numbers[6]),
-          )
-          steps = int(abs(arc.delta) / PI * 180 / 5)
-          step = arc.delta / steps.float32
-        var a = arc.theta
-        for i in 0 .. steps:
-          polygon.add(
-            arc.rotMat * vec2(
-              cos(a) * arc.radii.x, sin(a) * arc.radii.y
-            ) + arc.center
-          )
-          a += step
-        at = polygon[^1]
+          radii = vec2(command.numbers[0], command.numbers[1])
+          rotation = command.numbers[2]
+          large = command.numbers[3] == 1
+          sweep = command.numbers[4] == 1
+          to = vec2(command.numbers[5], command.numbers[6])
+        drawArc(at, radii, rotation, large, sweep, to)
+        at = to
 
       of Close:
         assert command.numbers.len == 0
