@@ -875,56 +875,52 @@ proc arc*(path: Path) =
 proc arcTo*(path: Path, x1, y1, x2, y2, r: float32) =
   ## Adds a circular arc to the path with the given control points and radius, connected to the previous point by a straight line.
 
-  var
-    x0 = path.at.x
-    y0 = path.at.y
-    x21 = x2 - x1
-    y21 = y2 - y1
-    x01 = x0 - x1
-    y01 = y0 - y1
-    l01_2 = x01 * x01 + y01 * y01
+  const epsilon = 1e-6.float32
 
-  const epsilon: float32 = 1e-6
+  if path.commands.len == 0:
+    # Is this path empty? Move to (x1,y1).
+    path.moveTo(x1, y1)
 
   var r = r
   if r < 0:
     # Is the radius negative? Flip it.
     r = -r
 
-  if path.commands.len == 0:
-    # Is this path empty? Move to (x1,y1).
-    path.commands.add(PathCommand(kind: Move, numbers: @[x1,y1]))
+  var
+    x21 = x2 - x1
+    y21 = y2 - y1
+    x01 = path.at.x - x1
+    y01 = path.at.y - y1
+    l01_2 = x01 * x01 + y01 * y01
 
-  elif not (l01_2 > epsilon):
-    # Or, is (x1,y1) coincident with (x0,y0)? Do nothing.
+  if not (l01_2 > epsilon):
+    # Is (x1,y1) coincident with (x0,y0)? Do nothing.
     discard
 
   elif not (abs(y01 * x21 - y21 * x01) > epsilon) or r == 0:
-    # // Or, are (x0,y0), (x1,y1) and (x2,y2) collinear?
+    # // Or, are (x0,y0), (x1,y1) and (x2,y2) colinear?
     # // Equivalently, is (x1,y1) coincident with (x2,y2)?
     # // Or, is the radius zero? Line to (x1,y1).
 
-    path.commands.add(PathCommand(kind: Line, numbers: @[x1, y1]))
-    path.at.x = x1
-    path.at.y = y1
+    path.lineTo(x1, y1)
 
   else:
-    # Otherwise, draw an arc!
+    # Draw an arc
     var
-      x20 = x2 - x0
-      y20 = y2 - y0
+      x20 = x2 - path.at.x
+      y20 = y2 - path.at.y
       l21_2 = x21 * x21 + y21 * y21
       l20_2 = x20 * x20 + y20 * y20
       l21 = sqrt(l21_2)
       l01 = sqrt(l01_2)
-      l:float32 = r * tan((PI - arccos((l21_2 + l01_2 - l20_2) / (2 * l21 * l01))) / 2)
+      l = r * tan((PI - arccos((l21_2 + l01_2 - l20_2) / (2 * l21 * l01))) / 2).float32
       t01 = l / l01
       t21 = l / l21
 
-    # If the start tangent is not coincident with (x0,y0), line to.
+    # If the start tangent is not coincident with path.at, line to.
     if abs(t01 - 1) > epsilon:
-      path.commands.add(PathCommand(kind: Line, numbers: @[x1 + t01 * x01, y1 + t01 * y01]))
-      discard
+      path.lineTo(x1 + t01 * x01, y1 + t01 * y01)
+
     path.at.x = x1 + t21 * x21
     path.at.y = y1 + t21 * y21
     path.commands.add(PathCommand(
