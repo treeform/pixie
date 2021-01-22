@@ -346,29 +346,28 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
       result = vec2(cos(a) * arc.radii.x, sin(a) * arc.radii.y)
       result = arc.rotMat * result + arc.center
 
-    proc discretize(arc: ArcParams, steps: int) =
+    var prev = at
+
+    proc discretize(arc: ArcParams, i, steps: int) =
       let
-        initialShapeLen = polygon.len
         step = arc.delta / steps.float32
-      var prev = at
-      for i in 1 .. steps:
-        let
-          aPrev = arc.theta + step * (i - 1).float32
-          a = arc.theta + step * i.float32
-          next = arc.compute(a)
-          halfway = arc.compute(aPrev + (a - aPrev) / 2)
-          midpoint = (prev + next) / 2
-          error = (midpoint - halfway).length
-        if error >= 0.25:
-          # Error too large, try again with doubled precision
-          polygon.setLen(initialShapeLen)
-          discretize(arc, steps * 2)
-          return
+        aPrev = arc.theta + step * (i - 1).float32
+        a = arc.theta + step * i.float32
+        next = arc.compute(a)
+        halfway = arc.compute(aPrev + (a - aPrev) / 2)
+        midpoint = (prev + next) / 2
+        error = (midpoint - halfway).length
+
+      if error >= 0.25:
+        # Error too large, try again with doubled precision
+        discretize(arc, i * 2 - 1, steps * 2)
+        discretize(arc, i * 2, steps * 2)
+      else:
         drawLine(prev, next)
         prev = next
 
     let arc = endpointToCenterArcParams(at, radii, rotation, large, sweep, to)
-    discretize(arc, 4)
+    discretize(arc, 1, 1)
 
   for command in commands:
     case command.kind
