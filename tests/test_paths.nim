@@ -37,10 +37,10 @@ block:
   let path = parsePath(pathStr)
   doAssert $path == "M1 2 L3 4 H5 V6 C0 0 0 0 0 0 Q1 1 1 1 T2 2 A7 7 7 7 7 7 7 Z"
 
-
 block:
-  let pathStr = "M 0.1E-10 0.1e10 L2+2 L3-3 L0.1E+10-1"
-  let path = parsePath(pathStr)
+  let
+    pathStr = "M 0.1E-10 0.1e10 L2+2 L3-3 L0.1E+10-1"
+    path = parsePath(pathStr)
 
 block:
   let image = newImage(100, 100)
@@ -71,6 +71,14 @@ block:
   let color = rgba(0, 0, 0, 255)
   image.fillPath(pathStr, color)
   image.writeFile("tests/images/paths/pathBlackRectangle.png")
+
+block:
+  let
+    image = newImage(100, 100)
+    pathStr = "M 10 10 H 90 V 90 H 10 Z"
+    color = rgba(0, 0, 0, 255)
+  image.fillPath(parsePath(pathStr), color)
+  image.writeFile("tests/images/paths/pathBlackRectangleZ.png")
 
 block:
   let image = newImage(100, 100)

@@ -191,93 +191,77 @@ proc `$`*(path: Path): string =
 ## See https://www.w3.org/TR/SVG/implnote.html#ArcImplementationNotes
 
 type ArcParams = object
-  s: float32
-  rx, ry: float32
-  rotation: float32
-  cx, cy: float32
+  radii: Vec2
+  rotMat: Mat3
+  center: Vec2
   theta, delta: float32
 
-proc svgAngle (ux, uy, vx, vy: float32): float32 =
-  var u = vec2(ux, uy)
-  var v = vec2(vx, vy)
-  # (F.6.5.4)
-  var dot = dot(u,v)
-  var len = length(u) * length(v)
-  var ang = arccos( clamp(dot / len,-1,1) ) # floating point precision, slightly over values appear
-  if (u.x*v.y - u.y*v.x) < 0:
-      ang = -ang
-  return ang
-
 proc endpointToCenterArcParams(
-  ax, ay, rx, ry, rotation, large, sweep, bx, by: float32
+  at, radii: Vec2, rotation: float32, large, sweep: bool, to: Vec2
 ): ArcParams =
+  var
+    radii = vec2(abs(radii.x), abs(radii.y))
+    radiiSq = vec2(radii.x * radii.x, radii.y * radii.y)
 
-  var r = vec2(rx, ry)
-  var p1 = vec2(ax, ay)
-  var p2 = vec2(bx, by)
-  var xAngle = rotation/180*PI
-  var flagA = large == 1.0
-  var flagS = sweep == 1.0
-  var rX = abs(r.x)
-  var rY = abs(r.y)
+  let
+    radians = rotation / 180 * PI
+    d = vec2((at.x - to.x) / 2.0, (at.y - to.y) / 2.0)
+    p = vec2(
+      cos(radians) * d.x + sin(radians) * d.y,
+      -sin(radians) * d.x + cos(radians) * d.y
+    )
+    pSq = vec2(p.x * p.x, p.y * p.y)
 
-  # (F.6.5.1)
-  var dx2 = (p1.x - p2.x) / 2.0
-  var dy2 = (p1.y - p2.y) / 2.0
-  var x1p = cos(xAngle)*dx2 + sin(xAngle)*dy2
-  var y1p = -sin(xAngle)*dx2 + cos(xAngle)*dy2
-
-  # (F.6.5.2)
-  var rxs = rX * rX
-  var rys = rY * rY
-  var x1ps = x1p * x1p
-  var y1ps = y1p * y1p
-  #  check if the radius is too small `pq < 0`, when `dq > rxs * rys` (see below)
-  #  cr is the ratio (dq : rxs * rys)
-  var cr = x1ps/rxs + y1ps/rys
-  var s = 1.0
+  let cr = pSq.x / radiiSq.x + pSq.y / radiiSq.y
   if cr > 1:
-      # scale up rX,rY equally so cr == 1
-      s = sqrt(cr)
-      rX = s * rX
-      rY = s * rY
-      rxs = rX * rX
-      rys = rY * rY
+    radii *= sqrt(cr)
+    radiiSq = vec2(radii.x * radii.x, radii.y * radii.y)
 
-  var dq = (rxs * y1ps + rys * x1ps)
-  var pq = (rxs*rys - dq) / dq
-  var q = sqrt(max(0,pq)) # use Max to account for float precision
-  if flagA == flagS:
+  let
+    dq = radiiSq.x * pSq.y + radiiSq.y * pSq.x
+    pq = (radiiSq.x * radiiSq.y - dq) / dq
+
+  var q = sqrt(max(0, pq))
+  if large == sweep:
       q = -q
-  var cxp = q * rX * y1p / rY
-  var cyp = - q * rY * x1p / rX
 
-  # (F.6.5.3)
-  var cx = cos(xAngle)*cxp - sin(xAngle)*cyp + (p1.x + p2.x)/2
-  var cy = sin(xAngle)*cxp + cos(xAngle)*cyp + (p1.y + p2.y)/2
+  proc svgAngle(u, v: Vec2): float32 =
+    let
+      dot = dot(u,v)
+      len = length(u) * length(v)
+    result = arccos(clamp(dot / len, -1, 1))
+    if (u.x * v.y - u.y * v.x) < 0:
+        result = -result
 
-  # (F.6.5.5)
-  var theta = svgAngle( 1,0, (x1p-cxp) / rX, (y1p - cyp)/rY )
-  # (F.6.5.6)
+  let
+    cp = vec2(q * radii.x * p.y / radii.y, -q * radii.y * p.x / radii.x)
+    center = vec2(
+      cos(radians) * cp.x - sin(radians) * cp.y + (at.x + to.x) / 2,
+      sin(radians) * cp.x + cos(radians) * cp.y + (at.y + to.y) / 2
+    )
+    theta = svgAngle(vec2(1, 0), vec2((p.x-cp.x) / radii.x, (p.y - cp.y) / radii.y))
+
   var delta = svgAngle(
-      (x1p - cxp)/rX, (y1p - cyp)/rY,
-      (-x1p - cxp)/rX, (-y1p-cyp)/rY)
+      vec2((p.x - cp.x) / radii.x, (p.y - cp.y) / radii.y),
+      vec2((-p.x - cp.x) / radii.x, (-p.y - cp.y) / radii.y)
+    )
   delta = delta mod (PI * 2)
 
-  if not flagS:
+  if not sweep:
     delta -= 2 * PI
 
-  # normalize the delta
-  while delta > PI*2:
-    delta -= PI*2
-  while delta < -PI*2:
-    delta += PI*2
+  # Normalize the delta
+  while delta > PI * 2:
+    delta -= PI * 2
+  while delta < -PI * 2:
+    delta += PI * 2
 
-  r = vec2(rX, rY)
-
-  return ArcParams(
-    s: s, rx: rX, rY: ry, rotation: xAngle, cx: cx, cy: cy,
-    theta: theta, delta: delta
+  ArcParams(
+    radii: radii,
+    rotMat: rotationMat3(-radians),
+    center: center,
+    theta: theta,
+    delta: delta
   )
 
 proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
@@ -325,25 +309,34 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
 
     discretize(1, 1)
 
-  proc drawQuad(p0, p1, p2: Vec2) =
-    let devx = p0.x - 2.0 * p1.x + p2.x
-    let devy = p0.y - 2.0 * p1.y + p2.y
-    let devsq = devx * devx + devy * devy
-    if devsq < 0.333:
-      drawLine(p0, p2)
-      return
-    let tol = 3.0
-    let n = 1 + (tol * (devsq)).sqrt().sqrt().floor()
-    var p = p0
-    let nrecip = 1 / n
-    var t = 0.0
-    for i in 0 ..< int(n):
-      t += nrecip
-      let pn = lerp(lerp(p0, p1, t), lerp(p1, p2, t), t)
-      drawLine(p, pn)
-      p = pn
+  proc drawQuad(at, ctrl, to: Vec2) =
 
-    drawLine(p, p2)
+    proc compute(at, ctrl, to: Vec2, t: float32): Vec2 {.inline.} =
+      pow(1 - t, 2) * at +
+      2 * (1 - t) * t * ctrl +
+      pow(t, 2) * to
+
+    var prev = at
+
+    proc discretize(i, steps: int) =
+      # Closure captures at, ctrl, to and prev
+      let
+        tPrev = (i - 1).float32 / steps.float32
+        t = i.float32 / steps.float32
+        next = compute(at, ctrl, to, t)
+        halfway = compute(at, ctrl, to, tPrev + (t - tPrev) / 2)
+        midpoint = (prev + next) / 2
+        error = (midpoint - halfway).length
+
+      if error >= 0.25:
+        # Error too large, double precision for this step
+        discretize(i * 2 - 1, steps * 2)
+        discretize(i * 2, steps * 2)
+      else:
+        drawLine(prev, next)
+        prev = next
+
+    discretize(1, 1)
 
   for command in commands:
     case command.kind
@@ -409,25 +402,23 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
         at = to
 
       of Arc:
-        var arc = endpointToCenterArcParams(
-          at.x,
-          at.y,
-          command.numbers[0],
-          command.numbers[1],
-          command.numbers[2],
-          command.numbers[3],
-          command.numbers[4],
-          command.numbers[5],
-          command.numbers[6],
-        )
-        let steps = int(abs(arc.delta)/PI*180/5)
-        let step = arc.delta / steps.float32
+        let
+          arc = endpointToCenterArcParams(
+            at,
+            vec2(command.numbers[0], command.numbers[1]),
+            command.numbers[2],
+            command.numbers[3] == 1,
+            command.numbers[4] == 1,
+            vec2(command.numbers[5], command.numbers[6]),
+          )
+          steps = int(abs(arc.delta) / PI * 180 / 5)
+          step = arc.delta / steps.float32
         var a = arc.theta
-        var rotMat = rotationMat3(-arc.rotation)
         for i in 0 .. steps:
-          polygon.add(rotMat * vec2(
-            cos(a)*arc.rx,
-            sin(a)*arc.ry) + vec2(arc.cx, arc.cy)
+          polygon.add(
+            arc.rotMat * vec2(
+              cos(a) * arc.radii.x, sin(a) * arc.radii.y
+            ) + arc.center
           )
           a += step
         at = polygon[^1]
@@ -436,7 +427,7 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
         assert command.numbers.len == 0
         if at != start:
           if prevCommand == Quad or prevCommand == TQuad:
-              drawQuad(at, ctr, start)
+            drawQuad(at, ctr, start)
           else:
             drawLine(at, start)
         if polygon.len > 0:
