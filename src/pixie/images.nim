@@ -211,7 +211,7 @@ proc toAlphy*(image: Image) =
 
     for j in countup(i, image.data.len - 4, 4):
       var
-        color = mm_load_si128(image.data[j].addr)
+        color = mm_loadu_si128(image.data[j].addr)
         alpha = mm_and_si128(color, alphaMask)
       alpha = mm_or_si128(alpha, mm_srli_epi32(alpha, 16))
 
@@ -230,7 +230,7 @@ proc toAlphy*(image: Image) =
         mm_and_si128(alpha, alphaMask), mm_and_si128(color, alphaMaskComp)
       )
 
-      mm_store_si128(image.data[j].addr, color)
+      mm_storeu_si128(image.data[j].addr, color)
       i += 4
   # Convert whatever is left
   for j in i ..< image.data.len:
