@@ -261,37 +261,61 @@ proc blendExcludeMaskFloats*(backdrop, source: Color): Color {.inline.} =
 proc blendOverwriteFloats*(backdrop, source: Color): Color {.inline.} =
   source
 
-proc alphaFix(backdrop, source: ColorRGBA, vb, vs, vm: M128): ColorRGBA =
-  let
-    sa = source.a.float32
-    ba = backdrop.a.float32
-    a = sa + ba * (255 - sa) / 255
-  if a == 0:
-    return
+when defined(amd64):
+  proc alphaFix(backdrop, source: ColorRGBA, vb, vs, vm: M128): ColorRGBA =
+    let
+      sa = source.a.float32
+      ba = backdrop.a.float32
+      a = sa + ba * (255 - sa) / 255
+    if a == 0:
+      return
 
-  let
-    t0 = mm_set1_ps(sa * (255 - ba))
-    t1 = mm_set1_ps(sa * ba)
-    t2 = mm_set1_ps((255 - sa) * ba)
-    va = mm_set1_ps(a)
-    v255 = mm_set1_ps(255)
-    values = cast[array[4, uint32]](
-      mm_cvtps_epi32((t0 * vs + t1 * vm + t2 * vb) / va / v255)
-    )
+    let
+      t0 = mm_set1_ps(sa * (255 - ba))
+      t1 = mm_set1_ps(sa * ba)
+      t2 = mm_set1_ps((255 - sa) * ba)
+      va = mm_set1_ps(a)
+      v255 = mm_set1_ps(255)
+      values = cast[array[4, uint32]](
+        mm_cvtps_epi32((t0 * vs + t1 * vm + t2 * vb) / va / v255)
+      )
 
-  result.r = values[0].uint8
-  result.g = values[1].uint8
-  result.b = values[2].uint8
-  result.a = a.uint8
+    result.r = values[0].uint8
+    result.g = values[1].uint8
+    result.b = values[2].uint8
+    result.a = a.uint8
 
 proc alphaFix(backdrop, source, mixed: ColorRGBA): ColorRGBA {.inline.} =
   if backdrop.a == 0 and source.a == 0:
     return
-  let
-    vb = mm_setr_ps(backdrop.r.float32, backdrop.g.float32, backdrop.b.float32, 0)
-    vs = mm_setr_ps(source.r.float32, source.g.float32, source.b.float32, 0)
-    vm = mm_setr_ps(mixed.r.float32, mixed.g.float32, mixed.b.float32, 0)
-  alphaFix(backdrop, source, vb, vs, vm)
+
+  when defined(amd64):
+    let
+      vb = mm_setr_ps(backdrop.r.float32, backdrop.g.float32, backdrop.b.float32, 0)
+      vs = mm_setr_ps(source.r.float32, source.g.float32, source.b.float32, 0)
+      vm = mm_setr_ps(mixed.r.float32, mixed.g.float32, mixed.b.float32, 0)
+    alphaFix(backdrop, source, vb, vs, vm)
+  else:
+    let
+      sa = source.a.int32
+      ba = backdrop.a.int32
+      t0 = sa * (255 - ba)
+      t1 = sa * ba
+      t2 = (255 - sa) * ba
+
+    let
+      r = t0 * source.r.int32 + t1 * mixed.r.int32 + t2 * backdrop.r.int32
+      g = t0 * source.g.int32 + t1 * mixed.g.int32 + t2 * backdrop.g.int32
+      b = t0 * source.b.int32 + t1 * mixed.b.int32 + t2 * backdrop.b.int32
+      a = sa + ba * (255 - sa) div 255
+
+    if a == 0:
+      return
+
+    result.r = (r div a div 255).uint8
+    result.g = (g div a div 255).uint8
+    result.b = (b div a div 255).uint8
+    result.a = a.uint8
 
 proc min(a, b: uint32): uint32 {.inline.} =
   if a < b: a else: b
@@ -391,19 +415,22 @@ proc blendSoftLight(backdrop, source: ColorRGBA): ColorRGBA =
   #     (2 * source * backdrop) div 255
   #   ).uint8
 
-  let
-    vb = mm_setr_ps(backdrop.r.float32, backdrop.g.float32, backdrop.b.float32, 0)
-    vs = mm_setr_ps(source.r.float32, source.g.float32, source.b.float32, 0)
-    v2 = mm_set1_ps(2)
-    v255 = mm_set1_ps(255)
-    v255sq = mm_set1_ps(255 * 255)
-    vm = ((v255 - v2 * vs) * vb * vb) / v255sq + (v2 * vs * vb) / v255
-    values = cast[array[4, uint32]](mm_cvtps_epi32(vm))
+  when defined(amd64):
+    let
+      vb = mm_setr_ps(backdrop.r.float32, backdrop.g.float32, backdrop.b.float32, 0)
+      vs = mm_setr_ps(source.r.float32, source.g.float32, source.b.float32, 0)
+      v2 = mm_set1_ps(2)
+      v255 = mm_set1_ps(255)
+      v255sq = mm_set1_ps(255 * 255)
+      vm = ((v255 - v2 * vs) * vb * vb) / v255sq + (v2 * vs * vb) / v255
+      values = cast[array[4, uint32]](mm_cvtps_epi32(vm))
 
-  result.r = values[0].uint8
-  result.g = values[1].uint8
-  result.b = values[2].uint8
-  result = alphaFix(backdrop, source, vb, vs, vm)
+    result.r = values[0].uint8
+    result.g = values[1].uint8
+    result.b = values[2].uint8
+    result = alphaFix(backdrop, source, vb, vs, vm)
+  else:
+    blendSoftLightFloats(backdrop.color, source.color).rgba
 
 proc blendDifference(backdrop, source: ColorRGBA): ColorRGBA =
   result.r = max(backdrop.r, source.r) - min(backdrop.r, source.r)
