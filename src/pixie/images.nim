@@ -121,9 +121,15 @@ proc subImage*(image: Image, x, y, w, h: int): Image =
   ## Gets a sub image from this image.
 
   if x < 0 or x + w > image.width:
-    raise newException(PixieError, "Param x value " & $x & " is out of bounds")
+    raise newException(
+      PixieError,
+      "Params x: " & $x & " w: " & $w & " invalid, image width is " & $image.width
+    )
   if y < 0 or y + h > image.height:
-    raise newException(PixieError, "Param y value " & $y & " is out of bounds")
+    raise newException(
+      PixieError,
+      "Params y: " & $y & " h: " & $h & " invalid, image height is " & $image.height
+    )
 
   result = newImage(w, h)
   for y2 in 0 ..< h:
