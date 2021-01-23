@@ -95,35 +95,36 @@ proc fill*(image: Image, rgba: ColorRgba) {.inline.} =
   ## Fills the image with a solid color.
   fillUnsafe(image.data, rgba, 0, image.data.len)
 
-when defined(release):
-  {.pop.}
+proc flipHorizontal*(image: Image) =
+  ## Flips the image around the Y axis.
+  let w = image.width div 2
+  for y in 0 ..< image.height:
+    for x in 0 ..< w:
+      let
+        rgba1 = image.getRgbaUnsafe(x, y)
+        rgba2 = image.getRgbaUnsafe(image.width - x - 1, y)
+      image.setRgbaUnsafe(image.width - x - 1, y, rgba1)
+      image.setRgbaUnsafe(x, y, rgba2)
 
-proc draw*(a, b: Image, mat: Mat3, blendMode = bmNormal)
-proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.}
-
-proc invert*(image: Image) =
-  ## Inverts all of the colors and alpha.
-  var i: int
-  when defined(amd64):
-    let vec255 = mm_set1_epi8(255)
-    while i < image.data.len - 4:
-      var m = mm_loadu_si128(image.data[i].addr)
-      m = mm_sub_epi8(vec255, m)
-      mm_storeu_si128(image.data[i].addr, m)
-      i += 4
-  for j in i ..< image.data.len:
-    var rgba = image.data[j]
-    rgba.r = 255 - rgba.r
-    rgba.g = 255 - rgba.g
-    rgba.b = 255 - rgba.b
-    rgba.a = 255 - rgba.a
-    image.data[j] = rgba
+proc flipVertical*(image: Image) =
+  ## Flips the image around the X axis.
+  let h = image.height div 2
+  for y in 0 ..< h:
+    for x in 0 ..< image.width:
+      let
+        rgba1 = image.getRgbaUnsafe(x, y)
+        rgba2 = image.getRgbaUnsafe(x, image.height - y - 1)
+      image.setRgbaUnsafe(x, image.height - y - 1, rgba1)
+      image.setRgbaUnsafe(x, y, rgba2)
 
 proc subImage*(image: Image, x, y, w, h: int): Image =
-  ## Gets a sub image of the main image.
-  ## TODO handle images out of bounds faster
-  # doAssert x >= 0 and y >= 0
-  # doAssert x + w <= image.width and y + h <= image.height
+  ## Gets a sub image from this image.
+
+  if x < 0 or x + w > image.width:
+    raise newException(PixieError, "Param x value " & $x & " is out of bounds")
+  if y < 0 or y + h > image.height:
+    raise newException(PixieError, "Param y value " & $y & " is out of bounds")
+
   result = newImage(w, h)
   for y2 in 0 ..< h:
     for x2 in 0 ..< w:
@@ -159,49 +160,29 @@ proc magnifyBy2*(image: Image, scale2x: int): Image =
 proc magnifyBy2*(image: Image): Image =
   image.magnifyBy2(2)
 
-proc flipHorizontal*(image: Image) =
-  ## Flips the image around the Y axis.
-  let w = image.width div 2
-  for y in 0 ..< image.height:
-    for x in 0 ..< w:
-      let
-        rgba1 = image.getRgbaUnsafe(x, y)
-        rgba2 = image.getRgbaUnsafe(image.width - x - 1, y)
-      image.setRgbaUnsafe(image.width - x - 1, y, rgba1)
-      image.setRgbaUnsafe(x, y, rgba2)
+when defined(release):
+  {.pop.}
 
-proc flipVertical*(image: Image) =
-  ## Flips the image around the X axis.
-  let h = image.height div 2
-  for y in 0 ..< h:
-    for x in 0 ..< image.width:
-      let
-        rgba1 = image.getRgbaUnsafe(x, y)
-        rgba2 = image.getRgbaUnsafe(x, image.height - y - 1)
-      image.setRgbaUnsafe(x, image.height - y - 1, rgba1)
-      image.setRgbaUnsafe(x, y, rgba2)
+proc draw*(a, b: Image, mat: Mat3, blendMode = bmNormal)
+proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.}
 
-func lerp(a, b: Color, v: float32): Color {.inline.} =
-  result.r = lerp(a.r, b.r, v)
-  result.g = lerp(a.g, b.g, v)
-  result.b = lerp(a.b, b.b, v)
-  result.a = lerp(a.a, b.a, v)
-
-proc toAlphy*(c: Color): Color =
-  ## Converts a color to premultiplied alpha from straight.
-  result.r = c.r * c.a
-  result.g = c.g * c.a
-  result.b = c.b * c.a
-  result.a = c.a
-
-proc fromAlphy*(c: Color): Color =
-  ## Converts a color to from premultiplied alpha to straight.
-  if c.a == 0:
-    return
-  result.r = c.r / c.a
-  result.g = c.g / c.a
-  result.b = c.b / c.a
-  result.a = c.a
+proc invert*(image: Image) =
+  ## Inverts all of the colors and alpha.
+  var i: int
+  when defined(amd64):
+    let vec255 = mm_set1_epi8(255)
+    while i < image.data.len - 4:
+      var m = mm_loadu_si128(image.data[i].addr)
+      m = mm_sub_epi8(vec255, m)
+      mm_storeu_si128(image.data[i].addr, m)
+      i += 4
+  for j in i ..< image.data.len:
+    var rgba = image.data[j]
+    rgba.r = 255 - rgba.r
+    rgba.g = 255 - rgba.g
+    rgba.b = 255 - rgba.b
+    rgba.a = 255 - rgba.a
+    image.data[j] = rgba
 
 proc toAlphy*(image: Image) =
   ## Converts an image to premultiplied alpha from straight.
