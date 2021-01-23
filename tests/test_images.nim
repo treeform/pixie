@@ -1,4 +1,4 @@
-import pixie, chroma, strutils, os
+import pixie, chroma, strutils, os, vmath
 
 proc writeAndCheck(image: Image, fileName: string) =
   image.writeFile(fileName)
@@ -106,3 +106,19 @@ block:
 
 #   var c = a.draw(b, translate(vec2(25, 25)) * rotationMat3(PI/2))
 #   c.writeAndCheck("tests/images/drawOverwriteRot.png")
+
+block:
+  let
+    a = newImage(101, 101)
+    b = newImage(50, 50)
+
+  a.fill(rgba(255, 0, 0, 255))
+  b.fill(rgba(0, 255, 0, 255))
+
+  a.draw(b, vec2(0, 0))
+
+  a.writeFile("tests/images/flipped1.png")
+  a.flipVertical()
+  a.writeFile("tests/images/flipped2.png")
+  a.flipHorizontal()
+  a.writeFile("tests/images/flipped3.png")
