@@ -4,15 +4,15 @@ const h = 0.5.float32
 
 type
   Image* = ref object
-    ## Main image object that holds the bitmap data in RGBA format.
+    ## Image object that holds bitmap data in RGBA format.
     width*, height*: int
     data*: seq[ColorRGBA]
 
-proc draw*(a, b: Image, mat: Mat3, blendMode = bmNormal)
-proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.}
+when defined(release):
+  {.push checks: off.}
 
 proc newImage*(width, height: int): Image =
-  ## Creates a new image with appropriate dimensions.
+  ## Creates a new image with the parameter dimensions.
   result = Image()
   result.width = width
   result.height = height
@@ -23,23 +23,20 @@ proc wh*(image: Image): Vec2 {.inline.} =
   vec2(image.width.float32, image.height.float32)
 
 proc copy*(image: Image): Image =
-  ## Copies an image creating a new image.
+  ## Copies the image data into a new image.
   result = newImage(image.width, image.height)
   result.data = image.data
 
 proc `$`*(image: Image): string =
-  ## Display the image size and channels.
+  ## Prints the image size.
   "<Image " & $image.width & "x" & $image.height & ">"
 
 proc inside*(image: Image, x, y: int): bool {.inline.} =
   ## Returns true if (x, y) is inside the image.
   x >= 0 and x < image.width and y >= 0 and y < image.height
 
-proc inside1px*(image: Image, x, y: float): bool {.inline.} =
-  ## Returns true if (x, y) is inside the image.
-  const px = 1
-  x >= -px and x < (image.width.float32 + px) and
-  y >= -px and y < (image.height.float32 + px)
+proc dataIndex*(image: Image, x, y: int): int {.inline.} =
+  image.width * y + x
 
 proc getRgbaUnsafe*(image: Image, x, y: int): ColorRGBA {.inline.} =
   ## Gets a color from (x, y) coordinates.
@@ -47,11 +44,6 @@ proc getRgbaUnsafe*(image: Image, x, y: int): ColorRGBA {.inline.} =
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will case unsafe memory reads.
   result = image.data[image.width * y + x]
-
-proc getAddr*(image: Image, x, y: int): pointer {.inline.} =
-  ## Gets a address of the color from (x, y) coordinates.
-  ## Unsafe make sure x, y are in bounds.
-  image.data[image.width * y + x].addr
 
 proc `[]`*(image: Image, x, y: int): ColorRGBA {.inline.} =
   ## Gets a pixel at (x, y) or returns transparent black if outside of bounds.
@@ -63,39 +55,51 @@ proc setRgbaUnsafe*(image: Image, x, y: int, rgba: ColorRGBA) {.inline.} =
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will case unsafe memory writes.
-  image.data[image.width * y + x] = rgba
+  image.data[image.dataIndex(x, y)] = rgba
 
 proc `[]=`*(image: Image, x, y: int, rgba: ColorRGBA) {.inline.} =
   ## Sets a pixel at (x, y) or does nothing if outside of bounds.
   if image.inside(x, y):
     image.setRgbaUnsafe(x, y, rgba)
 
-proc fill*(image: Image, rgba: ColorRgba) =
-  ## Fills the image with a solid color.
+proc fillUnsafe(data: var seq[ColorRGBA], rgba: ColorRGBA, start, len: int) =
+  ## Fills the image data with a solid color starting at index start and
+  ## continuing for len indices.
 
-  # Use memset whene very byte has the same value
+  # Use memset when every byte has the same value
   if rgba.r == rgba.g and rgba.r == rgba.b and rgba.r == rgba.a:
-    nimSetMem(image.data[0].addr, rgba.r.cint, image.data.len * 4)
+    nimSetMem(data[start].addr, rgba.r.cint, len * 4)
   else:
-    var i: int
+    var i = start
     when defined(amd64):
-      # When supported, SIMD fill until we run out of room.
+      # When supported, SIMD fill until we run out of room
       let m = mm_set1_epi32(cast[int32](rgba))
-      while i < image.data.len - 4:
-        mm_storeu_si128(image.data[i].addr, m)
-        i += 4
+      for j in countup(i, start + len - 8, 8):
+        mm_storeu_si128(data[j].addr, m)
+        mm_storeu_si128(data[j + 4].addr, m)
+        i += 8
     else:
       when sizeof(int) == 8:
         # Fill 8 bytes at a time when possible
         let
           u32 = cast[uint32](rgba)
           u64 = cast[uint64]([u32, u32])
-        while i < image.data.len - 2:
-          cast[ptr uint64](image.data[i].addr)[] = u64
+        for j in countup(i, start + len - 2, 2):
+          cast[ptr uint64](image.data[j].addr)[] = u64
           i += 2
     # Fill whatever is left the slow way
-    for j in i ..< image.data.len:
-      image.data[j] = rgba
+    for j in i ..< start + len:
+      data[j] = rgba
+
+proc fill*(image: Image, rgba: ColorRgba) {.inline.} =
+  ## Fills the image with a solid color.
+  fillUnsafe(image.data, rgba, 0, image.data.len)
+
+when defined(release):
+  {.pop.}
+
+proc draw*(a, b: Image, mat: Mat3, blendMode = bmNormal)
+proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.}
 
 proc invert*(image: Image) =
   ## Inverts all of the colors and alpha.
@@ -493,7 +497,7 @@ proc drawUber(
 
     if blendMode == bmIntersectMask:
       if xMin > 0:
-        zeroMem(a.getAddr(0, y), 4 * xMin)
+        zeroMem(a.data[a.dataIndex(0, y)].addr, 4 * xMin)
 
     for x in xMin ..< xMax:
       let
@@ -510,7 +514,7 @@ proc drawUber(
 
     if blendMode == bmIntersectMask:
       if a.width - xMax > 0:
-        zeroMem(a.getAddr(xMax, y), 4 * (a.width - xMax))
+        zeroMem(a.data[a.dataIndex(xMax, y)].addr, 4 * (a.width - xMax))
 
 proc draw*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
   ## Draws one image onto another using matrix with color blending.
