@@ -82,7 +82,7 @@ proc fill*(image: Image, rgba: ColorRgba) =
       # When supported, SIMD fill until we run out of room.
       let m = mm_set1_epi32(cast[int32](rgba))
       while i < image.data.len - 4:
-        mm_store_si128(image.data[i].addr, m)
+        mm_storeu_si128(image.data[i].addr, m)
         i += 4
     else:
       when sizeof(int) == 8:
@@ -99,13 +99,14 @@ proc fill*(image: Image, rgba: ColorRgba) =
 
 proc invert*(image: Image) =
   ## Inverts all of the colors and alpha.
-  let vec255 = mm_set1_epi8(255)
   var i: int
-  while i < image.data.len - 4:
-    var m = mm_loadu_si128(image.data[i].addr)
-    m = mm_sub_epi8(vec255, m)
-    mm_store_si128(image.data[i].addr, m)
-    i += 4
+  when defined(amd64):
+    let vec255 = mm_set1_epi8(255)
+    while i < image.data.len - 4:
+      var m = mm_loadu_si128(image.data[i].addr)
+      m = mm_sub_epi8(vec255, m)
+      mm_storeu_si128(image.data[i].addr, m)
+      i += 4
   for j in i ..< image.data.len:
     var rgba = image.data[j]
     rgba.r = 255 - rgba.r
