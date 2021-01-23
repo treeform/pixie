@@ -1,24 +1,12 @@
-import pixie/images, pixie/masks, pixie/paths, pixie/common, pixie/blends,
+import pixie/images, pixie/paths, pixie/common, pixie/blends,
   pixie/fileformats/bmp, pixie/fileformats/png, pixie/fileformats/jpg,
   pixie/fileformats/svg, flatty/binny, os
 
-export images, masks, paths, common, blends
+export images, paths, common, blends
 
 type
   FileFormat* = enum
     ffPng, ffBmp, ffJpg
-
-proc toMask*(image: Image): Mask =
-  ## Converts an Image to a Mask.
-  result = newMask(image.width, image.height)
-  for i in 0 ..< image.data.len:
-    result.data[i] = image.data[i].a
-
-proc toImage*(mask: Mask): Image =
-  ## Converts a Mask to Image.
-  result = newImage(mask.width, mask.height)
-  for i in 0 ..< mask.data.len:
-    result.data[i].a = mask.data[i]
 
 proc decodeImage*(data: string | seq[uint8]): Image =
   ## Loads an image from a memory.
