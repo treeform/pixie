@@ -127,8 +127,11 @@ proc subImage*(image: Image, x, y, w, h: int): Image =
 
   result = newImage(w, h)
   for y2 in 0 ..< h:
-    for x2 in 0 ..< w:
-      result.setRgbaUnsafe(x2, y2, image[x2 + x, y2 + y])
+    copyMem(
+      result.data[result.dataIndex(0, y2)].addr,
+      image.data[image.dataIndex(x, y + y2)].addr,
+      w * 4
+    )
 
 proc minifyBy2*(image: Image): Image =
   ## Scales the image down by an integer scale.

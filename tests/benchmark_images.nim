@@ -1,4 +1,4 @@
-import chroma, pixie, benchy, system/memory
+import chroma, pixie, benchy
 
 let a = newImage(2560, 1440)
 
@@ -11,6 +11,9 @@ timeIt "fill_rgba":
   a.fill(rgba(63, 127, 191, 255))
   doAssert a[0, 0] == rgba(63, 127, 191, 255)
   keep(a)
+
+timeIt "subImage":
+  keep a.subImage(0, 0, 256, 256)
 
 timeIt "invert":
   a.invert()
