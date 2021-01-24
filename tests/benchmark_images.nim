@@ -8,8 +8,8 @@ timeIt "fill":
   keep(a)
 
 timeIt "fill_rgba":
-  a.fill(rgba(63, 127, 191, 255))
-  doAssert a[0, 0] == rgba(63, 127, 191, 255)
+  a.fill(rgba(63, 127, 191, 191))
+  doAssert a[0, 0] == rgba(63, 127, 191, 191)
   keep(a)
 
 timeIt "subImage":
@@ -26,3 +26,11 @@ timeIt "applyOpacity":
 timeIt "sharpOpacity":
   a.sharpOpacity()
   keep(a)
+
+a.fill(rgba(63, 127, 191, 191))
+
+timeIt "toAlphy":
+  a.toAlphy()
+
+timeIt "fromAlphy":
+  a.fromAlphy()

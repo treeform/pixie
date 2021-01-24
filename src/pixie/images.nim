@@ -218,13 +218,15 @@ proc toAlphy*(image: Image) =
     image.data[j] = c
 
 proc fromAlphy*(image: Image) =
-  ## Converts an image to from premultiplied alpha to straight.
+  ## Converts an image from premultiplied alpha to straight alpha.
+  ## This is expensive for large images.
   for c in image.data.mitems:
-    if c.a == 0:
+    if c.a == 0 or c.a == 255:
       continue
-    c.r = ((c.r.uint32 * 255) div c.a.uint32).uint8
-    c.g = ((c.g.uint32 * 255) div c.a.uint32).uint8
-    c.b = ((c.b.uint32 * 255) div c.a.uint32).uint8
+    let multiplier = ((255 / c.a.float32) * 255).uint32
+    c.r = ((c.r.uint32 * multiplier) div 255).uint8
+    c.g = ((c.g.uint32 * multiplier) div 255).uint8
+    c.b = ((c.b.uint32 * multiplier) div 255).uint8
 
 proc draw*(a, b: Image, mat: Mat3, blendMode = bmNormal)
 proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.}
