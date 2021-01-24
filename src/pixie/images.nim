@@ -175,27 +175,6 @@ proc magnifyBy2*(image: Image): Image =
 when defined(release):
   {.pop.}
 
-proc draw*(a, b: Image, mat: Mat3, blendMode = bmNormal)
-proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.}
-
-proc invert*(image: Image) =
-  ## Inverts all of the colors and alpha.
-  var i: int
-  when defined(amd64) and not defined(pixieNoSimd):
-    let vec255 = mm_set1_epi8(255)
-    while i < image.data.len - 4:
-      var m = mm_loadu_si128(image.data[i].addr)
-      m = mm_sub_epi8(vec255, m)
-      mm_storeu_si128(image.data[i].addr, m)
-      i += 4
-  for j in i ..< image.data.len:
-    var rgba = image.data[j]
-    rgba.r = 255 - rgba.r
-    rgba.g = 255 - rgba.g
-    rgba.b = 255 - rgba.b
-    rgba.a = 255 - rgba.a
-    image.data[j] = rgba
-
 proc toAlphy*(image: Image) =
   ## Converts an image to premultiplied alpha from straight.
   var i: int
@@ -246,6 +225,27 @@ proc fromAlphy*(image: Image) =
     c.r = ((c.r.uint32 * 255) div c.a.uint32).uint8
     c.g = ((c.g.uint32 * 255) div c.a.uint32).uint8
     c.b = ((c.b.uint32 * 255) div c.a.uint32).uint8
+
+proc draw*(a, b: Image, mat: Mat3, blendMode = bmNormal)
+proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.}
+
+proc invert*(image: Image) =
+  ## Inverts all of the colors and alpha.
+  var i: int
+  when defined(amd64) and not defined(pixieNoSimd):
+    let vec255 = mm_set1_epi8(255)
+    while i < image.data.len - 4:
+      var m = mm_loadu_si128(image.data[i].addr)
+      m = mm_sub_epi8(vec255, m)
+      mm_storeu_si128(image.data[i].addr, m)
+      i += 4
+  for j in i ..< image.data.len:
+    var rgba = image.data[j]
+    rgba.r = 255 - rgba.r
+    rgba.g = 255 - rgba.g
+    rgba.b = 255 - rgba.b
+    rgba.a = 255 - rgba.a
+    image.data[j] = rgba
 
 proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA {.inline.} =
   ## Gets a pixel as (x, y) floats.
