@@ -5,12 +5,10 @@ let a = newImage(2560, 1440)
 timeIt "fill":
   a.fill(rgba(255, 255, 255, 255))
   doAssert a[0, 0] == rgba(255, 255, 255, 255)
-  keep(a)
 
 timeIt "fill_rgba":
   a.fill(rgba(63, 127, 191, 191))
   doAssert a[0, 0] == rgba(63, 127, 191, 191)
-  keep(a)
 
 timeIt "subImage":
   keep a.subImage(0, 0, 256, 256)
@@ -34,3 +32,19 @@ timeIt "toAlphy":
 
 timeIt "fromAlphy":
   a.fromAlphy()
+
+timeIt "lerp integers":
+  for i in 0 ..< 100000:
+    let c = a[0, 0]
+    var z: int
+    for t in 0 .. 100:
+      z += lerp(c, c, t.float32 / 100).a.int
+    doAssert z > 0
+
+timeIt "lerp floats":
+  for i in 0 ..< 100000:
+    let c = a[0, 0]
+    var z: int
+    for t in 0 .. 100:
+      z += lerp(c.color, c.color, t.float32 / 100).rgba().a.int
+    doAssert z > 0

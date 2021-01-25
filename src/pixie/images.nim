@@ -250,23 +250,22 @@ proc invert*(image: Image) =
     image.data[j] = rgba
 
 proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA {.inline.} =
-  ## Gets a pixel as (x, y) floats.
   let
     minX = x.floor.int
     difX = x - x.floor
     minY = y.floor.int
     difY = y - y.floor
 
-    vX0Y0 = image[minX, minY].color().toAlphy()
-    vX1Y0 = image[minX + 1, minY].color().toAlphy()
-    vX0Y1 = image[minX, minY + 1].color().toAlphy()
-    vX1Y1 = image[minX + 1, minY + 1].color().toAlphy()
+    vX0Y0 = image[minX, minY].premultiplyAlpha()
+    vX1Y0 = image[minX + 1, minY].premultiplyAlpha()
+    vX0Y1 = image[minX, minY + 1].premultiplyAlpha()
+    vX1Y1 = image[minX + 1, minY + 1].premultiplyAlpha()
 
     bottomMix = lerp(vX0Y0, vX1Y0, difX)
     topMix = lerp(vX0Y1, vX1Y1, difX)
     finalMix = lerp(bottomMix, topMix, difY)
 
-  return finalMix.fromAlphy().rgba()
+  finalMix.straightenAlpha()
 
 proc resize*(srcImage: Image, width, height: int): Image =
   result = newImage(width, height)
