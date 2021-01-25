@@ -94,9 +94,7 @@ proc draw(
     return
 
   case node.tag:
-  of "title":
-    discard
-  of "desc":
+  of "title", "desc":
     discard
 
   of "g":
@@ -110,12 +108,11 @@ proc draw(
     let
       d = node.attr("d")
       ctx = decodeCtx(ctxStack[^1], node)
+      path = parsePath(d)
     if ctx.fill != ColorRGBA():
-      img.fillPath(d, ctx.fill, ctx.transform)
+      img.fillPath(path, ctx.fill, ctx.transform)
     if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
-      img.strokePath(
-        d, ctx.stroke, ctx.strokeWidth, ctx.transform
-      )
+      img.strokePath(path, ctx.stroke, ctx.strokeWidth, ctx.transform)
 
   of "line":
     let
@@ -125,7 +122,7 @@ proc draw(
       x2 = parseFloat(node.attr("x2"))
       y2 = parseFloat(node.attr("y2"))
 
-    let path = newPath()
+    var path: Path
     path.moveTo(x1, y1)
     path.lineTo(x2, y2)
     path.closePath()
@@ -150,7 +147,7 @@ proc draw(
     if vecs.len == 0:
       failInvalid()
 
-    let path = newPath()
+    var path: Path
     path.moveTo(vecs[0])
     for i in 1 ..< vecs.len:
       path.lineTo(vecs[i])
@@ -172,12 +169,8 @@ proc draw(
       width = parseFloat(node.attr("width"))
       height = parseFloat(node.attr("height"))
 
-    let path = newPath()
-    path.moveTo(x, y)
-    path.lineTo(x + width, y)
-    path.lineTo(x + width, y + height)
-    path.lineTo(x, y + height)
-    path.closePath()
+    var path: Path
+    path.rect(x, y, width, height)
 
     if ctx.fill != ColorRGBA():
       img.fillPath(path, ctx.fill, ctx.transform)
@@ -207,7 +200,7 @@ proc draw(
       magicX = (4.0 * (-1.0 + sqrt(2.0)) / 3) * rx
       magicY = (4.0 * (-1.0 + sqrt(2.0)) / 3) * ry
 
-    let path = newPath()
+    var path: Path
     path.moveTo(cx + rx, cy)
     path.bezierCurveTo(cx + rx, cy + magicY, cx + magicX, cy + ry, cx, cy + ry)
     path.bezierCurveTo(cx - magicX, cy + ry, cx - rx, cy + magicY, cx - rx, cy)
@@ -215,13 +208,10 @@ proc draw(
     path.bezierCurveTo(cx + magicX, cy - ry, cx + rx, cy - magicY, cx + rx, cy)
     path.closePath()
 
-    let d = $path
     if ctx.fill != ColorRGBA():
-      img.fillPath(d, ctx.fill, ctx.transform)
+      img.fillPath(path, ctx.fill, ctx.transform)
     if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
-      img.strokePath(
-        d, ctx.stroke, ctx.strokeWidth, ctx.transform
-      )
+      img.strokePath(path, ctx.stroke, ctx.strokeWidth, ctx.transform)
 
   else:
     raise newException(PixieError, "Unsupported SVG tag: " & node.tag & ".")

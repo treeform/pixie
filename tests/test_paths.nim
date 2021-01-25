@@ -90,7 +90,7 @@ block:
 
 block:
   let image = newImage(100, 100)
-  var path = newPath()
+  var path: Path
   path.moveTo(10, 10)
   path.lineTo(10, 90)
   path.lineTo(90, 90)
@@ -149,14 +149,14 @@ block:
   image.writeFile("tests/images/paths/pathCornerArc.png")
 
 block:
-  let image = newImage(100, 100)
-  var path = newPath()
   let
+    image = newImage(100, 100)
     r = 10.0
     x = 10.0
     y = 10.0
     h = 80.0
     w = 80.0
+  var path: Path
   path.moveTo(x+r, y)
   path.arcTo(x+w, y,   x+w, y+h, r)
   path.arcTo(x+w, y+h, x,   y+h, r)

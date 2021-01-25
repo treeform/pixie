@@ -331,7 +331,7 @@ proc hardLight(backdrop, source: uint32): uint8 {.inline.} =
   else:
     screen(backdrop, 2 * source - 255)
 
-proc blendNormal(backdrop, source: ColorRGBA): ColorRGBA =
+proc blendNormal*(backdrop, source: ColorRGBA): ColorRGBA =
   result = source
   result = alphaFix(backdrop, source, result)
 

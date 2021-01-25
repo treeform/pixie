@@ -88,7 +88,7 @@ proc fillUnsafe(data: var seq[ColorRGBA], rgba: ColorRGBA, start, len: int) =
           u32 = cast[uint32](rgba)
           u64 = cast[uint64]([u32, u32])
         for j in countup(i, start + len - 2, 2):
-          cast[ptr uint64](image.data[j].addr)[] = u64
+          cast[ptr uint64](data[j].addr)[] = u64
           i += 2
     # Fill whatever is left the slow way
     for j in i ..< start + len:
@@ -172,11 +172,8 @@ proc magnifyBy2*(image: Image, scale2x: int): Image =
 proc magnifyBy2*(image: Image): Image =
   image.magnifyBy2(2)
 
-when defined(release):
-  {.pop.}
-
 proc toPremultipliedAlpha*(image: Image) =
-  ## Converts an image to premultiplied alpha from straight.
+  ## Converts an image to premultiplied alpha from straight alpha.
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
     # When supported, SIMD convert as much as possible
@@ -190,11 +187,10 @@ proc toPremultipliedAlpha*(image: Image) =
       var
         color = mm_loadu_si128(image.data[j].addr)
         alpha = mm_and_si128(color, alphaMask)
-      alpha = mm_or_si128(alpha, mm_srli_epi32(alpha, 16))
-
-      var
         colorEven = mm_slli_epi16(color, 8)
         colorOdd = mm_and_si128(color, oddMask)
+
+      alpha = mm_or_si128(alpha, mm_srli_epi32(alpha, 16))
 
       colorEven = mm_mulhi_epu16(colorEven, alpha)
       colorOdd = mm_mulhi_epu16(colorOdd, alpha)
@@ -227,6 +223,9 @@ proc toStraightAlpha*(image: Image) =
     c.r = ((c.r.uint32 * multiplier) div 255).uint8
     c.g = ((c.g.uint32 * multiplier) div 255).uint8
     c.b = ((c.b.uint32 * multiplier) div 255).uint8
+
+when defined(release):
+  {.pop.}
 
 proc draw*(a, b: Image, mat: Mat3, blendMode = bmNormal)
 proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.}
