@@ -1,4 +1,4 @@
-import vmath, images, chroma, strutils, common, bumpy, blends, common
+import common, strutils, vmath, images, chroma, bumpy, blends
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -23,7 +23,7 @@ type
     commands*: seq[PathCommand]
     start, at: Vec2 # Maintained by moveTo, lineTo, etc. Used by arcTo.
 
-  SomePath* = Path | string | seq[seq[Segment]]
+  SomePath* = Path | string | seq[seq[Vec2]]
 
 when defined(release):
   {.push checks: off.}
@@ -369,12 +369,12 @@ proc polygon*(path: var Path, x, y, size: float32, sides: int) =
       y + size * sin(side.float32 * 2.0 * PI / sides.float32)
     )
 
-proc commandsToShapes*(path: Path): seq[seq[Segment]] =
+proc commandsToShapes*(path: Path): seq[seq[Vec2]] =
   ## Converts SVG-like commands to line segments.
 
   var
     start, at: Vec2
-    shape: seq[Segment]
+    shape: seq[Vec2]
 
   # Some commands use data from the previous command
   var
@@ -383,7 +383,15 @@ proc commandsToShapes*(path: Path): seq[seq[Segment]] =
 
   const errorMargin = 0.2
 
-  proc addCubic(shape: var seq[Segment], at, ctrl1, ctrl2, to: Vec2) =
+  proc addSegment(shape: var seq[Vec2], at, to: Vec2) =
+    # Don't add any 0 length lines
+    if at - to != vec2(0, 0):
+      # Don't double up points
+      if shape.len == 0 or shape[^1] != at:
+        shape.add(at)
+      shape.add(to)
+
+  proc addCubic(shape: var seq[Vec2], at, ctrl1, ctrl2, to: Vec2) =
 
     proc compute(at, ctrl1, ctrl2, to: Vec2, t: float32): Vec2 {.inline.} =
       pow(1 - t, 3) * at +
@@ -393,7 +401,7 @@ proc commandsToShapes*(path: Path): seq[seq[Segment]] =
 
     var prev = at
 
-    proc discretize(shape: var seq[Segment], i, steps: int) =
+    proc discretize(shape: var seq[Vec2], i, steps: int) =
       # Closure captures at, ctrl1, ctrl2, to and prev
       let
         tPrev = (i - 1).float32 / steps.float32
@@ -408,12 +416,12 @@ proc commandsToShapes*(path: Path): seq[seq[Segment]] =
         shape.discretize(i * 2 - 1, steps * 2)
         shape.discretize(i * 2, steps * 2)
       else:
-        shape.add(segment(prev, next))
+        shape.addSegment(prev, next)
         prev = next
 
     shape.discretize(1, 1)
 
-  proc addQuadratic(shape: var seq[Segment], at, ctrl, to: Vec2) =
+  proc addQuadratic(shape: var seq[Vec2], at, ctrl, to: Vec2) =
 
     proc compute(at, ctrl, to: Vec2, t: float32): Vec2 {.inline.} =
       pow(1 - t, 2) * at +
@@ -422,7 +430,7 @@ proc commandsToShapes*(path: Path): seq[seq[Segment]] =
 
     var prev = at
 
-    proc discretize(shape: var seq[Segment], i, steps: int) =
+    proc discretize(shape: var seq[Vec2], i, steps: int) =
       # Closure captures at, ctrl, to and prev
       let
         tPrev = (i - 1).float32 / steps.float32
@@ -437,13 +445,13 @@ proc commandsToShapes*(path: Path): seq[seq[Segment]] =
         shape.discretize(i * 2 - 1, steps * 2)
         shape.discretize(i * 2, steps * 2)
       else:
-        shape.add(segment(prev, next))
+        shape.addSegment(prev, next)
         prev = next
 
     shape.discretize(1, 1)
 
   proc addArc(
-    shape: var seq[Segment],
+    shape: var seq[Vec2],
     at, radii: Vec2,
     rotation: float32,
     large, sweep: bool,
@@ -529,7 +537,7 @@ proc commandsToShapes*(path: Path): seq[seq[Segment]] =
 
     var prev = at
 
-    proc discretize(shape: var seq[Segment], arc: ArcParams, i, steps: int) =
+    proc discretize(shape: var seq[Vec2], arc: ArcParams, i, steps: int) =
       let
         step = arc.delta / steps.float32
         aPrev = arc.theta + step * (i - 1).float32
@@ -544,7 +552,7 @@ proc commandsToShapes*(path: Path): seq[seq[Segment]] =
         shape.discretize(arc, i * 2 - 1, steps * 2)
         shape.discretize(arc, i * 2, steps * 2)
       else:
-        shape.add(segment(prev, next))
+        shape.addSegment(prev, next)
         prev = next
 
     let arc = endpointToCenterArcParams(at, radii, rotation, large, sweep, to)
@@ -562,17 +570,17 @@ proc commandsToShapes*(path: Path): seq[seq[Segment]] =
 
     of Line:
       let to = vec2(command.numbers[0], command.numbers[1])
-      shape.add(segment(at, to))
+      shape.addSegment(at, to)
       at = to
 
     of HLine:
       let to = vec2(command.numbers[0], at.y)
-      shape.add(segment(at, to))
+      shape.addSegment(at, to)
       at = to
 
     of VLine:
       let to = vec2(at.x, command.numbers[0])
-      shape.add(segment(at, to))
+      shape.addSegment(at, to)
       at = to
 
     of Cubic:
@@ -633,17 +641,17 @@ proc commandsToShapes*(path: Path): seq[seq[Segment]] =
 
     of RLine:
       let to = vec2(at.x + command.numbers[0], at.y + command.numbers[1])
-      shape.add(segment(at, to))
+      shape.addSegment(at, to)
       at = to
 
     of RHLine:
       let to = vec2(at.x + command.numbers[0], at.y)
-      shape.add(segment(at, to))
+      shape.addSegment(at, to)
       at = to
 
     of RVLine:
       let to = vec2(at.x, at.y + command.numbers[0])
-      shape.add(segment(at, to))
+      shape.addSegment(at, to)
       at = to
 
     of RCubic:
@@ -700,7 +708,7 @@ proc commandsToShapes*(path: Path): seq[seq[Segment]] =
 
     of Close:
       if at != start:
-        shape.add(segment(at, start))
+        shape.addSegment(at, start)
         at = start
       if shape.len > 0:
         result.add(shape)
@@ -710,6 +718,11 @@ proc commandsToShapes*(path: Path): seq[seq[Segment]] =
 
   if shape.len > 0:
     result.add(shape)
+
+iterator segments*(s: seq[Vec2]): Segment =
+  ## Return elements in pairs: (1st, 2nd), (2nd, 3rd) ... (n - 1, last).
+  for i in 0 ..< s.len - 1:
+    yield(segment(s[i], s[i + 1]))
 
 proc quickSort(a: var seq[(float32, bool)], inl, inr: int) =
   var
@@ -731,13 +744,13 @@ proc quickSort(a: var seq[(float32, bool)], inl, inr: int) =
   quickSort(a, inl, r)
   quickSort(a, l, inr)
 
-proc computeBounds(shape: seq[Segment]): Rect =
+proc computeBounds(shape: seq[Vec2]): Rect =
   var
     xMin = float32.high
     xMax = float32.low
     yMin = float32.high
     yMax = float32.low
-  for segment in shape:
+  for segment in shape.segments:
     xMin = min(xMin, min(segment.at.x, segment.to.x))
     xMax = max(xMax, max(segment.at.x, segment.to.x))
     yMin = min(yMin, min(segment.at.y, segment.to.y))
@@ -755,13 +768,13 @@ proc computeBounds(shape: seq[Segment]): Rect =
 
 proc fillShapes(
   image: Image,
-  shapes: seq[seq[Segment]],
+  shapes: seq[seq[Vec2]],
   color: ColorRGBA,
   windingRule: WindingRule
 ) =
   var sortedShapes = newSeq[seq[(Segment, bool)]](shapes.len)
   for i, sorted in sortedShapes.mpairs:
-    for j, segment in shapes[i]:
+    for segment in shapes[i].segments:
       if segment.at.y == segment.to.y or segment.at - segment.to == Vec2():
         # Skip horizontal and zero-length
         continue
@@ -926,7 +939,7 @@ proc fillShapes(
         image.setRgbaUnsafe(x, y, blendNormal(backdrop, source))
       inc x
 
-proc parseSomePath(path: SomePath): seq[seq[Segment]] {.inline.} =
+proc parseSomePath(path: SomePath): seq[seq[Vec2]] {.inline.} =
   when type(path) is string:
     parsePath(path).commandsToShapes()
   elif type(path) is Path:
@@ -969,11 +982,11 @@ proc fillPath*(
   image.fillShapes(shapes, color, windingRule)
 
 proc strokeShapes(
-  shapes: seq[seq[Segment]],
+  shapes: seq[seq[Vec2]],
   color: ColorRGBA,
   strokeWidth: float32,
   windingRule: WindingRule
-): seq[seq[Segment]] =
+): seq[seq[Vec2]] =
   if strokeWidth == 0:
     return
 
@@ -983,9 +996,9 @@ proc strokeShapes(
 
   for shape in shapes:
     var
-      points: seq[Vec2]
+      strokeShape: seq[Vec2]
       back: seq[Vec2]
-    for segment in shape:
+    for segment in shape.segments:
       let
         tangent = (segment.at - segment.to).normalize()
         normal = vec2(-tangent.y, tangent.x)
@@ -998,19 +1011,14 @@ proc strokeShapes(
           segment.to + normal * widthRight
         )
 
-      points.add([right.at, right.to])
+      strokeShape.add([right.at, right.to])
       back.add([left.at, left.to])
 
     # Add the back side reversed
     for i in 1 .. back.len:
-      points.add(back[^i])
+      strokeShape.add(back[^i])
 
-    points.add(points[0])
-
-    # Walk the points to create the shape
-    var strokeShape: seq[Segment]
-    for i in 0 ..< points.len - 1:
-      strokeShape.add(segment(points[i], points[i + 1]))
+    strokeShape.add(strokeShape[0])
 
     if strokeShape.len > 0:
       result.add(strokeShape)
