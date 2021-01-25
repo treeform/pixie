@@ -27,11 +27,11 @@ timeIt "sharpOpacity":
 
 a.fill(rgba(63, 127, 191, 191))
 
-timeIt "toAlphy":
-  a.toAlphy()
+timeIt "toPremultipliedAlpha":
+  a.toPremultipliedAlpha()
 
-timeIt "fromAlphy":
-  a.fromAlphy()
+timeIt "toStraightAlpha":
+  a.toStraightAlpha()
 
 timeIt "lerp integers":
   for i in 0 ..< 100000:

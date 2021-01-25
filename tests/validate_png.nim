@@ -2,7 +2,7 @@ import chroma, pixie/fileformats/png, stb_image/read as stbi, strformat, pngsuit
 
 for file in pngSuiteFiles:
   let
-    data = readFile(&"tests/images/pngsuite/{file}.png")
+    data = readFile(&"tests/images/png/pngsuite/{file}.png")
     pixieLoaded = decodePng(cast[seq[uint8]](data))
 
   var
