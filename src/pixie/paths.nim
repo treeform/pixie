@@ -20,6 +20,11 @@ type
     commands*: seq[PathCommand]
     start, at: Vec2 # Maintained by moveTo, lineTo, etc. Used by arcTo.
 
+  SomePath* = Path | string | seq[seq[Segment]]
+
+when defined(release):
+  {.push checks: off.}
+
 proc parameterCount(kind: PathCommandKind): int =
   case kind:
   of Close: 0
@@ -773,14 +778,11 @@ proc computeBounds(shape: seq[Segment]): Rect =
   result.w = xMax - xMin
   result.h = yMax - yMin
 
-{.push checks: off, stacktrace: off.}
-
 proc fillShapes*(
   image: Image,
   shapes: seq[seq[Segment]],
   color: ColorRGBA,
-  windingRule: WindingRule,
-  quality = 4
+  windingRule: WindingRule
 ) =
   var sortedShapes = newSeq[seq[(Segment, bool)]](shapes.len)
   for i, sorted in sortedShapes.mpairs:
@@ -800,7 +802,25 @@ proc fillShapes*(
   for i, shape in shapes:
     bounds[i] = computeBounds(shape)
 
-  const ep = 0.0001 * PI
+  # Figure out the total bounds of all the shapes
+  var
+    minX = float32.high
+    minY = float32.high
+    maxY = float32.low
+  for bounds in bounds:
+    minX = min(minX, bounds.x)
+    minY = min(minY, bounds.y)
+    maxY = max(maxY, bounds.y + bounds.h)
+
+  # Rasterize only within the total bounds
+  let
+    startX = max(0, minX.int)
+    startY = max(0, miny.int)
+    stopY = min(image.height, maxY.int)
+
+  const
+    quality = 4
+    ep = 0.0001 * PI
 
   proc scanLineHits(
     shapes: seq[seq[(Segment, bool)]],
@@ -831,7 +851,7 @@ proc fillShapes*(
   var
     hits = newSeq[(float32, bool)]()
     alphas = newSeq[float32](image.width)
-  for y in 0 ..< image.height:
+  for y in startY ..< stopY:
     # Reset alphas for this row.
     zeroMem(alphas[0].addr, alphas.len * 4)
 
@@ -843,7 +863,7 @@ proc fillShapes*(
       var
         penFill = 0
         curHit = 0
-      for x in 0 ..< image.width:
+      for x in startX ..< image.width:
         var penEdge: float32
         case windingRule
         of wrNonZero:
@@ -877,16 +897,11 @@ proc fillShapes*(
         let rgba = image.getRgbaUnsafe(x, y)
         image.setRgbaUnsafe(x, y, blendNormal(rgba, colorWithAlpha))
 
-{.pop.}
-
-type SomePath = seq[seq[Segment]] | string | Path
-
 proc parseSomePath(path: SomePath): seq[seq[Segment]] =
-  ## Given some path, turns it into polys.
   when type(path) is string:
-    commandsToShapes(parsePath(path))
+    parsePath(path).commandsToShapes()
   elif type(path) is Path:
-    commandsToShapes(path)
+    path.commandsToShapes()
   elif type(path) is seq[seq[Segment]]:
     path
 
@@ -895,9 +910,8 @@ proc fillPath*(
   path: SomePath,
   color: ColorRGBA,
   windingRule = wrNonZero
-) =
-  let polys = parseSomePath(path)
-  image.fillShapes(polys, color, windingRule)
+) {.inline.} =
+  image.fillShapes(parseSomePath(path), color, windingRule)
 
 proc fillPath*(
   image: Image,
@@ -906,11 +920,11 @@ proc fillPath*(
   pos: Vec2,
   windingRule = wrNonZero
 ) =
-  var polys = parseSomePath(path)
-  for poly in polys.mitems:
-    for i, p in poly.mpairs:
-      poly[i] = p + pos
-  image.fillShapes(polys, color, windingRule)
+  var shapes = parseSomePath(path)
+  for shape in shapes.mitems:
+    for segment in shape.mitems:
+      segment += pos
+  image.fillShapes(shapes, color, windingRule)
 
 proc fillPath*(
   image: Image,
@@ -919,11 +933,11 @@ proc fillPath*(
   mat: Mat3,
   windingRule = wrNonZero
 ) =
-  var polys = parseSomePath(path)
-  for poly in polys.mitems:
-    for i, p in poly.mpairs:
-      poly[i] = mat * p
-  image.fillShapes(polys, color, windingRule)
+  var shapes = parseSomePath(path)
+  for shape in shapes.mitems:
+    for segment in shape.mitems:
+      segment = mat * segment
+  image.fillShapes(shapes, color, windingRule)
 
 proc strokePath*(
   image: Image,
@@ -977,3 +991,6 @@ proc strokePath*(
     for segment in shape.mitems:
       segment = mat * segment
   image.fillShapes(strokeShapes, color, windingRule)
+
+when defined(release):
+  {.pop.}
