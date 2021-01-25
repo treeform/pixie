@@ -19,7 +19,5 @@ for file in files:
     image = decodeSvg(original)
     gold = readImage(&"tests/images/svg/{file}.png")
 
-  image.toStraightAlpha()
-
   doAssert image.data == gold.data
   #image.writeFile(&"tests/images/svg/{file}.png")

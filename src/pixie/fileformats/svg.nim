@@ -236,6 +236,7 @@ proc decodeSvg*(data: string): Image =
     result = newImage(width, height)
     for node in root:
       result.draw(node, ctxStack)
+    result.toStraightAlpha()
   except PixieError as e:
     raise e
   except:
