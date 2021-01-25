@@ -20,9 +20,6 @@ type
     commands*: seq[PathCommand]
     start, at: Vec2 # Maintained by moveTo, lineTo, etc. Used by arcTo.
 
-proc newPath*(): Path =
-  result = Path()
-
 proc parameterCount(kind: PathCommandKind): int =
   case kind:
   of Close: 0
@@ -35,7 +32,6 @@ proc parameterCount(kind: PathCommandKind): int =
 
 proc parsePath*(path: string): Path =
   ## Converts a SVG style path into seq of commands.
-  result = newPath()
 
   if path.len == 0:
     return
@@ -241,6 +237,130 @@ proc transform*(path: var Path, mat: Mat3) =
       command.numbers[1] = radii.y
       command.numbers[5] = to.x
       command.numbers[6] = to.y
+
+proc addPath*(path: var Path, other: Path) =
+  ## Adds a path to the current path.
+  path.commands.add(other.commands)
+
+proc closePath*(path: var Path) =
+  path.commands.add(PathCommand(kind: Close))
+  path.at = path.start
+
+proc moveTo*(path: var Path, x, y: float32) =
+  path.commands.add(PathCommand(kind: Move, numbers: @[x, y]))
+  path.start = vec2(x, y)
+  path.at = path.start
+
+proc moveTo*(path: var Path, v: Vec2) {.inline.} =
+  path.moveTo(v.x, v.y)
+
+proc lineTo*(path: var Path, x, y: float32) =
+  path.commands.add(PathCommand(kind: Line, numbers: @[x, y]))
+  path.at = vec2(x, y)
+
+proc lineTo*(path: var Path, v: Vec2) {.inline.} =
+  path.lineTo(v.x, v.y)
+
+proc bezierCurveTo*(path: var Path, x1, y1, x2, y2, x3, y3: float32) =
+  ## Adds a cubic Bézier curve to the path. This requires three points.
+  ## The first two points are control points and the third is the end point.
+  ## The starting point is the last point in the current path, which can be
+  ## changed using moveTo() before creating the curve.
+  path.commands.add(PathCommand(
+    kind: Cubic,
+    numbers: @[x1, y1, x2, y2, x3, y3]
+  ))
+  path.at = vec2(x3, y3)
+
+proc bezierCurveTo*(path: var Path, ctrl1, ctrl2, to: Vec2) {.inline.} =
+  path.bezierCurveTo(ctrl1.x, ctrl1.y, ctrl2.x, ctrl2.y, to.x, to.y)
+
+proc quadraticCurveTo*(path: var Path, x1, y1, x2, y2: float32) =
+  ## Adds a quadratic Bézier curve to the path. This requires 2 points.
+  ## The first point is the control point and the second is the end point.
+  ## The starting point is the last point in the current path, which can be
+  ## changed using moveTo() before creating the curve.
+  path.commands.add(PathCommand(
+    kind: Quad,
+    numbers: @[x1, y1, x2, y2]
+  ))
+  path.at = vec2(x2, y2)
+
+proc quadraticCurveTo*(path: var Path, ctrl, to: Vec2) {.inline.} =
+  path.quadraticCurveTo(ctrl.x, ctrl.y, to.x, to.y)
+
+proc arcTo*(path: var Path, ctrl1, ctrl2: Vec2, radius: float32) {.inline.} =
+  ## Adds a circular arc to the current sub-path, using the given control
+  ## points and radius.
+
+  const epsilon = 1e-6.float32
+
+  var radius = radius
+  if radius < 0:
+    radius = -radius
+
+  if path.commands.len == 0:
+    path.moveTo(ctrl1)
+
+  let
+    a = path.at - ctrl1
+    b = ctrl2 - ctrl1
+
+  if a.lengthSq() < epsilon:
+    # If the control point is coincident with at, do nothing
+    discard
+  elif abs(a.y * b.x - a.x * b.y) < epsilon or radius == 0:
+    # If ctrl1, a and b are colinear or coincident or radius is zero
+    path.lineTo(ctrl1)
+  else:
+    let
+      c = ctrl2 - path.at
+      als = a.lengthSq()
+      bls = b.lengthSq()
+      cls = c.lengthSq()
+      al = a.length()
+      bl = b.length()
+      l = radius * tan((PI - arccos((als + bls - cls) / 2 * al * bl)) / 2)
+      ta = l / al
+      tb = l / bl
+
+    if abs(ta - 1) > epsilon:
+      # If the start tangent is not coincident with path.at
+      path.lineTo(ctrl1 + a * ta)
+
+    let to = ctrl1 + b * tb
+    path.commands.add(PathCommand(
+      kind: Arc,
+      numbers: @[
+        radius,
+        radius,
+        0,
+        0,
+        if a.y * c.x > a.x * c.y: 1 else: 0,
+        to.x,
+        to.y
+      ]
+    ))
+    path.at = to
+
+proc arcTo*(path: var Path, x1, y1, x2, y2, radius: float32) =
+  path.arcTo(vec2(x1, y1), vec2(x2, y2), radius)
+
+proc rect*(path: var Path, x, y, w, h: float32) =
+  path.moveTo(x, y)
+  path.lineTo(x + w, y)
+  path.lineTo(x + w, y + h)
+  path.lineTo(x, y + h)
+  path.closePath()
+
+proc polygon*(path: var Path, x, y, size: float32, sides: int) =
+  ## Draws a n sided regular polygon at (x, y) with size.
+  path.moveTo(x + size * cos(0.0), y + size * sin(0.0))
+  for side in 0 .. sides:
+    path.lineTo(
+      x + size * cos(side.float32 * 2.0 * PI / sides.float32),
+      y + size * sin(side.float32 * 2.0 * PI / sides.float32)
+    )
 
 proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
   ## Converts SVG-like commands to simpler polygon
@@ -664,7 +784,6 @@ proc fillPolygons*(
   polys: seq[seq[Vec2]],
   color: ColorRGBA,
   windingRule: WindingRule,
-  blendMode: BlendMode = bmNormal,
   quality = 4
 ) =
   var bounds = newSeq[Rect](polys.len)
@@ -672,7 +791,6 @@ proc fillPolygons*(
     bounds[i] = computeBounds(poly)
 
   const ep = 0.0001 * PI
-  let mixer = blendMode.mixer()
 
   proc scanLineHits(
     polys: seq[seq[Vec2]],
@@ -755,7 +873,7 @@ proc fillPolygons*(
         var colorWithAlpha = color
         colorWithAlpha.a = uint8(a * 255.0)
         let rgba = image.getRgbaUnsafe(x, y)
-        image.setRgbaUnsafe(x, y, mixer(rgba, colorWithAlpha))
+        image.setRgbaUnsafe(x, y, blendNormal(rgba, colorWithAlpha))
 
 {.pop.}
 
@@ -865,133 +983,3 @@ proc strokePath*(
     for i, p in poly.mpairs:
       poly[i] = mat * p
   image.fillPolygons(image.wh, polys2, color, windingRule)
-
-proc closePath*(path: var Path) =
-  ## Causes the point of the pen to move back to the start of the current sub-path. It tries to draw a straight line from the current point to the start. If the shape has already been closed or has only one point, this function does nothing.
-  path.commands.add PathCommand(kind: Close)
-
-proc moveTo*(path: var Path, x, y: float32) =
-  ## Moves the starting point of a new sub-path to the (x, y) coordinates.
-  path.commands.add PathCommand(kind: Move, numbers: @[x, y])
-  path.at = vec2(x, y)
-
-proc moveTo*(path: var Path, pos: Vec2) =
-  path.moveTo(pos.x, pos.y)
-
-proc lineTo*(path: var Path, x, y: float32) =
-  ## Connects the last point in the subpath to the (x, y) coordinates with a straight line.
-  path.commands.add PathCommand(kind: Line, numbers: @[x, y])
-  path.at = vec2(x, y)
-
-proc lineTo*(path: var Path, pos: Vec2) =
-  path.lineTo(pos.x, pos.y)
-
-proc bezierCurveTo*(path: var Path, x1, y1, x2, y2, x3, y3: float32) =
-  ## Adds a cubic Bézier curve to the path. It requires three points. The first two points are control points and the third one is the end point. The starting point is the last point in the current path, which can be changed using moveTo() before creating the Bézier curve.
-  path.commands.add(PathCommand(kind: Cubic, numbers: @[
-    x1, y1, x2, y2, x3, y3
-  ]))
-
-proc quadraticCurveTo*(path: var Path, x1, y1, x2, y2: float32) =
-  ## Adds a quadratic Bézier curve to the path. This requires 2 points.
-  ## The first point is the control point and the second is the end point.
-  ## The starting point is the last point in the current path, which can be
-  ## changed using moveTo() before creating the curve.
-  path.commands.add(PathCommand(
-    kind: Quad,
-    numbers: @[x1, y1, x2, y2]
-  ))
-  path.at = vec2(x2, y2)
-
-proc quadraticCurveTo*(path: var Path, ctrl, to: Vec2) {.inline.} =
-  path.quadraticCurveTo(ctrl.x, ctrl.y, to.x, to.y)
-
-proc arc*(path: var Path) =
-  ## Adds an arc to the path which is centered at (x, y) position with radius r starting at startAngle and ending at endAngle going in the given direction by anticlockwise (defaulting to clockwise).
-  raise newException(ValueError, "not implemented")
-
-proc arcTo*(path: var Path, x1, y1, x2, y2, r: float32) =
-  ## Adds a circular arc to the path with the given control points and radius, connected to the previous point by a straight line.
-
-  const epsilon = 1e-6.float32
-
-  if path.commands.len == 0:
-    # Is this path empty? Move to (x1,y1).
-    path.moveTo(x1, y1)
-
-  var r = r
-  if r < 0:
-    # Is the radius negative? Flip it.
-    r = -r
-
-  var
-    x21 = x2 - x1
-    y21 = y2 - y1
-    x01 = path.at.x - x1
-    y01 = path.at.y - y1
-    l01_2 = x01 * x01 + y01 * y01
-
-  if not (l01_2 > epsilon):
-    # Is (x1,y1) coincident with (x0,y0)? Do nothing.
-    discard
-
-  elif not (abs(y01 * x21 - y21 * x01) > epsilon) or r == 0:
-    # // Or, are (x0,y0), (x1,y1) and (x2,y2) colinear?
-    # // Equivalently, is (x1,y1) coincident with (x2,y2)?
-    # // Or, is the radius zero? Line to (x1,y1).
-
-    path.lineTo(x1, y1)
-
-  else:
-    # Draw an arc
-    var
-      x20 = x2 - path.at.x
-      y20 = y2 - path.at.y
-      l21_2 = x21 * x21 + y21 * y21
-      l20_2 = x20 * x20 + y20 * y20
-      l21 = sqrt(l21_2)
-      l01 = sqrt(l01_2)
-      l = r * tan((PI - arccos((l21_2 + l01_2 - l20_2) / (2 * l21 * l01))) / 2).float32
-      t01 = l / l01
-      t21 = l / l21
-
-    # If the start tangent is not coincident with path.at, line to.
-    if abs(t01 - 1) > epsilon:
-      path.lineTo(x1 + t01 * x01, y1 + t01 * y01)
-
-    path.at.x = x1 + t21 * x21
-    path.at.y = y1 + t21 * y21
-    path.commands.add(PathCommand(
-      kind: Arc,
-      numbers: @[
-        r,
-        r,
-        0,
-        0,
-        if y01 * x20 > x01 * y20: 1 else: 0,
-        path.at.x,
-        path.at.y
-      ]
-    ))
-
-proc ellipse*(path: var Path) =
-  ## Adds an elliptical arc to the path which is centered at (x, y) position with the radii radiusX and radiusY starting at startAngle and ending at endAngle going in the given direction by anticlockwise (defaulting to clockwise).
-  raise newException(ValueError, "not implemented")
-
-proc rect*(path: var Path, x, y, w, h: float32) =
-  ## Creates a path for a rectangle at position (x, y) with a size that is determined by width and height.
-  path.moveTo(x, y)
-  path.lineTo(x+w, y)
-  path.lineTo(x+w, y+h)
-  path.lineTo(x,   y+h)
-  path.lineTo(x,   y)
-  path.closePath()
-
-proc polygon*(path: var Path, x, y, size: float32, sides: int) =
-  ## Draws a n sided regular polygon at (x, y) with size.
-  path.moveTo(x + size * cos(0.0), y + size * sin(0.0))
-  for side in 0 .. sides:
-    path.lineTo(
-      x + size * cos(side.float32 * 2.0 * PI / sides.float32),
-      y + size * sin(side.float32 * 2.0 * PI / sides.float32)
-    )

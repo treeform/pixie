@@ -88,7 +88,7 @@ proc fillUnsafe(data: var seq[ColorRGBA], rgba: ColorRGBA, start, len: int) =
           u32 = cast[uint32](rgba)
           u64 = cast[uint64]([u32, u32])
         for j in countup(i, start + len - 2, 2):
-          cast[ptr uint64](image.data[j].addr)[] = u64
+          cast[ptr uint64](data[j].addr)[] = u64
           i += 2
     # Fill whatever is left the slow way
     for j in i ..< start + len:
@@ -173,7 +173,7 @@ proc magnifyBy2*(image: Image): Image =
   image.magnifyBy2(2)
 
 proc toPremultipliedAlpha*(image: Image) =
-  ## Converts an image to straight alpha from premultiplied alpha.
+  ## Converts an image to premultiplied alpha from straight alpha.
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
     # When supported, SIMD convert as much as possible
