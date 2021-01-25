@@ -16,9 +16,9 @@ type
     kind*: PathCommandKind
     numbers*: seq[float32]
 
-  Path* = ref object
-    at*: Vec2
+  Path* = object
     commands*: seq[PathCommand]
+    start, at: Vec2 # Maintained by moveTo, lineTo, etc. Used by arcTo.
 
 proc newPath*(): Path =
   result = Path()
@@ -188,7 +188,7 @@ proc `$`*(path: Path): string =
       if i != path.commands.len - 1 or j != command.numbers.len - 1:
         result.add " "
 
-proc transform*(path: Path, mat: Mat3) =
+proc transform*(path: var Path, mat: Mat3) =
   for command in path.commands.mitems:
     case command.kind:
     of Close:
@@ -866,31 +866,27 @@ proc strokePath*(
       poly[i] = mat * p
   image.fillPolygons(image.wh, polys2, color, windingRule)
 
-proc addPath*(path: Path, other: Path) =
-  ## Adds a path to the current path.
-  path.commands &= other.commands
-
-proc closePath*(path: Path) =
+proc closePath*(path: var Path) =
   ## Causes the point of the pen to move back to the start of the current sub-path. It tries to draw a straight line from the current point to the start. If the shape has already been closed or has only one point, this function does nothing.
   path.commands.add PathCommand(kind: Close)
 
-proc moveTo*(path: Path, x, y: float32) =
+proc moveTo*(path: var Path, x, y: float32) =
   ## Moves the starting point of a new sub-path to the (x, y) coordinates.
   path.commands.add PathCommand(kind: Move, numbers: @[x, y])
   path.at = vec2(x, y)
 
-proc moveTo*(path: Path, pos: Vec2) =
+proc moveTo*(path: var Path, pos: Vec2) =
   path.moveTo(pos.x, pos.y)
 
-proc lineTo*(path: Path, x, y: float32) =
+proc lineTo*(path: var Path, x, y: float32) =
   ## Connects the last point in the subpath to the (x, y) coordinates with a straight line.
   path.commands.add PathCommand(kind: Line, numbers: @[x, y])
   path.at = vec2(x, y)
 
-proc lineTo*(path: Path, pos: Vec2) =
+proc lineTo*(path: var Path, pos: Vec2) =
   path.lineTo(pos.x, pos.y)
 
-proc bezierCurveTo*(path: Path, x1, y1, x2, y2, x3, y3: float32) =
+proc bezierCurveTo*(path: var Path, x1, y1, x2, y2, x3, y3: float32) =
   ## Adds a cubic Bézier curve to the path. It requires three points. The first two points are control points and the third one is the end point. The starting point is the last point in the current path, which can be changed using moveTo() before creating the Bézier curve.
   path.commands.add(PathCommand(kind: Cubic, numbers: @[
     x1, y1, x2, y2, x3, y3
@@ -910,11 +906,11 @@ proc quadraticCurveTo*(path: var Path, x1, y1, x2, y2: float32) =
 proc quadraticCurveTo*(path: var Path, ctrl, to: Vec2) {.inline.} =
   path.quadraticCurveTo(ctrl.x, ctrl.y, to.x, to.y)
 
-proc arc*(path: Path) =
+proc arc*(path: var Path) =
   ## Adds an arc to the path which is centered at (x, y) position with radius r starting at startAngle and ending at endAngle going in the given direction by anticlockwise (defaulting to clockwise).
   raise newException(ValueError, "not implemented")
 
-proc arcTo*(path: Path, x1, y1, x2, y2, r: float32) =
+proc arcTo*(path: var Path, x1, y1, x2, y2, r: float32) =
   ## Adds a circular arc to the path with the given control points and radius, connected to the previous point by a straight line.
 
   const epsilon = 1e-6.float32
@@ -978,11 +974,11 @@ proc arcTo*(path: Path, x1, y1, x2, y2, r: float32) =
       ]
     ))
 
-proc ellipse*(path: Path) =
+proc ellipse*(path: var Path) =
   ## Adds an elliptical arc to the path which is centered at (x, y) position with the radii radiusX and radiusY starting at startAngle and ending at endAngle going in the given direction by anticlockwise (defaulting to clockwise).
   raise newException(ValueError, "not implemented")
 
-proc rect*(path: Path, x, y, w, h: float32) =
+proc rect*(path: var Path, x, y, w, h: float32) =
   ## Creates a path for a rectangle at position (x, y) with a size that is determined by width and height.
   path.moveTo(x, y)
   path.lineTo(x+w, y)
@@ -991,7 +987,7 @@ proc rect*(path: Path, x, y, w, h: float32) =
   path.lineTo(x,   y)
   path.closePath()
 
-proc polygon*(path: Path, x, y, size: float32, sides: int) =
+proc polygon*(path: var Path, x, y, size: float32, sides: int) =
   ## Draws a n sided regular polygon at (x, y) with size.
   path.moveTo(x + size * cos(0.0), y + size * sin(0.0))
   for side in 0 .. sides:
