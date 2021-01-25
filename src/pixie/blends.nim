@@ -335,6 +335,16 @@ proc blendNormal*(backdrop, source: ColorRGBA): ColorRGBA =
   result = source
   result = alphaFix(backdrop, source, result)
 
+when defined(amd64) and not defined(pixieNoSimd):
+  proc blendNormalSimd*(backdrop, source: M128i): M128i =
+    let
+      backdrops = cast[array[4, ColorRGBA]](backdrop)
+      sources = cast[array[4, ColorRGBA]](source)
+    var blended: array[4, ColorRGBA]
+    for i in 0 ..< 4:
+      blended[i] = blendNormal(backdrops[i], sources[i])
+    cast[M128i](blended)
+
 proc blendDarken(backdrop, source: ColorRGBA): ColorRGBA =
   result.r = min(backdrop.r, source.r)
   result.g = min(backdrop.g, source.g)
