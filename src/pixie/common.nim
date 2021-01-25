@@ -24,7 +24,7 @@ proc toPremultipliedAlpha*(c: ColorRGBA): ColorRGBA {.inline.} =
   result.a = c.a
 
 proc toStraightAlpha*(c: ColorRGBA): ColorRGBA {.inline.} =
-  ## Converts a color to from premultiplied alpha to straight alpha.
+  ## Converts a color from premultiplied alpha to straight alpha.
   result = c
   if result.a != 0 and result.a != 255:
     let multiplier = ((255 / c.a.float32) * 255).uint32

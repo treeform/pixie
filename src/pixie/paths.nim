@@ -1,4 +1,7 @@
-import vmath, images, chroma, strutils, algorithm, common, bumpy, blends
+import vmath, images, chroma, strutils, common, bumpy, blends, common
+
+when defined(amd64) and not defined(pixieNoSimd):
+  import nimsimd/sse2
 
 type
   WindingRule* = enum
@@ -28,11 +31,10 @@ when defined(release):
 proc parameterCount(kind: PathCommandKind): int =
   case kind:
   of Close: 0
-  of Move, Line, RMove, RLine: 2
+  of Move, Line, RMove, RLine, TQuad, RTQuad: 2
   of HLine, VLine, RHLine, RVLine: 1
   of Cubic, RCubic: 6
   of SCubic, RSCubic, Quad, RQuad: 4
-  of TQuad, RTQuad: 2
   of Arc, RArc: 7
 
 proc parsePath*(path: string): Path =
@@ -368,7 +370,7 @@ proc polygon*(path: var Path, x, y, size: float32, sides: int) =
     )
 
 proc commandsToShapes*(path: Path): seq[seq[Segment]] =
-  ## Converts SVG-like commands to simpler polygon
+  ## Converts SVG-like commands to line segments.
 
   var
     start, at: Vec2
@@ -709,6 +711,264 @@ proc commandsToShapes*(path: Path): seq[seq[Segment]] =
   if shape.len > 0:
     result.add(shape)
 
+proc quickSort(a: var seq[(float32, bool)], inl, inr: int) =
+  var
+    r = inr
+    l = inl
+  let n = r - l + 1
+  if n < 2:
+    return
+  let p = a[l + 3 * n div 4][0]
+  while l <= r:
+    if a[l][0] < p:
+      inc l
+    elif a[r][0] > p:
+      dec r
+    else:
+      swap(a[l], a[r])
+      inc l
+      dec r
+  quickSort(a, inl, r)
+  quickSort(a, l, inr)
+
+proc computeBounds(shape: seq[Segment]): Rect =
+  var
+    xMin = float32.high
+    xMax = float32.low
+    yMin = float32.high
+    yMax = float32.low
+  for segment in shape:
+    xMin = min(xMin, min(segment.at.x, segment.to.x))
+    xMax = max(xMax, max(segment.at.x, segment.to.x))
+    yMin = min(yMin, min(segment.at.y, segment.to.y))
+    yMax = max(yMax, max(segment.at.y, segment.to.y))
+
+  xMin = floor(xMin)
+  xMax = ceil(xMax)
+  yMin = floor(yMin)
+  yMax = ceil(yMax)
+
+  result.x = xMin
+  result.y = yMin
+  result.w = xMax - xMin
+  result.h = yMax - yMin
+
+proc fillShapes(
+  image: Image,
+  shapes: seq[seq[Segment]],
+  color: ColorRGBA,
+  windingRule: WindingRule
+) =
+  var sortedShapes = newSeq[seq[(Segment, bool)]](shapes.len)
+  for i, sorted in sortedShapes.mpairs:
+    for j, segment in shapes[i]:
+      if segment.at.y == segment.to.y or segment.at - segment.to == Vec2():
+        # Skip horizontal and zero-length
+        continue
+      var
+        segment = segment
+        winding = segment.at.y > segment.to.y
+      if winding:
+        swap(segment.at, segment.to)
+      sorted.add((segment, winding))
+
+  # Compute the bounds of each shape
+  var bounds = newSeq[Rect](shapes.len)
+  for i, shape in shapes:
+    bounds[i] = computeBounds(shape)
+
+  # Figure out the total bounds of all the shapes
+  var
+    minX = float32.high
+    minY = float32.high
+    maxY = float32.low
+  for bounds in bounds:
+    minX = min(minX, bounds.x)
+    minY = min(minY, bounds.y)
+    maxY = max(maxY, bounds.y + bounds.h)
+
+  # Rasterize only within the total bounds
+  let
+    startX = max(0, minX.int)
+    startY = max(0, miny.int)
+    stopY = min(image.height, maxY.int)
+
+  const
+    quality = 5 # Must divide 255 cleanly
+    sampleCoverage = 255.uint8 div quality
+    ep = 0.0001 * PI
+    offset = 1 / quality.float32
+    initialOffset = offset / 2
+
+  var
+    hits = newSeq[(float32, bool)](4)
+    coverages = newSeq[uint32](image.width)
+    numHits: int
+
+  for y in startY ..< stopY:
+    # Reset buffer for this row
+    zeroMem(coverages[0].addr, coverages.len * 4)
+
+    # Do scanlines for this row
+    for m in 0 ..< quality:
+      let
+        yLine = y.float32 + initialOffset + offset * m.float32 + ep
+        scanline = Line(a: vec2(0, yLine), b: vec2(1000, yLine))
+      numHits = 0
+      for i, shape in sortedShapes:
+        let bounds = bounds[i]
+        if bounds.y > y.float32 or bounds.y + bounds.h < y.float32:
+          continue
+        for (segment, winding) in shape:
+          var at: Vec2
+          if scanline.intersects(segment, at):# and segment.to != at:
+            if numHits == hits.len:
+              hits.setLen(hits.len * 2)
+            hits[numHits] = (at.x.clamp(0, image.width.float32), winding)
+            inc numHits
+
+      quickSort(hits, 0, numHits - 1)
+
+      proc shouldFill(windingRule: WindingRule, count: int): bool {.inline.} =
+        case windingRule:
+        of wrNonZero:
+          count != 0
+        of wrEvenOdd:
+          count mod 2 != 0
+
+      var
+        x: float32
+        count: int
+      for i in 0 ..< numHits:
+        let (at, winding) = hits[i]
+
+        var
+          fillStart = x.int
+          leftCover = if at.int - x.int > 0: ceil(x) - x else: at - x
+        if leftCover != 0:
+          inc fillStart
+          if shouldFill(windingRule, count):
+            coverages[x.int] += (leftCover * sampleCoverage.float32).uint8
+
+        if at.int - x.int > 0:
+          let rightCover = at - trunc(at)
+          if rightCover > 0 and shouldFill(windingRule, count):
+            coverages[at.int] += (rightCover * sampleCoverage.float32).uint8
+
+        let fillLen = at.int - fillStart
+        if fillLen > 0 and shouldFill(windingRule, count):
+          var i = fillStart
+          when defined(amd64) and not defined(pixieNoSimd):
+            let m = mm_set1_epi32(sampleCoverage.int32)
+            for j in countup(i, fillStart + fillLen - 4, 4):
+              let current = mm_loadu_si128(coverages[j].addr)
+              mm_storeu_si128(coverages[j].addr, mm_add_epi32(m, current))
+              i += 4
+          for j in i ..< fillStart + fillLen:
+            coverages[j] += sampleCoverage
+
+        count += (if winding: -1 else: 1)
+        x = at
+
+    # Apply the coverage and blend
+    var x = startX
+    when defined(amd64) and not defined(pixieNoSimd):
+      # When supported, SIMD blend as much as possible
+
+      let
+        alphaMask = mm_set1_epi32(cast[int32](0xff000000))
+        colorMask = mm_set1_epi32(cast[int32](0x00ffffff))
+        div255 = mm_set1_epi16(cast[int16](0x8081))
+        zero = mm_set1_epi32(0)
+        v255 = mm_set1_epi32(255)
+
+      for _ in countup(x, coverages.len - 4, 4):
+        var coverage = mm_loadu_si128(coverages[x].addr)
+
+        if mm_movemask_epi8(mm_cmpeq_epi32(coverage, zero)) != 0xffff:
+          # If the coverages are not all zero
+          var source = mm_set1_epi32(cast[int32](color))
+
+          if mm_movemask_epi8(mm_cmpeq_epi32(coverage, v255)) != 0xffff:
+            # If the coverages are not all 255
+
+            # Shift the coverages to `a` for multiplying
+            coverage = mm_slli_epi32(coverage, 24)
+
+            var alpha = mm_and_si128(source, alphaMask)
+            alpha = mm_mulhi_epu16(alpha, coverage)
+            alpha = mm_srli_epi16(mm_mulhi_epu16(alpha, div255), 7)
+            alpha = mm_slli_epi32(alpha, 8)
+
+            source = mm_or_si128(mm_and_si128(source, colorMask), alpha)
+
+          let
+            index = image.dataIndex(x, y)
+            backdrop = mm_loadu_si128(image.data[index].addr)
+          mm_storeu_si128(image.data[index].addr, blendNormalSimd(backdrop, source))
+
+        x += 4
+        break
+
+    while x < image.width:
+      if x + 2 <= coverages.len:
+        let peeked = cast[ptr uint64](coverages[x].addr)[]
+        if peeked == 0:
+          x += 2
+          continue
+
+      let coverage = coverages[x]
+      if coverage != 0:
+        var source = color
+        if coverage != 255:
+          source.a = ((color.a.uint16 * coverage) div 255).uint8
+
+        let backdrop = image.getRgbaUnsafe(x, y)
+        image.setRgbaUnsafe(x, y, blendNormal(backdrop, source))
+      inc x
+
+proc parseSomePath(path: SomePath): seq[seq[Segment]] =
+  when type(path) is string:
+    parsePath(path).commandsToShapes()
+  elif type(path) is Path:
+    path.commandsToShapes()
+  elif type(path) is seq[seq[Segment]]:
+    path
+
+proc fillPath*(
+  image: Image,
+  path: SomePath,
+  color: ColorRGBA,
+  windingRule = wrNonZero
+) {.inline.} =
+  image.fillShapes(parseSomePath(path), color, windingRule)
+
+proc fillPath*(
+  image: Image,
+  path: SomePath,
+  color: ColorRGBA,
+  pos: Vec2,
+  windingRule = wrNonZero
+) =
+  var shapes = parseSomePath(path)
+  for shape in shapes.mitems:
+    for segment in shape.mitems:
+      segment += pos
+  image.fillShapes(shapes, color, windingRule)
+
+proc fillPath*(
+  image: Image,
+  path: SomePath,
+  color: ColorRGBA,
+  mat: Mat3,
+  windingRule = wrNonZero
+) =
+  var shapes = parseSomePath(path)
+  for shape in shapes.mitems:
+    for segment in shape.mitems:
+      segment = mat * segment
+  image.fillShapes(shapes, color, windingRule)
+
 proc strokeShapes(
   shapes: seq[seq[Segment]],
   color: ColorRGBA,
@@ -756,197 +1016,14 @@ proc strokeShapes(
     if strokeShape.len > 0:
       result.add(strokeShape)
 
-proc computeBounds(shape: seq[Segment]): Rect =
-  var
-    xMin = float32.high
-    xMax = float32.low
-    yMin = float32.high
-    yMax = float32.low
-  for segment in shape:
-    xMin = min(xMin, min(segment.at.x, segment.to.x))
-    xMax = max(xMax, max(segment.at.x, segment.to.x))
-    yMin = min(yMin, min(segment.at.y, segment.to.y))
-    yMax = max(yMax, max(segment.at.y, segment.to.y))
-
-  xMin = floor(xMin)
-  xMax = ceil(xMax)
-  yMin = floor(yMin)
-  yMax = ceil(yMax)
-
-  result.x = xMin
-  result.y = yMin
-  result.w = xMax - xMin
-  result.h = yMax - yMin
-
-proc fillShapes*(
-  image: Image,
-  shapes: seq[seq[Segment]],
-  color: ColorRGBA,
-  windingRule: WindingRule
-) =
-  var sortedShapes = newSeq[seq[(Segment, bool)]](shapes.len)
-  for i, sorted in sortedShapes.mpairs:
-    for j, segment in shapes[i]:
-      if segment.at.y == segment.to.y or segment.at - segment.to == Vec2():
-        # Skip horizontal and zero-length
-        continue
-      var
-        segment = segment
-        winding = segment.at.y > segment.to.y
-      if winding:
-        swap(segment.at, segment.to)
-      sorted.add((segment, winding))
-
-  # Compute the bounds of each shape
-  var bounds = newSeq[Rect](shapes.len)
-  for i, shape in shapes:
-    bounds[i] = computeBounds(shape)
-
-  # Figure out the total bounds of all the shapes
-  var
-    minX = float32.high
-    minY = float32.high
-    maxY = float32.low
-  for bounds in bounds:
-    minX = min(minX, bounds.x)
-    minY = min(minY, bounds.y)
-    maxY = max(maxY, bounds.y + bounds.h)
-
-  # Rasterize only within the total bounds
-  let
-    startX = max(0, minX.int)
-    startY = max(0, miny.int)
-    stopY = min(image.height, maxY.int)
-
-  const
-    quality = 4
-    ep = 0.0001 * PI
-
-  proc scanLineHits(
-    shapes: seq[seq[(Segment, bool)]],
-    bounds: seq[Rect],
-    hits: var seq[(float32, bool)],
-    size: Vec2,
-    y: int,
-    shiftY: float32
-  ) {.inline.} =
-    hits.setLen(0)
-
-    let
-      yLine = y.float32 + ep + shiftY
-      scanline = Line(a: vec2(-10000, yLine), b: vec2(10000, yLine))
-
-    for i, shape in shapes:
-      let bounds = bounds[i]
-      if bounds.y > y.float32 or bounds.y + bounds.h < y.float32:
-        continue
-      for (segment, winding) in shape:
-        # Lines often connect and we need them to not share starts and ends
-        var at: Vec2
-        if scanline.intersects(segment, at) and segment.to != at:
-          hits.add((at.x.clamp(0, size.x), winding))
-
-    hits.sort(proc(a, b: (float32, bool)): int = cmp(a[0], b[0]))
-
-  var
-    hits = newSeq[(float32, bool)]()
-    alphas = newSeq[float32](image.width)
-  for y in startY ..< stopY:
-    # Reset alphas for this row.
-    zeroMem(alphas[0].addr, alphas.len * 4)
-
-    # Do scan lines for this row.
-    for m in 0 ..< quality:
-      sortedShapes.scanLineHits(bounds, hits, image.wh, y, float32(m) / float32(quality))
-      if hits.len == 0:
-        continue
-      var
-        penFill = 0
-        curHit = 0
-      for x in startX ..< image.width:
-        var penEdge: float32
-        case windingRule
-        of wrNonZero:
-          penEdge = penFill.float32
-        of wrEvenOdd:
-          if penFill mod 2 == 0:
-            penEdge = 0.0
-          else:
-            penEdge = 1.0
-
-        while true:
-          if curHit >= hits.len or x != hits[curHit][0].int:
-            break
-          let
-            cover = hits[curHit][0] - x.float32
-            winding = hits[curHit][1]
-          if winding == false:
-            penFill += 1
-            penEdge += 1.0 - cover
-          else:
-            penFill -= 1
-            penEdge -= 1.0 - cover
-          inc curHit
-        alphas[x] += penEdge
-
-    for x in 0 ..< image.width:
-      let a = clamp(abs(alphas[x]) / float32(quality), 0.0, 1.0)
-      if a > 0:
-        var colorWithAlpha = color
-        colorWithAlpha.a = uint8(a * 255.0)
-        let rgba = image.getRgbaUnsafe(x, y)
-        image.setRgbaUnsafe(x, y, blendNormal(rgba, colorWithAlpha))
-
-proc parseSomePath(path: SomePath): seq[seq[Segment]] =
-  when type(path) is string:
-    parsePath(path).commandsToShapes()
-  elif type(path) is Path:
-    path.commandsToShapes()
-  elif type(path) is seq[seq[Segment]]:
-    path
-
-proc fillPath*(
-  image: Image,
-  path: SomePath,
-  color: ColorRGBA,
-  windingRule = wrNonZero
-) {.inline.} =
-  image.fillShapes(parseSomePath(path), color, windingRule)
-
-proc fillPath*(
-  image: Image,
-  path: SomePath,
-  color: ColorRGBA,
-  pos: Vec2,
-  windingRule = wrNonZero
-) =
-  var shapes = parseSomePath(path)
-  for shape in shapes.mitems:
-    for segment in shape.mitems:
-      segment += pos
-  image.fillShapes(shapes, color, windingRule)
-
-proc fillPath*(
-  image: Image,
-  path: SomePath,
-  color: ColorRGBA,
-  mat: Mat3,
-  windingRule = wrNonZero
-) =
-  var shapes = parseSomePath(path)
-  for shape in shapes.mitems:
-    for segment in shape.mitems:
-      segment = mat * segment
-  image.fillShapes(shapes, color, windingRule)
-
 proc strokePath*(
   image: Image,
   path: SomePath,
   color: ColorRGBA,
-  strokeWidth: float32,
+  strokeWidth = 1.0,
   windingRule = wrNonZero
 ) =
-  var strokeShapes = strokeShapes(
+  let strokeShapes = strokeShapes(
     parseSomePath(path),
     color,
     strokeWidth,
@@ -958,7 +1035,7 @@ proc strokePath*(
   image: Image,
   path: SomePath,
   color: ColorRGBA,
-  strokeWidth: float32,
+  strokeWidth = 1.0,
   pos: Vec2,
   windingRule = wrNonZero
 ) =
@@ -977,7 +1054,7 @@ proc strokePath*(
   image: Image,
   path: SomePath,
   color: ColorRGBA,
-  strokeWidth: float32,
+  strokeWidth = 1.0,
   mat: Mat3,
   windingRule = wrNonZero
 ) =
