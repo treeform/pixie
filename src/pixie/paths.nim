@@ -775,7 +775,7 @@ proc fillShapes(
   var sortedShapes = newSeq[seq[(Segment, bool)]](shapes.len)
   for i, sorted in sortedShapes.mpairs:
     for segment in shapes[i].segments:
-      if segment.at.y == segment.to.y or segment.at - segment.to == Vec2():
+      if segment.at.y == segment.to.y:
         # Skip horizontal and zero-length
         continue
       var
@@ -889,8 +889,7 @@ proc fillShapes(
       # When supported, SIMD blend as much as possible
 
       let
-        alphaMask = mm_set1_epi32(cast[int32](0xff000000))
-        colorMask = mm_set1_epi32(cast[int32](0x00ffffff))
+        oddMask = mm_set1_epi16(cast[int16](0xff00))
         div255 = mm_set1_epi16(cast[int16](0x8081))
         zero = mm_set1_epi32(0)
         v255 = mm_set1_epi32(255)
@@ -905,20 +904,30 @@ proc fillShapes(
           if mm_movemask_epi8(mm_cmpeq_epi32(coverage, v255)) != 0xffff:
             # If the coverages are not all 255
 
-            # Shift the coverages to `a` for multiplying
-            coverage = mm_slli_epi32(coverage, 24)
+            # Shift the coverages from `r` to `g` and `a` for multiplying later
+            coverage = mm_or_si128(
+              mm_slli_epi32(coverage, 8), mm_slli_epi32(coverage, 24)
+            )
 
-            var alpha = mm_and_si128(source, alphaMask)
-            alpha = mm_mulhi_epu16(alpha, coverage)
-            alpha = mm_srli_epi16(mm_mulhi_epu16(alpha, div255), 7)
-            alpha = mm_slli_epi32(alpha, 8)
+            var
+              colorEven = mm_slli_epi16(source, 8)
+              colorOdd = mm_and_si128(source, oddMask)
 
-            source = mm_or_si128(mm_and_si128(source, colorMask), alpha)
+            colorEven = mm_mulhi_epu16(colorEven, coverage)
+            colorOdd = mm_mulhi_epu16(colorOdd, coverage)
+
+            colorEven = mm_srli_epi16(mm_mulhi_epu16(colorEven, div255), 7)
+            colorOdd = mm_srli_epi16(mm_mulhi_epu16(colorOdd, div255), 7)
+
+            source = mm_or_si128(colorEven, mm_slli_epi16(colorOdd, 8))
 
           let
             index = image.dataIndex(x, y)
             backdrop = mm_loadu_si128(image.data[index].addr)
-          mm_storeu_si128(image.data[index].addr, blendNormalSimd(backdrop, source))
+          mm_storeu_si128(
+            image.data[index].addr,
+            blendNormalPremultiplied(backdrop, source)
+          )
 
         x += 4
 
@@ -933,10 +942,13 @@ proc fillShapes(
       if coverage != 0:
         var source = color
         if coverage != 255:
+          source.r = ((color.r.uint16 * coverage) div 255).uint8
+          source.g = ((color.g.uint16 * coverage) div 255).uint8
+          source.b = ((color.b.uint16 * coverage) div 255).uint8
           source.a = ((color.a.uint16 * coverage) div 255).uint8
 
         let backdrop = image.getRgbaUnsafe(x, y)
-        image.setRgbaUnsafe(x, y, blendNormal(backdrop, source))
+        image.setRgbaUnsafe(x, y, blendNormalPremultiplied(backdrop, source))
       inc x
 
 proc parseSomePath(path: SomePath): seq[seq[Vec2]] {.inline.} =

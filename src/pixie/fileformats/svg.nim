@@ -14,7 +14,7 @@ template failInvalid() =
   raise newException(PixieError, "Invalid SVG data")
 
 proc initCtx(): Ctx =
-  result.fill = parseHtmlColor("black").rgba
+  result.fill = parseHtmlColor("black").rgba.toPremultipliedAlpha()
   result.strokeWidth = 1
   result.transform = mat3()
 
@@ -32,14 +32,14 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
   elif fill == "none":
     result.fill = ColorRGBA()
   else:
-    result.fill = parseHtmlColor(fill).rgba
+    result.fill = parseHtmlColor(fill).rgba.toPremultipliedAlpha()
 
   if stroke == "":
     discard # Inherit
   elif stroke == "none":
     result.stroke = ColorRGBA()
   else:
-    result.stroke = parseHtmlColor(stroke).rgba
+    result.stroke = parseHtmlColor(stroke).rgba.toPremultipliedAlpha()
 
   if strokeWidth == "":
     discard # Inherit
@@ -236,6 +236,7 @@ proc decodeSvg*(data: string): Image =
     result = newImage(width, height)
     for node in root:
       result.draw(node, ctxStack)
+    result.toStraightAlpha()
   except PixieError as e:
     raise e
   except:
