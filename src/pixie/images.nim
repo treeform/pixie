@@ -175,7 +175,7 @@ proc magnifyBy2*(image: Image): Image =
 when defined(release):
   {.pop.}
 
-proc toAlphy*(image: Image) =
+proc toPremultipliedAlpha*(image: Image) =
   ## Converts an image to premultiplied alpha from straight.
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
@@ -217,7 +217,7 @@ proc toAlphy*(image: Image) =
     c.b = ((c.b.uint32 * c.a.uint32) div 255).uint8
     image.data[j] = c
 
-proc fromAlphy*(image: Image) =
+proc toStraightAlpha*(image: Image) =
   ## Converts an image from premultiplied alpha to straight alpha.
   ## This is expensive for large images.
   for c in image.data.mitems:
@@ -256,16 +256,16 @@ proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA {.inline.} =
     minY = y.floor.int
     difY = y - y.floor
 
-    vX0Y0 = image[minX, minY].premultiplyAlpha()
-    vX1Y0 = image[minX + 1, minY].premultiplyAlpha()
-    vX0Y1 = image[minX, minY + 1].premultiplyAlpha()
-    vX1Y1 = image[minX + 1, minY + 1].premultiplyAlpha()
+    vX0Y0 = image[minX, minY].toPremultipliedAlpha()
+    vX1Y0 = image[minX + 1, minY].toPremultipliedAlpha()
+    vX0Y1 = image[minX, minY + 1].toPremultipliedAlpha()
+    vX1Y1 = image[minX + 1, minY + 1].toPremultipliedAlpha()
 
     bottomMix = lerp(vX0Y0, vX1Y0, difX)
     topMix = lerp(vX0Y1, vX1Y1, difX)
     finalMix = lerp(bottomMix, topMix, difY)
 
-  finalMix.straightenAlpha()
+  finalMix.toStraightAlpha()
 
 proc resize*(srcImage: Image, width, height: int): Image =
   result = newImage(width, height)
