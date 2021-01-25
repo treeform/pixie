@@ -908,7 +908,6 @@ proc fillShapes(
           mm_storeu_si128(image.data[index].addr, blendNormalSimd(backdrop, source))
 
         x += 4
-        break
 
     while x < image.width:
       if x + 2 <= coverages.len:
@@ -927,7 +926,7 @@ proc fillShapes(
         image.setRgbaUnsafe(x, y, blendNormal(backdrop, source))
       inc x
 
-proc parseSomePath(path: SomePath): seq[seq[Segment]] =
+proc parseSomePath(path: SomePath): seq[seq[Segment]] {.inline.} =
   when type(path) is string:
     parsePath(path).commandsToShapes()
   elif type(path) is Path:
