@@ -1,4 +1,7 @@
-import chroma, blends, bumpy, vmath, common, nimsimd/sse2, system/memory
+import chroma, blends, bumpy, vmath, common, system/memory
+
+when defined(amd64) and not defined(pixieNoSimd):
+  import nimsimd/sse2
 
 const h = 0.5.float32
 
@@ -71,7 +74,7 @@ proc fillUnsafe(data: var seq[ColorRGBA], rgba: ColorRGBA, start, len: int) =
     nimSetMem(data[start].addr, rgba.r.cint, len * 4)
   else:
     var i = start
-    when defined(amd64):
+    when defined(amd64) and not defined(pixieNoSimd):
       # When supported, SIMD fill until we run out of room
       let m = mm_set1_epi32(cast[int32](rgba))
       for j in countup(i, start + len - 8, 8):
@@ -172,31 +175,10 @@ proc magnifyBy2*(image: Image): Image =
 when defined(release):
   {.pop.}
 
-proc draw*(a, b: Image, mat: Mat3, blendMode = bmNormal)
-proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.}
-
-proc invert*(image: Image) =
-  ## Inverts all of the colors and alpha.
-  var i: int
-  when defined(amd64):
-    let vec255 = mm_set1_epi8(255)
-    while i < image.data.len - 4:
-      var m = mm_loadu_si128(image.data[i].addr)
-      m = mm_sub_epi8(vec255, m)
-      mm_storeu_si128(image.data[i].addr, m)
-      i += 4
-  for j in i ..< image.data.len:
-    var rgba = image.data[j]
-    rgba.r = 255 - rgba.r
-    rgba.g = 255 - rgba.g
-    rgba.b = 255 - rgba.b
-    rgba.a = 255 - rgba.a
-    image.data[j] = rgba
-
-proc toAlphy*(image: Image) =
+proc toPremultipliedAlpha*(image: Image) =
   ## Converts an image to premultiplied alpha from straight.
   var i: int
-  when defined(amd64):
+  when defined(amd64) and not defined(pixieNoSimd):
     # When supported, SIMD convert as much as possible
     let
       alphaMask = mm_set1_epi32(cast[int32](0xff000000))
@@ -235,33 +217,55 @@ proc toAlphy*(image: Image) =
     c.b = ((c.b.uint32 * c.a.uint32) div 255).uint8
     image.data[j] = c
 
-proc fromAlphy*(image: Image) =
-  ## Converts an image to from premultiplied alpha to straight.
+proc toStraightAlpha*(image: Image) =
+  ## Converts an image from premultiplied alpha to straight alpha.
+  ## This is expensive for large images.
   for c in image.data.mitems:
-    if c.a == 0:
+    if c.a == 0 or c.a == 255:
       continue
-    c.r = ((c.r.uint32 * 255) div c.a.uint32).uint8
-    c.g = ((c.g.uint32 * 255) div c.a.uint32).uint8
-    c.b = ((c.b.uint32 * 255) div c.a.uint32).uint8
+    let multiplier = ((255 / c.a.float32) * 255).uint32
+    c.r = ((c.r.uint32 * multiplier) div 255).uint8
+    c.g = ((c.g.uint32 * multiplier) div 255).uint8
+    c.b = ((c.b.uint32 * multiplier) div 255).uint8
+
+proc draw*(a, b: Image, mat: Mat3, blendMode = bmNormal)
+proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.}
+
+proc invert*(image: Image) =
+  ## Inverts all of the colors and alpha.
+  var i: int
+  when defined(amd64) and not defined(pixieNoSimd):
+    let vec255 = mm_set1_epi8(255)
+    while i < image.data.len - 4:
+      var m = mm_loadu_si128(image.data[i].addr)
+      m = mm_sub_epi8(vec255, m)
+      mm_storeu_si128(image.data[i].addr, m)
+      i += 4
+  for j in i ..< image.data.len:
+    var rgba = image.data[j]
+    rgba.r = 255 - rgba.r
+    rgba.g = 255 - rgba.g
+    rgba.b = 255 - rgba.b
+    rgba.a = 255 - rgba.a
+    image.data[j] = rgba
 
 proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA {.inline.} =
-  ## Gets a pixel as (x, y) floats.
   let
     minX = x.floor.int
     difX = x - x.floor
     minY = y.floor.int
     difY = y - y.floor
 
-    vX0Y0 = image[minX, minY].color().toAlphy()
-    vX1Y0 = image[minX + 1, minY].color().toAlphy()
-    vX0Y1 = image[minX, minY + 1].color().toAlphy()
-    vX1Y1 = image[minX + 1, minY + 1].color().toAlphy()
+    vX0Y0 = image[minX, minY].toPremultipliedAlpha()
+    vX1Y0 = image[minX + 1, minY].toPremultipliedAlpha()
+    vX0Y1 = image[minX, minY + 1].toPremultipliedAlpha()
+    vX1Y1 = image[minX + 1, minY + 1].toPremultipliedAlpha()
 
     bottomMix = lerp(vX0Y0, vX1Y0, difX)
     topMix = lerp(vX0Y1, vX1Y1, difX)
     finalMix = lerp(bottomMix, topMix, difY)
 
-  return finalMix.fromAlphy().rgba()
+  finalMix.toStraightAlpha()
 
 proc resize*(srcImage: Image, width, height: int): Image =
   result = newImage(width, height)

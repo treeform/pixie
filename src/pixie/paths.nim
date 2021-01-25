@@ -415,36 +415,34 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
     discretize(arc, 1, 1)
 
   for command in commands:
+    if command.numbers.len != command.kind.parameterCount():
+      raise newException(PixieError, "Invalid path")
+
     case command.kind
       of Move:
-        assert command.numbers.len == 2
         at.x = command.numbers[0]
         at.y = command.numbers[1]
         start = at
 
       of Line:
-        assert command.numbers.len == 2
         to.x = command.numbers[0]
         to.y = command.numbers[1]
         drawLine(at, to)
         at = to
 
       of VLine:
-        assert command.numbers.len == 1
         to.x = at.x
         to.y = command.numbers[0]
         drawLine(at, to)
         at = to
 
       of HLine:
-        assert command.numbers.len == 1
         to.x = command.numbers[0]
         to.y = at.y
         drawLine(at, to)
         at = to
 
       of Quad:
-        assert command.numbers.len mod 4 == 0
         var i = 0
         while i < command.numbers.len:
           ctr.x = command.numbers[i+0]
@@ -459,7 +457,6 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
       of TQuad:
         if prevCommand != Quad and prevCommand != TQuad:
           ctr = at
-        assert command.numbers.len == 2
         to.x = command.numbers[0]
         to.y = command.numbers[1]
         ctr = at - (ctr - at)
@@ -467,7 +464,6 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
         at = to
 
       of Cubic:
-        assert command.numbers.len == 6
         ctr.x = command.numbers[0]
         ctr.y = command.numbers[1]
         ctr2.x = command.numbers[2]
@@ -488,7 +484,6 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
         at = to
 
       of Close:
-        assert command.numbers.len == 0
         if at != start:
           if prevCommand == Quad or prevCommand == TQuad:
             drawQuad(at, ctr, start)
@@ -500,34 +495,29 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
         at = start
 
       of RMove:
-        assert command.numbers.len == 2
         at.x += command.numbers[0]
         at.y += command.numbers[1]
         start = at
 
       of RLine:
-        assert command.numbers.len == 2
         to.x = at.x + command.numbers[0]
         to.y = at.y + command.numbers[1]
         drawLine(at, to)
         at = to
 
       of RVLine:
-        assert command.numbers.len == 1
         to.x = at.x
         to.y = at.y + command.numbers[0]
         drawLine(at, to)
         at = to
 
       of RHLine:
-        assert command.numbers.len == 1
         to.x = at.x + command.numbers[0]
         to.y = at.y
         drawLine(at, to)
         at = to
 
       of RQuad:
-        assert command.numbers.len == 4
         ctr.x = at.x + command.numbers[0]
         ctr.y = at.y + command.numbers[1]
         to.x = at.x + command.numbers[2]
@@ -538,7 +528,6 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
       of RTQuad:
         if prevCommand != RQuad and prevCommand != RTQuad:
           ctr = at
-        assert command.numbers.len == 2
         to.x = at.x + command.numbers[0]
         to.y = at.y + command.numbers[1]
         ctr = at - (ctr - at)
@@ -546,7 +535,6 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
         at = to
 
       of RCubic:
-        assert command.numbers.len == 6
         ctr.x = at.x + command.numbers[0]
         ctr.y = at.y + command.numbers[1]
         ctr2.x = at.x + command.numbers[2]
@@ -557,7 +545,6 @@ proc commandsToPolygons*(commands: seq[PathCommand]): seq[seq[Vec2]] =
         at = to
 
       of RSCubic:
-        assert command.numbers.len == 4
         if prevCommand in {Cubic, SCubic, RCubic, RSCubic}:
           ctr = 2 * at - ctr2
         else:
@@ -1005,11 +992,7 @@ proc rect*(path: Path, x, y, w, h: float32) =
   path.closePath()
 
 proc polygon*(path: Path, x, y, size: float32, sides: int) =
-  ## Draws a n sided regular polygon at x,y with size.
-  let
-    size = 80.0
-    x = 100.0
-    y = 100.0
+  ## Draws a n sided regular polygon at (x, y) with size.
   path.moveTo(x + size * cos(0.0), y + size * sin(0.0))
   for side in 0 .. sides:
     path.lineTo(

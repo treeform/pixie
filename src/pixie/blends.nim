@@ -1,7 +1,7 @@
 ## Blending modes.
 import chroma, math
 
-when defined(amd64):
+when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
 
 # See https://www.w3.org/TR/compositing-1/
@@ -264,7 +264,7 @@ proc blendExcludeMaskFloats*(backdrop, source: Color): Color {.inline.} =
 proc blendOverwriteFloats*(backdrop, source: Color): Color {.inline.} =
   source
 
-when defined(amd64):
+when defined(amd64) and not defined(pixieNoSimd):
   proc alphaFix(backdrop, source: ColorRGBA, vb, vs, vm: M128): ColorRGBA =
     let
       sa = source.a.float32
@@ -417,7 +417,7 @@ proc blendSoftLight(backdrop, source: ColorRGBA): ColorRGBA =
   #     (2 * source * backdrop) div 255
   #   ).uint8
 
-  when defined(amd64):
+  when defined(amd64) and not defined(pixieNoSimd):
     let
       vb = mm_setr_ps(backdrop.r.float32, backdrop.g.float32, backdrop.b.float32, 0)
       vs = mm_setr_ps(source.r.float32, source.g.float32, source.b.float32, 0)
