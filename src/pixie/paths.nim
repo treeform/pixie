@@ -772,23 +772,21 @@ proc fillShapes(
   color: ColorRGBA,
   windingRule: WindingRule
 ) =
-  var sortedShapes = newSeq[seq[(Segment, bool)]](shapes.len)
+  var
+    sortedShapes = newSeq[seq[(Segment, bool)]](shapes.len)
+    bounds = newSeq[Rect](shapes.len)
   for i, sorted in sortedShapes.mpairs:
+    bounds[i] = computeBounds(shapes[i])
     for segment in shapes[i].segments:
-      if segment.at.y == segment.to.y:
-        # Skip horizontal and zero-length
+      if segment.at.y == segment.to.y: # Skip horizontal
         continue
-      var
-        segment = segment
-        winding = segment.at.y > segment.to.y
+      let winding = segment.at.y > segment.to.y
       if winding:
+        var segment = segment
         swap(segment.at, segment.to)
-      sorted.add((segment, winding))
-
-  # Compute the bounds of each shape
-  var bounds = newSeq[Rect](shapes.len)
-  for i, shape in shapes:
-    bounds[i] = computeBounds(shape)
+        sorted.add((segment, winding))
+      else:
+        sorted.add((segment, winding))
 
   # Figure out the total bounds of all the shapes
   var
@@ -815,12 +813,12 @@ proc fillShapes(
 
   var
     hits = newSeq[(float32, bool)](4)
-    coverages = newSeq[uint32](image.width)
+    coverages = newSeq[uint8](image.width)
     numHits: int
 
   for y in startY ..< stopY:
     # Reset buffer for this row
-    zeroMem(coverages[0].addr, coverages.len * 4)
+    zeroMem(coverages[0].addr, coverages.len)
 
     # Do scanlines for this row
     for m in 0 ..< quality:
@@ -872,11 +870,14 @@ proc fillShapes(
         if fillLen > 0 and shouldFill(windingRule, count):
           var i = fillStart
           when defined(amd64) and not defined(pixieNoSimd):
-            let m = mm_set1_epi32(sampleCoverage.int32)
-            for j in countup(i, fillStart + fillLen - 4, 4):
+            let vSampleCoverage = mm_set1_epi8(cast[int8](sampleCoverage))
+            for j in countup(i, fillStart + fillLen - 16, 16):
               let current = mm_loadu_si128(coverages[j].addr)
-              mm_storeu_si128(coverages[j].addr, mm_add_epi32(m, current))
-              i += 4
+              mm_storeu_si128(
+                coverages[j].addr,
+                mm_add_epi8(current, vSampleCoverage)
+              )
+              i += 16
           for j in i ..< fillStart + fillLen:
             coverages[j] += sampleCoverage
 
@@ -889,17 +890,39 @@ proc fillShapes(
       # When supported, SIMD blend as much as possible
 
       let
+        coverageMask1 = cast[M128i]([0xffffffff, 0, 0, 0]) # First 32 bits
+        coverageMask3 = mm_set1_epi32(cast[int32](0x000000ff)) # Only `r`
         oddMask = mm_set1_epi16(cast[int16](0xff00))
         div255 = mm_set1_epi16(cast[int16](0x8081))
         zero = mm_set1_epi32(0)
         v255 = mm_set1_epi32(255)
+        vColor = mm_set1_epi32(cast[int32](color))
 
-      for _ in countup(x, coverages.len - 4, 4):
+      for _ in countup(x, coverages.len - 8, 8):
         var coverage = mm_loadu_si128(coverages[x].addr)
+        coverage = mm_and_si128(coverage, coverageMask1)
 
-        if mm_movemask_epi8(mm_cmpeq_epi32(coverage, zero)) != 0xffff:
+        if mm_movemask_epi8(mm_cmpeq_epi16(coverage, zero)) != 0xffff:
           # If the coverages are not all zero
-          var source = mm_set1_epi32(cast[int32](color))
+          var source = vColor
+          coverage = mm_slli_si128(coverage, 2)
+          coverage = mm_shuffle_epi32(coverage, MM_SHUFFLE(1, 1, 0, 0))
+
+          var
+            a = mm_and_si128(coverage, coverageMask1)
+            b = mm_and_si128(coverage, mm_slli_si128(coverageMask1, 4))
+            c = mm_and_si128(coverage, mm_slli_si128(coverageMask1, 8))
+            d = mm_and_si128(coverage, mm_slli_si128(coverageMask1, 12))
+
+          # Shift the coverages to `r`
+          a = mm_srli_si128(a, 2)
+          b = mm_srli_si128(b, 3)
+          d = mm_srli_si128(d, 1)
+
+          coverage = mm_and_si128(
+            mm_or_si128(mm_or_si128(a, b), mm_or_si128(c, d)),
+            coverageMask3
+          )
 
           if mm_movemask_epi8(mm_cmpeq_epi32(coverage, v255)) != 0xffff:
             # If the coverages are not all 255
@@ -932,10 +955,10 @@ proc fillShapes(
         x += 4
 
     while x < image.width:
-      if x + 2 <= coverages.len:
+      if x + 8 <= coverages.len:
         let peeked = cast[ptr uint64](coverages[x].addr)[]
         if peeked == 0:
-          x += 2
+          x += 8
           continue
 
       let coverage = coverages[x]

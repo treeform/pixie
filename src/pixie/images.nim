@@ -66,7 +66,7 @@ proc `[]=`*(image: Image, x, y: int, rgba: ColorRGBA) {.inline.} =
     image.setRgbaUnsafe(x, y, rgba)
 
 proc fillUnsafe(data: var seq[ColorRGBA], rgba: ColorRGBA, start, len: int) =
-  ## Fills the image data with a solid color starting at index start and
+  ## Fills the image data with the parameter color starting at index start and
   ## continuing for len indices.
 
   # Use memset when every byte has the same value
@@ -95,7 +95,7 @@ proc fillUnsafe(data: var seq[ColorRGBA], rgba: ColorRGBA, start, len: int) =
       data[j] = rgba
 
 proc fill*(image: Image, rgba: ColorRgba) {.inline.} =
-  ## Fills the image with a solid color.
+  ## Fills the image with the parameter color.
   fillUnsafe(image.data, rgba, 0, image.data.len)
 
 proc flipHorizontal*(image: Image) =
@@ -234,7 +234,7 @@ proc invert*(image: Image) =
   ## Inverts all of the colors and alpha.
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
-    let vec255 = mm_set1_epi8(255)
+    let vec255 = mm_set1_epi8(cast[int8](255))
     while i < image.data.len - 4:
       var m = mm_loadu_si128(image.data[i].addr)
       m = mm_sub_epi8(vec255, m)
@@ -251,18 +251,18 @@ proc invert*(image: Image) =
 proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA {.inline.} =
   let
     minX = x.floor.int
-    difX = x - x.floor
+    diffX = x - x.floor
     minY = y.floor.int
-    difY = y - y.floor
+    diffY = y - y.floor
 
-    vX0Y0 = image[minX, minY].toPremultipliedAlpha()
-    vX1Y0 = image[minX + 1, minY].toPremultipliedAlpha()
-    vX0Y1 = image[minX, minY + 1].toPremultipliedAlpha()
-    vX1Y1 = image[minX + 1, minY + 1].toPremultipliedAlpha()
+    x0y0 = image[minX, minY].toPremultipliedAlpha()
+    x1y0 = image[minX + 1, minY].toPremultipliedAlpha()
+    x0y1 = image[minX, minY + 1].toPremultipliedAlpha()
+    x1y1 = image[minX + 1, minY + 1].toPremultipliedAlpha()
 
-    bottomMix = lerp(vX0Y0, vX1Y0, difX)
-    topMix = lerp(vX0Y1, vX1Y1, difX)
-    finalMix = lerp(bottomMix, topMix, difY)
+    bottomMix = lerp(x0y0, x1y0, diffX)
+    topMix = lerp(x0y1, x1y1, diffX)
+    finalMix = lerp(bottomMix, topMix, diffY)
 
   finalMix.toStraightAlpha()
 
@@ -376,9 +376,10 @@ proc blurAlpha*(image: Image, radius: float32) =
 
 proc shift*(image: Image, offset: Vec2) =
   ## Shifts the image by offset.
-  let copy = image.copy() # Copy to read from.
-  image.fill(rgba(0, 0, 0, 0)) # Reset this for being drawn to.
-  image.draw(copy, offset) # Draw copy into image.
+  if offset != vec2(0, 0):
+    let copy = image.copy() # Copy to read from.
+    image.fill(rgba(0, 0, 0, 0)) # Reset this for being drawn to.
+    image.draw(copy, offset) # Draw copy into image.
 
 proc spread*(image: Image, spread: float32) =
   ## Grows the image as a mask by spread.
@@ -465,7 +466,7 @@ proc drawCorrect*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
 proc drawUber(
   a, b: Image,
   p, dx, dy: Vec2,
-  lines: array[0..3, Segment],
+  segments: array[0..3, Segment],
   blendMode: BlendMode,
   smooth: bool
 ) =
@@ -475,13 +476,13 @@ proc drawUber(
       xMin = a.width
       xMax = 0
     for yOffset in [0.float32, 1]:
-      var scanLine = segment(
-        vec2(-100000, y.float32 + yOffset),
-        vec2(10000, y.float32 + yOffset)
+      var scanLine = Line(
+        a: vec2(-1000, y.float32 + yOffset),
+        b: vec2(1000, y.float32 + yOffset)
       )
-      for l in lines:
+      for segment in segments:
         var at: Vec2
-        if intersects(l, scanLine, at) and l.to != at:
+        if scanline.intersects(segment, at) and segment.to != at:
           xMin = min(xMin, at.x.floor.int)
           xMax = max(xMax, at.x.ceil.int)
 
@@ -519,7 +520,7 @@ proc draw*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
       mat * vec2(b.width.float32, b.height.float32),
       mat * vec2(0, b.height.float32)
     ]
-    lines = [
+    segments = [
       segment(corners[0], corners[1]),
       segment(corners[1], corners[2]),
       segment(corners[2], corners[3]),
@@ -543,10 +544,14 @@ proc draw*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
     minFilterBy2 /= 2
     matInv = matInv * scale(vec2(0.5, 0.5))
 
-  let smooth = not(dx.length == 1.0 and dy.length == 1.0 and
-    mat[2, 0].fractional == 0.0 and mat[2, 1].fractional == 0.0)
+  let smooth = not(
+    dx.length == 1.0 and
+    dy.length == 1.0 and
+    mat[2, 0].fractional == 0.0 and
+    mat[2, 1].fractional == 0.0
+  )
 
-  a.drawUber(b, p, dx, dy, lines, blendMode, smooth)
+  a.drawUber(b, p, dx, dy, segments, blendMode, smooth)
 
 proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.} =
   a.draw(b, translate(pos), blendMode)

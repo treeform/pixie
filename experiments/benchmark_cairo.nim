@@ -1,4 +1,4 @@
-import cairo, math, benchy, pixie, chroma
+import cairo, math, benchy, pixie, pixie/paths, chroma
 
 var
   surface = imageSurfaceCreate(FORMAT_ARGB32, 1000, 1000)
