@@ -831,6 +831,8 @@ proc fillShapes(
         if bounds.y > y.float32 or bounds.y + bounds.h < y.float32:
           continue
         for (segment, winding) in shape:
+          if segment.at.y > yLine or segment.to.y < y.float32:
+            continue
           var at: Vec2
           if scanline.intersects(segment, at):# and segment.to != at:
             if numHits == hits.len:
