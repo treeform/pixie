@@ -744,17 +744,18 @@ proc quickSort(a: var seq[(float32, bool)], inl, inr: int) =
   quickSort(a, inl, r)
   quickSort(a, l, inr)
 
-proc computeBounds(shape: seq[Vec2]): Rect =
+proc computeBounds(shapes: seq[seq[(Segment, bool)]]): Rect =
   var
     xMin = float32.high
     xMax = float32.low
     yMin = float32.high
     yMax = float32.low
-  for segment in shape.segments:
-    xMin = min(xMin, min(segment.at.x, segment.to.x))
-    xMax = max(xMax, max(segment.at.x, segment.to.x))
-    yMin = min(yMin, min(segment.at.y, segment.to.y))
-    yMax = max(yMax, max(segment.at.y, segment.to.y))
+  for shape in shapes:
+    for (segment, _) in shape:
+      xMin = min(xMin, min(segment.at.x, segment.to.x))
+      xMax = max(xMax, max(segment.at.x, segment.to.x))
+      yMin = min(yMin, min(segment.at.y, segment.to.y))
+      yMax = max(yMax, max(segment.at.y, segment.to.y))
 
   xMin = floor(xMin)
   xMax = ceil(xMax)
@@ -772,11 +773,8 @@ proc fillShapes(
   color: ColorRGBA,
   windingRule: WindingRule
 ) =
-  var
-    sortedShapes = newSeq[seq[(Segment, bool)]](shapes.len)
-    bounds = newSeq[Rect](shapes.len)
+  var sortedShapes = newSeq[seq[(Segment, bool)]](shapes.len)
   for i, sorted in sortedShapes.mpairs:
-    bounds[i] = computeBounds(shapes[i])
     for segment in shapes[i].segments:
       if segment.at.y == segment.to.y: # Skip horizontal
         continue
@@ -788,21 +786,13 @@ proc fillShapes(
       else:
         sorted.add((segment, winding))
 
-  # Figure out the total bounds of all the shapes
-  var
-    minX = float32.high
-    minY = float32.high
-    maxY = float32.low
-  for bounds in bounds:
-    minX = min(minX, bounds.x)
-    minY = min(minY, bounds.y)
-    maxY = max(maxY, bounds.y + bounds.h)
-
-  # Rasterize only within the total bounds
+  # Figure out the total bounds of all the shapes,
+  # rasterize only within the total bounds
   let
-    startX = max(0, minX.int)
-    startY = max(0, miny.int)
-    stopY = min(image.height, maxY.int)
+    bounds = computeBounds(sortedShapes)
+    startX = max(0, bounds.x.int)
+    startY = max(0, bounds.y.int)
+    stopY = min(image.height, (bounds.y + bounds.h).int)
 
   const
     quality = 5 # Must divide 255 cleanly
@@ -827,9 +817,6 @@ proc fillShapes(
         scanline = Line(a: vec2(0, yLine), b: vec2(1000, yLine))
       numHits = 0
       for i, shape in sortedShapes:
-        let bounds = bounds[i]
-        if bounds.y > y.float32 or bounds.y + bounds.h < y.float32:
-          continue
         for (segment, winding) in shape:
           if segment.at.y > yLine or segment.to.y < y.float32:
             continue
