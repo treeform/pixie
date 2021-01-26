@@ -887,7 +887,7 @@ proc fillShapes(
         v255 = mm_set1_epi32(255)
         vColor = mm_set1_epi32(cast[int32](color))
 
-      for _ in countup(x, coverages.len - 8, 8):
+      for _ in countup(x, coverages.len - 16, 16):
         var coverage = mm_loadu_si128(coverages[x].addr)
         coverage = mm_and_si128(coverage, coverageMask1)
 
