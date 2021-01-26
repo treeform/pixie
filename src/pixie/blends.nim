@@ -299,16 +299,16 @@ when defined(amd64) and not defined(pixieNoSimd):
 else:
   proc alphaFix(backdrop, source, mixed: ColorRGBA): ColorRGBA {.inline.} =
     let
-      sa = source.a.int32
-      ba = backdrop.a.int32
+      sa = source.a.uint32
+      ba = backdrop.a.uint32
       t0 = sa * (255 - ba)
       t1 = sa * ba
       t2 = (255 - sa) * ba
 
     let
-      r = t0 * source.r.int32 + t1 * mixed.r.int32 + t2 * backdrop.r.int32
-      g = t0 * source.g.int32 + t1 * mixed.g.int32 + t2 * backdrop.g.int32
-      b = t0 * source.b.int32 + t1 * mixed.b.int32 + t2 * backdrop.b.int32
+      r = t0 * source.r.uint32 + t1 * mixed.r.uint32 + t2 * backdrop.r.uint32
+      g = t0 * source.g.uint32 + t1 * mixed.g.uint32 + t2 * backdrop.g.uint32
+      b = t0 * source.b.uint32 + t1 * mixed.b.uint32 + t2 * backdrop.b.uint32
       a = sa + ba * (255 - sa) div 255
 
     if a == 0:

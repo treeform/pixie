@@ -437,10 +437,9 @@ proc encodePng*(
       raise newException(PixieError, "Invalid PNG number of channels")
 
   let data = cast[ptr UncheckedArray[uint8]](data)
-  const signature = [137.uint8, 80, 78, 71, 13, 10, 26, 10]
 
   # Add the PNG file signature
-  result.add(signature)
+  result.add(pngSignature)
 
   # Add IHDR
   result.addUint32(13.uint32.swap())
