@@ -47,9 +47,10 @@ proc toPremultipliedAlpha*(c: Color): Color {.inline.} =
 
 proc toStraightAlpha*(c: Color): Color {.inline.} =
   ## Converts a color to from premultiplied alpha to straight.
-  if c.a == 0:
-    return
-  result.r = c.r / c.a
-  result.g = c.g / c.a
-  result.b = c.b / c.a
-  result.a = c.a
+  if c.a != 0 and c.a != 1:
+    result = c
+  else:
+    result.r = c.r / c.a
+    result.g = c.g / c.a
+    result.b = c.b / c.a
+    result.a = c.a
