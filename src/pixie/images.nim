@@ -547,12 +547,13 @@ proc shadow*(
   mask: Image, offset: Vec2, spread, blur: float32, color: ColorRGBA
 ): Image =
   ## Create a shadow of the image with the offset, spread and blur.
+  let copy = mask.copy()
   if offset != vec2(0, 0):
-    mask.shift(offset)
+    copy.shift(offset)
   if spread > 0:
-    mask.spread(spread)
+    copy.spread(spread)
   if blur > 0:
-    mask.blurAlpha(blur)
+    copy.blurAlpha(blur)
   result = newImage(mask.width, mask.height)
   result.fill(color)
-  result.draw(mask, blendMode = bmMask)
+  result.draw(copy, blendMode = bmMask)
