@@ -332,7 +332,7 @@ proc blur*(image: Image, radius: float32) =
       c.b = c.b / totalA
       image.setRgbaUnsafe(x, y, c.rgba)
 
-proc blurAlpha*(image: Image, radius: float32) =
+proc blurAlpha(image: Image, radius: float32) =
   ## Applies Gaussian blur to the image given a radius.
   let radius = round(radius).int
   if radius == 0:
@@ -520,7 +520,7 @@ proc shift*(image: Image, offset: Vec2) =
     image.fill(rgba(0, 0, 0, 0)) # Reset this for being drawn to.
     image.draw(copy, offset, bmOverwrite) # Draw copy into image.
 
-proc spread*(image: Image, spread: float32) =
+proc spread(image: Image, spread: float32) =
   ## Grows the image as a mask by spread.
   if spread == 0:
     return
