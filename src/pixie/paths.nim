@@ -841,7 +841,7 @@ proc fillShapes(
 
         var
           fillStart = x.int
-          leftCover = if at.int - x.int > 0: ceil(x) - x else: at - x
+          leftCover = if at.int - x.int > 0: trunc(x) + 1 - x else: at - x
         if leftCover != 0:
           inc fillStart
           if shouldFill(windingRule, count):
