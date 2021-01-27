@@ -466,7 +466,7 @@ proc drawCorrect*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
 proc drawUber(
   a, b: Image,
   p, dx, dy: Vec2,
-  segments: array[0..3, Segment],
+  perimeter: array[0..3, Segment],
   blendMode: BlendMode,
   smooth: bool
 ) =
@@ -480,7 +480,7 @@ proc drawUber(
         a: vec2(-1000, y.float32 + yOffset),
         b: vec2(1000, y.float32 + yOffset)
       )
-      for segment in segments:
+      for segment in perimeter:
         var at: Vec2
         if scanline.intersects(segment, at) and segment.to != at:
           xMin = min(xMin, at.x.floor.int)
@@ -520,7 +520,7 @@ proc draw*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
       mat * vec2(b.width.float32, b.height.float32),
       mat * vec2(0, b.height.float32)
     ]
-    segments = [
+    perimeter = [
       segment(corners[0], corners[1]),
       segment(corners[1], corners[2]),
       segment(corners[2], corners[3]),
@@ -551,7 +551,7 @@ proc draw*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
     mat[2, 1].fractional == 0.0
   )
 
-  a.drawUber(b, p, dx, dy, segments, blendMode, smooth)
+  a.drawUber(b, p, dx, dy, perimeter, blendMode, smooth)
 
 proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.} =
   a.draw(b, translate(pos), blendMode)
