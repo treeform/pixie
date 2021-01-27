@@ -724,7 +724,7 @@ iterator segments*(s: seq[Vec2]): Segment =
   for i in 0 ..< s.len - 1:
     yield(segment(s[i], s[i + 1]))
 
-proc quickSort(a: var seq[(float32, bool)], inl, inr: int) =
+proc quickSort(a: var seq[(float32, int16)], inl, inr: int) =
   var
     r = inr
     l = inl
@@ -744,7 +744,7 @@ proc quickSort(a: var seq[(float32, bool)], inl, inr: int) =
   quickSort(a, inl, r)
   quickSort(a, l, inr)
 
-proc computeBounds(segments: seq[(Segment, bool)]): Rect =
+proc computeBounds(segments: seq[(Segment, int16)]): Rect =
   var
     xMin = float32.high
     xMax = float32.low
@@ -772,18 +772,17 @@ proc fillShapes(
   color: ColorRGBA,
   windingRule: WindingRule
 ) =
-  var sortedSegments: seq[(Segment, bool)]
+  var sortedSegments: seq[(Segment, int16)]
   for shape in shapes:
     for segment in shape.segments:
       if segment.at.y == segment.to.y: # Skip horizontal
         continue
-      let winding = segment.at.y > segment.to.y
-      if winding:
+      if segment.at.y > segment.to.y:
         var segment = segment
         swap(segment.at, segment.to)
-        sortedSegments.add((segment, winding))
+        sortedSegments.add((segment, -1.int16))
       else:
-        sortedSegments.add((segment, winding))
+        sortedSegments.add((segment, 1.int16))
 
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
@@ -801,7 +800,7 @@ proc fillShapes(
     initialOffset = offset / 2
 
   var
-    hits = newSeq[(float32, bool)](4)
+    hits = newSeq[(float32, int16)](4)
     coverages = newSeq[uint8](image.width)
     numHits: int
 
@@ -868,7 +867,7 @@ proc fillShapes(
           for j in i ..< fillStart + fillLen:
             coverages[j] += sampleCoverage
 
-        count += (if winding: -1 else: 1)
+        count += winding
         x = at
 
     # Apply the coverage and blend
