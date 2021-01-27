@@ -878,10 +878,9 @@ proc fillShapes(
 
       let
         coverageMask1 = cast[M128i]([0xffffffff, 0, 0, 0]) # First 32 bits
-        coverageMask3 = mm_set1_epi32(cast[int32](0x000000ff)) # Only `r`
+        coverageMask2 = mm_set1_epi32(cast[int32](0x000000ff)) # Only `r`
         oddMask = mm_set1_epi16(cast[int16](0xff00))
         div255 = mm_set1_epi16(cast[int16](0x8081))
-        zero = mm_set1_epi32(0)
         v255 = mm_set1_epi32(255)
         vColor = mm_set1_epi32(cast[int32](color))
 
@@ -889,9 +888,11 @@ proc fillShapes(
         var coverage = mm_loadu_si128(coverages[x].addr)
         coverage = mm_and_si128(coverage, coverageMask1)
 
-        if mm_movemask_epi8(mm_cmpeq_epi16(coverage, zero)) != 0xffff:
+        let eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
+        if mm_movemask_epi8(eqZero) != 0xffff:
           # If the coverages are not all zero
           var source = vColor
+
           coverage = mm_slli_si128(coverage, 2)
           coverage = mm_shuffle_epi32(coverage, MM_SHUFFLE(1, 1, 0, 0))
 
@@ -908,7 +909,7 @@ proc fillShapes(
 
           coverage = mm_and_si128(
             mm_or_si128(mm_or_si128(a, b), mm_or_si128(c, d)),
-            coverageMask3
+            coverageMask2
           )
 
           if mm_movemask_epi8(mm_cmpeq_epi32(coverage, v255)) != 0xffff:
