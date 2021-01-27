@@ -227,9 +227,6 @@ proc toStraightAlpha*(image: Image) =
 when defined(release):
   {.pop.}
 
-proc draw*(a, b: Image, mat: Mat3, blendMode = bmNormal)
-proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.}
-
 proc invert*(image: Image) =
   ## Inverts all of the colors and alpha.
   var i: int
@@ -265,16 +262,6 @@ proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA {.inline.} =
     finalMix = lerp(bottomMix, topMix, diffY)
 
   finalMix.toStraightAlpha()
-
-proc resize*(srcImage: Image, width, height: int): Image =
-  result = newImage(width, height)
-  result.draw(
-    srcImage,
-    scale(vec2(
-      (width + 1).float / srcImage.width.float,
-      (height + 1).float / srcImage.height.float
-    ))
-  )
 
 proc blur*(image: Image, radius: float32) =
   ## Applies Gaussian blur to the image given a radius.
@@ -374,47 +361,6 @@ proc blurAlpha*(image: Image, radius: float32) =
         alpha += c2.a.float32 * a
       image.setRgbaUnsafe(x, y, rgba(0, 0, 0, alpha.uint8))
 
-proc shift*(image: Image, offset: Vec2) =
-  ## Shifts the image by offset.
-  if offset != vec2(0, 0):
-    let copy = image.copy() # Copy to read from.
-    image.fill(rgba(0, 0, 0, 0)) # Reset this for being drawn to.
-    image.draw(copy, offset) # Draw copy into image.
-
-proc spread*(image: Image, spread: float32) =
-  ## Grows the image as a mask by spread.
-  let
-    copy = image.copy()
-    spread = round(spread).int
-  assert spread > 0
-  for y in 0 ..< image.height:
-    for x in 0 ..< image.width:
-      var maxAlpha = 0.uint8
-      block blurBox:
-        for bx in -spread .. spread:
-          for by in -spread .. spread:
-            let alpha = copy[x + bx, y + by].a
-            if alpha > maxAlpha:
-              maxAlpha = alpha
-            if maxAlpha == 255:
-              break blurBox
-      image[x, y] = rgba(0, 0, 0, maxAlpha)
-
-proc shadow*(
-  mask: Image, offset: Vec2, spread, blur: float32, color: ColorRGBA
-): Image =
-  ## Create a shadow of the image with the offset, spread and blur.
-  var shadow = mask
-  if offset != vec2(0, 0):
-    shadow.shift(offset)
-  if spread > 0:
-    shadow.spread(spread)
-  if blur > 0:
-    shadow.blurAlpha(blur)
-  result = newImage(mask.width, mask.height)
-  result.fill(color)
-  result.draw(shadow, blendMode = bmMask)
-
 proc applyOpacity*(image: Image, opacity: float32) =
   ## Multiplies alpha of the image by opacity.
   let op = (255 * opacity).uint32
@@ -510,7 +456,7 @@ proc drawUber(
       if a.width - xMax > 0:
         zeroMem(a.data[a.dataIndex(xMax, y)].addr, 4 * (a.width - xMax))
 
-proc draw*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
+proc draw*(a, b: Image, mat: Mat3, blendMode = bmNormal) =
   ## Draws one image onto another using matrix with color blending.
 
   let
@@ -555,3 +501,54 @@ proc draw*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
 
 proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.} =
   a.draw(b, translate(pos), blendMode)
+
+proc resize*(srcImage: Image, width, height: int): Image =
+  result = newImage(width, height)
+  result.draw(
+    srcImage,
+    scale(vec2(
+      (width + 1).float / srcImage.width.float,
+      (height + 1).float / srcImage.height.float
+    ))
+  )
+
+proc shift*(image: Image, offset: Vec2) =
+  ## Shifts the image by offset.
+  if offset != vec2(0, 0):
+    let copy = image.copy() # Copy to read from.
+    image.fill(rgba(0, 0, 0, 0)) # Reset this for being drawn to.
+    image.draw(copy, offset) # Draw copy into image.
+
+proc spread*(image: Image, spread: float32) =
+  ## Grows the image as a mask by spread.
+  let
+    copy = image.copy()
+    spread = round(spread).int
+  assert spread > 0
+  for y in 0 ..< image.height:
+    for x in 0 ..< image.width:
+      var maxAlpha = 0.uint8
+      block blurBox:
+        for bx in -spread .. spread:
+          for by in -spread .. spread:
+            let alpha = copy[x + bx, y + by].a
+            if alpha > maxAlpha:
+              maxAlpha = alpha
+            if maxAlpha == 255:
+              break blurBox
+      image[x, y] = rgba(0, 0, 0, maxAlpha)
+
+proc shadow*(
+  mask: Image, offset: Vec2, spread, blur: float32, color: ColorRGBA
+): Image =
+  ## Create a shadow of the image with the offset, spread and blur.
+  var shadow = mask
+  if offset != vec2(0, 0):
+    shadow.shift(offset)
+  if spread > 0:
+    shadow.spread(spread)
+  if blur > 0:
+    shadow.blurAlpha(blur)
+  result = newImage(mask.width, mask.height)
+  result.fill(color)
+  result.draw(shadow, blendMode = bmMask)
