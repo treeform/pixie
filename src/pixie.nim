@@ -44,7 +44,7 @@ proc writeFile*(image: Image, filePath: string) =
   let fileFormat = case splitFile(filePath).ext:
     of ".png": ffPng
     of ".bmp": ffBmp
-    of ".jpg",".jpeg": ffJpg
+    of ".jpg", ".jpeg": ffJpg
     else:
       raise newException(PixieError, "Unsupported image file extension")
   image.writeFile(filePath, fileformat)

@@ -724,7 +724,7 @@ iterator segments*(s: seq[Vec2]): Segment =
   for i in 0 ..< s.len - 1:
     yield(segment(s[i], s[i + 1]))
 
-proc quickSort(a: var seq[(float32, bool)], inl, inr: int) =
+proc quickSort(a: var seq[(float32, int16)], inl, inr: int) =
   var
     r = inr
     l = inl
@@ -744,18 +744,17 @@ proc quickSort(a: var seq[(float32, bool)], inl, inr: int) =
   quickSort(a, inl, r)
   quickSort(a, l, inr)
 
-proc computeBounds(shapes: seq[seq[(Segment, bool)]]): Rect =
+proc computeBounds(segments: seq[(Segment, int16)]): Rect =
   var
     xMin = float32.high
     xMax = float32.low
     yMin = float32.high
     yMax = float32.low
-  for shape in shapes:
-    for (segment, _) in shape:
-      xMin = min(xMin, min(segment.at.x, segment.to.x))
-      xMax = max(xMax, max(segment.at.x, segment.to.x))
-      yMin = min(yMin, min(segment.at.y, segment.to.y))
-      yMax = max(yMax, max(segment.at.y, segment.to.y))
+  for (segment, _) in segments:
+    xMin = min(xMin, min(segment.at.x, segment.to.x))
+    xMax = max(xMax, max(segment.at.x, segment.to.x))
+    yMin = min(yMin, min(segment.at.y, segment.to.y))
+    yMax = max(yMax, max(segment.at.y, segment.to.y))
 
   xMin = floor(xMin)
   xMax = ceil(xMax)
@@ -773,23 +772,22 @@ proc fillShapes(
   color: ColorRGBA,
   windingRule: WindingRule
 ) =
-  var sortedShapes = newSeq[seq[(Segment, bool)]](shapes.len)
-  for i, sorted in sortedShapes.mpairs:
-    for segment in shapes[i].segments:
+  var sortedSegments: seq[(Segment, int16)]
+  for shape in shapes:
+    for segment in shape.segments:
       if segment.at.y == segment.to.y: # Skip horizontal
         continue
-      let winding = segment.at.y > segment.to.y
-      if winding:
+      if segment.at.y > segment.to.y:
         var segment = segment
         swap(segment.at, segment.to)
-        sorted.add((segment, winding))
+        sortedSegments.add((segment, -1.int16))
       else:
-        sorted.add((segment, winding))
+        sortedSegments.add((segment, 1.int16))
 
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
   let
-    bounds = computeBounds(sortedShapes)
+    bounds = computeBounds(sortedSegments)
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
     stopY = min(image.height, (bounds.y + bounds.h).int)
@@ -802,7 +800,7 @@ proc fillShapes(
     initialOffset = offset / 2
 
   var
-    hits = newSeq[(float32, bool)](4)
+    hits = newSeq[(float32, int16)](4)
     coverages = newSeq[uint8](image.width)
     numHits: int
 
@@ -816,16 +814,15 @@ proc fillShapes(
         yLine = y.float32 + initialOffset + offset * m.float32 + ep
         scanline = Line(a: vec2(0, yLine), b: vec2(1000, yLine))
       numHits = 0
-      for i, shape in sortedShapes:
-        for (segment, winding) in shape:
-          if segment.at.y > yLine or segment.to.y < y.float32:
-            continue
-          var at: Vec2
-          if scanline.intersects(segment, at):# and segment.to != at:
-            if numHits == hits.len:
-              hits.setLen(hits.len * 2)
-            hits[numHits] = (at.x.clamp(0, image.width.float32), winding)
-            inc numHits
+      for (segment, winding) in sortedSegments:
+        if segment.at.y > yLine or segment.to.y < y.float32:
+          continue
+        var at: Vec2
+        if scanline.intersects(segment, at):# and segment.to != at:
+          if numHits == hits.len:
+            hits.setLen(hits.len * 2)
+          hits[numHits] = (at.x.clamp(0, image.width.float32), winding)
+          inc numHits
 
       quickSort(hits, 0, numHits - 1)
 
@@ -870,7 +867,7 @@ proc fillShapes(
           for j in i ..< fillStart + fillLen:
             coverages[j] += sampleCoverage
 
-        count += (if winding: -1 else: 1)
+        count += winding
         x = at
 
     # Apply the coverage and blend
@@ -880,10 +877,9 @@ proc fillShapes(
 
       let
         coverageMask1 = cast[M128i]([0xffffffff, 0, 0, 0]) # First 32 bits
-        coverageMask3 = mm_set1_epi32(cast[int32](0x000000ff)) # Only `r`
+        coverageMask2 = mm_set1_epi32(cast[int32](0x000000ff)) # Only `r`
         oddMask = mm_set1_epi16(cast[int16](0xff00))
         div255 = mm_set1_epi16(cast[int16](0x8081))
-        zero = mm_set1_epi32(0)
         v255 = mm_set1_epi32(255)
         vColor = mm_set1_epi32(cast[int32](color))
 
@@ -891,9 +887,11 @@ proc fillShapes(
         var coverage = mm_loadu_si128(coverages[x].addr)
         coverage = mm_and_si128(coverage, coverageMask1)
 
-        if mm_movemask_epi8(mm_cmpeq_epi16(coverage, zero)) != 0xffff:
+        let eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
+        if mm_movemask_epi8(eqZero) != 0xffff:
           # If the coverages are not all zero
           var source = vColor
+
           coverage = mm_slli_si128(coverage, 2)
           coverage = mm_shuffle_epi32(coverage, MM_SHUFFLE(1, 1, 0, 0))
 
@@ -910,7 +908,7 @@ proc fillShapes(
 
           coverage = mm_and_si128(
             mm_or_si128(mm_or_si128(a, b), mm_or_si128(c, d)),
-            coverageMask3
+            coverageMask2
           )
 
           if mm_movemask_epi8(mm_cmpeq_epi32(coverage, v255)) != 0xffff:
