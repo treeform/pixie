@@ -154,15 +154,23 @@ proc minifyBy2*(image: Image): Image =
         image.getRgbaUnsafe(x * 2 + 0, y * 2 + 1).color / 4.0
       result.setRgbaUnsafe(x, y, color.rgba)
 
-proc minifyBy2*(image: Image, scale2x: int): Image =
+proc minifyBy2*(image: Image, power: int): Image =
   ## Scales the image down by an integer scale.
-  result = image
-  for i in 1 ..< scale2x:
-    result = result.minifyBy2()
+  if power < 0:
+    raise newException(PixieError, "Cannot minifyBy2 with negative power")
 
-proc magnifyBy2*(image: Image, scale2x: int): Image =
-  ## Scales image image up by an integer scale.
-  let scale = 2 ^ scale2x
+  if power == 0:
+    result = image.copy()
+  else:
+    for i in 1 .. power:
+      result = result.minifyBy2()
+
+proc magnifyBy2*(image: Image, power: int): Image =
+  ## Scales image image up by 2 ^ power.
+  if power < 0:
+    raise newException(PixieError, "Cannot magnifyBy2 with negative power")
+
+  let scale = 2 ^ power
   result = newImage(image.width * scale, image.height * scale)
   for y in 0 ..< result.height:
     for x in 0 ..< result.width:
@@ -170,7 +178,7 @@ proc magnifyBy2*(image: Image, scale2x: int): Image =
       result.setRgbaUnsafe(x, y, rgba)
 
 proc magnifyBy2*(image: Image): Image =
-  image.magnifyBy2(2)
+  image.magnifyBy2(1)
 
 proc toPremultipliedAlpha*(image: Image) =
   ## Converts an image to premultiplied alpha from straight alpha.
