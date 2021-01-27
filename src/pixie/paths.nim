@@ -744,18 +744,17 @@ proc quickSort(a: var seq[(float32, bool)], inl, inr: int) =
   quickSort(a, inl, r)
   quickSort(a, l, inr)
 
-proc computeBounds(shapes: seq[seq[(Segment, bool)]]): Rect =
+proc computeBounds(segments: seq[(Segment, bool)]): Rect =
   var
     xMin = float32.high
     xMax = float32.low
     yMin = float32.high
     yMax = float32.low
-  for shape in shapes:
-    for (segment, _) in shape:
-      xMin = min(xMin, min(segment.at.x, segment.to.x))
-      xMax = max(xMax, max(segment.at.x, segment.to.x))
-      yMin = min(yMin, min(segment.at.y, segment.to.y))
-      yMax = max(yMax, max(segment.at.y, segment.to.y))
+  for (segment, _) in segments:
+    xMin = min(xMin, min(segment.at.x, segment.to.x))
+    xMax = max(xMax, max(segment.at.x, segment.to.x))
+    yMin = min(yMin, min(segment.at.y, segment.to.y))
+    yMax = max(yMax, max(segment.at.y, segment.to.y))
 
   xMin = floor(xMin)
   xMax = ceil(xMax)
@@ -773,23 +772,23 @@ proc fillShapes(
   color: ColorRGBA,
   windingRule: WindingRule
 ) =
-  var sortedShapes = newSeq[seq[(Segment, bool)]](shapes.len)
-  for i, sorted in sortedShapes.mpairs:
-    for segment in shapes[i].segments:
+  var sortedSegments: seq[(Segment, bool)]
+  for shape in shapes:
+    for segment in shape.segments:
       if segment.at.y == segment.to.y: # Skip horizontal
         continue
       let winding = segment.at.y > segment.to.y
       if winding:
         var segment = segment
         swap(segment.at, segment.to)
-        sorted.add((segment, winding))
+        sortedSegments.add((segment, winding))
       else:
-        sorted.add((segment, winding))
+        sortedSegments.add((segment, winding))
 
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
   let
-    bounds = computeBounds(sortedShapes)
+    bounds = computeBounds(sortedSegments)
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
     stopY = min(image.height, (bounds.y + bounds.h).int)
@@ -816,16 +815,15 @@ proc fillShapes(
         yLine = y.float32 + initialOffset + offset * m.float32 + ep
         scanline = Line(a: vec2(0, yLine), b: vec2(1000, yLine))
       numHits = 0
-      for i, shape in sortedShapes:
-        for (segment, winding) in shape:
-          if segment.at.y > yLine or segment.to.y < y.float32:
-            continue
-          var at: Vec2
-          if scanline.intersects(segment, at):# and segment.to != at:
-            if numHits == hits.len:
-              hits.setLen(hits.len * 2)
-            hits[numHits] = (at.x.clamp(0, image.width.float32), winding)
-            inc numHits
+      for (segment, winding) in sortedSegments:
+        if segment.at.y > yLine or segment.to.y < y.float32:
+          continue
+        var at: Vec2
+        if scanline.intersects(segment, at):# and segment.to != at:
+          if numHits == hits.len:
+            hits.setLen(hits.len * 2)
+          hits[numHits] = (at.x.clamp(0, image.width.float32), winding)
+          inc numHits
 
       quickSort(hits, 0, numHits - 1)
 
