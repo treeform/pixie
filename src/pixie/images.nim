@@ -364,20 +364,17 @@ proc blurAlpha*(image: Image, radius: float32) =
 proc applyOpacity*(image: Image, opacity: float32) =
   ## Multiplies alpha of the image by opacity.
   let op = (255 * opacity).uint32
-  for i in 0 ..< image.data.len:
-    var rgba = image.data[i]
+  for rgba in image.data.mitems:
     rgba.a = ((rgba.a.uint32 * op) div 255).clamp(0, 255).uint8
-    image.data[i] = rgba
 
 proc sharpOpacity*(image: Image) =
   ## Sharpens the opacity to extreme.
   ## A = 0 stays 0. Anything else turns into 255.
-  for i in 0 ..< image.data.len:
-    var rgba = image.data[i]
+  for rgba in image.data.mitems:
     if rgba.a == 0:
-      image.data[i] = rgba(0, 0, 0, 0)
+      rgba = rgba(0, 0, 0, 0)
     else:
-      image.data[i] = rgba(255, 255, 255, 255)
+      rgba = rgba(255, 255, 255, 255)
 
 proc drawCorrect*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
   ## Draws one image onto another using matrix with color blending.
@@ -509,7 +506,8 @@ proc resize*(srcImage: Image, width, height: int): Image =
     scale(vec2(
       (width + 1).float / srcImage.width.float,
       (height + 1).float / srcImage.height.float
-    ))
+    )),
+    bmOverwrite
   )
 
 proc shift*(image: Image, offset: Vec2) =
@@ -517,7 +515,7 @@ proc shift*(image: Image, offset: Vec2) =
   if offset != vec2(0, 0):
     let copy = image.copy() # Copy to read from.
     image.fill(rgba(0, 0, 0, 0)) # Reset this for being drawn to.
-    image.draw(copy, offset) # Draw copy into image.
+    image.draw(copy, offset, bmOverwrite) # Draw copy into image.
 
 proc spread*(image: Image, spread: float32) =
   ## Grows the image as a mask by spread.
@@ -536,19 +534,18 @@ proc spread*(image: Image, spread: float32) =
               maxAlpha = alpha
             if maxAlpha == 255:
               break blurBox
-      image[x, y] = rgba(0, 0, 0, maxAlpha)
+      image.setRgbaUnsafe(x, y, rgba(0, 0, 0, maxAlpha))
 
 proc shadow*(
   mask: Image, offset: Vec2, spread, blur: float32, color: ColorRGBA
 ): Image =
   ## Create a shadow of the image with the offset, spread and blur.
-  var shadow = mask
   if offset != vec2(0, 0):
-    shadow.shift(offset)
+    mask.shift(offset)
   if spread > 0:
-    shadow.spread(spread)
+    mask.spread(spread)
   if blur > 0:
-    shadow.blurAlpha(blur)
+    mask.blurAlpha(blur)
   result = newImage(mask.width, mask.height)
   result.fill(color)
-  result.draw(shadow, blendMode = bmMask)
+  result.draw(mask, blendMode = bmMask)
