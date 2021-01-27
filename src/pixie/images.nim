@@ -500,15 +500,18 @@ proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.} =
   a.draw(b, translate(pos), blendMode)
 
 proc resize*(srcImage: Image, width, height: int): Image =
-  result = newImage(width, height)
-  result.draw(
-    srcImage,
-    scale(vec2(
-      (width + 1).float / srcImage.width.float,
-      (height + 1).float / srcImage.height.float
-    )),
-    bmOverwrite
-  )
+  if width == srcImage.width and height == srcImage.height:
+    result = srcImage.copy()
+  else:
+    result = newImage(width, height)
+    result.draw(
+      srcImage,
+      scale(vec2(
+        width.float32 / srcImage.width.float32,
+        height.float32 / srcImage.height.float32
+      )),
+      bmOverwrite
+    )
 
 proc shift*(image: Image, offset: Vec2) =
   ## Shifts the image by offset.
