@@ -263,24 +263,27 @@ proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA {.inline.} =
 
   finalMix.toStraightAlpha()
 
+proc gaussianLookup(radius: int): seq[float32] =
+  ## Compute lookup table for 1d Gaussian kernel.
+  result.setLen(radius * 2 + 1)
+  var total = 0.0
+  for xb in -radius .. radius:
+    let
+      s = radius.float32 / 2.2 # 2.2 matches Figma.
+      x = xb.float32
+      a = 1 / sqrt(2 * PI * s^2) * exp(-1 * x^2 / (2 * s^2))
+    result[xb + radius] = a
+    total += a
+  for xb in -radius .. radius:
+    result[xb + radius] = result[xb + radius] / total
+
 proc blur*(image: Image, radius: float32) =
   ## Applies Gaussian blur to the image given a radius.
   let radius = round(radius).int
   if radius == 0:
     return
 
-  # Compute lookup table for 1d Gaussian kernel.
-  var
-    lookup = newSeq[float](radius * 2 + 1)
-    total = 0.0
-  for xb in -radius .. radius:
-    let s = radius.float32 / 2.2 # 2.2 matches Figma.
-    let x = xb.float32
-    let a = 1 / sqrt(2 * PI * s^2) * exp(-1 * x^2 / (2 * s^2))
-    lookup[xb + radius] = a
-    total += a
-  for xb in -radius .. radius:
-    lookup[xb + radius] /= total
+  let lookup = gaussianLookup(radius)
 
   # Blur in the X direction.
   var blurX = newImage(image.width, image.height)
@@ -327,18 +330,7 @@ proc blurAlpha*(image: Image, radius: float32) =
   if radius == 0:
     return
 
-  # Compute lookup table for 1d Gaussian kernel.
-  var
-    lookup = newSeq[float](radius * 2 + 1)
-    total = 0.0
-  for xb in -radius .. radius:
-    let s = radius.float32 / 2.2 # 2.2 matches Figma.
-    let x = xb.float32
-    let a = 1 / sqrt(2 * PI * s^2) * exp(-1 * x^2 / (2 * s^2))
-    lookup[xb + radius] = a
-    total += a
-  for xb in -radius .. radius:
-    lookup[xb + radius] /= total
+  let lookup = gaussianLookup(radius)
 
   # Blur in the X direction.
   var blurX = newImage(image.width, image.height)
