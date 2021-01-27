@@ -519,10 +519,14 @@ proc shift*(image: Image, offset: Vec2) =
 
 proc spread*(image: Image, spread: float32) =
   ## Grows the image as a mask by spread.
+  if spread == 0:
+    return
+  if spread < 0:
+    raise newException(PixieError, "Cannot apply negative spread")
+
   let
     copy = image.copy()
     spread = round(spread).int
-  assert spread > 0
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       var maxAlpha = 0.uint8
