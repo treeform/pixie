@@ -21,13 +21,16 @@ This library is being actively developed and is not yet ready for use. Since you
 ### Blur
 [examples/blur.nim](examples/blur.nim)
 ```nim
-var p = newPath()
+var p: Path
 p.polygon(100, 100, 70, sides=6)
 p.closePath()
-var mask = newImage(200, 200)
+
+let mask = newImage(200, 200)
 mask.fillPath(p, rgba(255, 255, 255, 255))
+
 blur.blur(20)
 blur.draw(mask, blendMode = bmMask)
+
 image.draw(trees)
 image.draw(blur)
 ```
@@ -36,19 +39,21 @@ image.draw(blur)
 ### Rounded rectangle
 [examples/rounded_rectangle.nim](examples/rounded_rectangle.nim)
 ```nim
-var path = newPath()
 let
   x = 50.0
   y = 50.0
   w = 100.0
   h = 100.0
   r = 25.0
+
+var path: Path
 path.moveTo(x+r, y)
 path.arcTo(x+w, y,   x+w, y+h, r)
 path.arcTo(x+w, y+h, x,   y+h, r)
 path.arcTo(x,   y+h, x,   y,   r)
 path.arcTo(x,   y,   x+w, y,   r)
 path.closePath()
+
 image.fillPath(path, rgba(255, 0, 0, 255))
 ```
 ![example output](examples/rounded_rectangle.png)
@@ -56,12 +61,13 @@ image.fillPath(path, rgba(255, 0, 0, 255))
 ### Square
 [examples/square.nim](examples/square.nim)
 ```nim
-var p = newPath()
+var p: Path
 p.moveTo(50, 50)
 p.lineTo(50, 150)
 p.lineTo(150, 150)
 p.lineTo(150, 50)
 p.closePath()
+
 image.fillPath(p, rgba(255, 0, 0, 255))
 ```
 ![example output](examples/square.png)
@@ -69,7 +75,8 @@ image.fillPath(p, rgba(255, 0, 0, 255))
 ### Tiger
 [examples/tiger.nim](examples/tiger.nim)
 ```nim
-var tiger = readImage("examples/data/tiger.svg")
+let tiger = readImage("examples/data/tiger.svg")
+
 image.draw(
   tiger,
   translate(vec2(100, 100)) *
