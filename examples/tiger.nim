@@ -1,9 +1,10 @@
 import pixie, chroma, vmath
 
-var image = newImage(200, 200)
+let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
 
-var tiger = readImage("examples/data/tiger.svg")
+let tiger = readImage("examples/data/tiger.svg")
+
 image.draw(
   tiger,
   translate(vec2(100, 100)) *
