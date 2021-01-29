@@ -36,6 +36,58 @@ type
 
   Mixer* = proc(a, b: ColorRGBA): ColorRGBA
 
+when defined(release):
+  {.push checks: off.}
+
+proc blendNormalPremultiplied*(backdrop, source: ColorRGBA): ColorRGBA {.inline.} =
+  if backdrop.a == 0:
+    return source
+  if source.a == 255:
+    return source
+  if source.a == 0:
+    return backdrop
+
+  let k = (255 - source.a.uint32)
+  result.r = source.r + ((backdrop.r.uint32 * k) div 255).uint8
+  result.g = source.g + ((backdrop.g.uint32 * k) div 255).uint8
+  result.b = source.b + ((backdrop.b.uint32 * k) div 255).uint8
+  result.a = source.a + ((backdrop.a.uint32 * k) div 255).uint8
+
+when defined(amd64) and not defined(pixieNoSimd):
+  proc blendNormalPremultiplied*(backdrop, source: M128i): M128i {.inline.} =
+    let
+      alphaMask = mm_set1_epi32(cast[int32](0xff000000))
+      oddMask = mm_set1_epi16(cast[int16](0xff00))
+      div255 = mm_set1_epi16(cast[int16](0x8081))
+
+    # Shortcuts didn't help (backdrop.a == 0, source.a == 0, source.a == 255)
+
+    var
+      sourceAlpha = mm_and_si128(source, alphaMask)
+      backdropEven = mm_slli_epi16(backdrop, 8)
+      backdropOdd = mm_and_si128(backdrop, oddMask)
+
+    sourceAlpha = mm_or_si128(sourceAlpha, mm_srli_epi32(sourceAlpha, 16))
+
+    let k = mm_sub_epi32(
+      mm_set1_epi32(cast[int32]([0.uint8, 255, 0, 255])),
+      sourceAlpha
+    )
+
+    backdropEven = mm_mulhi_epu16(backdropEven, k)
+    backdropOdd = mm_mulhi_epu16(backdropOdd, k)
+
+    backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
+    backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
+
+    mm_add_epi8(
+      source,
+      mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
+    )
+
+when defined(release):
+  {.pop.}
+
 proc `+`*(a, b: Color): Color {.inline.} =
   result.r = a.r + b.r
   result.g = a.g + b.g
@@ -504,55 +556,3 @@ proc mixer*(blendMode: BlendMode): Mixer =
   of bmSubtractMask: blendSubtractMask
   of bmIntersectMask: blendIntersectMask
   of bmExcludeMask: blendExcludeMask
-
-when defined(release):
-  {.push checks: off.}
-
-proc blendNormalPremultiplied*(backdrop, source: ColorRGBA): ColorRGBA {.inline.} =
-  if backdrop.a == 0:
-    return source
-  if source.a == 255:
-    return source
-  if source.a == 0:
-    return backdrop
-
-  let k = (255 - source.a.uint32)
-  result.r = source.r + ((backdrop.r.uint32 * k) div 255).uint8
-  result.g = source.g + ((backdrop.g.uint32 * k) div 255).uint8
-  result.b = source.b + ((backdrop.b.uint32 * k) div 255).uint8
-  result.a = source.a + ((backdrop.a.uint32 * k) div 255).uint8
-
-when defined(amd64) and not defined(pixieNoSimd):
-  proc blendNormalPremultiplied*(backdrop, source: M128i): M128i {.inline.} =
-    let
-      alphaMask = mm_set1_epi32(cast[int32](0xff000000))
-      oddMask = mm_set1_epi16(cast[int16](0xff00))
-      div255 = mm_set1_epi16(cast[int16](0x8081))
-
-    # Shortcuts didn't help (backdrop.a == 0, source.a == 0, source.a == 255)
-
-    var
-      sourceAlpha = mm_and_si128(source, alphaMask)
-      backdropEven = mm_slli_epi16(backdrop, 8)
-      backdropOdd = mm_and_si128(backdrop, oddMask)
-
-    sourceAlpha = mm_or_si128(sourceAlpha, mm_srli_epi32(sourceAlpha, 16))
-
-    let k = mm_sub_epi32(
-      mm_set1_epi32(cast[int32]([0.uint8, 255, 0, 255])),
-      sourceAlpha
-    )
-
-    backdropEven = mm_mulhi_epu16(backdropEven, k)
-    backdropOdd = mm_mulhi_epu16(backdropOdd, k)
-
-    backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
-    backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
-
-    mm_add_epi8(
-      source,
-      mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
-    )
-
-when defined(release):
-  {.pop.}
