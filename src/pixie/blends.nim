@@ -1,5 +1,5 @@
 ## Blending modes.
-import chroma, math
+import chroma, math, common
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -384,8 +384,10 @@ proc hardLight(backdrop, source: uint32): uint8 {.inline.} =
     screen(backdrop, 2 * source - 255)
 
 proc blendNormal(backdrop, source: ColorRGBA): ColorRGBA =
-  result = source
-  result = alphaFix(backdrop, source, result)
+  blendNormalPremultiplied(
+    backdrop.toPremultipliedAlpha(),
+    source.toPremultipliedAlpha()
+  ).toStraightAlpha()
 
 proc blendDarken(backdrop, source: ColorRGBA): ColorRGBA =
   result.r = min(backdrop.r, source.r)
