@@ -332,7 +332,7 @@ proc blur*(image: Image, radius: float32) =
       c.b = c.b / totalA
       image.setRgbaUnsafe(x, y, c.rgba)
 
-proc blurAlpha(image: Image, radius: float32) =
+proc blurAlpha*(image: Image, radius: float32) =
   ## Applies Gaussian blur to the image given a radius.
   let radius = round(radius).int
   if radius == 0:
