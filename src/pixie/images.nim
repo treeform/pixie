@@ -512,7 +512,7 @@ proc shift*(image: Image, offset: Vec2) =
     image.fill(rgba(0, 0, 0, 0)) # Reset this for being drawn to.
     image.draw(copy, offset, bmOverwrite) # Draw copy into image.
 
-proc spread(image: Image, spread: float32) =
+proc spread*(image: Image, spread: float32) =
   ## Grows the image as a mask by spread.
   if spread == 0:
     return
@@ -539,6 +539,8 @@ proc shadow*(
   mask: Image, offset: Vec2, spread, blur: float32, color: ColorRGBA
 ): Image =
   ## Create a shadow of the image with the offset, spread and blur.
+  # TODO: copying is bad here due to this being slow already,
+  # we're doing it tho to avoid mutating param and returning new Image.
   let copy = mask.copy()
   if offset != vec2(0, 0):
     copy.shift(offset)
