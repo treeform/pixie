@@ -142,35 +142,35 @@ proc subImage*(image: Image, x, y, w, h: int): Image =
       w * 4
     )
 
-proc minifyBy2*(image: Image): Image =
+proc minifyBy2*(image: Image, power = 1): Image =
   ## Scales the image down by an integer scale.
-  result = newImage(image.width div 2, image.height div 2)
-  for y in 0 ..< result.height:
-    for x in 0 ..< result.width:
-      var color =
-        image.getRgbaUnsafe(x * 2 + 0, y * 2 + 0).color / 4.0 +
-        image.getRgbaUnsafe(x * 2 + 1, y * 2 + 0).color / 4.0 +
-        image.getRgbaUnsafe(x * 2 + 1, y * 2 + 1).color / 4.0 +
-        image.getRgbaUnsafe(x * 2 + 0, y * 2 + 1).color / 4.0
-      result.setRgbaUnsafe(x, y, color.rgba)
+  if power < 0:
+    raise newException(PixieError, "Cannot minifyBy2 with negative power")
+  if power == 0:
+    return image.copy()
 
-proc minifyBy2*(image: Image, scale2x: int): Image =
-  ## Scales the image down by an integer scale.
-  result = image
-  for i in 1 ..< scale2x:
-    result = result.minifyBy2()
+  for i in 1 .. power:
+    result = newImage(image.width div 2, image.height div 2)
+    for y in 0 ..< result.height:
+      for x in 0 ..< result.width:
+        var color =
+          image.getRgbaUnsafe(x * 2 + 0, y * 2 + 0).color / 4.0 +
+          image.getRgbaUnsafe(x * 2 + 1, y * 2 + 0).color / 4.0 +
+          image.getRgbaUnsafe(x * 2 + 1, y * 2 + 1).color / 4.0 +
+          image.getRgbaUnsafe(x * 2 + 0, y * 2 + 1).color / 4.0
+        result.setRgbaUnsafe(x, y, color.rgba)
 
-proc magnifyBy2*(image: Image, scale2x: int): Image =
-  ## Scales image image up by an integer scale.
-  let scale = 2 ^ scale2x
+proc magnifyBy2*(image: Image, power = 1): Image =
+  ## Scales image image up by 2 ^ power.
+  if power < 0:
+    raise newException(PixieError, "Cannot magnifyBy2 with negative power")
+
+  let scale = 2 ^ power
   result = newImage(image.width * scale, image.height * scale)
   for y in 0 ..< result.height:
     for x in 0 ..< result.width:
       var rgba = image.getRgbaUnsafe(x div scale, y div scale)
       result.setRgbaUnsafe(x, y, rgba)
-
-proc magnifyBy2*(image: Image): Image =
-  image.magnifyBy2(2)
 
 proc toPremultipliedAlpha*(image: Image) =
   ## Converts an image to premultiplied alpha from straight alpha.
@@ -492,15 +492,18 @@ proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.} =
   a.draw(b, translate(pos), blendMode)
 
 proc resize*(srcImage: Image, width, height: int): Image =
-  result = newImage(width, height)
-  result.draw(
-    srcImage,
-    scale(vec2(
-      (width + 1).float / srcImage.width.float,
-      (height + 1).float / srcImage.height.float
-    )),
-    bmOverwrite
-  )
+  if width == srcImage.width and height == srcImage.height:
+    result = srcImage.copy()
+  else:
+    result = newImage(width, height)
+    result.draw(
+      srcImage,
+      scale(vec2(
+        width.float32 / srcImage.width.float32,
+        height.float32 / srcImage.height.float32
+      )),
+      bmOverwrite
+    )
 
 proc shift*(image: Image, offset: Vec2) =
   ## Shifts the image by offset.
@@ -536,12 +539,15 @@ proc shadow*(
   mask: Image, offset: Vec2, spread, blur: float32, color: ColorRGBA
 ): Image =
   ## Create a shadow of the image with the offset, spread and blur.
+  # TODO: copying is bad here due to this being slow already,
+  # we're doing it tho to avoid mutating param and returning new Image.
+  let copy = mask.copy()
   if offset != vec2(0, 0):
-    mask.shift(offset)
+    copy.shift(offset)
   if spread > 0:
-    mask.spread(spread)
+    copy.spread(spread)
   if blur > 0:
-    mask.blurAlpha(blur)
+    copy.blurAlpha(blur)
   result = newImage(mask.width, mask.height)
   result.fill(color)
-  result.draw(mask, blendMode = bmMask)
+  result.draw(copy, blendMode = bmMask)
