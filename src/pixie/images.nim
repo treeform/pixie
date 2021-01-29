@@ -387,7 +387,7 @@ proc drawCorrect*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
     minFilterBy2 /= 2
     matInv = matInv * scale(vec2(0.5, 0.5))
 
-  let mixer = blendMode.mixer()
+  let blender = blendMode.blender()
   for y in 0 ..< a.height:
     for x in 0 ..< a.width:
       let
@@ -396,7 +396,7 @@ proc drawCorrect*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
         yFloat = srcPos.y - h
         rgba = a.getRgbaUnsafe(x, y)
         rgba2 = b.getRgbaSmooth(xFloat, yFloat)
-      a.setRgbaUnsafe(x, y, mixer(rgba, rgba2))
+      a.setRgbaUnsafe(x, y, blender(rgba, rgba2))
 
 proc drawUber(
   a, b: Image,
@@ -405,7 +405,7 @@ proc drawUber(
   blendMode: BlendMode,
   smooth: bool
 ) =
-  let mixer = blendMode.mixer()
+  let blender = blendMode.blender()
   for y in 0 ..< a.height:
     var
       xMin = a.width
@@ -439,7 +439,7 @@ proc drawUber(
             b.getRgbaSmooth(xFloat, yFloat)
           else:
             b.getRgbaUnsafe(xFloat.int, yFloat.int)
-      a.setRgbaUnsafe(x, y, mixer(rgba, rgba2))
+      a.setRgbaUnsafe(x, y, blender(rgba, rgba2))
 
     if blendMode == bmIntersectMask:
       if a.width - xMax > 0:

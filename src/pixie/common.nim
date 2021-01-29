@@ -18,9 +18,9 @@ proc lerp*(a, b: ColorRGBA, t: float32): ColorRGBA {.inline.} =
 
 proc toPremultipliedAlpha*(c: ColorRGBA): ColorRGBA {.inline.} =
   ## Converts a color to premultiplied alpha from straight alpha.
-  result.r = ((c.r.uint16 * c.a.uint16) div 255).uint8
-  result.g = ((c.g.uint16 * c.a.uint16) div 255).uint8
-  result.b = ((c.b.uint16 * c.a.uint16) div 255).uint8
+  result.r = ((c.r.uint32 * c.a.uint32) div 255).uint8
+  result.g = ((c.g.uint32 * c.a.uint32) div 255).uint8
+  result.b = ((c.b.uint32 * c.a.uint32) div 255).uint8
   result.a = c.a
 
 proc toStraightAlpha*(c: ColorRGBA): ColorRGBA {.inline.} =

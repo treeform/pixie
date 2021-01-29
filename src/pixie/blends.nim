@@ -1,5 +1,5 @@
 ## Blending modes.
-import chroma, math
+import chroma, math, common
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -34,7 +34,165 @@ type
     bmIntersectMask
     bmExcludeMask
 
-  Mixer* = proc(a, b: ColorRGBA): ColorRGBA
+  Blender* = proc(a, b: ColorRGBA): ColorRGBA
+
+when defined(release):
+  {.push checks: off.}
+
+proc min(a, b: uint32): uint32 {.inline.} =
+  if a < b: a else: b
+
+proc max(a, b: uint32): uint32 {.inline.} =
+  if a > b: a else: b
+
+proc screenPremultiplied(backdrop, source: uint32): uint8 {.inline.} =
+  (255 - ((255 - backdrop) * (255 - source)) div 255).uint8
+
+proc hardLightPremultiplied(backdrop, source: uint32): uint8 {.inline.} =
+  if source <= 127:
+    ((backdrop * 2 * source) div 255).uint8
+  else:
+    screenPremultiplied(backdrop, 2 * source - 255)
+
+proc blendAlpha(backdrop, source: uint8): uint8 {.inline.} =
+  source + ((backdrop.uint32 * (255 - source)) div 255).uint8
+
+proc blendNormalPremultiplied*(backdrop, source: ColorRGBA): ColorRGBA {.inline.} =
+  if backdrop.a == 0:
+    return source
+  if source.a == 255:
+    return source
+  if source.a == 0:
+    return backdrop
+
+  let k = (255 - source.a.uint32)
+  result.r = source.r + ((backdrop.r.uint32 * k) div 255).uint8
+  result.g = source.g + ((backdrop.g.uint32 * k) div 255).uint8
+  result.b = source.b + ((backdrop.b.uint32 * k) div 255).uint8
+  result.a = blendAlpha(backdrop.a, source.a)
+
+proc blendDarkenPremultiplied(backdrop, source: ColorRGBA): ColorRGBA =
+  result.r = min(backdrop.r, source.r)
+  result.g = min(backdrop.g, source.g)
+  result.b = min(backdrop.b, source.b)
+  result.a = blendAlpha(backdrop.a, source.a)
+
+proc blendMultiplyPremultiplied(backdrop, source: ColorRGBA): ColorRGBA =
+  result.r = ((backdrop.r.uint32 * source.r) div 255).uint8
+  result.g = ((backdrop.g.uint32 * source.g) div 255).uint8
+  result.b = ((backdrop.b.uint32 * source.b) div 255).uint8
+  result.a = blendAlpha(backdrop.a, source.a)
+
+proc blendLinearBurnPremultiplied(backdrop, source: ColorRGBA): ColorRGBA =
+  result.r = min(0, backdrop.r.uint32 + source.r.uint32 - 255).uint8
+  result.g = min(0, backdrop.g.uint32 + source.g.uint32 - 255).uint8
+  result.b = min(0, backdrop.b.uint32 + source.b.uint32 - 255).uint8
+  result.a = blendAlpha(backdrop.a, source.a)
+
+proc blendLightenPremultiplied(backdrop, source: ColorRGBA): ColorRGBA =
+  result.r = max(backdrop.r, source.r)
+  result.g = max(backdrop.g, source.g)
+  result.b = max(backdrop.b, source.b)
+  result.a = blendAlpha(backdrop.a, source.a)
+
+proc blendColorBurnPremultiplied(backdrop, source: ColorRGBA): ColorRGBA =
+  proc blend(backdrop, source: uint32): uint8 {.inline.} =
+    if backdrop == 255:
+      255.uint8
+    elif source == 0:
+      0
+    else:
+      255 - min(255, (255 * (255 - backdrop)) div source).uint8
+  result.r = blend(backdrop.r, source.r)
+  result.g = blend(backdrop.g, source.g)
+  result.b = blend(backdrop.b, source.b)
+  result.a = blendAlpha(backdrop.a, source.a)
+
+proc blendScreenPremultiplied(backdrop, source: ColorRGBA): ColorRGBA =
+  result.r = screenPremultiplied(backdrop.r, source.r)
+  result.g = screenPremultiplied(backdrop.g, source.g)
+  result.b = screenPremultiplied(backdrop.b, source.b)
+  result.a = blendAlpha(backdrop.a, source.a)
+
+proc blendLinearDodgePremultiplied(backdrop, source: ColorRGBA): ColorRGBA =
+  result.r = min(backdrop.r.uint32 + source.r, 255).uint8
+  result.g = min(backdrop.g.uint32 + source.g, 255).uint8
+  result.b = min(backdrop.b.uint32 + source.b, 255).uint8
+  result.a = blendAlpha(backdrop.a, source.a)
+
+proc blendColorDodgePremultiplied(backdrop, source: ColorRGBA): ColorRGBA =
+  proc blend(backdrop, source: uint32): uint8 {.inline.} =
+    if backdrop == 0:
+      0.uint8
+    elif source == 255:
+      255
+    else:
+      min(255, (255 * backdrop) div (255 - source)).uint8
+  result.r = blend(backdrop.r, source.r)
+  result.g = blend(backdrop.g, source.g)
+  result.b = blend(backdrop.b, source.b)
+  result.a = blendAlpha(backdrop.a, source.a)
+
+proc blendOverlayPremultiplied(backdrop, source: ColorRGBA): ColorRGBA =
+  result.r = hardLightPremultiplied(source.r, backdrop.r)
+  result.g = hardLightPremultiplied(source.g, backdrop.g)
+  result.b = hardLightPremultiplied(source.b, backdrop.b)
+  result.a = blendAlpha(backdrop.a, source.a)
+
+proc blendHardLightyPremultiplied(backdrop, source: ColorRGBA): ColorRGBA =
+  result.r = hardLightPremultiplied(backdrop.r, source.r)
+  result.g = hardLightPremultiplied(backdrop.g, source.g)
+  result.b = hardLightPremultiplied(backdrop.b, source.b)
+  result.a = blendAlpha(backdrop.a, source.a)
+
+proc blendDifferencePremultiplied(backdrop, source: ColorRGBA): ColorRGBA =
+  result.r = max(backdrop.r, source.r) - min(backdrop.r, source.r)
+  result.g = max(backdrop.g, source.g) - min(backdrop.g, source.g)
+  result.b = max(backdrop.b, source.b) - min(backdrop.b, source.b)
+  result.a = blendAlpha(backdrop.a, source.a)
+
+proc blendExclusionPremultiplied(backdrop, source: ColorRGBA): ColorRGBA =
+  proc blend(backdrop, source: uint32): uint8 {.inline.} =
+    max(0, backdrop + source - (2 * backdrop * source) div 255).uint8
+  result.r = blend(backdrop.r.uint32, source.r.uint32)
+  result.g = blend(backdrop.g.uint32, source.g.uint32)
+  result.b = blend(backdrop.b.uint32, source.b.uint32)
+  result.a = blendAlpha(backdrop.a, source.a)
+
+when defined(amd64) and not defined(pixieNoSimd):
+  proc blendNormalPremultiplied*(backdrop, source: M128i): M128i {.inline.} =
+    let
+      alphaMask = mm_set1_epi32(cast[int32](0xff000000))
+      oddMask = mm_set1_epi16(cast[int16](0xff00))
+      div255 = mm_set1_epi16(cast[int16](0x8081))
+
+    # Shortcuts didn't help (backdrop.a == 0, source.a == 0, source.a == 255)
+
+    var
+      sourceAlpha = mm_and_si128(source, alphaMask)
+      backdropEven = mm_slli_epi16(backdrop, 8)
+      backdropOdd = mm_and_si128(backdrop, oddMask)
+
+    sourceAlpha = mm_or_si128(sourceAlpha, mm_srli_epi32(sourceAlpha, 16))
+
+    let k = mm_sub_epi32(
+      mm_set1_epi32(cast[int32]([0.uint8, 255, 0, 255])),
+      sourceAlpha
+    )
+
+    backdropEven = mm_mulhi_epu16(backdropEven, k)
+    backdropOdd = mm_mulhi_epu16(backdropOdd, k)
+
+    backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
+    backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
+
+    mm_add_epi8(
+      source,
+      mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
+    )
+
+when defined(release):
+  {.pop.}
 
 proc `+`*(a, b: Color): Color {.inline.} =
   result.r = a.r + b.r
@@ -72,18 +230,18 @@ proc `-`*(c: Color, v: float32): Color {.inline.} =
   result.b = c.b - v
   result.a = c.a - v
 
-proc screen(backdrop, source: float32): float32 {.inline.} =
-  1 - (1 - backdrop) * (1 - source)
+# proc screen(backdrop, source: float32): float32 {.inline.} =
+#   1 - (1 - backdrop) * (1 - source)
 
-proc hardLight(backdrop, source: float32): float32 {.inline.} =
-  if source <= 0.5:
-    backdrop * 2 * source
-  else:
-    screen(backdrop, 2 * source - 1)
+# proc hardLight(backdrop, source: float32): float32 {.inline.} =
+#   if source <= 0.5:
+#     backdrop * 2 * source
+#   else:
+#     screen(backdrop, 2 * source - 1)
 
-proc softLight(backdrop, source: float32): float32 {.inline.} =
-  ## Pegtop
-  (1 - 2 * source) * backdrop ^ 2 + 2 * source * backdrop
+# proc softLight(backdrop, source: float32): float32 {.inline.} =
+#   ## Pegtop
+#   (1 - 2 * source) * backdrop ^ 2 + 2 * source * backdrop
 
 proc Lum(C: Color): float32 {.inline.} =
   0.3 * C.r + 0.59 * C.g + 0.11 * C.b
@@ -131,103 +289,103 @@ proc alphaFix(backdrop, source, mixed: Color): Color =
   result.g /= result.a
   result.b /= result.a
 
-proc blendNormalFloats*(backdrop, source: Color): Color {.inline.} =
-  result = source
-  result = alphaFix(backdrop, source, result)
+# proc blendNormalFloats*(backdrop, source: Color): Color {.inline.} =
+#   result = source
+#   result = alphaFix(backdrop, source, result)
 
-proc blendDarkenFloats*(backdrop, source: Color): Color {.inline.} =
-  result.r = min(backdrop.r, source.r)
-  result.g = min(backdrop.g, source.g)
-  result.b = min(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
+# proc blendDarkenFloats*(backdrop, source: Color): Color {.inline.} =
+#   result.r = min(backdrop.r, source.r)
+#   result.g = min(backdrop.g, source.g)
+#   result.b = min(backdrop.b, source.b)
+#   result = alphaFix(backdrop, source, result)
 
-proc blendMultiplyFloats*(backdrop, source: Color): Color {.inline.} =
-  result.r = backdrop.r * source.r
-  result.g = backdrop.g * source.g
-  result.b = backdrop.b * source.b
-  result = alphaFix(backdrop, source, result)
+# proc blendMultiplyFloats*(backdrop, source: Color): Color {.inline.} =
+#   result.r = backdrop.r * source.r
+#   result.g = backdrop.g * source.g
+#   result.b = backdrop.b * source.b
+#   result = alphaFix(backdrop, source, result)
 
-proc blendLinearBurnFloats*(backdrop, source: Color): Color {.inline.} =
-  result.r = backdrop.r + source.r - 1
-  result.g = backdrop.g + source.g - 1
-  result.b = backdrop.b + source.b - 1
-  result = alphaFix(backdrop, source, result)
+# proc blendLinearBurnFloats*(backdrop, source: Color): Color {.inline.} =
+#   result.r = backdrop.r + source.r - 1
+#   result.g = backdrop.g + source.g - 1
+#   result.b = backdrop.b + source.b - 1
+#   result = alphaFix(backdrop, source, result)
 
-proc blendColorBurnFloats*(backdrop, source: Color): Color {.inline.} =
-  proc blend(backdrop, source: float32): float32 {.inline.} =
-    if backdrop == 1:
-      1.0
-    elif source == 0:
-      0.0
-    else:
-      1.0 - min(1, (1 - backdrop) / source)
-  result.r = blend(backdrop.r, source.r)
-  result.g = blend(backdrop.g, source.g)
-  result.b = blend(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
+# proc blendColorBurnFloats*(backdrop, source: Color): Color {.inline.} =
+#   proc blend(backdrop, source: float32): float32 {.inline.} =
+#     if backdrop == 1:
+#       1.0
+#     elif source == 0:
+#       0.0
+#     else:
+#       1.0 - min(1, (1 - backdrop) / source)
+#   result.r = blend(backdrop.r, source.r)
+#   result.g = blend(backdrop.g, source.g)
+#   result.b = blend(backdrop.b, source.b)
+#   result = alphaFix(backdrop, source, result)
 
-proc blendLightenFloats*(backdrop, source: Color): Color {.inline.} =
-  result.r = max(backdrop.r, source.r)
-  result.g = max(backdrop.g, source.g)
-  result.b = max(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
+# proc blendLightenFloats*(backdrop, source: Color): Color {.inline.} =
+#   result.r = max(backdrop.r, source.r)
+#   result.g = max(backdrop.g, source.g)
+#   result.b = max(backdrop.b, source.b)
+#   result = alphaFix(backdrop, source, result)
 
-proc blendScreenFloats*(backdrop, source: Color): Color {.inline.} =
-  result.r = screen(backdrop.r, source.r)
-  result.g = screen(backdrop.g, source.g)
-  result.b = screen(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
+# proc blendScreenFloats*(backdrop, source: Color): Color {.inline.} =
+#   result.r = screen(backdrop.r, source.r)
+#   result.g = screen(backdrop.g, source.g)
+#   result.b = screen(backdrop.b, source.b)
+#   result = alphaFix(backdrop, source, result)
 
-proc blendLinearDodgeFloats*(backdrop, source: Color): Color {.inline.} =
-  result.r = backdrop.r + source.r
-  result.g = backdrop.g + source.g
-  result.b = backdrop.b + source.b
-  result = alphaFix(backdrop, source, result)
+# proc blendLinearDodgeFloats*(backdrop, source: Color): Color {.inline.} =
+#   result.r = backdrop.r + source.r
+#   result.g = backdrop.g + source.g
+#   result.b = backdrop.b + source.b
+#   result = alphaFix(backdrop, source, result)
 
-proc blendColorDodgeFloats*(backdrop, source: Color): Color {.inline.} =
-  proc blend(backdrop, source: float32): float32 {.inline.} =
-    if backdrop == 0:
-      0.0
-    elif source == 1:
-      1.0
-    else:
-      min(1, backdrop / (1 - source))
-  result.r = blend(backdrop.r, source.r)
-  result.g = blend(backdrop.g, source.g)
-  result.b = blend(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
+# proc blendColorDodgeFloats*(backdrop, source: Color): Color {.inline.} =
+#   proc blend(backdrop, source: float32): float32 {.inline.} =
+#     if backdrop == 0:
+#       0.0
+#     elif source == 1:
+#       1.0
+#     else:
+#       min(1, backdrop / (1 - source))
+#   result.r = blend(backdrop.r, source.r)
+#   result.g = blend(backdrop.g, source.g)
+#   result.b = blend(backdrop.b, source.b)
+#   result = alphaFix(backdrop, source, result)
 
-proc blendOverlayFloats*(backdrop, source: Color): Color {.inline.} =
-  result.r = hardLight(source.r, backdrop.r)
-  result.g = hardLight(source.g, backdrop.g)
-  result.b = hardLight(source.b, backdrop.b)
-  result = alphaFix(backdrop, source, result)
+# proc blendOverlayFloats*(backdrop, source: Color): Color {.inline.} =
+#   result.r = hardLight(source.r, backdrop.r)
+#   result.g = hardLight(source.g, backdrop.g)
+#   result.b = hardLight(source.b, backdrop.b)
+#   result = alphaFix(backdrop, source, result)
 
-proc blendHardLightFloats*(backdrop, source: Color): Color {.inline.} =
-  result.r = hardLight(backdrop.r, source.r)
-  result.g = hardLight(backdrop.g, source.g)
-  result.b = hardLight(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
+# proc blendHardLightFloats*(backdrop, source: Color): Color {.inline.} =
+#   result.r = hardLight(backdrop.r, source.r)
+#   result.g = hardLight(backdrop.g, source.g)
+#   result.b = hardLight(backdrop.b, source.b)
+#   result = alphaFix(backdrop, source, result)
 
-proc blendSoftLightFloats*(backdrop, source: Color): Color {.inline.} =
-  result.r = softLight(backdrop.r, source.r)
-  result.g = softLight(backdrop.g, source.g)
-  result.b = softLight(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
+# proc blendSoftLightFloats*(backdrop, source: Color): Color {.inline.} =
+#   result.r = softLight(backdrop.r, source.r)
+#   result.g = softLight(backdrop.g, source.g)
+#   result.b = softLight(backdrop.b, source.b)
+#   result = alphaFix(backdrop, source, result)
 
-proc blendDifferenceFloats*(backdrop, source: Color): Color {.inline.} =
-  result.r = abs(backdrop.r - source.r)
-  result.g = abs(backdrop.g - source.g)
-  result.b = abs(backdrop.b - source.b)
-  result = alphaFix(backdrop, source, result)
+# proc blendDifferenceFloats*(backdrop, source: Color): Color {.inline.} =
+#   result.r = abs(backdrop.r - source.r)
+#   result.g = abs(backdrop.g - source.g)
+#   result.b = abs(backdrop.b - source.b)
+#   result = alphaFix(backdrop, source, result)
 
-proc blendExclusionFloats*(backdrop, source: Color): Color {.inline.} =
-  proc blend(backdrop, source: float32): float32 {.inline.} =
-    backdrop + source - 2 * backdrop * source
-  result.r = blend(backdrop.r, source.r)
-  result.g = blend(backdrop.g, source.g)
-  result.b = blend(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
+# proc blendExclusionFloats*(backdrop, source: Color): Color {.inline.} =
+#   proc blend(backdrop, source: float32): float32 {.inline.} =
+#     backdrop + source - 2 * backdrop * source
+#   result.r = blend(backdrop.r, source.r)
+#   result.g = blend(backdrop.g, source.g)
+#   result.b = blend(backdrop.b, source.b)
+#   result = alphaFix(backdrop, source, result)
 
 proc blendColorFloats*(backdrop, source: Color): Color {.inline.} =
   result = SetLum(source, Lum(backdrop))
@@ -245,24 +403,24 @@ proc blendSaturationFloats*(backdrop, source: Color): Color {.inline.} =
   result = SetLum(SetSat(backdrop, Sat(source)), Lum(backdrop))
   result = alphaFix(backdrop, source, result)
 
-proc blendMaskFloats*(backdrop, source: Color): Color {.inline.} =
-  result = backdrop
-  result.a = min(backdrop.a, source.a)
+# proc blendMaskFloats*(backdrop, source: Color): Color {.inline.} =
+#   result = backdrop
+#   result.a = min(backdrop.a, source.a)
 
-proc blendSubtractMaskFloats*(backdrop, source: Color): Color {.inline.} =
-  result = backdrop
-  result.a = backdrop.a * (1 - source.a)
+# proc blendSubtractMaskFloats*(backdrop, source: Color): Color {.inline.} =
+#   result = backdrop
+#   result.a = backdrop.a * (1 - source.a)
 
-proc blendIntersectMaskFloats*(backdrop, source: Color): Color {.inline.} =
-  result = backdrop
-  result.a = backdrop.a * source.a
+# proc blendIntersectMaskFloats*(backdrop, source: Color): Color {.inline.} =
+#   result = backdrop
+#   result.a = backdrop.a * source.a
 
-proc blendExcludeMaskFloats*(backdrop, source: Color): Color {.inline.} =
-  result = backdrop
-  result.a = abs(backdrop.a - source.a)
+# proc blendExcludeMaskFloats*(backdrop, source: Color): Color {.inline.} =
+#   result = backdrop
+#   result.a = abs(backdrop.a - source.a)
 
-proc blendOverwriteFloats*(backdrop, source: Color): Color {.inline.} =
-  source
+# proc blendOverwriteFloats*(backdrop, source: Color): Color {.inline.} =
+#   source
 
 when defined(amd64) and not defined(pixieNoSimd):
   proc alphaFix(backdrop, source: ColorRGBA, vb, vs, vm: M128): ColorRGBA =
@@ -319,95 +477,81 @@ else:
     result.b = (b div a div 255).uint8
     result.a = a.uint8
 
-proc min(a, b: uint32): uint32 {.inline.} =
-  if a < b: a else: b
-
-proc screen(backdrop, source: uint32): uint8 {.inline.} =
-  (255 - ((255 - backdrop) * (255 - source)) div 255).uint8
-
-proc hardLight(backdrop, source: uint32): uint8 {.inline.} =
-  if source <= 127:
-    ((backdrop * 2 * source) div 255).uint8
-  else:
-    screen(backdrop, 2 * source - 255)
-
 proc blendNormal(backdrop, source: ColorRGBA): ColorRGBA =
-  result = source
-  result = alphaFix(backdrop, source, result)
+  blendNormalPremultiplied(
+    backdrop.toPremultipliedAlpha(),
+    source.toPremultipliedAlpha()
+  ).toStraightAlpha()
 
 proc blendDarken(backdrop, source: ColorRGBA): ColorRGBA =
-  result.r = min(backdrop.r, source.r)
-  result.g = min(backdrop.g, source.g)
-  result.b = min(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
+  let
+    backdrop = backdrop.toPremultipliedAlpha()
+    source = source.toPremultipliedAlpha()
+  result = blendDarkenPremultiplied(backdrop, source)
+  result = result.toStraightAlpha()
 
 proc blendMultiply(backdrop, source: ColorRGBA): ColorRGBA =
-  result.r = ((backdrop.r.uint32 * source.r) div 255).uint8
-  result.g = ((backdrop.g.uint32 * source.g) div 255).uint8
-  result.b = ((backdrop.b.uint32 * source.b) div 255).uint8
-  result = alphaFix(backdrop, source, result)
+  let
+    backdrop = backdrop.toPremultipliedAlpha()
+    source = source.toPremultipliedAlpha()
+  result = blendMultiplyPremultiplied(backdrop, source)
+  result = result.toStraightAlpha()
 
 proc blendLinearBurn(backdrop, source: ColorRGBA): ColorRGBA =
-  result.r = min(0, backdrop.r.int16 + source.r.int16 - 255).uint8
-  result.g = min(0, backdrop.g.int16 + source.g.int16 - 255).uint8
-  result.b = min(0, backdrop.b.int16 + source.b.int16 - 255).uint8
-  result = alphaFix(backdrop, source, result)
+  let
+    backdrop = backdrop.toPremultipliedAlpha()
+    source = source.toPremultipliedAlpha()
+  result = blendLinearBurnPremultiplied(backdrop, source)
+  result = result.toStraightAlpha()
 
 proc blendColorBurn(backdrop, source: ColorRGBA): ColorRGBA =
-  proc blend(backdrop, source: uint32): uint8 {.inline.} =
-    if backdrop == 255:
-      255.uint8
-    elif source == 0:
-      0
-    else:
-      255 - min(255, (255 * (255 - backdrop)) div source).uint8
-  result.r = blend(backdrop.r, source.r)
-  result.g = blend(backdrop.g, source.g)
-  result.b = blend(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
+  let
+    backdrop = backdrop.toPremultipliedAlpha()
+    source = source.toPremultipliedAlpha()
+  result = blendColorBurnPremultiplied(backdrop, source)
+  result = result.toStraightAlpha()
 
 proc blendLighten(backdrop, source: ColorRGBA): ColorRGBA =
-  result.r = max(backdrop.r, source.r)
-  result.g = max(backdrop.g, source.g)
-  result.b = max(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
+  let
+    backdrop = backdrop.toPremultipliedAlpha()
+    source = source.toPremultipliedAlpha()
+  result = blendLightenPremultiplied(backdrop, source)
+  result = result.toStraightAlpha()
 
 proc blendScreen(backdrop, source: ColorRGBA): ColorRGBA =
-  result.r = screen(backdrop.r, source.r)
-  result.g = screen(backdrop.g, source.g)
-  result.b = screen(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
+  let
+    backdrop = backdrop.toPremultipliedAlpha()
+    source = source.toPremultipliedAlpha()
+  result = blendScreenPremultiplied(backdrop, source)
+  result = result.toStraightAlpha()
 
 proc blendLinearDodge(backdrop, source: ColorRGBA): ColorRGBA =
-  result.r = min(backdrop.r.uint32 + source.r, 255).uint8
-  result.g = min(backdrop.g.uint32 + source.g, 255).uint8
-  result.b = min(backdrop.b.uint32 + source.b, 255).uint8
-  result = alphaFix(backdrop, source, result)
+  let
+    backdrop = backdrop.toPremultipliedAlpha()
+    source = source.toPremultipliedAlpha()
+  result = blendLinearDodgePremultiplied(backdrop, source)
+  result = result.toStraightAlpha()
 
 proc blendColorDodge(backdrop, source: ColorRGBA): ColorRGBA =
-  proc blend(backdrop, source: uint32): uint8 {.inline.} =
-    if backdrop == 0:
-      0.uint8
-    elif source == 255:
-      255
-    else:
-      min(255, (255 * backdrop) div (255 - source)).uint8
-  result.r = blend(backdrop.r, source.r)
-  result.g = blend(backdrop.g, source.g)
-  result.b = blend(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
+  let
+    backdrop = backdrop.toPremultipliedAlpha()
+    source = source.toPremultipliedAlpha()
+  result = blendColorDodgePremultiplied(backdrop, source)
+  result = result.toStraightAlpha()
 
 proc blendOverlay(backdrop, source: ColorRGBA): ColorRGBA =
-  result.r = hardLight(source.r, backdrop.r)
-  result.g = hardLight(source.g, backdrop.g)
-  result.b = hardLight(source.b, backdrop.b)
-  result = alphaFix(backdrop, source, result)
+  let
+    backdrop = backdrop.toPremultipliedAlpha()
+    source = source.toPremultipliedAlpha()
+  result = blendOverlayPremultiplied(backdrop, source)
+  result = result.toStraightAlpha()
 
 proc blendHardLight(backdrop, source: ColorRGBA): ColorRGBA =
-  result.r = hardLight(backdrop.r, source.r)
-  result.g = hardLight(backdrop.g, source.g)
-  result.b = hardLight(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
+  let
+    backdrop = backdrop.toPremultipliedAlpha()
+    source = source.toPremultipliedAlpha()
+  result = blendHardLightyPremultiplied(backdrop, source)
+  result = result.toStraightAlpha()
 
 proc blendSoftLight(backdrop, source: ColorRGBA): ColorRGBA =
   # proc softLight(backdrop, source: int32): uint8 {.inline.} =
@@ -435,18 +579,18 @@ proc blendSoftLight(backdrop, source: ColorRGBA): ColorRGBA =
     blendSoftLightFloats(backdrop.color, source.color).rgba
 
 proc blendDifference(backdrop, source: ColorRGBA): ColorRGBA =
-  result.r = max(backdrop.r, source.r) - min(backdrop.r, source.r)
-  result.g = max(backdrop.g, source.g) - min(backdrop.g, source.g)
-  result.b = max(backdrop.b, source.b) - min(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
+  let
+    backdrop = backdrop.toPremultipliedAlpha()
+    source = source.toPremultipliedAlpha()
+  result = blendDifferencePremultiplied(backdrop, source)
+  result = result.toStraightAlpha()
 
 proc blendExclusion(backdrop, source: ColorRGBA): ColorRGBA =
-  proc blend(backdrop, source: int32): uint8 {.inline.} =
-    max(0, backdrop + source - (2 * backdrop * source) div 255).uint8
-  result.r = blend(backdrop.r.int32, source.r.int32)
-  result.g = blend(backdrop.g.int32, source.g.int32)
-  result.b = blend(backdrop.b.int32, source.b.int32)
-  result = alphaFix(backdrop, source, result)
+  let
+    backdrop = backdrop.toPremultipliedAlpha()
+    source = source.toPremultipliedAlpha()
+  result = blendExclusionPremultiplied(backdrop, source)
+  result = result.toStraightAlpha()
 
 proc blendColor(backdrop, source: ColorRGBA): ColorRGBA =
   blendColorFloats(backdrop.color, source.color).rgba
@@ -466,7 +610,7 @@ proc blendMask(backdrop, source: ColorRGBA): ColorRGBA =
 
 proc blendSubtractMask(backdrop, source: ColorRGBA): ColorRGBA =
   result = backdrop
-  result.a = max(0, (backdrop.a.int32 * (255 - source.a.int32)) div 255).uint8
+  result.a = max(0, (backdrop.a.uint32 * (255 - source.a.uint32)) div 255).uint8
 
 proc blendIntersectMask(backdrop, source: ColorRGBA): ColorRGBA =
   result = backdrop
@@ -479,7 +623,7 @@ proc blendExcludeMask(backdrop, source: ColorRGBA): ColorRGBA =
 proc blendOverwrite(backdrop, source: ColorRGBA): ColorRGBA =
   source
 
-proc mixer*(blendMode: BlendMode): Mixer =
+proc blender*(blendMode: BlendMode): Blender =
   case blendMode
   of bmNormal: blendNormal
   of bmDarken: blendDarken
@@ -504,55 +648,3 @@ proc mixer*(blendMode: BlendMode): Mixer =
   of bmSubtractMask: blendSubtractMask
   of bmIntersectMask: blendIntersectMask
   of bmExcludeMask: blendExcludeMask
-
-when defined(release):
-  {.push checks: off.}
-
-proc blendNormalPremultiplied*(backdrop, source: ColorRGBA): ColorRGBA {.inline.} =
-  if backdrop.a == 0:
-    return source
-  if source.a == 255:
-    return source
-  if source.a == 0:
-    return backdrop
-
-  let k = (255 - source.a.uint32)
-  result.r = source.r + ((backdrop.r.uint32 * k) div 255).uint8
-  result.g = source.g + ((backdrop.g.uint32 * k) div 255).uint8
-  result.b = source.b + ((backdrop.b.uint32 * k) div 255).uint8
-  result.a = source.a + ((backdrop.a.uint32 * k) div 255).uint8
-
-when defined(amd64) and not defined(pixieNoSimd):
-  proc blendNormalPremultiplied*(backdrop, source: M128i): M128i {.inline.} =
-    let
-      alphaMask = mm_set1_epi32(cast[int32](0xff000000))
-      oddMask = mm_set1_epi16(cast[int16](0xff00))
-      div255 = mm_set1_epi16(cast[int16](0x8081))
-
-    # Shortcuts didn't help (backdrop.a == 0, source.a == 0, source.a == 255)
-
-    var
-      sourceAlpha = mm_and_si128(source, alphaMask)
-      backdropEven = mm_slli_epi16(backdrop, 8)
-      backdropOdd = mm_and_si128(backdrop, oddMask)
-
-    sourceAlpha = mm_or_si128(sourceAlpha, mm_srli_epi32(sourceAlpha, 16))
-
-    let k = mm_sub_epi32(
-      mm_set1_epi32(cast[int32]([0.uint8, 255, 0, 255])),
-      sourceAlpha
-    )
-
-    backdropEven = mm_mulhi_epu16(backdropEven, k)
-    backdropOdd = mm_mulhi_epu16(backdropOdd, k)
-
-    backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
-    backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
-
-    mm_add_epi8(
-      source,
-      mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
-    )
-
-when defined(release):
-  {.pop.}
