@@ -1,4 +1,4 @@
-import benchy, chroma, vmath, pixie/images
+import benchy, chroma, pixie/images
 
 include pixie/blends
 
@@ -18,13 +18,13 @@ timeIt "blendNormal":
 
 reset()
 
-timeIt "blendNormalFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendNormalFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendNormalFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendNormalFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendDarken":
   for i in 0 ..< backdrop.data.len:
@@ -32,13 +32,13 @@ timeIt "blendDarken":
 
 reset()
 
-timeIt "blendDarkenFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendDarkenFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendDarkenFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendDarkenFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendMultiply":
   for i in 0 ..< backdrop.data.len:
@@ -46,13 +46,13 @@ timeIt "blendMultiply":
 
 reset()
 
-timeIt "blendMultiplyFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendMultiplyFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendMultiplyFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendMultiplyFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendLinearBurn":
   for i in 0 ..< backdrop.data.len:
@@ -60,13 +60,13 @@ timeIt "blendLinearBurn":
 
 reset()
 
-timeIt "blendLinearBurnFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendLinearBurnFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendLinearBurnFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendLinearBurnFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendColorBurn":
   for i in 0 ..< backdrop.data.len:
@@ -74,13 +74,13 @@ timeIt "blendColorBurn":
 
 reset()
 
-timeIt "blendColorBurnFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendColorBurnFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendColorBurnFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendColorBurnFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendLighten":
   for i in 0 ..< backdrop.data.len:
@@ -88,13 +88,13 @@ timeIt "blendLighten":
 
 reset()
 
-timeIt "blendLightenFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendLightenFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendLightenFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendLightenFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendScreen":
   for i in 0 ..< backdrop.data.len:
@@ -102,13 +102,13 @@ timeIt "blendScreen":
 
 reset()
 
-timeIt "blendScreenFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendScreenFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendScreenFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendScreenFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendLinearDodge":
   for i in 0 ..< backdrop.data.len:
@@ -116,13 +116,13 @@ timeIt "blendLinearDodge":
 
 reset()
 
-timeIt "blendLinearDodgeFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendLinearDodgeFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendLinearDodgeFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendLinearDodgeFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendColorDodge":
   for i in 0 ..< backdrop.data.len:
@@ -130,13 +130,13 @@ timeIt "blendColorDodge":
 
 reset()
 
-timeIt "blendColorDodgeFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendColorDodgeFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendColorDodgeFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendColorDodgeFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendOverlay":
   for i in 0 ..< backdrop.data.len:
@@ -144,13 +144,13 @@ timeIt "blendOverlay":
 
 reset()
 
-timeIt "blendOverlayFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendOverlayFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendOverlayFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendOverlayFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendSoftLight":
   for i in 0 ..< backdrop.data.len:
@@ -158,13 +158,13 @@ timeIt "blendSoftLight":
 
 reset()
 
-timeIt "blendSoftLightFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendSoftLightFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendSoftLightFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendSoftLightFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendHardLight":
   for i in 0 ..< backdrop.data.len:
@@ -172,13 +172,13 @@ timeIt "blendHardLight":
 
 reset()
 
-timeIt "blendHardLightFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendHardLightFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendHardLightFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendHardLightFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendDifference":
   for i in 0 ..< backdrop.data.len:
@@ -186,13 +186,13 @@ timeIt "blendDifference":
 
 reset()
 
-timeIt "blendDifferenceFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendDifferenceFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendDifferenceFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendDifferenceFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendExclusion":
   for i in 0 ..< backdrop.data.len:
@@ -200,13 +200,13 @@ timeIt "blendExclusion":
 
 reset()
 
-timeIt "blendExclusionFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendExclusionFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendExclusionFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendExclusionFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendHue":
   for i in 0 ..< backdrop.data.len:
@@ -214,13 +214,13 @@ timeIt "blendHue":
 
 reset()
 
-timeIt "blendHueFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendHueFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendHueFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendHueFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendSaturation":
   for i in 0 ..< backdrop.data.len:
@@ -228,11 +228,11 @@ timeIt "blendSaturation":
 
 reset()
 
-timeIt "blendSaturationFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendSaturationFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendSaturationFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendSaturationFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
 reset()
 
@@ -242,13 +242,13 @@ timeIt "blendColor":
 
 reset()
 
-timeIt "blendColorFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendColorFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendColorFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendColorFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendLuminosity":
   for i in 0 ..< backdrop.data.len:
@@ -256,13 +256,13 @@ timeIt "blendLuminosity":
 
 reset()
 
-timeIt "blendLuminosityFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendLuminosityFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendLuminosityFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendLuminosityFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendMask":
   for i in 0 ..< backdrop.data.len:
@@ -270,13 +270,13 @@ timeIt "blendMask":
 
 reset()
 
-timeIt "blendMaskFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendMaskFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendMaskFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendMaskFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendSubtractMask":
   for i in 0 ..< backdrop.data.len:
@@ -284,13 +284,13 @@ timeIt "blendSubtractMask":
 
 reset()
 
-timeIt "blendSubtractMaskFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendSubtractMaskFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendSubtractMaskFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendSubtractMaskFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendIntersectMask":
   for i in 0 ..< backdrop.data.len:
@@ -298,13 +298,13 @@ timeIt "blendIntersectMask":
 
 reset()
 
-timeIt "blendIntersectMaskFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendIntersectMaskFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendIntersectMaskFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendIntersectMaskFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendExcludeMask":
   for i in 0 ..< backdrop.data.len:
@@ -312,13 +312,13 @@ timeIt "blendExcludeMask":
 
 reset()
 
-timeIt "blendExcludeMaskFloats":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendExcludeMaskFloats(
-      backdrop.data[i].color, source.data[i].color
-    ).rgba
+# timeIt "blendExcludeMaskFloats":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendExcludeMaskFloats(
+#       backdrop.data[i].color, source.data[i].color
+#     ).rgba
 
-reset()
+# reset()
 
 timeIt "blendNormalPremultiplied":
   for i in 0 ..< backdrop.data.len:
