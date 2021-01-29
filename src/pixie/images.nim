@@ -142,30 +142,25 @@ proc subImage*(image: Image, x, y, w, h: int): Image =
       w * 4
     )
 
-proc minifyBy2*(image: Image): Image =
-  ## Scales the image down by an integer scale.
-  result = newImage(image.width div 2, image.height div 2)
-  for y in 0 ..< result.height:
-    for x in 0 ..< result.width:
-      var color =
-        image.getRgbaUnsafe(x * 2 + 0, y * 2 + 0).color / 4.0 +
-        image.getRgbaUnsafe(x * 2 + 1, y * 2 + 0).color / 4.0 +
-        image.getRgbaUnsafe(x * 2 + 1, y * 2 + 1).color / 4.0 +
-        image.getRgbaUnsafe(x * 2 + 0, y * 2 + 1).color / 4.0
-      result.setRgbaUnsafe(x, y, color.rgba)
-
-proc minifyBy2*(image: Image, power: int): Image =
+proc minifyBy2*(image: Image, power = 1): Image =
   ## Scales the image down by an integer scale.
   if power < 0:
     raise newException(PixieError, "Cannot minifyBy2 with negative power")
-
   if power == 0:
-    result = image.copy()
-  else:
-    for i in 1 .. power:
-      result = result.minifyBy2()
+    return image.copy()
 
-proc magnifyBy2*(image: Image, power: int): Image =
+  for i in 1 .. power:
+    result = newImage(image.width div 2, image.height div 2)
+    for y in 0 ..< result.height:
+      for x in 0 ..< result.width:
+        var color =
+          image.getRgbaUnsafe(x * 2 + 0, y * 2 + 0).color / 4.0 +
+          image.getRgbaUnsafe(x * 2 + 1, y * 2 + 0).color / 4.0 +
+          image.getRgbaUnsafe(x * 2 + 1, y * 2 + 1).color / 4.0 +
+          image.getRgbaUnsafe(x * 2 + 0, y * 2 + 1).color / 4.0
+        result.setRgbaUnsafe(x, y, color.rgba)
+
+proc magnifyBy2*(image: Image, power = 1): Image =
   ## Scales image image up by 2 ^ power.
   if power < 0:
     raise newException(PixieError, "Cannot magnifyBy2 with negative power")
@@ -176,9 +171,6 @@ proc magnifyBy2*(image: Image, power: int): Image =
     for x in 0 ..< result.width:
       var rgba = image.getRgbaUnsafe(x div scale, y div scale)
       result.setRgbaUnsafe(x, y, rgba)
-
-proc magnifyBy2*(image: Image): Image =
-  image.magnifyBy2(1)
 
 proc toPremultipliedAlpha*(image: Image) =
   ## Converts an image to premultiplied alpha from straight alpha.
