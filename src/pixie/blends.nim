@@ -239,9 +239,9 @@ proc `-`*(c: Color, v: float32): Color {.inline.} =
 #   else:
 #     screen(backdrop, 2 * source - 1)
 
-# proc softLight(backdrop, source: float32): float32 {.inline.} =
-#   ## Pegtop
-#   (1 - 2 * source) * backdrop ^ 2 + 2 * source * backdrop
+proc softLight(backdrop, source: float32): float32 {.inline.} =
+  ## Pegtop
+  (1 - 2 * source) * backdrop ^ 2 + 2 * source * backdrop
 
 proc Lum(C: Color): float32 {.inline.} =
   0.3 * C.r + 0.59 * C.g + 0.11 * C.b
@@ -367,11 +367,11 @@ proc alphaFix(backdrop, source, mixed: Color): Color =
 #   result.b = hardLight(backdrop.b, source.b)
 #   result = alphaFix(backdrop, source, result)
 
-# proc blendSoftLightFloats*(backdrop, source: Color): Color {.inline.} =
-#   result.r = softLight(backdrop.r, source.r)
-#   result.g = softLight(backdrop.g, source.g)
-#   result.b = softLight(backdrop.b, source.b)
-#   result = alphaFix(backdrop, source, result)
+proc blendSoftLightFloats*(backdrop, source: Color): Color {.inline.} =
+  result.r = softLight(backdrop.r, source.r)
+  result.g = softLight(backdrop.g, source.g)
+  result.b = softLight(backdrop.b, source.b)
+  result = alphaFix(backdrop, source, result)
 
 # proc blendDifferenceFloats*(backdrop, source: Color): Color {.inline.} =
 #   result.r = abs(backdrop.r - source.r)
