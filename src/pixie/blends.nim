@@ -34,7 +34,7 @@ type
     bmIntersectMask
     bmExcludeMask
 
-  Mixer* = proc(a, b: ColorRGBA): ColorRGBA
+  Blender* = proc(a, b: ColorRGBA): ColorRGBA
 
 when defined(release):
   {.push checks: off.}
@@ -531,7 +531,7 @@ proc blendExcludeMask(backdrop, source: ColorRGBA): ColorRGBA =
 proc blendOverwrite(backdrop, source: ColorRGBA): ColorRGBA =
   source
 
-proc mixer*(blendMode: BlendMode): Mixer =
+proc blender*(blendMode: BlendMode): Blender =
   case blendMode
   of bmNormal: blendNormal
   of bmDarken: blendDarken
