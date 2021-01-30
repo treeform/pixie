@@ -554,6 +554,13 @@ proc blendHardLight(backdrop, source: ColorRGBA): ColorRGBA =
   result = result.toStraightAlpha()
 
 proc blendSoftLight(backdrop, source: ColorRGBA): ColorRGBA =
+  # proc softLight(backdrop, source: int32): uint8 {.inline.} =
+  #   ## Pegtop
+  #   (
+  #     ((255 - 2 * source) * backdrop ^ 2) div 255 ^ 2 +
+  #     (2 * source * backdrop) div 255
+  #   ).uint8
+
   when defined(amd64) and not defined(pixieNoSimd):
     let
       vb = mm_setr_ps(backdrop.r.float32, backdrop.g.float32, backdrop.b.float32, 0)
@@ -570,16 +577,6 @@ proc blendSoftLight(backdrop, source: ColorRGBA): ColorRGBA =
     result = alphaFix(backdrop, source, vb, vs, vm)
   else:
     blendSoftLightFloats(backdrop.color, source.color).rgba
-    # proc softLight(backdrop, source: int32): uint8 {.inline.} =
-    #   ## Pegtop
-    #   (
-    #     ((255 - 2 * source) * (backdrop ^ 2)) div (255 ^ 2) +
-    #     (2 * source * backdrop) div 255
-    #   ).uint8
-    # result.r = softLight(backdrop.r.int32, source.r.int32)
-    # result.g = softLight(backdrop.g.int32, source.g.int32)
-    # result.b = softLight(backdrop.b.int32, source.b.int32)
-    # result = alphaFix(backdrop, source, result)
 
 proc blendDifference(backdrop, source: ColorRGBA): ColorRGBA =
   let
