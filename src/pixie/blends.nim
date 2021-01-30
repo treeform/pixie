@@ -57,22 +57,6 @@ proc hardLightPremultiplied(backdrop, source: uint32): uint8 {.inline.} =
 proc blendAlpha(backdrop, source: uint8): uint8 {.inline.} =
   source + ((backdrop.uint32 * (255 - source)) div 255).uint8
 
-proc tripleBlend(result: var ColorRGBA, backdrop, source: ColorRGBA) =
-  result.a = blendAlpha(backdrop.a, source.a)
-  if result.a == 0:
-    result = rgba(0, 0, 0, 0)
-  else:
-    let
-      t0 = (255 - backdrop.a.uint32) * source.a.uint32
-      t1 = (255 - source.a.uint32) * backdrop.a.uint32
-      t2 = 255.uint32 * 255
-      r = t0 * source.r + t1 * backdrop.r + t2 * result.r
-      g = t0 * source.g + t1 * backdrop.g + t2 * result.g
-      b = t0 * source.b + t1 * backdrop.b + t2 * result.b
-    result.r = (r div 255 div result.a).uint8
-    result.g = (g div 255 div result.a).uint8
-    result.b = (b div 255 div result.a).uint8
-
 proc blendNormalPremultiplied*(backdrop, source: ColorRGBA): ColorRGBA {.inline.} =
   if backdrop.a == 0:
     return source
@@ -91,13 +75,13 @@ proc blendDarkenPremultiplied(backdrop, source: ColorRGBA): ColorRGBA =
   result.r = min(backdrop.r, source.r)
   result.g = min(backdrop.g, source.g)
   result.b = min(backdrop.b, source.b)
-  result.tripleBlend(backdrop, source)
+  result.a = blendAlpha(backdrop.a, source.a)
 
 proc blendMultiplyPremultiplied(backdrop, source: ColorRGBA): ColorRGBA =
   result.r = ((backdrop.r.uint32 * source.r) div 255).uint8
   result.g = ((backdrop.g.uint32 * source.g) div 255).uint8
   result.b = ((backdrop.b.uint32 * source.b) div 255).uint8
-  result.tripleBlend(backdrop, source)
+  result.a = blendAlpha(backdrop.a, source.a)
 
 proc blendLinearBurnPremultiplied(backdrop, source: ColorRGBA): ColorRGBA =
   result.r = min(0, backdrop.r.uint32 + source.r.uint32 - 255).uint8
@@ -122,7 +106,7 @@ proc blendColorBurnPremultiplied(backdrop, source: ColorRGBA): ColorRGBA =
   result.r = blend(backdrop.r, source.r)
   result.g = blend(backdrop.g, source.g)
   result.b = blend(backdrop.b, source.b)
-  result.tripleBlend(backdrop, source)
+  result.a = blendAlpha(backdrop.a, source.a)
 
 proc blendScreenPremultiplied(backdrop, source: ColorRGBA): ColorRGBA =
   result.r = screenPremultiplied(backdrop.r, source.r)
