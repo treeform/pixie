@@ -142,6 +142,13 @@ proc subImage*(image: Image, x, y, w, h: int): Image =
       w * 4
     )
 
+proc superImage*(image: Image, x, y, w, h: int): Image =
+  ## Cuts either a sub image or super image with padded transparency.
+  result = newImage(w, h)
+  for y2 in 0 ..< h:
+    for x2 in 0 ..< w:
+      result.setRgbaUnsafe(x2, y2, image[x2 + x, y2 + y])
+
 proc minifyBy2*(image: Image, power = 1): Image =
   ## Scales the image down by an integer scale.
   if power < 0:
