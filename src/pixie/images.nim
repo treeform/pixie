@@ -16,8 +16,8 @@ when defined(release):
 
 proc newImage*(width, height: int): Image =
   ## Creates a new image with the parameter dimensions.
-  if width < 0 or height < 0:
-    raise newException(PixieError, "Image width and height must be positive")
+  if width <= 0 or height <= 0:
+    raise newException(PixieError, "Image width and height must be > 0")
 
   result = Image()
   result.width = width
