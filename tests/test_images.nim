@@ -43,3 +43,39 @@ block:
   a.writeFile("tests/images/flipped2.png")
   a.flipHorizontal()
   a.writeFile("tests/images/flipped3.png")
+
+block:
+  let
+    a = readImage("tests/images/flipped1.png")
+    b = a.superImage(-10, 0, 20, 20)
+  b.writeFile("tests/images/superimage1.png")
+
+block:
+  let
+    a = readImage("tests/images/flipped1.png")
+    b = a.superImage(-10, -10, 20, 20)
+  b.writeFile("tests/images/superimage2.png")
+
+block:
+  let
+    a = readImage("tests/images/flipped1.png")
+    b = a.superImage(90, 0, 120, 120)
+  b.writeFile("tests/images/superimage3.png")
+
+block:
+  let
+    a = readImage("tests/images/flipped1.png")
+    b = a.superImage(90, 90, 120, 120)
+  b.writeFile("tests/images/superimage4.png")
+
+block:
+  let
+    a = readImage("tests/images/flipped1.png")
+    b = a.superImage(-10, -10, 120, 120)
+  b.writeFile("tests/images/superimage5.png")
+
+block:
+  let
+    a = readImage("tests/images/flipped1.png")
+    b = a.superImage(45, 45, 20, 20)
+  b.writeFile("tests/images/superimage6.png")

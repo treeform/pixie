@@ -16,6 +16,9 @@ when defined(release):
 
 proc newImage*(width, height: int): Image =
   ## Creates a new image with the parameter dimensions.
+  if width < 0 or height < 0:
+    raise newException(PixieError, "Image width and height must be positive")
+
   result = Image()
   result.width = width
   result.height = height
@@ -143,11 +146,28 @@ proc subImage*(image: Image, x, y, w, h: int): Image =
     )
 
 proc superImage*(image: Image, x, y, w, h: int): Image =
-  ## Cuts either a sub image or super image with padded transparency.
-  result = newImage(w, h)
-  for y2 in 0 ..< h:
-    for x2 in 0 ..< w:
-      result.setRgbaUnsafe(x2, y2, image[x2 + x, y2 + y])
+  ## Either cuts a sub image or returns a super image with padded transparency.
+  if x >= 0 and x + w <= image.width and y >= 0 and y + h <= image.height:
+    result = image.subImage(x, y, w, h)
+  elif abs(x) >= image.width or abs(y) >= image.height:
+    # Nothing to copy, just an empty new image
+    result = newImage(w, h)
+  else:
+    let
+      readOffsetX = max(x, 0)
+      readOffsetY = max(y, 0)
+      writeOffsetX = max(0 - x, 0)
+      writeOffsetY = max(0 - y, 0)
+      copyWidth = max(min(image.width, w) - abs(x), 0)
+      copyHeight = max(min(image.height, h) - abs(y), 0)
+
+    result = newImage(w, h)
+    for y2 in 0 ..< copyHeight:
+      copyMem(
+        result.data[result.dataIndex(writeOffsetX, writeOffsetY + y2)].addr,
+        image.data[image.dataIndex(readOffsetX, readOffsetY + y2)].addr,
+        copyWidth * 4
+      )
 
 proc minifyBy2*(image: Image, power = 1): Image =
   ## Scales the image down by an integer scale.
