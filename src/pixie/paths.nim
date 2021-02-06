@@ -982,6 +982,47 @@ proc fillShapes(
         image.setRgbaUnsafe(x, y, blendNormalPremultiplied(backdrop, source))
       inc x
 
+proc strokeShapes(
+  shapes: seq[seq[Vec2]],
+  strokeWidth: float32,
+  windingRule: WindingRule
+): seq[seq[Vec2]] =
+  if strokeWidth == 0:
+    return
+
+  let
+    widthLeft = strokeWidth / 2
+    widthRight = strokeWidth / 2
+
+  for shape in shapes:
+    var
+      strokeShape: seq[Vec2]
+      back: seq[Vec2]
+    for segment in shape.segments:
+      let
+        tangent = (segment.at - segment.to).normalize()
+        normal = vec2(-tangent.y, tangent.x)
+        left = segment(
+          segment.at - normal * widthLeft,
+          segment.to - normal * widthLeft
+        )
+        right = segment(
+          segment.at + normal * widthRight,
+          segment.to + normal * widthRight
+        )
+
+      strokeShape.add([right.at, right.to])
+      back.add([left.at, left.to])
+
+    # Add the back side reversed
+    for i in 1 .. back.len:
+      strokeShape.add(back[^i])
+
+    strokeShape.add(strokeShape[0])
+
+    if strokeShape.len > 0:
+      result.add(strokeShape)
+
 proc parseSomePath(path: SomePath): seq[seq[Vec2]] {.inline.} =
   when type(path) is string:
     parsePath(path).commandsToShapes()
@@ -1024,48 +1065,6 @@ proc fillPath*(
       segment = mat * segment
   image.fillShapes(shapes, color, windingRule)
 
-proc strokeShapes(
-  shapes: seq[seq[Vec2]],
-  color: ColorRGBA,
-  strokeWidth: float32,
-  windingRule: WindingRule
-): seq[seq[Vec2]] =
-  if strokeWidth == 0:
-    return
-
-  let
-    widthLeft = strokeWidth / 2
-    widthRight = strokeWidth / 2
-
-  for shape in shapes:
-    var
-      strokeShape: seq[Vec2]
-      back: seq[Vec2]
-    for segment in shape.segments:
-      let
-        tangent = (segment.at - segment.to).normalize()
-        normal = vec2(-tangent.y, tangent.x)
-        left = segment(
-          segment.at - normal * widthLeft,
-          segment.to - normal * widthLeft
-        )
-        right = segment(
-          segment.at + normal * widthRight,
-          segment.to + normal * widthRight
-        )
-
-      strokeShape.add([right.at, right.to])
-      back.add([left.at, left.to])
-
-    # Add the back side reversed
-    for i in 1 .. back.len:
-      strokeShape.add(back[^i])
-
-    strokeShape.add(strokeShape[0])
-
-    if strokeShape.len > 0:
-      result.add(strokeShape)
-
 proc strokePath*(
   image: Image,
   path: SomePath,
@@ -1075,7 +1074,6 @@ proc strokePath*(
 ) =
   let strokeShapes = strokeShapes(
     parseSomePath(path),
-    color,
     strokeWidth,
     windingRule
   )
@@ -1091,7 +1089,6 @@ proc strokePath*(
 ) =
   var strokeShapes = strokeShapes(
     parseSomePath(path),
-    color,
     strokeWidth,
     windingRule
   )
@@ -1110,7 +1107,6 @@ proc strokePath*(
 ) =
   var strokeShapes = strokeShapes(
     parseSomePath(path),
-    color,
     strokeWidth,
     windingRule
   )
