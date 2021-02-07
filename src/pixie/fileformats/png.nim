@@ -1,4 +1,5 @@
-import chroma, pixie/common, math, zippy, zippy/crc, flatty/binny, pixie/images
+import chroma, pixie/common, math, zippy, zippy/crc, flatty/binny,
+  pixie/images, pixie/masks
 
 # See http://www.libpng.org/pub/png/spec/1.2/PNG-Contents.html
 
@@ -499,6 +500,17 @@ proc encodePng*(image: Image): string =
     )
   cast[string](encodePng(
     image.width, image.height, 4, image.data[0].addr, image.data.len * 4
+  ))
+
+proc encodePng*(mask: Mask): string =
+  ## Encodes the mask data into the PNG file format.
+  if mask.data.len == 0:
+    raise newException(
+      PixieError,
+      "Mask has no data (are height and width 0?)"
+    )
+  cast[string](encodePng(
+    mask.width, mask.height, 1, mask.data[0].addr, mask.data.len
   ))
 
 when defined(release):
