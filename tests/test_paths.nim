@@ -1,4 +1,4 @@
-import pixie, chroma
+import pixie, chroma, pixie/fileformats/png
 
 block:
   let pathStr = """
@@ -178,3 +178,27 @@ block:
   image.fillPath(path, rgba(255, 0, 0, 255))
   image.toStraightAlpha()
   image.writeFile("tests/images/paths/pathRoundRect.png")
+
+block:
+  let
+    mask = newMask(100, 100)
+    pathStr = "M 10 10 H 90 V 90 H 10 L 10 10"
+  mask.fillPath(pathStr)
+  writeFile("tests/images/paths/pathRectangleMask.png", mask.encodePng())
+
+block:
+  let
+    mask = newMask(100, 100)
+    r = 10.0
+    x = 10.0
+    y = 10.0
+    h = 80.0
+    w = 80.0
+  var path: Path
+  path.moveTo(x + r, y)
+  path.arcTo(x + w, y, x + w, y + h, r)
+  path.arcTo(x + w, y + h, x, y + h, r)
+  path.arcTo(x, y + h, x, y, r)
+  path.arcTo(x, y, x + w, y, r)
+  mask.fillPath(path)
+  writeFile("tests/images/paths/pathRoundRectMask.png", mask.encodePng())

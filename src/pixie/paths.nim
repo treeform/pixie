@@ -1,4 +1,4 @@
-import common, strutils, vmath, images, chroma, bumpy, blends
+import common, strutils, vmath, images, masks, chroma, bumpy, blends
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -767,13 +767,18 @@ proc computeBounds(seqs: varargs[seq[(Segment, int16)]]): Rect =
   result.w = xMax - xMin
   result.h = yMax - yMin
 
-proc fillShapes(
-  image: Image,
-  shapes: seq[seq[Vec2]],
-  color: ColorRGBA,
-  windingRule: WindingRule
-) =
-  var topHalf, bottomHalf, fullHeight: seq[(Segment, int16)]
+proc shouldFill(windingRule: WindingRule, count: int): bool {.inline.} =
+  case windingRule:
+  of wrNonZero:
+    count != 0
+  of wrEvenOdd:
+    count mod 2 != 0
+
+proc partitionSegments(shapes: seq[seq[Vec2]], middle: int): tuple[
+  topHalf: seq[(Segment, int16)],
+  bottomHalf: seq[(Segment, int16)],
+  fullHeight: seq[(Segment, int16)]
+] =
   for shape in shapes:
     for segment in shape.segments:
       if segment.at.y == segment.to.y: # Skip horizontal
@@ -784,12 +789,107 @@ proc fillShapes(
       if segment.at.y > segment.to.y:
         swap(segment.at, segment.to)
         winding = -1
-      if ceil(segment.to.y).int < image.height div 2:
-        topHalf.add((segment, winding))
-      elif segment.at.y.int >= image.height div 2:
-        bottomHalf.add((segment, winding))
+      if ceil(segment.to.y).int < middle:
+        result.topHalf.add((segment, winding))
+      elif segment.at.y.int >= middle:
+        result.bottomHalf.add((segment, winding))
       else:
-        fullHeight.add((segment, winding))
+        result.fullHeight.add((segment, winding))
+
+proc computeCoverages(
+  coverages: var seq[uint8],
+  hits: var seq[(float32, int16)],
+  size: Vec2,
+  y: int,
+  topHalf, bottomHalf, fullHeight: seq[(Segment, int16)],
+  windingRule: WindingRule
+) =
+  const
+    quality = 5 # Must divide 255 cleanly
+    sampleCoverage = 255.uint8 div quality
+    ep = 0.0001 * PI
+    offset = 1 / quality.float32
+    initialOffset = offset / 2
+
+  proc intersects(
+    scanline: Line,
+    segment: Segment,
+    winding: int16,
+    hits: var seq[(float32, int16)],
+    numHits: var int
+  ) {.inline.} =
+    if segment.at.y <= scanline.a.y and segment.to.y >= scanline.a.y:
+      var at: Vec2
+      if scanline.intersects(segment, at):# and segment.to != at:
+        if numHits == hits.len:
+          hits.setLen(hits.len * 2)
+        hits[numHits] = (at.x.clamp(0, scanline.b.x), winding)
+        inc numHits
+
+  var numHits: int
+
+  # Do scanlines for this row
+  for m in 0 ..< quality:
+    let
+      yLine = y.float32 + initialOffset + offset * m.float32 + ep
+      scanline = Line(a: vec2(0, yLine), b: vec2(size.x, yLine))
+    numHits = 0
+    if y < size.y.int div 2:
+      for (segment, winding) in topHalf:
+        scanline.intersects(segment, winding, hits, numHits)
+    else:
+      for (segment, winding) in bottomHalf:
+        scanline.intersects(segment, winding, hits, numHits)
+    for (segment, winding) in fullHeight:
+      scanline.intersects(segment, winding, hits, numHits)
+
+    quickSort(hits, 0, numHits - 1)
+
+    var
+      x: float32
+      count: int
+    for i in 0 ..< numHits:
+      let (at, winding) = hits[i]
+
+      var
+        fillStart = x.int
+        leftCover = if at.int - x.int > 0: trunc(x) + 1 - x else: at - x
+      if leftCover != 0:
+        inc fillStart
+        if shouldFill(windingRule, count):
+          coverages[x.int] += (leftCover * sampleCoverage.float32).uint8
+
+      if at.int - x.int > 0:
+        let rightCover = at - trunc(at)
+        if rightCover > 0 and shouldFill(windingRule, count):
+          coverages[at.int] += (rightCover * sampleCoverage.float32).uint8
+
+      let fillLen = at.int - fillStart
+      if fillLen > 0 and shouldFill(windingRule, count):
+        var i = fillStart
+        when defined(amd64) and not defined(pixieNoSimd):
+          let vSampleCoverage = mm_set1_epi8(cast[int8](sampleCoverage))
+          for j in countup(i, fillStart + fillLen - 16, 16):
+            let current = mm_loadu_si128(coverages[j].addr)
+            mm_storeu_si128(
+              coverages[j].addr,
+              mm_add_epi8(current, vSampleCoverage)
+            )
+            i += 16
+        for j in i ..< fillStart + fillLen:
+          coverages[j] += sampleCoverage
+
+      count += winding
+      x = at
+
+proc fillShapes(
+  image: Image,
+  shapes: seq[seq[Vec2]],
+  color: ColorRGBA,
+  windingRule: WindingRule
+) =
+  let (topHalf, bottomHalf, fullHeight) =
+    partitionSegments(shapes, image.height div 2)
 
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
@@ -799,105 +899,29 @@ proc fillShapes(
     startY = max(0, bounds.y.int)
     stopY = min(image.height, (bounds.y + bounds.h).int)
 
-  const
-    quality = 5 # Must divide 255 cleanly
-    sampleCoverage = 255.uint8 div quality
-    ep = 0.0001 * PI
-    offset = 1 / quality.float32
-    initialOffset = offset / 2
-
   var
     coverages = newSeq[uint8](image.width)
     hits = newSeq[(float32, int16)](4)
-    numHits: int
 
   for y in startY ..< stopY:
     # Reset buffer for this row
     zeroMem(coverages[0].addr, coverages.len)
 
-    proc intersects(
-      scanline: Line,
-      segment: Segment,
-      winding: int16,
-      hits: var seq[(float32, int16)],
-      numHits: var int
-    ) {.inline.} =
-      if segment.at.y <= scanline.a.y and segment.to.y >= scanline.a.y:
-        var at: Vec2
-        if scanline.intersects(segment, at):# and segment.to != at:
-          if numHits == hits.len:
-            hits.setLen(hits.len * 2)
-          hits[numHits] = (at.x.clamp(0, scanline.b.x), winding)
-          inc numHits
-
-    # Do scanlines for this row
-    for m in 0 ..< quality:
-      let
-        yLine = y.float32 + initialOffset + offset * m.float32 + ep
-        scanline = Line(a: vec2(0, yLine), b: vec2(image.width.float32, yLine))
-      numHits = 0
-      if y < image.height div 2:
-        for (segment, winding) in topHalf:
-          scanline.intersects(segment, winding, hits, numHits)
-      else:
-        for (segment, winding) in bottomHalf:
-          scanline.intersects(segment, winding, hits, numHits)
-      for (segment, winding) in fullHeight:
-        scanline.intersects(segment, winding, hits, numHits)
-
-      quickSort(hits, 0, numHits - 1)
-
-      proc shouldFill(windingRule: WindingRule, count: int): bool {.inline.} =
-        case windingRule:
-        of wrNonZero:
-          count != 0
-        of wrEvenOdd:
-          count mod 2 != 0
-
-      var
-        x: float32
-        count: int
-      for i in 0 ..< numHits:
-        let (at, winding) = hits[i]
-
-        var
-          fillStart = x.int
-          leftCover = if at.int - x.int > 0: trunc(x) + 1 - x else: at - x
-        if leftCover != 0:
-          inc fillStart
-          if shouldFill(windingRule, count):
-            coverages[x.int] += (leftCover * sampleCoverage.float32).uint8
-
-        if at.int - x.int > 0:
-          let rightCover = at - trunc(at)
-          if rightCover > 0 and shouldFill(windingRule, count):
-            coverages[at.int] += (rightCover * sampleCoverage.float32).uint8
-
-        let fillLen = at.int - fillStart
-        if fillLen > 0 and shouldFill(windingRule, count):
-          var i = fillStart
-          when defined(amd64) and not defined(pixieNoSimd):
-            let vSampleCoverage = mm_set1_epi8(cast[int8](sampleCoverage))
-            for j in countup(i, fillStart + fillLen - 16, 16):
-              let current = mm_loadu_si128(coverages[j].addr)
-              mm_storeu_si128(
-                coverages[j].addr,
-                mm_add_epi8(current, vSampleCoverage)
-              )
-              i += 16
-          for j in i ..< fillStart + fillLen:
-            coverages[j] += sampleCoverage
-
-        count += winding
-        x = at
+    computeCoverages(
+      coverages,
+      hits,
+      image.wh,
+      y,
+      topHalf, bottomHalf, fullHeight,
+      windingRule
+    )
 
     # Apply the coverage and blend
     var x = startX
     when defined(amd64) and not defined(pixieNoSimd):
       # When supported, SIMD blend as much as possible
-
       let
-        coverageMask1 = cast[M128i]([0xffffffff, 0, 0, 0]) # First 32 bits
+        coverageMask1 = cast[M128i]([uint32.high, 0, 0, 0]) # First 32 bits
         coverageMask2 = mm_set1_epi32(cast[int32](0x000000ff)) # Only `r`
         oddMask = mm_set1_epi16(cast[int16](0xff00))
         div255 = mm_set1_epi16(cast[int16](0x8081))
@@ -982,6 +1006,148 @@ proc fillShapes(
         image.setRgbaUnsafe(x, y, blendNormalPremultiplied(backdrop, source))
       inc x
 
+proc fillShapes(
+  mask: Mask,
+  shapes: seq[seq[Vec2]],
+  windingRule: WindingRule
+) =
+  let (topHalf, bottomHalf, fullHeight) =
+    partitionSegments(shapes, mask.height div 2)
+
+  # Figure out the total bounds of all the shapes,
+  # rasterize only within the total bounds
+  let
+    bounds = computeBounds(topHalf, bottomHalf, fullHeight)
+    startX = max(0, bounds.x.int)
+    startY = max(0, bounds.y.int)
+    stopY = min(mask.height, (bounds.y + bounds.h).int)
+
+  var
+    coverages = newSeq[uint8](mask.width)
+    hits = newSeq[(float32, int16)](4)
+
+  for y in startY ..< stopY:
+    # Reset buffer for this row
+    zeroMem(coverages[0].addr, coverages.len)
+
+    computeCoverages(
+      coverages,
+      hits,
+      mask.wh,
+      y,
+      topHalf, bottomHalf, fullHeight,
+      windingRule
+    )
+
+    # Apply the coverage and blend
+    var x = startX
+    when defined(amd64) and not defined(pixieNoSimd):
+      # When supported, SIMD blend as much as possible
+      let
+        oddMask = mm_set1_epi16(cast[int16](0xff00))
+        v255high = mm_set1_epi16(cast[int16](255.uint16 shl 8))
+        div255 = mm_set1_epi16(cast[int16](0x8081))
+
+      for _ in countup(x, coverages.len - 16, 16):
+        var coverage = mm_loadu_si128(coverages[x].addr)
+
+        let eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
+        if mm_movemask_epi8(eqZero) != 0xffff:
+          # If the coverages are not all zero
+          var
+            coverageEven = mm_slli_epi16(mm_andnot_si128(oddMask, coverage), 8)
+            coverageOdd = mm_and_si128(coverage, oddMask)
+
+          let
+            evenK = mm_sub_epi16(v255high, coverageEven)
+            oddK = mm_sub_epi16(v255high, coverageOdd)
+
+          var
+            backdrop = mm_loadu_si128(mask.data[mask.dataIndex(x, y)].addr)
+            backdropEven = mm_slli_epi16(mm_andnot_si128(oddMask, backdrop), 8)
+            backdropOdd = mm_and_si128(backdrop, oddMask)
+
+          # backdrop * k
+          backdropEven = mm_mulhi_epu16(backdropEven, evenK)
+          backdropOdd = mm_mulhi_epu16(backdropOdd, oddK)
+
+          # div 255
+          backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
+          backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
+
+          # Shift from high to low bits
+          coverageEven = mm_srli_epi16(coverageEven, 8)
+          coverageOdd = mm_srli_epi16(coverageOdd, 8)
+
+          var
+            blendedEven = mm_add_epi16(coverageEven, backdropEven)
+            blendedOdd = mm_add_epi16(coverageOdd, backdropOdd)
+
+          blendedOdd = mm_slli_epi16(blendedOdd, 8)
+
+          mm_storeu_si128(
+            mask.data[mask.dataIndex(x, y)].addr,
+            mm_or_si128(blendedEven, blendedOdd)
+          )
+
+        x += 16
+
+    while x < mask.width:
+      if x + 8 <= coverages.len:
+        let peeked = cast[ptr uint64](coverages[x].addr)[]
+        if peeked == 0:
+          x += 8
+          continue
+      let coverage = coverages[x]
+      if coverage != 0:
+        let
+          backdrop = mask.getValueUnsafe(x, y)
+          blended =
+            coverage + ((backdrop.uint32 * (255 - coverage)) div 255).uint8
+        mask.setValueUnsafe(x, y, blended)
+      inc x
+
+proc strokeShapes(
+  shapes: seq[seq[Vec2]],
+  strokeWidth: float32,
+  windingRule: WindingRule
+): seq[seq[Vec2]] =
+  if strokeWidth == 0:
+    return
+
+  let
+    widthLeft = strokeWidth / 2
+    widthRight = strokeWidth / 2
+
+  for shape in shapes:
+    var
+      strokeShape: seq[Vec2]
+      back: seq[Vec2]
+    for segment in shape.segments:
+      let
+        tangent = (segment.at - segment.to).normalize()
+        normal = vec2(-tangent.y, tangent.x)
+        left = segment(
+          segment.at - normal * widthLeft,
+          segment.to - normal * widthLeft
+        )
+        right = segment(
+          segment.at + normal * widthRight,
+          segment.to + normal * widthRight
+        )
+
+      strokeShape.add([right.at, right.to])
+      back.add([left.at, left.to])
+
+    # Add the back side reversed
+    for i in 1 .. back.len:
+      strokeShape.add(back[^i])
+
+    strokeShape.add(strokeShape[0])
+
+    if strokeShape.len > 0:
+      result.add(strokeShape)
+
 proc parseSomePath(path: SomePath): seq[seq[Vec2]] {.inline.} =
   when type(path) is string:
     parsePath(path).commandsToShapes()
@@ -1024,47 +1190,36 @@ proc fillPath*(
       segment = mat * segment
   image.fillShapes(shapes, color, windingRule)
 
-proc strokeShapes(
-  shapes: seq[seq[Vec2]],
-  color: ColorRGBA,
-  strokeWidth: float32,
-  windingRule: WindingRule
-): seq[seq[Vec2]] =
-  if strokeWidth == 0:
-    return
+proc fillPath*(
+  mask: Mask,
+  path: SomePath,
+  windingRule = wrNonZero
+) {.inline.} =
+  mask.fillShapes(parseSomePath(path), windingRule)
 
-  let
-    widthLeft = strokeWidth / 2
-    widthRight = strokeWidth / 2
+proc fillPath*(
+  mask: Mask,
+  path: SomePath,
+  pos: Vec2,
+  windingRule = wrNonZero
+) =
+  var shapes = parseSomePath(path)
+  for shape in shapes.mitems:
+    for segment in shape.mitems:
+      segment += pos
+  mask.fillShapes(shapes, color, windingRule)
 
-  for shape in shapes:
-    var
-      strokeShape: seq[Vec2]
-      back: seq[Vec2]
-    for segment in shape.segments:
-      let
-        tangent = (segment.at - segment.to).normalize()
-        normal = vec2(-tangent.y, tangent.x)
-        left = segment(
-          segment.at - normal * widthLeft,
-          segment.to - normal * widthLeft
-        )
-        right = segment(
-          segment.at + normal * widthRight,
-          segment.to + normal * widthRight
-        )
-
-      strokeShape.add([right.at, right.to])
-      back.add([left.at, left.to])
-
-    # Add the back side reversed
-    for i in 1 .. back.len:
-      strokeShape.add(back[^i])
-
-    strokeShape.add(strokeShape[0])
-
-    if strokeShape.len > 0:
-      result.add(strokeShape)
+proc fillPath*(
+  mask: Mask,
+  path: SomePath,
+  mat: Mat3,
+  windingRule = wrNonZero
+) =
+  var shapes = parseSomePath(path)
+  for shape in shapes.mitems:
+    for segment in shape.mitems:
+      segment = mat * segment
+  mask.fillShapes(shapes, windingRule)
 
 proc strokePath*(
   image: Image,
@@ -1075,7 +1230,6 @@ proc strokePath*(
 ) =
   let strokeShapes = strokeShapes(
     parseSomePath(path),
-    color,
     strokeWidth,
     windingRule
   )
@@ -1091,7 +1245,6 @@ proc strokePath*(
 ) =
   var strokeShapes = strokeShapes(
     parseSomePath(path),
-    color,
     strokeWidth,
     windingRule
   )
@@ -1110,7 +1263,6 @@ proc strokePath*(
 ) =
   var strokeShapes = strokeShapes(
     parseSomePath(path),
-    color,
     strokeWidth,
     windingRule
   )
@@ -1118,6 +1270,53 @@ proc strokePath*(
     for segment in shape.mitems:
       segment = mat * segment
   image.fillShapes(strokeShapes, color, windingRule)
+
+proc strokePath*(
+  mask: Mask,
+  path: SomePath,
+  strokeWidth = 1.0,
+  windingRule = wrNonZero
+) =
+  let strokeShapes = strokeShapes(
+    parseSomePath(path),
+    strokeWidth,
+    windingRule
+  )
+  mask.fillShapes(strokeShapes, windingRule)
+
+proc strokePath*(
+  mask: Mask,
+  path: SomePath,
+  strokeWidth = 1.0,
+  pos: Vec2,
+  windingRule = wrNonZero
+) =
+  var strokeShapes = strokeShapes(
+    parseSomePath(path),
+    strokeWidth,
+    windingRule
+  )
+  for shape in strokeShapes.mitems:
+    for segment in shape.mitems:
+      segment += pos
+  mask.fillShapes(strokeShapes, windingRule)
+
+proc strokePath*(
+  mask: Mask,
+  path: SomePath,
+  strokeWidth = 1.0,
+  mat: Mat3,
+  windingRule = wrNonZero
+) =
+  var strokeShapes = strokeShapes(
+    parseSomePath(path),
+    strokeWidth,
+    windingRule
+  )
+  for shape in strokeShapes.mitems:
+    for segment in shape.mitems:
+      segment = mat * segment
+  mask.fillShapes(strokeShapes, windingRule)
 
 when defined(release):
   {.pop.}
