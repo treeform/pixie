@@ -16,4 +16,8 @@ block:
   path.arcTo(x, y, x + w, y, r)
   mask.fillPath(path)
 
-  writeFile("tests/images/masks/maskMinified.png", mask.minifyBy2().encodePng())
+  let minified = mask.minifyBy2()
+
+  doAssert minified.width == 50 and minified.height == 50
+
+  writeFile("tests/images/masks/maskMinified.png", minified.encodePng())

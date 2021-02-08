@@ -363,6 +363,18 @@ proc rect*(path: var Path, x, y, w, h: float32) =
 proc rect*(path: var Path, pos: Vec2, wh: Vec2) {.inline.} =
   path.rect(pos.x, pos.y, wh.x, wh.y)
 
+proc ellipse*(path: var Path, cx, cy, rx, ry: float32) =
+  let
+    magicX = (4.0 * (-1.0 + sqrt(2.0)) / 3) * rx
+    magicY = (4.0 * (-1.0 + sqrt(2.0)) / 3) * ry
+
+  path.moveTo(cx + rx, cy)
+  path.bezierCurveTo(cx + rx, cy + magicY, cx + magicX, cy + ry, cx, cy + ry)
+  path.bezierCurveTo(cx - magicX, cy + ry, cx - rx, cy + magicY, cx - rx, cy)
+  path.bezierCurveTo(cx - rx, cy - magicY, cx - magicX, cy - ry, cx, cy - ry)
+  path.bezierCurveTo(cx + magicX, cy - ry, cx + rx, cy - magicY, cx + rx, cy)
+  path.closePath()
+
 proc polygon*(path: var Path, x, y, size: float32, sides: int) =
   ## Draws a n sided regular polygon at (x, y) with size.
   path.moveTo(x + size * cos(0.0), y + size * sin(0.0))

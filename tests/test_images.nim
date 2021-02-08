@@ -91,3 +91,17 @@ block:
     a = readImage("tests/images/flipped1.png")
     b = a.minifyBy2(2)
   b.writeFile("tests/images/minifiedBy4.png")
+
+block:
+  let image = newImage(100, 100)
+  image.fill(rgba(255, 100, 100, 255))
+
+  var path: Path
+  path.ellipse(image.width / 2, image.height / 2, 25, 25)
+
+  let mask = newMask(image.width, image.height)
+  mask.fillPath(path)
+
+  image.draw(mask)
+  image.toStraightAlpha()
+  image.writeFile("tests/images/circleMask.png")

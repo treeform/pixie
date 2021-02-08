@@ -9,6 +9,10 @@ proc fractional*(v: float32): float32 {.inline.} =
   result = abs(v)
   result = result - floor(result)
 
+proc lerp*(a, b: uint8, t: float32): uint8 {.inline.} =
+  let t = round(t * 255).uint32
+  ((a * (255 - t) + b * t) div 255).uint8
+
 proc lerp*(a, b: ColorRGBA, t: float32): ColorRGBA {.inline.} =
   let x = round(t * 255).uint32
   result.r = ((a.r.uint32 * (255 - x) + b.r.uint32 * x) div 255).uint8

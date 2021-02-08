@@ -1,4 +1,4 @@
-import chroma, blends, bumpy, vmath, common, system/memory
+import chroma, blends, bumpy, vmath, common, system/memory, masks
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -263,6 +263,48 @@ proc toStraightAlpha*(image: Image) =
     c.g = ((c.g.uint32 * multiplier) div 255).uint8
     c.b = ((c.b.uint32 * multiplier) div 255).uint8
 
+proc drawCorrect*(image: Image, mask: Mask, mat = mat3(), blendMode = bmMask) =
+  if blendMode notin {bmMask}:
+    raise newException(
+      PixieError,
+      "Blend mode " & $blendMode & " not supported for masks"
+    )
+
+  var
+    matInv = mat.inverse()
+    mask = mask
+
+  block: # Shrink mask by 2 as needed
+    var
+      dx = matInv * vec2(1, 0)
+      dy = matInv * vec2(0, 1)
+    while max(dx.length, dy.length) > 2:
+      mask = mask.minifyBy2()
+      dx /= 2
+      dy /= 2
+      matInv = matInv * scale(vec2(0.5, 0.5))
+
+  for y in 0 ..< image.height:
+    for x in 0 ..< image.width:
+      let
+        maskPos = matInv * vec2(x.float32 + h, y.float32 + h)
+        xFloat = maskPos.x - h
+        yFloat = maskPos.y - h
+        value = mask.getValueSmooth(xFloat, yFloat).uint32
+        rgba = image.getRgbaUnsafe(x, y)
+        blended = rgba(
+          ((rgba.r * value) div 255).uint8,
+          ((rgba.g * value) div 255).uint8,
+          ((rgba.b * value) div 255).uint8,
+          ((rgba.a * value) div 255).uint8
+        )
+      image.setRgbaUnsafe(x, y, blended)
+
+proc draw*(
+  image: Image, mask: Mask, pos = vec2(0, 0), blendMode = bmMask
+) {.inline.} =
+  image.drawCorrect(mask, translate(pos), blendMode)
+
 when defined(release):
   {.pop.}
 
@@ -286,15 +328,17 @@ proc invert*(image: Image) =
 
 proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA {.inline.} =
   let
-    minX = x.floor.int
-    diffX = x - x.floor
-    minY = y.floor.int
-    diffY = y - y.floor
+    minX = floor(x)
+    minY = floor(y)
+    diffX = x - minX
+    diffY = y - minY
+    x = minX.int
+    y = minY.int
 
-    x0y0 = image[minX, minY].toPremultipliedAlpha()
-    x1y0 = image[minX + 1, minY].toPremultipliedAlpha()
-    x0y1 = image[minX, minY + 1].toPremultipliedAlpha()
-    x1y1 = image[minX + 1, minY + 1].toPremultipliedAlpha()
+    x0y0 = image[x + 0, y + 0].toPremultipliedAlpha()
+    x1y0 = image[x + 1, y + 0].toPremultipliedAlpha()
+    x0y1 = image[x + 0, y + 1].toPremultipliedAlpha()
+    x1y1 = image[x + 1, y + 1].toPremultipliedAlpha()
 
     bottomMix = lerp(x0y0, x1y0, diffX)
     topMix = lerp(x0y1, x1y1, diffX)
@@ -407,24 +451,21 @@ proc sharpOpacity*(image: Image) =
     else:
       rgba = rgba(255, 255, 255, 255)
 
-proc drawCorrect*(a, b: Image, mat: Mat3, blendMode: BlendMode) =
+proc drawCorrect*(a, b: Image, mat = mat3(), blendMode = bmNormal) =
   ## Draws one image onto another using matrix with color blending.
   var
     matInv = mat.inverse()
-    # Compute movement vectors
-    p = matInv * vec2(0 + h, 0 + h)
-    dx = matInv * vec2(1 + h, 0 + h) - p
-    dy = matInv * vec2(0 + h, 1 + h) - p
-    minFilterBy2 = max(dx.length, dy.length)
     b = b
 
-  while minFilterBy2 > 2.0:
-    b = b.minifyBy2()
-    p /= 2
-    dx /= 2
-    dy /= 2
-    minFilterBy2 /= 2
-    matInv = matInv * scale(vec2(0.5, 0.5))
+  block: # Shrink image by 2 as needed
+    var
+      dx = matInv * vec2(1, 0)
+      dy = matInv * vec2(0, 1)
+    while max(dx.length, dy.length) > 2:
+      b = b.minifyBy2()
+      dx /= 2
+      dy /= 2
+      matInv = matInv * scale(vec2(0.5, 0.5))
 
   let blender = blendMode.blender()
   for y in 0 ..< a.height:
