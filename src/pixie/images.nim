@@ -310,8 +310,9 @@ proc drawCorrect(
 
   block: # Shrink by 2 as needed
     var
-      dx = matInv * vec2(1, 0)
-      dy = matInv * vec2(0, 1)
+      p = matInv * vec2(0 + h, 0 + h)
+      dx = matInv * vec2(1 + h, 0 + h) - p
+      dy = matInv * vec2(0 + h, 1 + h) - p
     while max(dx.length, dy.length) > 2:
       b = b.minifyBy2()
       dx /= 2
