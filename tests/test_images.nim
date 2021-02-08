@@ -79,3 +79,9 @@ block:
     a = readImage("tests/images/flipped1.png")
     b = a.superImage(45, 45, 20, 20)
   b.writeFile("tests/images/superimage6.png")
+
+block:
+  let
+    a = readImage("tests/images/flipped1.png")
+    b = a.minifyBy2()
+  b.writeFile("tests/images/minifiedBy2.png")
