@@ -291,7 +291,9 @@ proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA =
 
   lerp(bottomMix, topMix, diffY)
 
-proc drawCorrect*(a: Image, b: Image | Mask, mat = mat3(), blendMode = bmMask) =
+proc drawCorrect(
+  a: Image, b: Image | Mask, mat = mat3(), blendMode = bmNormal
+) =
   ## Draws one image onto another using matrix with color blending.
   when type(b) is Image:
     let blender = blendMode.blender()
