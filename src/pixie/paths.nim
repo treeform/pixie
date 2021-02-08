@@ -889,8 +889,8 @@ proc fillShapes(
   image: Image,
   shapes: seq[seq[Vec2]],
   color: ColorRGBA,
-  blendMode: BlendMode,
-  windingRule: WindingRule
+  windingRule: WindingRule,
+  blendMode: BlendMode
 ) =
   let (topHalf, bottomHalf, fullHeight) =
     partitionSegments(shapes, image.height div 2)
@@ -1165,38 +1165,38 @@ proc fillPath*(
   image: Image,
   path: SomePath,
   color: ColorRGBA,
-  blendMode = bmNormal,
-  windingRule = wrNonZero
+  windingRule = wrNonZero,
+  blendMode = bmNormal
 ) {.inline.} =
-  image.fillShapes(parseSomePath(path), color, blendMode, windingRule)
+  image.fillShapes(parseSomePath(path), color, windingRule, blendMode)
 
 proc fillPath*(
   image: Image,
   path: SomePath,
   color: ColorRGBA,
   pos: Vec2,
-  blendMode = bmNormal,
-  windingRule = wrNonZero
+  windingRule = wrNonZero,
+  blendMode = bmNormal
 ) =
   var shapes = parseSomePath(path)
   for shape in shapes.mitems:
     for segment in shape.mitems:
       segment += pos
-  image.fillShapes(shapes, color, blendMode, windingRule)
+  image.fillShapes(shapes, color, windingRule, blendMode)
 
 proc fillPath*(
   image: Image,
   path: SomePath,
   color: ColorRGBA,
   mat: Mat3,
-  blendMode = bmNormal,
-  windingRule = wrNonZero
+  windingRule = wrNonZero,
+  blendMode = bmNormal
 ) =
   var shapes = parseSomePath(path)
   for shape in shapes.mitems:
     for segment in shape.mitems:
       segment = mat * segment
-  image.fillShapes(shapes, color, blendMode, windingRule)
+  image.fillShapes(shapes, color, windingRule, blendMode)
 
 proc fillPath*(
   mask: Mask,
@@ -1234,15 +1234,15 @@ proc strokePath*(
   path: SomePath,
   color: ColorRGBA,
   strokeWidth = 1.0,
-  blendMode = bmNormal,
-  windingRule = wrNonZero
+  windingRule = wrNonZero,
+  blendMode = bmNormal
 ) =
   let strokeShapes = strokeShapes(
     parseSomePath(path),
     strokeWidth,
     windingRule
   )
-  image.fillShapes(strokeShapes, color, blendMode, windingRule)
+  image.fillShapes(strokeShapes, color, windingRule, blendMode)
 
 proc strokePath*(
   image: Image,
@@ -1250,8 +1250,8 @@ proc strokePath*(
   color: ColorRGBA,
   strokeWidth = 1.0,
   pos: Vec2,
-  blendMode = bmNormal,
-  windingRule = wrNonZero
+  windingRule = wrNonZero,
+  blendMode = bmNormal
 ) =
   var strokeShapes = strokeShapes(
     parseSomePath(path),
@@ -1261,7 +1261,7 @@ proc strokePath*(
   for shape in strokeShapes.mitems:
     for segment in shape.mitems:
       segment += pos
-  image.fillShapes(strokeShapes, color, blendMode, windingRule)
+  image.fillShapes(strokeShapes, color, windingRule, blendMode)
 
 proc strokePath*(
   image: Image,
@@ -1269,8 +1269,8 @@ proc strokePath*(
   color: ColorRGBA,
   strokeWidth = 1.0,
   mat: Mat3,
-  blendMode = bmNormal,
-  windingRule = wrNonZero
+  windingRule = wrNonZero,
+  blendMode = bmNormal
 ) =
   var strokeShapes = strokeShapes(
     parseSomePath(path),
@@ -1280,7 +1280,7 @@ proc strokePath*(
   for shape in strokeShapes.mitems:
     for segment in shape.mitems:
       segment = mat * segment
-  image.fillShapes(strokeShapes, color, blendMode, windingRule)
+  image.fillShapes(strokeShapes, color, windingRule, blendMode)
 
 proc strokePath*(
   mask: Mask,
