@@ -186,17 +186,11 @@ proc minifyBy2*(image: Image, power = 1): Image =
           c = image.getRgbaUnsafe(x * 2 + 1, y * 2 + 1)
           d = image.getRgbaUnsafe(x * 2 + 0, y * 2 + 1)
 
-        var values: array[4, uint32]
-        values[0] = a.r.uint32 + b.r + c.r + d.r
-        values[1] = a.g.uint32 + b.g + c.g + d.g
-        values[2] = a.b.uint32 + b.b + c.b + d.b
-        values[3] = a.a.uint32 + b.a + c.a + d.a
-
         let color = rgba(
-          (values[0] div 4).uint8,
-          (values[1] div 4).uint8,
-          (values[2] div 4).uint8,
-          (values[3] div 4).uint8
+          ((a.r.uint32 + b.r + c.r + d.r) div 4).uint8,
+          ((a.g.uint32 + b.g + c.g + d.g) div 4).uint8,
+          ((a.b.uint32 + b.b + c.b + d.b) div 4).uint8,
+          ((a.a.uint32 + b.a + c.a + d.a) div 4).uint8
         )
 
         result.setRgbaUnsafe(x, y, color)
