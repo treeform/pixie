@@ -12,3 +12,6 @@ timeIt "minifyBy2":
   doAssert minified[0, 0] == 63
 
 reset()
+
+timeIt "applyOpacity":
+  mask.applyOpacity(0.5)

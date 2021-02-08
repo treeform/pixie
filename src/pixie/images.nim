@@ -263,6 +263,15 @@ proc toStraightAlpha*(image: Image) =
     c.g = ((c.g.uint32 * multiplier) div 255).uint8
     c.b = ((c.b.uint32 * multiplier) div 255).uint8
 
+proc applyOpacity*(image: Image, opacity: float32) =
+  ## Multiplies alpha of the image by opacity.
+  let opacity = round(255 * opacity).uint32
+  for rgba in image.data.mitems:
+    rgba.r = ((rgba.r * opacity) div 255).uint8
+    rgba.g = ((rgba.g * opacity) div 255).uint8
+    rgba.b = ((rgba.b * opacity) div 255).uint8
+    rgba.a = ((rgba.a * opacity) div 255).uint8
+
 proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA =
   let
     minX = floor(x)
@@ -272,16 +281,15 @@ proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA =
     x = minX.int
     y = minY.int
 
-    x0y0 = image[x + 0, y + 0].toPremultipliedAlpha()
-    x1y0 = image[x + 1, y + 0].toPremultipliedAlpha()
-    x0y1 = image[x + 0, y + 1].toPremultipliedAlpha()
-    x1y1 = image[x + 1, y + 1].toPremultipliedAlpha()
+    x0y0 = image[x + 0, y + 0]
+    x1y0 = image[x + 1, y + 0]
+    x0y1 = image[x + 0, y + 1]
+    x1y1 = image[x + 1, y + 1]
 
     bottomMix = lerp(x0y0, x1y0, diffX)
     topMix = lerp(x0y1, x1y1, diffX)
-    finalMix = lerp(bottomMix, topMix, diffY)
 
-  finalMix.toStraightAlpha()
+  lerp(bottomMix, topMix, diffY)
 
 proc drawCorrect*(a: Image, b: Image | Mask, mat = mat3(), blendMode = bmMask) =
   ## Draws one image onto another using matrix with color blending.
@@ -446,12 +454,6 @@ proc blurAlpha*(image: Image, radius: float32) =
         let a = lookup[yb + radius]
         alpha += c2.a.float32 * a
       image.setRgbaUnsafe(x, y, rgba(0, 0, 0, alpha.uint8))
-
-proc applyOpacity*(image: Image, opacity: float32) =
-  ## Multiplies alpha of the image by opacity.
-  let op = (255 * opacity).uint32
-  for rgba in image.data.mitems:
-    rgba.a = ((rgba.a.uint32 * op) div 255).clamp(0, 255).uint8
 
 proc sharpOpacity*(image: Image) =
   ## Sharpens the opacity to extreme.
