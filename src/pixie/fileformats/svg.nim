@@ -196,17 +196,8 @@ proc draw(
       rx = parseFloat(node.attr("rx"))
       ry = parseFloat(node.attr("ry"))
 
-    let
-      magicX = (4.0 * (-1.0 + sqrt(2.0)) / 3) * rx
-      magicY = (4.0 * (-1.0 + sqrt(2.0)) / 3) * ry
-
     var path: Path
-    path.moveTo(cx + rx, cy)
-    path.bezierCurveTo(cx + rx, cy + magicY, cx + magicX, cy + ry, cx, cy + ry)
-    path.bezierCurveTo(cx - magicX, cy + ry, cx - rx, cy + magicY, cx - rx, cy)
-    path.bezierCurveTo(cx - rx, cy - magicY, cx - magicX, cy - ry, cx, cy - ry)
-    path.bezierCurveTo(cx + magicX, cy - ry, cx + rx, cy - magicY, cx + rx, cy)
-    path.closePath()
+    path.ellipse(cx, cy, rx, ry)
 
     if ctx.fill != ColorRGBA():
       img.fillPath(path, ctx.fill, ctx.transform)

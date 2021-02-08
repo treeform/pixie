@@ -1,4 +1,4 @@
-import common, vmath
+import common, vmath, system/memory
 
 type
   Mask* = ref object
@@ -80,6 +80,34 @@ proc minifyBy2*(mask: Mask, power = 1): Mask =
           mask.getValueUnsafe(x * 2 + 1, y * 2 + 1) +
           mask.getValueUnsafe(x * 2 + 0, y * 2 + 1)
         result.setValueUnsafe(x, y, (value div 4).uint8)
+
+proc fillUnsafe(data: var seq[uint8], value: uint8, start, len: int) =
+  ## Fills the mask data with the parameter value starting at index start and
+  ## continuing for len indices.
+  nimSetMem(data[start].addr, value.cint, len)
+
+proc fill*(mask: Mask, value: uint8) {.inline.} =
+  ## Fills the mask with the parameter value.
+  fillUnsafe(mask.data, value, 0, mask.data.len)
+
+proc getValueSmooth*(mask: Mask, x, y: float32): uint8 =
+  let
+    minX = floor(x)
+    minY = floor(y)
+    diffX = x - minX
+    diffY = y - minY
+    x = minX.int
+    y = minY.int
+
+    x0y0 = mask[x + 0, y + 0]
+    x1y0 = mask[x + 1, y + 0]
+    x0y1 = mask[x + 0, y + 1]
+    x1y1 = mask[x + 1, y + 1]
+
+    bottomMix = lerp(x0y0, x1y0, diffX)
+    topMix = lerp(x0y1, x1y1, diffX)
+
+  lerp(bottomMix, topMix, diffY)
 
 when defined(release):
   {.pop.}

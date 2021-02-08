@@ -1,48 +1,80 @@
 import chroma, pixie, benchy
 
-let a = newImage(2560, 1440)
+let image = newImage(2560, 1440)
+
+proc reset() =
+  image.fill(rgba(63, 127, 191, 191))
+
+reset()
 
 timeIt "fill":
-  a.fill(rgba(255, 255, 255, 255))
-  doAssert a[0, 0] == rgba(255, 255, 255, 255)
+  image.fill(rgba(255, 255, 255, 255))
+  doAssert image[0, 0] == rgba(255, 255, 255, 255)
+
+reset()
 
 timeIt "fill_rgba":
-  a.fill(rgba(63, 127, 191, 191))
-  doAssert a[0, 0] == rgba(63, 127, 191, 191)
+  image.fill(rgba(63, 127, 191, 191))
+  doAssert image[0, 0] == rgba(63, 127, 191, 191)
+
+reset()
 
 timeIt "subImage":
-  keep a.subImage(0, 0, 256, 256)
+  keep image.subImage(0, 0, 256, 256)
+
+reset()
 
 # timeIt "superImage":
 #   discard
 
+reset()
+
 timeIt "minifyBy2":
-  let minified = a.minifyBy2()
+  let minified = image.minifyBy2()
   doAssert minified[0, 0] == rgba(63, 127, 191, 191)
 
+reset()
+
 timeIt "invert":
-  a.invert()
-  keep(a)
+  image.invert()
+
+reset()
 
 timeIt "applyOpacity":
-  a.applyOpacity(0.5)
-  keep(a)
+  image.applyOpacity(0.5)
+
+reset()
 
 timeIt "sharpOpacity":
-  a.sharpOpacity()
-  keep(a)
+  image.sharpOpacity()
 
-a.fill(rgba(63, 127, 191, 191))
+reset()
 
 timeIt "toPremultipliedAlpha":
-  a.toPremultipliedAlpha()
+  image.toPremultipliedAlpha()
+
+reset()
 
 timeIt "toStraightAlpha":
-  a.toStraightAlpha()
+  image.toStraightAlpha()
+
+reset()
+
+block:
+  var path: Path
+  path.ellipse(image.width / 2, image.height / 2, 300, 300)
+
+  let mask = newMask(image.width, image.height)
+  mask.fillPath(path)
+
+  timeIt "mask":
+    image.mask(mask)
+
+reset()
 
 timeIt "lerp integers":
   for i in 0 ..< 100000:
-    let c = a[0, 0]
+    let c = image[0, 0]
     var z: int
     for t in 0 .. 100:
       z += lerp(c, c, t.float32 / 100).a.int
@@ -50,7 +82,7 @@ timeIt "lerp integers":
 
 timeIt "lerp floats":
   for i in 0 ..< 100000:
-    let c = a[0, 0]
+    let c = image[0, 0]
     var z: int
     for t in 0 .. 100:
       z += lerp(c.color, c.color, t.float32 / 100).rgba().a.int
