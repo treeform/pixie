@@ -109,5 +109,11 @@ proc getValueSmooth*(mask: Mask, x, y: float32): uint8 =
 
   lerp(bottomMix, topMix, diffY)
 
+proc applyOpacity*(mask: Mask, opacity: float32) =
+  ## Multiplies the values of the mask by opacity.
+  let opacity = round(255 * opacity).uint32
+  for value in mask.data.mitems:
+    value = ((value * opacity) div 255).uint8
+
 when defined(release):
   {.pop.}
