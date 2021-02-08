@@ -63,5 +63,23 @@ proc `[]=`*(mask: Mask, x, y: int, value: uint8) {.inline.} =
   if mask.inside(x, y):
     mask.setValueUnsafe(x, y, value)
 
+proc minifyBy2*(mask: Mask, power = 1): Mask =
+  ## Scales the mask down by an integer scale.
+  if power < 0:
+    raise newException(PixieError, "Cannot minifyBy2 with negative power")
+  if power == 0:
+    return mask.copy()
+
+  for i in 1 .. power:
+    result = newMask(mask.width div 2, mask.height div 2)
+    for y in 0 ..< result.height:
+      for x in 0 ..< result.width:
+        let value =
+          mask.getValueUnsafe(x * 2 + 0, y * 2 + 0).uint32 +
+          mask.getValueUnsafe(x * 2 + 1, y * 2 + 0) +
+          mask.getValueUnsafe(x * 2 + 1, y * 2 + 1) +
+          mask.getValueUnsafe(x * 2 + 0, y * 2 + 1)
+        result.setValueUnsafe(x, y, (value div 4).uint8)
+
 when defined(release):
   {.pop.}

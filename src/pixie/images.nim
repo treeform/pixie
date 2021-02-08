@@ -176,16 +176,28 @@ proc minifyBy2*(image: Image, power = 1): Image =
   if power == 0:
     return image.copy()
 
+  var src = image
   for i in 1 .. power:
-    result = newImage(image.width div 2, image.height div 2)
+    result = newImage(src.width div 2, src.height div 2)
     for y in 0 ..< result.height:
       for x in 0 ..< result.width:
-        var color =
-          image.getRgbaUnsafe(x * 2 + 0, y * 2 + 0).color / 4.0 +
-          image.getRgbaUnsafe(x * 2 + 1, y * 2 + 0).color / 4.0 +
-          image.getRgbaUnsafe(x * 2 + 1, y * 2 + 1).color / 4.0 +
-          image.getRgbaUnsafe(x * 2 + 0, y * 2 + 1).color / 4.0
-        result.setRgbaUnsafe(x, y, color.rgba)
+        let
+          a = src.getRgbaUnsafe(x * 2 + 0, y * 2 + 0)
+          b = src.getRgbaUnsafe(x * 2 + 1, y * 2 + 0)
+          c = src.getRgbaUnsafe(x * 2 + 1, y * 2 + 1)
+          d = src.getRgbaUnsafe(x * 2 + 0, y * 2 + 1)
+
+        let color = rgba(
+          ((a.r.uint32 + b.r + c.r + d.r) div 4).uint8,
+          ((a.g.uint32 + b.g + c.g + d.g) div 4).uint8,
+          ((a.b.uint32 + b.b + c.b + d.b) div 4).uint8,
+          ((a.a.uint32 + b.a + c.a + d.a) div 4).uint8
+        )
+
+        result.setRgbaUnsafe(x, y, color)
+
+    # Set src as this result for if we do another power
+    src = result
 
 proc magnifyBy2*(image: Image, power = 1): Image =
   ## Scales image image up by 2 ^ power.

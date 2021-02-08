@@ -1,9 +1,6 @@
 ## Blending modes.
 import chroma, math, common
 
-when defined(amd64) and not defined(pixieNoSimd):
-  import nimsimd/sse2
-
 # See https://www.w3.org/TR/compositing-1/
 # See https://www.khronos.org/registry/OpenGL/extensions/KHR/KHR_blend_equation_advanced.txt
 
@@ -34,12 +31,20 @@ type
     bmIntersectMask
     bmExcludeMask
 
-  Blender* = proc(a, b: ColorRGBA): ColorRGBA
+  Blender* = proc(backdrop, source: ColorRGBA): ColorRGBA
+
+when defined(amd64) and not defined(pixieNoSimd):
+  import nimsimd/sse2
+
+  type BlenderSimd* = proc(blackdrop, source: M128i): M128i
 
 when defined(release):
   {.push checks: off.}
 
-proc blendNormalPremultiplied*(backdrop, source: ColorRGBA): ColorRGBA {.inline.} =
+proc blendAlpha(backdrop, source: uint8): uint8 {.inline.} =
+  source + ((backdrop.uint32 * (255 - source)) div 255).uint8
+
+proc blendNormalPremultiplied*(backdrop, source: ColorRGBA): ColorRGBA =
   if backdrop.a == 0:
     return source
   if source.a == 255:
@@ -51,16 +56,20 @@ proc blendNormalPremultiplied*(backdrop, source: ColorRGBA): ColorRGBA {.inline.
   result.r = source.r + ((backdrop.r.uint32 * k) div 255).uint8
   result.g = source.g + ((backdrop.g.uint32 * k) div 255).uint8
   result.b = source.b + ((backdrop.b.uint32 * k) div 255).uint8
-  result.a = source.a + ((backdrop.a.uint32 * k) div 255).uint8
+  result.a = blendAlpha(backdrop.a, source.a)
+
+proc blenderPremultiplied*(blendMode: BlendMode): Blender =
+  case blendMode:
+  of bmNormal: blendNormalPremultiplied
+  else:
+    raise newException(PixieError, "No premultiplied blender for " & $blendMode)
 
 when defined(amd64) and not defined(pixieNoSimd):
-  proc blendNormalPremultiplied*(backdrop, source: M128i): M128i {.inline.} =
+  proc blendNormalPremultipliedSimd*(backdrop, source: M128i): M128i =
     let
       alphaMask = mm_set1_epi32(cast[int32](0xff000000))
       oddMask = mm_set1_epi16(cast[int16](0xff00))
       div255 = mm_set1_epi16(cast[int16](0x8081))
-
-    # Shortcuts didn't help (backdrop.a == 0, source.a == 0, source.a == 255)
 
     var
       sourceAlpha = mm_and_si128(source, alphaMask)
@@ -84,6 +93,13 @@ when defined(amd64) and not defined(pixieNoSimd):
       source,
       mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
     )
+
+  proc blenderSimd*(blendMode: BlendMode): BlenderSimd =
+    case blendMode:
+    of bmNormal: blendNormalPremultipliedSimd
+    else:
+      raise newException(PixieError, "No SIMD blender for " & $blendMode)
+
 
 when defined(release):
   {.pop.}
@@ -534,7 +550,7 @@ proc blendOverwrite(backdrop, source: ColorRGBA): ColorRGBA =
   source
 
 proc blender*(blendMode: BlendMode): Blender =
-  case blendMode
+  case blendMode:
   of bmNormal: blendNormal
   of bmDarken: blendDarken
   of bmMultiply: blendMultiply

@@ -13,6 +13,13 @@ timeIt "fill_rgba":
 timeIt "subImage":
   keep a.subImage(0, 0, 256, 256)
 
+# timeIt "superImage":
+#   discard
+
+timeIt "minifyBy2":
+  let minified = a.minifyBy2()
+  doAssert minified[0, 0] == rgba(63, 127, 191, 191)
+
 timeIt "invert":
   a.invert()
   keep(a)
