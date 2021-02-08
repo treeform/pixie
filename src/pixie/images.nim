@@ -263,7 +263,13 @@ proc toStraightAlpha*(image: Image) =
     c.g = ((c.g.uint32 * multiplier) div 255).uint8
     c.b = ((c.b.uint32 * multiplier) div 255).uint8
 
-proc maskCorrect*(image: Image, mask: Mask, mat = mat3()) =
+proc drawCorrect*(image: Image, mask: Mask, mat = mat3(), blendMode = bmMask) =
+  if blendMode notin {bmMask}:
+    raise newException(
+      PixieError,
+      "Blend mode " & $blendMode & " not supported for masks"
+    )
+
   var
     matInv = mat.inverse()
     mask = mask
@@ -294,8 +300,10 @@ proc maskCorrect*(image: Image, mask: Mask, mat = mat3()) =
         )
       image.setRgbaUnsafe(x, y, blended)
 
-proc mask*(image: Image, mask: Mask, pos = vec2(0, 0)) {.inline.} =
-  image.maskCorrect(mask, translate(pos))
+proc draw*(
+  image: Image, mask: Mask, pos = vec2(0, 0), blendMode = bmMask
+) {.inline.} =
+  image.drawCorrect(mask, translate(pos), blendMode)
 
 when defined(release):
   {.pop.}

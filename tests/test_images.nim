@@ -102,6 +102,6 @@ block:
   let mask = newMask(image.width, image.height)
   mask.fillPath(path)
 
-  image.mask(mask)
+  image.draw(mask)
   image.toStraightAlpha()
   image.writeFile("tests/images/circleMask.png")
