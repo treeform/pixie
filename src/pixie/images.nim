@@ -263,42 +263,73 @@ proc toStraightAlpha*(image: Image) =
     c.g = ((c.g.uint32 * multiplier) div 255).uint8
     c.b = ((c.b.uint32 * multiplier) div 255).uint8
 
-proc drawCorrect*(image: Image, mask: Mask, mat = mat3(), blendMode = bmMask) =
-  if blendMode notin {bmMask}:
-    raise newException(
-      PixieError,
-      "Blend mode " & $blendMode & " not supported for masks"
-    )
+proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA =
+  let
+    minX = floor(x)
+    minY = floor(y)
+    diffX = x - minX
+    diffY = y - minY
+    x = minX.int
+    y = minY.int
+
+    x0y0 = image[x + 0, y + 0].toPremultipliedAlpha()
+    x1y0 = image[x + 1, y + 0].toPremultipliedAlpha()
+    x0y1 = image[x + 0, y + 1].toPremultipliedAlpha()
+    x1y1 = image[x + 1, y + 1].toPremultipliedAlpha()
+
+    bottomMix = lerp(x0y0, x1y0, diffX)
+    topMix = lerp(x0y1, x1y1, diffX)
+    finalMix = lerp(bottomMix, topMix, diffY)
+
+  finalMix.toStraightAlpha()
+
+proc drawCorrect*(a: Image, b: Image | Mask, mat = mat3(), blendMode = bmMask) =
+  ## Draws one image onto another using matrix with color blending.
+  when type(b) is Image:
+    let blender = blendMode.blender()
+  else:
+    if blendMode notin {bmMask}:
+      raise newException(
+        PixieError,
+        "Blend mode " & $blendMode & " not supported for masks"
+      )
 
   var
     matInv = mat.inverse()
-    mask = mask
+    b = b
 
-  block: # Shrink mask by 2 as needed
+  block: # Shrink by 2 as needed
     var
       dx = matInv * vec2(1, 0)
       dy = matInv * vec2(0, 1)
     while max(dx.length, dy.length) > 2:
-      mask = mask.minifyBy2()
+      b = b.minifyBy2()
       dx /= 2
       dy /= 2
       matInv = matInv * scale(vec2(0.5, 0.5))
 
-  for y in 0 ..< image.height:
-    for x in 0 ..< image.width:
+  for y in 0 ..< a.height:
+    for x in 0 ..< a.width:
       let
-        maskPos = matInv * vec2(x.float32 + h, y.float32 + h)
-        xFloat = maskPos.x - h
-        yFloat = maskPos.y - h
-        value = mask.getValueSmooth(xFloat, yFloat).uint32
-        rgba = image.getRgbaUnsafe(x, y)
+        samplePos = matInv * vec2(x.float32 + h, y.float32 + h)
+        xFloat = samplePos.x - h
+        yFloat = samplePos.y - h
+        rgba = a.getRgbaUnsafe(x, y)
+
+      var blended: ColorRGBA
+      when type(b) is Image:
+        let sample = b.getRgbaSmooth(xFloat, yFloat)
+        blended = blender(rgba, sample)
+      else:
+        let sample = b.getValueSmooth(xFloat, yFloat).uint32
         blended = rgba(
-          ((rgba.r * value) div 255).uint8,
-          ((rgba.g * value) div 255).uint8,
-          ((rgba.b * value) div 255).uint8,
-          ((rgba.a * value) div 255).uint8
+          ((rgba.r * sample) div 255).uint8,
+          ((rgba.g * sample) div 255).uint8,
+          ((rgba.b * sample) div 255).uint8,
+          ((rgba.a * sample) div 255).uint8
         )
-      image.setRgbaUnsafe(x, y, blended)
+
+      a.setRgbaUnsafe(x, y, blended)
 
 proc draw*(
   image: Image, mask: Mask, pos = vec2(0, 0), blendMode = bmMask
@@ -325,26 +356,6 @@ proc invert*(image: Image) =
     rgba.b = 255 - rgba.b
     rgba.a = 255 - rgba.a
     image.data[j] = rgba
-
-proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA {.inline.} =
-  let
-    minX = floor(x)
-    minY = floor(y)
-    diffX = x - minX
-    diffY = y - minY
-    x = minX.int
-    y = minY.int
-
-    x0y0 = image[x + 0, y + 0].toPremultipliedAlpha()
-    x1y0 = image[x + 1, y + 0].toPremultipliedAlpha()
-    x0y1 = image[x + 0, y + 1].toPremultipliedAlpha()
-    x1y1 = image[x + 1, y + 1].toPremultipliedAlpha()
-
-    bottomMix = lerp(x0y0, x1y0, diffX)
-    topMix = lerp(x0y1, x1y1, diffX)
-    finalMix = lerp(bottomMix, topMix, diffY)
-
-  finalMix.toStraightAlpha()
 
 proc gaussianLookup(radius: int): seq[float32] =
   ## Compute lookup table for 1d Gaussian kernel.
@@ -450,33 +461,6 @@ proc sharpOpacity*(image: Image) =
       rgba = rgba(0, 0, 0, 0)
     else:
       rgba = rgba(255, 255, 255, 255)
-
-proc drawCorrect*(a, b: Image, mat = mat3(), blendMode = bmNormal) =
-  ## Draws one image onto another using matrix with color blending.
-  var
-    matInv = mat.inverse()
-    b = b
-
-  block: # Shrink image by 2 as needed
-    var
-      dx = matInv * vec2(1, 0)
-      dy = matInv * vec2(0, 1)
-    while max(dx.length, dy.length) > 2:
-      b = b.minifyBy2()
-      dx /= 2
-      dy /= 2
-      matInv = matInv * scale(vec2(0.5, 0.5))
-
-  let blender = blendMode.blender()
-  for y in 0 ..< a.height:
-    for x in 0 ..< a.width:
-      let
-        srcPos = matInv * vec2(x.float32 + h, y.float32 + h)
-        xFloat = srcPos.x - h
-        yFloat = srcPos.y - h
-        rgba = a.getRgbaUnsafe(x, y)
-        rgba2 = b.getRgbaSmooth(xFloat, yFloat)
-      a.setRgbaUnsafe(x, y, blender(rgba, rgba2))
 
 proc drawUber(
   a, b: Image,
