@@ -61,20 +61,66 @@ proc blendMask(backdrop, source: ColorRGBA): ColorRGBA =
   result.b = ((backdrop.b * k) div 255).uint8
   result.a = ((backdrop.a * k) div 255).uint8
 
+proc blendSubtractMask(backdrop, source: ColorRGBA): ColorRGBA =
+  let a = (backdrop.a.uint32 * (255 - source.a)) div 255
+  result.r = ((backdrop.r * a) div 255).uint8
+  result.g = ((backdrop.g * a) div 255).uint8
+  result.b = ((backdrop.b * a) div 255).uint8
+  result.a = a.uint8
+
+proc blendIntersectMask(backdrop, source: ColorRGBA): ColorRGBA =
+  blendMask(backdrop, source)
+
+proc blendExcludeMask(backdrop, source: ColorRGBA): ColorRGBA =
+  let a = max(backdrop.a, source.a).uint32 - min(backdrop.a, source.a)
+  result.r = ((backdrop.r * a) div 255).uint8
+  result.g = ((backdrop.g * a) div 255).uint8
+  result.b = ((backdrop.b * a) div 255).uint8
+  result.a = a.uint8
+
 proc blendOverwrite(backdrop, source: ColorRGBA): ColorRGBA =
   source
 
 proc blender*(blendMode: BlendMode): Blender =
   case blendMode:
   of bmNormal: blendNormal
+  # of bmDarken: blendDarken
+  # of bmMultiply: blendMultiply
+  # of bmLinearBurn: blendLinearBurn
+  # of bmColorBurn: blendColorBurn
+  # of bmLighten: blendLighten
+  # of bmScreen: blendScreen
+  # of bmLinearDodge: blendLinearDodge
+  # of bmColorDodge: blendColorDodge
+  # of bmOverlay: blendOverlay
+  # of bmSoftLight: blendSoftLight
+  # of bmHardLight: blendHardLight
+  # of bmDifference: blendDifference
+  # of bmExclusion: blendExclusion
+  # of bmHue: blendHue
+  # of bmSaturation: blendSaturation
+  # of bmColor: blendColor
+  # of bmLuminosity: blendLuminosity
   of bmMask: blendMask
   of bmOverwrite: blendOverwrite
+  of bmSubtractMask: blendSubtractMask
+  of bmIntersectMask: blendIntersectMask
+  of bmExcludeMask: blendExcludeMask
   else:
     blendNormal
     # raise newException(PixieError, "No blender for " & $blendMode)
 
 proc maskMask(backdrop, source: uint8): uint8 =
   ((backdrop.uint32 * source) div 255).uint8
+
+proc maskSubtract(backdrop, source: uint8): uint8 =
+  ((backdrop.uint32 * (255 - source)) div 255).uint8
+
+proc maskIntersect(backdrop, source: uint8): uint8 =
+  maskMask(backdrop, source)
+
+proc maskExclude(backdrop, source: uint8): uint8 =
+  max(backdrop, source) - min(backdrop, source)
 
 proc maskOverwrite(backdrop, source: uint8): uint8 =
   source
@@ -83,6 +129,9 @@ proc masker*(blendMode: BlendMode): Masker =
   case blendMode:
   of bmMask: maskMask
   of bmOverwrite: maskOverwrite
+  of bmSubtractMask: maskSubtract
+  of bmIntersectMask: maskIntersect
+  of bmExcludeMask: maskExclude
   else:
     raise newException(PixieError, "No masker for " & $blendMode)
 
@@ -558,18 +607,6 @@ proc blendHue(backdrop, source: ColorRGBA): ColorRGBA =
 
 proc blendSaturation(backdrop, source: ColorRGBA): ColorRGBA =
   blendSaturationFloats(backdrop.color, source.color).rgba
-
-proc blendSubtractMask(backdrop, source: ColorRGBA): ColorRGBA =
-  result = backdrop
-  result.a = max(0, (backdrop.a.int32 * (255 - source.a.int32)) div 255).uint8
-
-proc blendIntersectMask(backdrop, source: ColorRGBA): ColorRGBA =
-  result = backdrop
-  result.a = ((backdrop.a.uint32 * (source.a.uint32)) div 255).uint8
-
-proc blendExcludeMask(backdrop, source: ColorRGBA): ColorRGBA =
-  result = backdrop
-  result.a = max(backdrop.a, source.a) - min(backdrop.a, source.a)
 
 # proc blender*(blendMode: BlendMode): Blender =
 #   case blendMode:
