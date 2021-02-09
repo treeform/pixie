@@ -263,14 +263,71 @@ proc toStraightAlpha*(image: Image) =
     c.g = ((c.g.uint32 * multiplier) div 255).uint8
     c.b = ((c.b.uint32 * multiplier) div 255).uint8
 
-proc applyOpacity*(image: Image, opacity: float32) =
+proc applyOpacity*(target: Image | Mask, opacity: float32) =
   ## Multiplies alpha of the image by opacity.
-  let opacity = round(255 * opacity).uint32
-  for rgba in image.data.mitems:
-    rgba.r = ((rgba.r * opacity) div 255).uint8
-    rgba.g = ((rgba.g * opacity) div 255).uint8
-    rgba.b = ((rgba.b * opacity) div 255).uint8
-    rgba.a = ((rgba.a * opacity) div 255).uint8
+  let opacity = round(255 * opacity).uint16
+
+  if opacity == 0:
+    when type(target) is Image:
+      target.fill(rgba(0, 0, 0, 0))
+    else:
+      target.fill(0)
+    return
+
+  var i: int
+  when defined(amd64) and not defined(pixieNoSimd):
+    when type(target) is Image:
+      let byteLen = target.data.len * 4
+    else:
+      let byteLen = target.data.len
+
+    let
+      oddMask = mm_set1_epi16(cast[int16](0xff00))
+      div255 = mm_set1_epi16(cast[int16](0x8081))
+      vOpacity = mm_slli_epi16(mm_set1_epi16(cast[int16](opacity)), 8)
+
+    for _ in countup(0, byteLen - 16, 16):
+      when type(target) is Image:
+        let index = i div 4
+      else:
+        let index = i
+
+      var values = mm_loadu_si128(target.data[index].addr)
+
+      let eqZero = mm_cmpeq_epi16(values, mm_setzero_si128())
+      if mm_movemask_epi8(eqZero) != 0xffff:
+        var
+          valuesEven = mm_slli_epi16(mm_andnot_si128(oddMask, values), 8)
+          valuesOdd = mm_and_si128(values, oddMask)
+
+        # values * opacity
+        valuesEven = mm_mulhi_epu16(valuesEven, vOpacity)
+        valuesOdd = mm_mulhi_epu16(valuesOdd, vOpacity)
+
+        # div 255
+        valuesEven = mm_srli_epi16(mm_mulhi_epu16(valuesEven, div255), 7)
+        valuesOdd = mm_srli_epi16(mm_mulhi_epu16(valuesOdd, div255), 7)
+
+        valuesOdd = mm_slli_epi16(valuesOdd, 8)
+
+        mm_storeu_si128(
+          target.data[index].addr,
+          mm_or_si128(valuesEven, valuesOdd)
+        )
+
+      i += 16
+
+  when type(target) is Image:
+    for j in i div 4 ..< target.data.len:
+      var rgba = target.data[j]
+      rgba.r = ((rgba.r * opacity) div 255).uint8
+      rgba.g = ((rgba.g * opacity) div 255).uint8
+      rgba.b = ((rgba.b * opacity) div 255).uint8
+      rgba.a = ((rgba.a * opacity) div 255).uint8
+      target.data[j] = rgba
+  else:
+    for j in i ..< target.data.len:
+      target.data[j] = ((target.data[j] * opacity) div 255).uint8
 
 proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA =
   let
