@@ -40,7 +40,7 @@ proc dataIndex*(mask: Mask, x, y: int): int {.inline.} =
   mask.width * y + x
 
 proc getValueUnsafe*(mask: Mask, x, y: int): uint8 {.inline.} =
-  ## Gets a color from (x, y) coordinates.
+  ## Gets a value from (x, y) coordinates.
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will case unsafe memory reads.
@@ -59,7 +59,7 @@ proc setValueUnsafe*(mask: Mask, x, y: int, value: uint8) {.inline.} =
   mask.data[mask.dataIndex(x, y)] = value
 
 proc `[]=`*(mask: Mask, x, y: int, value: uint8) {.inline.} =
-  ## Sets a pixel at (x, y) or does nothing if outside of bounds.
+  ## Sets a value at (x, y) or does nothing if outside of bounds.
   if mask.inside(x, y):
     mask.setValueUnsafe(x, y, value)
 
