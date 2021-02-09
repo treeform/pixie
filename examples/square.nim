@@ -4,11 +4,7 @@ var image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
 
 var p: Path
-p.moveTo(50, 50)
-p.lineTo(50, 150)
-p.lineTo(150, 150)
-p.lineTo(150, 50)
-p.closePath()
+p.rect(50, 50, 100, 100)
 
 image.fillPath(p, rgba(255, 0, 0, 255))
 
