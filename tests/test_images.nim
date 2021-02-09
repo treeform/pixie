@@ -29,6 +29,13 @@ block:
   doAssert image[9, 9] == rgba(254, 0, 0, 128)
 
 block:
+  let image = newImage(100, 100)
+  image.fill(rgba(200, 200, 200, 200))
+  image.applyOpacity(0.5)
+  doAssert image[0, 0] == rgba(100, 100, 100, 100)
+  doAssert image[88, 88] == rgba(100, 100, 100, 100)
+
+block:
   let
     a = newImage(101, 101)
     b = newImage(50, 50)
