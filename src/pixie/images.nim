@@ -476,9 +476,6 @@ proc draw*(
 ) {.inline.} =
   mask.draw(image, translate(pos), blendMode)
 
-when defined(release):
-  {.pop.}
-
 proc gaussianLookup(radius: int): seq[float32] =
   ## Compute lookup table for 1d Gaussian kernel.
   result.setLen(radius * 2 + 1)
@@ -492,6 +489,9 @@ proc gaussianLookup(radius: int): seq[float32] =
     total += a
   for xb in -radius .. radius:
     result[xb + radius] = result[xb + radius] / total
+
+when defined(release):
+  {.pop.}
 
 proc blur*(image: Image, radius: float32) =
   ## Applies Gaussian blur to the image given a radius.
