@@ -98,3 +98,9 @@ block:
     a = readImage("tests/images/flipped1.png")
     b = a.minifyBy2(2)
   b.writeFile("tests/images/minifiedBy4.png")
+
+block:
+  let a = newImage(100, 100)
+  a.fill(rgba(50, 100, 150, 200))
+  a.invert()
+  doAssert a[0, 0] == rgba(44, 33, 22, 55)

@@ -1,8 +1,5 @@
 import blends, common, vmath, system/memory
 
-when defined(amd64) and not defined(pixieNoSimd):
-  import nimsimd/sse2
-
 type
   Mask* = ref object
     ## Mask object that holds mask opacity data.
