@@ -686,29 +686,6 @@ proc shift*(target: Image | Mask, offset: Vec2) =
       target.fill(0)
     target.draw(copy, offset, bmOverwrite) # Draw copy at offset
 
-proc spread*(image: Image, spread: float32) =
-  ## Grows the target as a mask by spread.
-  if spread == 0:
-    return
-  if spread < 0:
-    raise newException(PixieError, "Cannot apply negative spread")
-
-  let
-    copy = image.copy()
-    spread = round(spread).int
-  for y in 0 ..< image.height:
-    for x in 0 ..< image.width:
-      var maxAlpha = 0.uint8
-      block blurBox:
-        for bx in -spread .. spread:
-          for by in -spread .. spread:
-            let alpha = copy[x + bx, y + by].a
-            if alpha > maxAlpha:
-              maxAlpha = alpha
-            if maxAlpha == 255:
-              break blurBox
-      image.setRgbaUnsafe(x, y, rgba(0, 0, 0, maxAlpha))
-
 proc shadow*(
   image: Image, offset: Vec2, spread, blur: float32, color: ColorRGBA
 ): Image =
