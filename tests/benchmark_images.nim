@@ -68,7 +68,7 @@ block:
   mask.fillPath(path)
 
   timeIt "mask":
-    image.mask(mask)
+    image.draw(mask)
 
 reset()
 
