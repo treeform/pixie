@@ -292,17 +292,30 @@ proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA =
   lerp(bottomMix, topMix, diffY)
 
 proc drawCorrect(
-  a: Image, b: Image | Mask, mat = mat3(), blendMode = bmNormal
+  a: Image | Mask, b: Image | Mask, mat = mat3(), blendMode = bmNormal
 ) =
   ## Draws one image onto another using matrix with color blending.
-  when type(b) is Image:
-    let blender = blendMode.blender()
-  else:
+
+  proc validateMaskBlendMode() =
     if blendMode notin {bmMask}:
       raise newException(
         PixieError,
         "Blend mode " & $blendMode & " not supported for masks"
       )
+
+  when type(a) is Image:
+    when type(b) is Image:
+      let blender = blendMode.blenderPremultiplied()
+    else: # b is a Mask
+      validateMaskBlendMode()
+  else: # a is a Mask
+    when type(b) is Image:
+      raise newException(
+        PixieError,
+        "Drawing an image onto a mask is not supported yet"
+        )
+    else: # b is a Mask
+      validateMaskBlendMode()
 
   var
     matInv = mat.inverse()
@@ -325,27 +338,38 @@ proc drawCorrect(
         samplePos = matInv * vec2(x.float32 + h, y.float32 + h)
         xFloat = samplePos.x - h
         yFloat = samplePos.y - h
-        rgba = a.getRgbaUnsafe(x, y)
 
-      var blended: ColorRGBA
-      when type(b) is Image:
-        let sample = b.getRgbaSmooth(xFloat, yFloat)
-        blended = blender(rgba, sample)
-      else:
-        let sample = b.getValueSmooth(xFloat, yFloat).uint32
-        blended = rgba(
-          ((rgba.r * sample) div 255).uint8,
-          ((rgba.g * sample) div 255).uint8,
-          ((rgba.b * sample) div 255).uint8,
-          ((rgba.a * sample) div 255).uint8
-        )
+      when type(a) is Image:
+        let rgba = a.getRgbaUnsafe(x, y)
+        var blended: ColorRGBA
+        when type(b) is Image:
+          let sample = b.getRgbaSmooth(xFloat, yFloat)
+          blended = blender(rgba, sample)
+        else: # b is a Mask
+          let sample = b.getValueSmooth(xFloat, yFloat).uint32
+          blended = rgba(
+            ((rgba.r * sample) div 255).uint8,
+            ((rgba.g * sample) div 255).uint8,
+            ((rgba.b * sample) div 255).uint8,
+            ((rgba.a * sample) div 255).uint8
+          )
+        a.setRgbaUnsafe(x, y, blended)
+      else: # a is a Mask, b must be a mask
+        let
+          value = a.getValueUnsafe(x, y)
+          sample = b.getValueSmooth(xFloat, yFloat).uint32
+        a.setValueUnsafe(x, y, ((value * sample) div 255).uint8)
 
-      a.setRgbaUnsafe(x, y, blended)
+proc draw*(image: Image, mask: Mask, mat: Mat3, blendMode = bmMask) =
+  image.drawCorrect(mask, mat, blendMode)
 
 proc draw*(
   image: Image, mask: Mask, pos = vec2(0, 0), blendMode = bmMask
 ) {.inline.} =
   image.drawCorrect(mask, translate(pos), blendMode)
+
+proc draw*(a, b: Mask, mat = mat3(), blendMode = bmMask) =
+  a.drawCorrect(b, mat, blendMode)
 
 when defined(release):
   {.pop.}

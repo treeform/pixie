@@ -363,6 +363,23 @@ proc rect*(path: var Path, x, y, w, h: float32) =
 proc rect*(path: var Path, pos: Vec2, wh: Vec2) {.inline.} =
   path.rect(pos.x, pos.y, wh.x, wh.y)
 
+proc roundedRect*(
+  path: var Path, pos, wh: Vec2, nw, ne, se, sw: float32, clockwise = true
+) =
+  let
+    maxRadius = min(wh.x / 2, wh.y / 2)
+    nw = min(nw, maxRadius)
+    ne = min(ne, maxRadius)
+    se = min(se, maxRadius)
+    sw = min(sw, maxRadius)
+
+  path.moveTo(pos.x + nw, pos.y)
+  path.arcTo(pos.x + wh.x, pos.y, pos.x + wh.x, pos.y + wh.y, ne)
+  path.arcTo(pos.x + wh.x, pos.y + wh.y, pos.x, pos.y + wh.y, se)
+  path.arcTo(pos.x, pos.y + wh.y, pos.x, pos.y, sw)
+  path.arcTo(pos.x, pos.y, pos.x + wh.x, pos.y, nw)
+  path.closePath()
+
 proc ellipse*(path: var Path, cx, cy, rx, ry: float32) =
   let
     magicX = (4.0 * (-1.0 + sqrt(2.0)) / 3) * rx
