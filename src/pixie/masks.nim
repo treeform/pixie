@@ -109,5 +109,28 @@ proc getValueSmooth*(mask: Mask, x, y: float32): uint8 =
 
   lerp(bottomMix, topMix, diffY)
 
+proc spread*(mask: Mask, spread: float32) =
+  ## Grows the mask by spread.
+  if spread == 0:
+    return
+  if spread < 0:
+    raise newException(PixieError, "Cannot apply negative spread")
+
+  let
+    copy = mask.copy()
+    spread = round(spread).int
+  for y in 0 ..< mask.height:
+    for x in 0 ..< mask.width:
+      var maxValue: uint8
+      block blurBox:
+        for bx in -spread .. spread:
+          for by in -spread .. spread:
+            let value = copy[x + bx, y + by]
+            if value > maxValue:
+              maxValue = value
+            if maxValue == 255:
+              break blurBox
+      mask.setValueUnsafe(x, y, maxValue)
+
 when defined(release):
   {.pop.}

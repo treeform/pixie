@@ -32,19 +32,15 @@ type
     bmExcludeMask
 
   Blender* = proc(backdrop, source: ColorRGBA): ColorRGBA
-
-when defined(amd64) and not defined(pixieNoSimd):
-  import nimsimd/sse2
-
-  type BlenderSimd* = proc(blackdrop, source: M128i): M128i
+  Masker* = proc(backdrop, source: uint8): uint8
 
 when defined(release):
   {.push checks: off.}
 
-proc blendAlpha(backdrop, source: uint8): uint8 {.inline.} =
+proc blendAlpha*(backdrop, source: uint8): uint8 {.inline.} =
   source + ((backdrop.uint32 * (255 - source)) div 255).uint8
 
-proc blendNormalPremultiplied*(backdrop, source: ColorRGBA): ColorRGBA =
+proc blendNormal(backdrop, source: ColorRGBA): ColorRGBA =
   if backdrop.a == 0:
     return source
   if source.a == 255:
@@ -65,18 +61,36 @@ proc blendMask(backdrop, source: ColorRGBA): ColorRGBA =
   result.b = ((backdrop.b * k) div 255).uint8
   result.a = ((backdrop.a * k) div 255).uint8
 
-proc blendOverwrite*(backdrop, source: ColorRGBA): ColorRGBA =
+proc blendOverwrite(backdrop, source: ColorRGBA): ColorRGBA =
   source
 
-proc blenderPremultiplied*(blendMode: BlendMode): Blender =
+proc blender*(blendMode: BlendMode): Blender =
   case blendMode:
-  of bmNormal: blendNormalPremultiplied
-  of bmOverwrite: blendOverwrite
+  of bmNormal: blendNormal
   of bmMask: blendMask
+  of bmOverwrite: blendOverwrite
   else:
-    raise newException(PixieError, "No premultiplied blender for " & $blendMode)
+    blendNormal
+    # raise newException(PixieError, "No blender for " & $blendMode)
+
+proc maskMask(backdrop, source: uint8): uint8 =
+  ((backdrop.uint32 * source) div 255).uint8
+
+proc maskOverwrite(backdrop, source: uint8): uint8 =
+  source
+
+proc masker*(blendMode: BlendMode): Masker =
+  case blendMode:
+  of bmMask: maskMask
+  of bmOverwrite: maskOverwrite
+  else:
+    raise newException(PixieError, "No masker for " & $blendMode)
 
 when defined(amd64) and not defined(pixieNoSimd):
+  import nimsimd/sse2
+
+  type BlenderSimd* = proc(blackdrop, source: M128i): M128i
+
   proc blendNormalPremultipliedSimd*(backdrop, source: M128i): M128i =
     let
       alphaMask = mm_set1_epi32(cast[int32](0xff000000))
@@ -115,7 +129,6 @@ when defined(amd64) and not defined(pixieNoSimd):
     of bmOverwrite: blendOverwriteSimd
     else:
       raise newException(PixieError, "No SIMD blender for " & $blendMode)
-
 
 when defined(release):
   {.pop.}
@@ -415,8 +428,8 @@ proc hardLight(backdrop, source: uint32): uint8 {.inline.} =
   else:
     screen(backdrop, 2 * source - 255)
 
-proc blendNormal(backdrop, source: ColorRGBA): ColorRGBA =
-  blendNormalPremultiplied(
+proc blendNormalOld(backdrop, source: ColorRGBA): ColorRGBA =
+  blendNormal(
     backdrop.toPremultipliedAlpha(),
     source.toPremultipliedAlpha()
   ).toStraightAlpha()
@@ -558,28 +571,28 @@ proc blendExcludeMask(backdrop, source: ColorRGBA): ColorRGBA =
   result = backdrop
   result.a = max(backdrop.a, source.a) - min(backdrop.a, source.a)
 
-proc blender*(blendMode: BlendMode): Blender =
-  case blendMode:
-  of bmNormal: blendNormal
-  of bmDarken: blendDarken
-  of bmMultiply: blendMultiply
-  of bmLinearBurn: blendLinearBurn
-  of bmColorBurn: blendColorBurn
-  of bmLighten: blendLighten
-  of bmScreen: blendScreen
-  of bmLinearDodge: blendLinearDodge
-  of bmColorDodge: blendColorDodge
-  of bmOverlay: blendOverlay
-  of bmSoftLight: blendSoftLight
-  of bmHardLight: blendHardLight
-  of bmDifference: blendDifference
-  of bmExclusion: blendExclusion
-  of bmHue: blendHue
-  of bmSaturation: blendSaturation
-  of bmColor: blendColor
-  of bmLuminosity: blendLuminosity
-  of bmMask: blendMask
-  of bmOverwrite: blendOverwrite
-  of bmSubtractMask: blendSubtractMask
-  of bmIntersectMask: blendIntersectMask
-  of bmExcludeMask: blendExcludeMask
+# proc blender*(blendMode: BlendMode): Blender =
+#   case blendMode:
+#   of bmNormal: blendNormal
+#   of bmDarken: blendDarken
+#   of bmMultiply: blendMultiply
+#   of bmLinearBurn: blendLinearBurn
+#   of bmColorBurn: blendColorBurn
+#   of bmLighten: blendLighten
+#   of bmScreen: blendScreen
+#   of bmLinearDodge: blendLinearDodge
+#   of bmColorDodge: blendColorDodge
+#   of bmOverlay: blendOverlay
+#   of bmSoftLight: blendSoftLight
+#   of bmHardLight: blendHardLight
+#   of bmDifference: blendDifference
+#   of bmExclusion: blendExclusion
+#   of bmHue: blendHue
+#   of bmSaturation: blendSaturation
+#   of bmColor: blendColor
+#   of bmLuminosity: blendLuminosity
+#   of bmMask: blendMask
+#   of bmOverwrite: blendOverwrite
+#   of bmSubtractMask: blendSubtractMask
+#   of bmIntersectMask: blendIntersectMask
+#   of bmExcludeMask: blendExcludeMask

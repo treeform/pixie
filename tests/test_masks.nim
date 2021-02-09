@@ -1,4 +1,4 @@
-import chroma, pixie, pixie/fileformats/png
+import chroma, pixie, pixie/fileformats/png, vmath
 
 block:
   let mask = newMask(100, 100)
@@ -74,3 +74,20 @@ block:
 
   a.draw(b)
   writeFile("tests/images/masks/imageMaskedMask.png", a.encodePng())
+
+block:
+  let a = newMask(100, 100)
+  a.fill(255)
+  a.shift(vec2(10, 10))
+  writeFile("tests/images/masks/shifted.png", a.encodePng())
+
+block:
+  var path: Path
+  path.rect(40, 40, 20, 20)
+
+  let a = newMask(100, 100)
+  a.fillPath(path)
+
+  a.spread(10)
+
+  writeFile("tests/images/masks/spread.png", a.encodePng())
