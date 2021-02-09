@@ -1,4 +1,4 @@
-import pixie, chroma
+import pixie, chroma, vmath
 
 let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
@@ -11,12 +11,7 @@ let
   r = 25.0
 
 var path: Path
-path.moveTo(x+r, y)
-path.arcTo(x+w, y,   x+w, y+h, r)
-path.arcTo(x+w, y+h, x,   y+h, r)
-path.arcTo(x,   y+h, x,   y,   r)
-path.arcTo(x,   y,   x+w, y,   r)
-path.closePath()
+path.roundedRect(vec2(x, y), vec2(w, h), r, r, r, r)
 
 image.fillPath(path, rgba(255, 0, 0, 255))
 

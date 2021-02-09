@@ -11,8 +11,8 @@ var p: Path
 p.polygon(100, 100, 70, sides=6)
 p.closePath()
 
-let mask = newImage(200, 200)
-mask.fillPath(p, rgba(255, 255, 255, 255))
+let mask = newMask(200, 200)
+mask.fillPath(p)
 
 blur.blur(20)
 blur.draw(mask, blendMode = bmMask)

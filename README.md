@@ -25,8 +25,8 @@ var p: Path
 p.polygon(100, 100, 70, sides=6)
 p.closePath()
 
-let mask = newImage(200, 200)
-mask.fillPath(p, rgba(255, 255, 255, 255))
+let mask = newMask(200, 200)
+mask.fillPath(p)
 
 blur.blur(20)
 blur.draw(mask, blendMode = bmMask)
@@ -47,12 +47,7 @@ let
   r = 25.0
 
 var path: Path
-path.moveTo(x+r, y)
-path.arcTo(x+w, y,   x+w, y+h, r)
-path.arcTo(x+w, y+h, x,   y+h, r)
-path.arcTo(x,   y+h, x,   y,   r)
-path.arcTo(x,   y,   x+w, y,   r)
-path.closePath()
+path.roundedRect(vec2(x, y), vec2(w, h), r, r, r, r)
 
 image.fillPath(path, rgba(255, 0, 0, 255))
 ```
@@ -62,11 +57,7 @@ image.fillPath(path, rgba(255, 0, 0, 255))
 [examples/square.nim](examples/square.nim)
 ```nim
 var p: Path
-p.moveTo(50, 50)
-p.lineTo(50, 150)
-p.lineTo(150, 150)
-p.lineTo(150, 50)
-p.closePath()
+p.rect(50, 50, 100, 100)
 
 image.fillPath(p, rgba(255, 0, 0, 255))
 ```

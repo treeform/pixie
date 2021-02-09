@@ -418,10 +418,13 @@ proc drawCorrect(
       p = matInv * vec2(0 + h, 0 + h)
       dx = matInv * vec2(1 + h, 0 + h) - p
       dy = matInv * vec2(0 + h, 1 + h) - p
-    while max(dx.length, dy.length) > 2:
+      minFilterBy2 = max(dx.length, dy.length)
+
+    while minFilterBy2 > 2:
       b = b.minifyBy2()
       dx /= 2
       dy /= 2
+      minFilterBy2 /= 2
       matInv = matInv * scale(vec2(0.5, 0.5))
 
   for y in 0 ..< a.height:
