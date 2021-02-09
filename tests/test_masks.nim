@@ -8,6 +8,12 @@ block:
   doAssert mask[88, 88] == 100
 
 block:
+  let mask = newMask(100, 100)
+  mask.fill(200)
+  mask.invert()
+  doAssert mask[0, 0] == 55
+
+block:
   let
     mask = newMask(100, 100)
     r = 10.0

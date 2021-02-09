@@ -13,5 +13,10 @@ timeIt "minifyBy2":
 
 reset()
 
+timeIt "invert":
+  mask.invert()
+
+reset()
+
 timeIt "applyOpacity":
   mask.applyOpacity(0.5)

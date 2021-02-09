@@ -329,6 +329,46 @@ proc applyOpacity*(target: Image | Mask, opacity: float32) =
     for j in i ..< target.data.len:
       target.data[j] = ((target.data[j] * opacity) div 255).uint8
 
+proc invert*(target: Image | Mask) =
+  ## Inverts all of the colors and alpha.
+  var i: int
+  when defined(amd64) and not defined(pixieNoSimd):
+    let v255 = mm_set1_epi8(cast[int8](255))
+
+    when type(target) is Image:
+      let byteLen = target.data.len * 4
+    else:
+      let byteLen = target.data.len
+
+    for _ in countup(0, byteLen - 16, 16):
+      when type(target) is Image:
+        let index = i div 4
+      else:
+        let index = i
+
+      var values = mm_loadu_si128(target.data[index].addr)
+      values = mm_sub_epi8(v255, values)
+      mm_storeu_si128(target.data[index].addr, values)
+
+      i += 16
+
+  when type(target) is Image:
+    for j in i div 4 ..< target.data.len:
+      var rgba = target.data[j]
+      rgba.r = 255 - rgba.r
+      rgba.g = 255 - rgba.g
+      rgba.b = 255 - rgba.b
+      rgba.a = 255 - rgba.a
+      target.data[j] = rgba
+
+    # Inverting rgba(50, 100, 150, 200) becomes rgba(205, 155, 105, 55). This
+    # is not a valid premultiplied alpha color.
+    # We need to convert back to premultiplied alpha after inverting.
+    target.toPremultipliedAlpha()
+  else:
+    for j in i ..< target.data.len:
+      target.data[j] = (255 - target.data[j]).uint8
+
 proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA =
   let
     minX = floor(x)
@@ -438,24 +478,6 @@ proc draw*(
 
 when defined(release):
   {.pop.}
-
-proc invert*(image: Image) =
-  ## Inverts all of the colors and alpha.
-  var i: int
-  when defined(amd64) and not defined(pixieNoSimd):
-    let vec255 = mm_set1_epi8(cast[int8](255))
-    while i < image.data.len - 4:
-      var m = mm_loadu_si128(image.data[i].addr)
-      m = mm_sub_epi8(vec255, m)
-      mm_storeu_si128(image.data[i].addr, m)
-      i += 4
-  for j in i ..< image.data.len:
-    var rgba = image.data[j]
-    rgba.r = 255 - rgba.r
-    rgba.g = 255 - rgba.g
-    rgba.b = 255 - rgba.b
-    rgba.a = 255 - rgba.a
-    image.data[j] = rgba
 
 proc gaussianLookup(radius: int): seq[float32] =
   ## Compute lookup table for 1d Gaussian kernel.
