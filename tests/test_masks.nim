@@ -48,3 +48,16 @@ block:
 
   a.draw(b)
   writeFile("tests/images/masks/maskedMask.png", a.encodePng())
+
+block:
+  let a = newMask(100, 100)
+  a.fill(255)
+
+  var path: Path
+  path.ellipse(a.width / 2, a.height / 2, 25, 25)
+
+  let b = newImage(a.width, a.height)
+  b.fillPath(path, rgba(0, 0, 0, 255))
+
+  a.draw(b)
+  writeFile("tests/images/masks/imageMaskedMask.png", a.encodePng())

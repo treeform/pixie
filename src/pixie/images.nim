@@ -309,12 +309,7 @@ proc drawCorrect(
     else: # b is a Mask
       validateMaskBlendMode()
   else: # a is a Mask
-    when type(b) is Image:
-      raise newException(
-        PixieError,
-        "Drawing an image onto a mask is not supported yet"
-        )
-    else: # b is a Mask
+    when type(b) is Mask:
       validateMaskBlendMode()
 
   var
@@ -355,9 +350,11 @@ proc drawCorrect(
           )
         a.setRgbaUnsafe(x, y, blended)
       else: # a is a Mask, b must be a mask
-        let
-          value = a.getValueUnsafe(x, y)
-          sample = b.getValueSmooth(xFloat, yFloat).uint32
+        let value = a.getValueUnsafe(x, y)
+        when type(b) is Image:
+          let sample = b.getRgbaSmooth(xFloat, yFloat).a.uint32
+        else: # a is a Mask
+          let sample = b.getValueSmooth(xFloat, yFloat).uint32
         a.setValueUnsafe(x, y, ((value * sample) div 255).uint8)
 
 proc draw*(image: Image, mask: Mask, mat: Mat3, blendMode = bmMask) =
@@ -370,6 +367,9 @@ proc draw*(
 
 proc draw*(a, b: Mask, mat = mat3(), blendMode = bmMask) =
   a.drawCorrect(b, mat, blendMode)
+
+proc draw*(mask: Mask, image: Image, mat = mat3(), blendMode = bmMask) =
+  mask.drawCorrect(image, mat, blendMode)
 
 when defined(release):
   {.pop.}
