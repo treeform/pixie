@@ -1,4 +1,4 @@
-import blends, common, vmath, system/memory
+import common, vmath, system/memory
 
 type
   Mask* = ref object
