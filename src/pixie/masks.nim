@@ -116,6 +116,10 @@ proc applyOpacity*(mask: Mask, opacity: float32) =
   ## Multiplies the values of the mask by opacity.
   let opacity = round(255 * opacity).uint16
 
+  if opacity == 0:
+    mask.fill(0)
+    return
+
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
     let
