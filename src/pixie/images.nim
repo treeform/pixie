@@ -373,8 +373,45 @@ proc newMask*(image: Image): Mask =
   ## Returns a new mask using the alpha values of the parameter image.
   result = newMask(image.width, image.height)
 
-  for i, rgba in image.data:
-    result.data[i] = rgba.a
+  var i: int
+  when defined(amd64) and not defined(pixieNoSimd):
+    let mask32 = cast[M128i]([uint32.high, 0, 0, 0])
+
+    for _ in countup(0, image.data.len - 16, 16):
+      var
+        a = mm_loadu_si128(image.data[i + 0].addr)
+        b = mm_loadu_si128(image.data[i + 4].addr)
+        c = mm_loadu_si128(image.data[i + 8].addr)
+        d = mm_loadu_si128(image.data[i + 12].addr)
+
+      template pack(v: var M128i) =
+        # Shuffle the alpha values for these 4 colors to the first 4 bytes
+        v = mm_srli_epi32(v, 24)
+        let
+          i = mm_srli_si128(v, 3)
+          j = mm_srli_si128(v, 6)
+          k = mm_srli_si128(v, 9)
+        v = mm_or_si128(mm_or_si128(v, i), mm_or_si128(j, k))
+        v = mm_and_si128(v, mask32)
+
+      pack(a)
+      pack(b)
+      pack(c)
+      pack(d)
+
+      b = mm_slli_si128(b, 4)
+      c = mm_slli_si128(c, 8)
+      d = mm_slli_si128(d, 12)
+
+      mm_storeu_si128(
+        result.data[i].addr,
+        mm_or_si128(mm_or_si128(a, b), mm_or_si128(c, d))
+      )
+
+      i += 16
+
+  for j in i ..< image.data.len:
+    result.data[i] = image.data[j].a
 
 proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA =
   let

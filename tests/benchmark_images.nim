@@ -72,6 +72,12 @@ block:
 
 reset()
 
+timeIt "newMask":
+  let mask = image.newMask()
+  doAssert mask[0, 0] == image[0, 0].a
+
+reset()
+
 timeIt "lerp integers":
   for i in 0 ..< 100000:
     let c = image[0, 0]
