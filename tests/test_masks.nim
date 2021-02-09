@@ -1,6 +1,13 @@
 import chroma, pixie, pixie/fileformats/png
 
 block:
+  let mask = newMask(100, 100)
+  mask.fill(200)
+  mask.applyOpacity(0.5)
+  doAssert mask[0, 0] == 100
+  doAssert mask[88, 88] == 100
+
+block:
   let
     mask = newMask(100, 100)
     r = 10.0

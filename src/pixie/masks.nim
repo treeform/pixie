@@ -1,5 +1,8 @@
 import blends, common, vmath, system/memory
 
+when defined(amd64) and not defined(pixieNoSimd):
+  import nimsimd/sse2
+
 type
   Mask* = ref object
     ## Mask object that holds mask opacity data.
@@ -111,9 +114,43 @@ proc getValueSmooth*(mask: Mask, x, y: float32): uint8 =
 
 proc applyOpacity*(mask: Mask, opacity: float32) =
   ## Multiplies the values of the mask by opacity.
-  let opacity = round(255 * opacity).uint32
-  for value in mask.data.mitems:
-    value = ((value * opacity) div 255).uint8
+  let opacity = round(255 * opacity).uint16
+
+  var i: int
+  when defined(amd64) and not defined(pixieNoSimd):
+    let
+      oddMask = mm_set1_epi16(cast[int16](0xff00))
+      div255 = mm_set1_epi16(cast[int16](0x8081))
+      vOpacity = mm_slli_epi16(mm_set1_epi16(cast[int16](opacity)), 8)
+
+    for _ in countup(i, mask.data.len - 16, 16):
+      var values = mm_loadu_si128(mask.data[i].addr)
+
+      let eqZero = mm_cmpeq_epi16(values, mm_setzero_si128())
+      if mm_movemask_epi8(eqZero) != 0xffff:
+        var
+          valuesEven = mm_slli_epi16(mm_andnot_si128(oddMask, values), 8)
+          valuesOdd = mm_and_si128(values, oddMask)
+
+        # values * opacity
+        valuesEven = mm_mulhi_epu16(valuesEven, vOpacity)
+        valuesOdd = mm_mulhi_epu16(valuesOdd, vOpacity)
+
+        # div 255
+        valuesEven = mm_srli_epi16(mm_mulhi_epu16(valuesEven, div255), 7)
+        valuesOdd = mm_srli_epi16(mm_mulhi_epu16(valuesOdd, div255), 7)
+
+        valuesOdd = mm_slli_epi16(valuesOdd, 8)
+
+        mm_storeu_si128(
+          mask.data[i].addr,
+          mm_or_si128(valuesEven, valuesOdd)
+        )
+
+      i += 16
+
+  for j in i ..< mask.data.len:
+    mask.data[j] = ((mask.data[j] * opacity) div 255).uint8
 
 when defined(release):
   {.pop.}

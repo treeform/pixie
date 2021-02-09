@@ -365,11 +365,19 @@ proc draw*(
 ) {.inline.} =
   image.drawCorrect(mask, translate(pos), blendMode)
 
-proc draw*(a, b: Mask, mat = mat3(), blendMode = bmMask) =
+proc draw*(a, b: Mask, mat: Mat3, blendMode = bmMask) =
   a.drawCorrect(b, mat, blendMode)
 
-proc draw*(mask: Mask, image: Image, mat = mat3(), blendMode = bmMask) =
+proc draw*(a, b: Mask, pos = vec2(0, 0), blendMode = bmMask) {.inline.} =
+  a.draw(b, translate(pos), blendMode)
+
+proc draw*(mask: Mask, image: Image, mat: Mat3, blendMode = bmMask) =
   mask.drawCorrect(image, mat, blendMode)
+
+proc draw*(
+  mask: Mask, image: Image, pos = vec2(0, 0), blendMode = bmMask
+) {.inline.} =
+  mask.draw(image, translate(pos), blendMode)
 
 when defined(release):
   {.pop.}
