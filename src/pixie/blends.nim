@@ -58,9 +58,21 @@ proc blendNormalPremultiplied*(backdrop, source: ColorRGBA): ColorRGBA =
   result.b = source.b + ((backdrop.b.uint32 * k) div 255).uint8
   result.a = blendAlpha(backdrop.a, source.a)
 
+proc blendMask(backdrop, source: ColorRGBA): ColorRGBA =
+  let k = source.a.uint32
+  result.r = ((backdrop.r * k) div 255).uint8
+  result.g = ((backdrop.g * k) div 255).uint8
+  result.b = ((backdrop.b * k) div 255).uint8
+  result.a = ((backdrop.a * k) div 255).uint8
+
+proc blendOverwrite*(backdrop, source: ColorRGBA): ColorRGBA =
+  source
+
 proc blenderPremultiplied*(blendMode: BlendMode): Blender =
   case blendMode:
   of bmNormal: blendNormalPremultiplied
+  of bmOverwrite: blendOverwrite
+  of bmMask: blendMask
   else:
     raise newException(PixieError, "No premultiplied blender for " & $blendMode)
 
@@ -94,9 +106,13 @@ when defined(amd64) and not defined(pixieNoSimd):
       mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
     )
 
+  proc blendOverwriteSimd*(backdrop, source: M128i): M128i =
+    source
+
   proc blenderSimd*(blendMode: BlendMode): BlenderSimd =
     case blendMode:
     of bmNormal: blendNormalPremultipliedSimd
+    of bmOverwrite: blendOverwriteSimd
     else:
       raise newException(PixieError, "No SIMD blender for " & $blendMode)
 
@@ -530,10 +546,6 @@ proc blendHue(backdrop, source: ColorRGBA): ColorRGBA =
 proc blendSaturation(backdrop, source: ColorRGBA): ColorRGBA =
   blendSaturationFloats(backdrop.color, source.color).rgba
 
-proc blendMask(backdrop, source: ColorRGBA): ColorRGBA =
-  result = backdrop
-  result.a = min(backdrop.a, source.a)
-
 proc blendSubtractMask(backdrop, source: ColorRGBA): ColorRGBA =
   result = backdrop
   result.a = max(0, (backdrop.a.int32 * (255 - source.a.int32)) div 255).uint8
@@ -545,9 +557,6 @@ proc blendIntersectMask(backdrop, source: ColorRGBA): ColorRGBA =
 proc blendExcludeMask(backdrop, source: ColorRGBA): ColorRGBA =
   result = backdrop
   result.a = max(backdrop.a, source.a) - min(backdrop.a, source.a)
-
-proc blendOverwrite(backdrop, source: ColorRGBA): ColorRGBA =
-  source
 
 proc blender*(blendMode: BlendMode): Blender =
   case blendMode:
