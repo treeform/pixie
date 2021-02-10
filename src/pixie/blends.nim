@@ -87,13 +87,19 @@ proc blendAlpha*(backdrop, source: uint8): uint8 {.inline.} =
   source + ((backdrop.uint32 * (255 - source)) div 255).uint8
 
 proc screen(backdrop, source: uint32): uint8 {.inline.} =
-  (255 - ((255 - backdrop) * (255 - source)) div 255).uint8
+  ((backdrop + source).int32 - ((backdrop * source) div 255).int32).uint8
 
-proc hardLight(backdrop, source: uint32): uint8 {.inline.} =
-  if source <= 127:
-    ((backdrop * 2 * source) div 255).uint8
+proc hardLight(
+  backdropColor, backdropAlpha, sourceColor, sourceAlpha: uint32
+): uint8 {.inline.} =
+  if sourceColor * 2 <= sourceAlpha:
+    ((
+      2 * sourceColor * backdropColor +
+      (sourceColor * (255 - backdropAlpha)) +
+      (backdropColor * (255 - sourceAlpha))
+    ) div 255).uint8
   else:
-    screen(backdrop, 2 * source - 255)
+    screen(backdropColor, sourceColor)
 
 proc softLight(backdrop, source: float32): float32 {.inline.} =
   ## Pegtop
@@ -169,24 +175,33 @@ proc blendNormal(backdrop, source: ColorRGBA): ColorRGBA =
   result.a = blendAlpha(backdrop.a, source.a)
 
 proc blendDarken(backdrop, source: ColorRGBA): ColorRGBA =
-  let
-    backdrop = backdrop.toStraightAlpha()
-    source = source.toStraightAlpha()
-  result.r = min(backdrop.r, source.r)
-  result.g = min(backdrop.g, source.g)
-  result.b = min(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
-  result = result.toPremultipliedAlpha()
+  proc blend(
+    backdropColor, backdropAlpha, sourceColor, sourceAlpha: uint8
+  ): uint8 {.inline.} =
+    min(
+      backdropColor + ((255 - backdropAlpha).uint32 * sourceColor) div 255,
+      sourceColor + ((255 - sourceAlpha).uint32 * backdropColor) div 255
+    ).uint8
+
+  result.r = blend(backdrop.r, backdrop.a, source.r, source.a)
+  result.g = blend(backdrop.g, backdrop.a, source.g, source.a)
+  result.b = blend(backdrop.b, backdrop.a, source.b, source.a)
+  result.a = blendAlpha(backdrop.a, source.a)
 
 proc blendMultiply(backdrop, source: ColorRGBA): ColorRGBA =
-  let
-    backdrop = backdrop.toStraightAlpha()
-    source = source.toStraightAlpha()
-  result.r = ((backdrop.r.uint32 * source.r) div 255).uint8
-  result.g = ((backdrop.g.uint32 * source.g) div 255).uint8
-  result.b = ((backdrop.b.uint32 * source.b) div 255).uint8
-  result = alphaFix(backdrop, source, result)
-  result = result.toPremultipliedAlpha()
+  proc blend(
+    backdropColor, backdropAlpha, sourceColor, sourceAlpha: uint8
+  ): uint8 {.inline.} =
+    ((
+      (255 - backdropAlpha).uint32 * sourceColor +
+      (255 - sourceAlpha).uint32 * backdropColor +
+      backdropColor.uint32 * sourceColor
+    ) div 255).uint8
+
+  result.r = blend(backdrop.r, backdrop.a, source.r, source.a)
+  result.g = blend(backdrop.g, backdrop.a, source.g, source.a)
+  result.b = blend(backdrop.b, backdrop.a, source.b, source.a)
+  result.a = blendAlpha(backdrop.a, source.a)
 
 proc blendLinearBurn(backdrop, source: ColorRGBA): ColorRGBA =
   let
@@ -216,24 +231,24 @@ proc blendColorBurn(backdrop, source: ColorRGBA): ColorRGBA =
   result = result.toPremultipliedAlpha()
 
 proc blendLighten(backdrop, source: ColorRGBA): ColorRGBA =
-  let
-    backdrop = backdrop.toStraightAlpha()
-    source = source.toStraightAlpha()
-  result.r = max(backdrop.r, source.r)
-  result.g = max(backdrop.g, source.g)
-  result.b = max(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
-  result = result.toPremultipliedAlpha()
+  proc blend(
+    backdropColor, backdropAlpha, sourceColor, sourceAlpha: uint8
+  ): uint8 {.inline.} =
+    max(
+      backdropColor + ((255 - backdropAlpha).uint32 * sourceColor) div 255,
+      sourceColor + ((255 - sourceAlpha).uint32 * backdropColor) div 255
+    ).uint8
+
+  result.r = blend(backdrop.r, backdrop.a, source.r, source.a)
+  result.g = blend(backdrop.g, backdrop.a, source.g, source.a)
+  result.b = blend(backdrop.b, backdrop.a, source.b, source.a)
+  result.a = blendAlpha(backdrop.a, source.a)
 
 proc blendScreen(backdrop, source: ColorRGBA): ColorRGBA =
-  let
-    backdrop = backdrop.toStraightAlpha()
-    source = source.toStraightAlpha()
   result.r = screen(backdrop.r, source.r)
   result.g = screen(backdrop.g, source.g)
   result.b = screen(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
-  result = result.toPremultipliedAlpha()
+  result.a = blendAlpha(backdrop.a, source.a)
 
 proc blendLinearDodge(backdrop, source: ColorRGBA): ColorRGBA =
   let
@@ -263,14 +278,10 @@ proc blendColorDodge(backdrop, source: ColorRGBA): ColorRGBA =
   result = result.toPremultipliedAlpha()
 
 proc blendOverlay(backdrop, source: ColorRGBA): ColorRGBA =
-  let
-    backdrop = backdrop.toStraightAlpha()
-    source = source.toStraightAlpha()
-  result.r = hardLight(source.r, backdrop.r)
-  result.g = hardLight(source.g, backdrop.g)
-  result.b = hardLight(source.b, backdrop.b)
-  result = alphaFix(backdrop, source, result)
-  result = result.toPremultipliedAlpha()
+  result.r = hardLight(source.r, source.a, backdrop.r, backdrop.a)
+  result.g = hardLight(source.g, source.a, backdrop.g, backdrop.a)
+  result.b = hardLight(source.b, source.a, backdrop.b, backdrop.a)
+  result.a = blendAlpha(backdrop.a, source.a)
 
 proc blendSoftLight(backdrop, source: ColorRGBA): ColorRGBA =
   # proc softLight(backdrop, source: int32): uint8 {.inline.} =
@@ -341,24 +352,26 @@ proc blendSoftLight(backdrop, source: ColorRGBA): ColorRGBA =
   result = result.toPremultipliedAlpha()
 
 proc blendHardLight(backdrop, source: ColorRGBA): ColorRGBA =
-  let
-    backdrop = backdrop.toStraightAlpha()
-    source = source.toStraightAlpha()
-  result.r = hardLight(backdrop.r, source.r)
-  result.g = hardLight(backdrop.g, source.g)
-  result.b = hardLight(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
-  result = result.toPremultipliedAlpha()
+  result.r = hardLight(backdrop.r, backdrop.a, source.r, source.a)
+  result.g = hardLight(backdrop.g, backdrop.a, source.g, source.a)
+  result.b = hardLight(backdrop.b, backdrop.a, source.b, source.a)
+  result.a = blendAlpha(backdrop.a, source.a)
 
 proc blendDifference(backdrop, source: ColorRGBA): ColorRGBA =
-  let
-    backdrop = backdrop.toStraightAlpha()
-    source = source.toStraightAlpha()
-  result.r = max(backdrop.r, source.r) - min(backdrop.r, source.r)
-  result.g = max(backdrop.g, source.g) - min(backdrop.g, source.g)
-  result.b = max(backdrop.b, source.b) - min(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, result)
-  result = result.toPremultipliedAlpha()
+  proc blend(
+    backdropColor, backdropAlpha, sourceColor, sourceAlpha: uint8
+  ): uint8 {.inline.} =
+    ((backdropColor + sourceColor).int32 - 2 *
+      (min(
+        backdropColor.uint32 * sourceAlpha,
+        sourceColor.uint32 * backdropAlpha
+      ) div 255).int32
+    ).uint8
+
+  result.r = blend(backdrop.r, backdrop.a, source.r, source.a)
+  result.g = blend(backdrop.g, backdrop.a, source.g, source.a)
+  result.b = blend(backdrop.b, backdrop.a, source.b, source.a)
+  result.a = blendAlpha(backdrop.a, source.a)
 
 proc blendExclusion(backdrop, source: ColorRGBA): ColorRGBA =
   proc blend(backdrop, source: uint32): uint8 {.inline.} =
@@ -454,9 +467,9 @@ proc blender*(blendMode: BlendMode): Blender =
   of bmIntersectMask: blendIntersectMask
   of bmExcludeMask: blendExcludeMask
   else:
-    blendWhite
+    # blendWhite
     # blendNormal
-    # raise newException(PixieError, "No blender for " & $blendMode)
+    raise newException(PixieError, "No blender for " & $blendMode)
 
 proc maskMask(backdrop, source: uint8): uint8 =
   ((backdrop.uint32 * source) div 255).uint8
