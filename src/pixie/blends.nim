@@ -57,7 +57,7 @@ proc blendNormal(backdrop, source: ColorRGBA): ColorRGBA =
 proc blendExclusion(backdrop, source: ColorRGBA): ColorRGBA =
   proc blend(backdrop, source: uint32): uint8 {.inline.} =
     let v = (backdrop + source).int32 - ((2 * backdrop * source) div 255).int32
-    (cast[uint32](v) and uint8.high.uint32).uint8
+    max(0, v).uint8
   result.r = blend(backdrop.r.uint32, source.r.uint32)
   result.g = blend(backdrop.g.uint32, source.g.uint32)
   result.b = blend(backdrop.b.uint32, source.b.uint32)
