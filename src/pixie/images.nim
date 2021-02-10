@@ -411,7 +411,7 @@ proc newMask*(image: Image): Mask =
       i += 16
 
   for j in i ..< image.data.len:
-    result.data[i] = image.data[j].a
+    result.data[j] = image.data[j].a
 
 proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA =
   let
@@ -508,70 +508,81 @@ proc draw*(
 ) {.inline.} =
   mask.draw(image, translate(pos), blendMode)
 
-proc gaussianLookup(radius: int): seq[float32] =
-  ## Compute lookup table for 1d Gaussian kernel.
-  result.setLen(radius * 2 + 1)
-  var total = 0.0
-  for xb in -radius .. radius:
-    let
-      s = radius.float32 / 2.2 # 2.2 matches Figma.
-      x = xb.float32
-      a = 1 / sqrt(2 * PI * s^2) * exp(-1 * x^2 / (2 * s^2))
-    result[xb + radius] = a
-    total += a
-  for xb in -radius .. radius:
-    result[xb + radius] = result[xb + radius] / total
-
-when defined(release):
-  {.pop.}
-
 proc blur*(target: Image | Mask, radius: float32) =
   ## Applies Gaussian blur to the image given a radius.
   let radius = round(radius).int
   if radius == 0:
     return
 
+  proc gaussianLookup(radius: int): seq[uint32] =
+    ## Compute lookup table for 1d Gaussian kernel.
+    ## Values are [0, 255] * 1024.
+    result.setLen(radius * 2 + 1)
+
+    var
+      floats = newSeq[float32](result.len)
+      total = 0.0
+    for xb in -radius .. radius:
+      let
+        s = radius.float32 / 2.2 # 2.2 matches Figma.
+        x = xb.float32
+        a = 1 / sqrt(2 * PI * s^2) * exp(-1 * x^2 / (2 * s^2))
+      floats[xb + radius] = a
+      total += a
+    for xb in -radius .. radius:
+      floats[xb + radius] = floats[xb + radius] / total
+
+    for i, f in floats:
+      result[i] = round(f * 255 * 1024).uint32
+
   let lookup = gaussianLookup(radius)
 
   when type(target) is Image:
+
+    template `*`(sample: ColorRGBA, a: uint32): array[4, uint32] =
+      [
+        sample.r * a,
+        sample.g * a,
+        sample.b * a,
+        sample.a * a
+      ]
+
+    template `+=`(values: var array[4, uint32], sample: array[4, uint32]) =
+      values[0] += sample[0]
+      values[1] += sample[1]
+      values[2] += sample[2]
+      values[3] += sample[3]
+
+    template rgba(values: array[4, uint32]): ColorRGBA =
+      rgba(
+        (values[0] div 1024 div 255).uint8,
+        (values[1] div 1024 div 255).uint8,
+        (values[2] div 1024 div 255).uint8,
+        (values[3] div 1024 div 255).uint8
+      )
+
     # Blur in the X direction.
     var blurX = newImage(target.width, target.height)
     for y in 0 ..< target.height:
       for x in 0 ..< target.width:
-        var c: Color
-        var totalA = 0.0
+        var values: array[4, uint32]
         for xb in -radius .. radius:
-          let c2 = target[x + xb, y].color
-          let a = lookup[xb + radius]
-          let aa = c2.a * a
-          totalA += aa
-          c.r += c2.r * aa
-          c.g += c2.g * aa
-          c.b += c2.b * aa
-          c.a += c2.a * a
-        c.r = c.r / totalA
-        c.g = c.g / totalA
-        c.b = c.b / totalA
-        blurX.setRgbaUnsafe(x, y, c.rgba)
+          let
+            sample = target[x + xb, y]
+            a = lookup[xb + radius].uint32
+          values += sample * a
+        blurX.setRgbaUnsafe(x, y, values.rgba())
 
     # Blur in the Y direction.
     for y in 0 ..< target.height:
       for x in 0 ..< target.width:
-        var c: Color
-        var totalA = 0.0
+        var values: array[4, uint32]
         for yb in -radius .. radius:
-          let c2 = blurX[x, y + yb].color
-          let a = lookup[yb + radius]
-          let aa = c2.a * a
-          totalA += aa
-          c.r += c2.r * aa
-          c.g += c2.g * aa
-          c.b += c2.b * aa
-          c.a += c2.a * a
-        c.r = c.r / totalA
-        c.g = c.g / totalA
-        c.b = c.b / totalA
-        target.setRgbaUnsafe(x, y, c.rgba)
+          let
+            sample = blurX[x, y + yb]
+            a = lookup[yb + radius].uint32
+          values += sample * a
+        target.setRgbaUnsafe(x, y, values.rgba())
 
   else: # target is a Mask
 
@@ -579,22 +590,27 @@ proc blur*(target: Image | Mask, radius: float32) =
     var blurX = newMask(target.width, target.height)
     for y in 0 ..< target.height:
       for x in 0 ..< target.width:
-        var alpha: float32
+        var value: uint32
         for xb in -radius .. radius:
-          let c2 = target[x + xb, y]
-          let a = lookup[xb + radius]
-          alpha += c2.float32 * a
-        blurX.setValueUnsafe(x, y, alpha.uint8)
+          let
+            sample = target[x + xb, y]
+            a = lookup[xb + radius].uint32
+          value += sample * a
+        blurX.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
 
     # Blur in the Y direction and modify image.
     for y in 0 ..< target.height:
       for x in 0 ..< target.width:
-        var alpha: float32
+        var value: uint32
         for yb in -radius .. radius:
-          let c2 = blurX[x, y + yb]
-          let a = lookup[yb + radius]
-          alpha += c2.float32 * a
-        target.setValueUnsafe(x, y, alpha.uint8)
+          let
+            sample = blurX[x, y + yb]
+            a = lookup[yb + radius].uint32
+          value += sample * a
+        target.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
+
+when defined(release):
+  {.pop.}
 
 proc sharpOpacity*(image: Image) =
   ## Sharpens the opacity to extreme.

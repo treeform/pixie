@@ -78,6 +78,11 @@ timeIt "newMask":
 
 reset()
 
+timeIt "blur":
+  image.blur(40)
+
+reset()
+
 timeIt "lerp integers":
   for i in 0 ..< 100000:
     let c = image[0, 0]
