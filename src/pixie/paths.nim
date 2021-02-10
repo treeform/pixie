@@ -931,7 +931,7 @@ proc fillShapes(
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
     stopY = min(image.height, (bounds.y + bounds.h).int)
-    blender = blendMode.blenderPremultiplied()
+    blender = blendMode.blender()
 
   when defined(amd64) and not defined(pixieNoSimd):
     let blenderSimd = blendMode.blenderSimd()
@@ -1136,8 +1136,7 @@ proc fillShapes(
       if coverage != 0:
         let
           backdrop = mask.getValueUnsafe(x, y)
-          blended =
-            coverage + ((backdrop.uint32 * (255 - coverage)) div 255).uint8
+          blended = blendAlpha(backdrop, coverage)
         mask.setValueUnsafe(x, y, blended)
       inc x
 

@@ -32,19 +32,15 @@ type
     bmExcludeMask
 
   Blender* = proc(backdrop, source: ColorRGBA): ColorRGBA
-
-when defined(amd64) and not defined(pixieNoSimd):
-  import nimsimd/sse2
-
-  type BlenderSimd* = proc(blackdrop, source: M128i): M128i
+  Masker* = proc(backdrop, source: uint8): uint8
 
 when defined(release):
   {.push checks: off.}
 
-proc blendAlpha(backdrop, source: uint8): uint8 {.inline.} =
+proc blendAlpha*(backdrop, source: uint8): uint8 {.inline.} =
   source + ((backdrop.uint32 * (255 - source)) div 255).uint8
 
-proc blendNormalPremultiplied*(backdrop, source: ColorRGBA): ColorRGBA =
+proc blendNormal(backdrop, source: ColorRGBA): ColorRGBA =
   if backdrop.a == 0:
     return source
   if source.a == 255:
@@ -58,14 +54,107 @@ proc blendNormalPremultiplied*(backdrop, source: ColorRGBA): ColorRGBA =
   result.b = source.b + ((backdrop.b.uint32 * k) div 255).uint8
   result.a = blendAlpha(backdrop.a, source.a)
 
-proc blenderPremultiplied*(blendMode: BlendMode): Blender =
+proc blendExclusion(backdrop, source: ColorRGBA): ColorRGBA =
+  proc blend(backdrop, source: uint32): uint8 {.inline.} =
+    let v = (backdrop + source).int32 - ((2 * backdrop * source) div 255).int32
+    (cast[uint32](v) and uint8.high.uint32).uint8
+  result.r = blend(backdrop.r.uint32, source.r.uint32)
+  result.g = blend(backdrop.g.uint32, source.g.uint32)
+  result.b = blend(backdrop.b.uint32, source.b.uint32)
+  result.a = blendAlpha(backdrop.a, source.a)
+
+proc blendMask(backdrop, source: ColorRGBA): ColorRGBA =
+  let k = source.a.uint32
+  result.r = ((backdrop.r * k) div 255).uint8
+  result.g = ((backdrop.g * k) div 255).uint8
+  result.b = ((backdrop.b * k) div 255).uint8
+  result.a = ((backdrop.a * k) div 255).uint8
+
+proc blendSubtractMask(backdrop, source: ColorRGBA): ColorRGBA =
+  let a = (backdrop.a.uint32 * (255 - source.a)) div 255
+  result.r = ((backdrop.r * a) div 255).uint8
+  result.g = ((backdrop.g * a) div 255).uint8
+  result.b = ((backdrop.b * a) div 255).uint8
+  result.a = a.uint8
+
+proc blendIntersectMask(backdrop, source: ColorRGBA): ColorRGBA =
+  blendMask(backdrop, source)
+
+proc blendExcludeMask(backdrop, source: ColorRGBA): ColorRGBA =
+  let a = max(backdrop.a, source.a).uint32 - min(backdrop.a, source.a)
+  result.r = ((backdrop.r * a) div 255).uint8
+  result.g = ((backdrop.g * a) div 255).uint8
+  result.b = ((backdrop.b * a) div 255).uint8
+  result.a = a.uint8
+
+proc blendOverwrite(backdrop, source: ColorRGBA): ColorRGBA =
+  source
+
+proc blendWhite(backdrop, source: ColorRGBA): ColorRGBA =
+  ## For testing
+  rgba(255, 255, 255, 255)
+
+proc blender*(blendMode: BlendMode): Blender =
   case blendMode:
-  of bmNormal: blendNormalPremultiplied
+  of bmNormal: blendNormal
+  # of bmDarken: blendDarken
+  # of bmMultiply: blendMultiply
+  # of bmLinearBurn: blendLinearBurn
+  # of bmColorBurn: blendColorBurn
+  # of bmLighten: blendLighten
+  # of bmScreen: blendScreen
+  # of bmLinearDodge: blendLinearDodge
+  # of bmColorDodge: blendColorDodge
+  # of bmOverlay: blendOverlay
+  # of bmSoftLight: blendSoftLight
+  # of bmHardLight: blendHardLight
+  # of bmDifference: blendDifference
+  of bmExclusion: blendExclusion
+  # of bmHue: blendHue
+  # of bmSaturation: blendSaturation
+  # of bmColor: blendColor
+  # of bmLuminosity: blendLuminosity
+  of bmMask: blendMask
+  of bmOverwrite: blendOverwrite
+  of bmSubtractMask: blendSubtractMask
+  of bmIntersectMask: blendIntersectMask
+  of bmExcludeMask: blendExcludeMask
   else:
-    raise newException(PixieError, "No premultiplied blender for " & $blendMode)
+    # blendWhite
+    blendNormal
+    # raise newException(PixieError, "No blender for " & $blendMode)
+
+proc maskMask(backdrop, source: uint8): uint8 =
+  ((backdrop.uint32 * source) div 255).uint8
+
+proc maskSubtract(backdrop, source: uint8): uint8 =
+  ((backdrop.uint32 * (255 - source)) div 255).uint8
+
+proc maskIntersect(backdrop, source: uint8): uint8 =
+  maskMask(backdrop, source)
+
+proc maskExclude(backdrop, source: uint8): uint8 =
+  max(backdrop, source) - min(backdrop, source)
+
+proc maskOverwrite(backdrop, source: uint8): uint8 =
+  source
+
+proc masker*(blendMode: BlendMode): Masker =
+  case blendMode:
+  of bmMask: maskMask
+  of bmOverwrite: maskOverwrite
+  of bmSubtractMask: maskSubtract
+  of bmIntersectMask: maskIntersect
+  of bmExcludeMask: maskExclude
+  else:
+    raise newException(PixieError, "No masker for " & $blendMode)
 
 when defined(amd64) and not defined(pixieNoSimd):
-  proc blendNormalPremultipliedSimd*(backdrop, source: M128i): M128i =
+  import nimsimd/sse2
+
+  type BlenderSimd* = proc(blackdrop, source: M128i): M128i
+
+  proc blendNormalSimd*(backdrop, source: M128i): M128i =
     let
       alphaMask = mm_set1_epi32(cast[int32](0xff000000))
       oddMask = mm_set1_epi16(cast[int16](0xff00))
@@ -94,12 +183,15 @@ when defined(amd64) and not defined(pixieNoSimd):
       mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
     )
 
+  proc blendOverwriteSimd*(backdrop, source: M128i): M128i =
+    source
+
   proc blenderSimd*(blendMode: BlendMode): BlenderSimd =
     case blendMode:
-    of bmNormal: blendNormalPremultipliedSimd
+    of bmNormal: blendNormalSimd
+    of bmOverwrite: blendOverwriteSimd
     else:
       raise newException(PixieError, "No SIMD blender for " & $blendMode)
-
 
 when defined(release):
   {.pop.}
@@ -399,12 +491,6 @@ proc hardLight(backdrop, source: uint32): uint8 {.inline.} =
   else:
     screen(backdrop, 2 * source - 255)
 
-proc blendNormal(backdrop, source: ColorRGBA): ColorRGBA =
-  blendNormalPremultiplied(
-    backdrop.toPremultipliedAlpha(),
-    source.toPremultipliedAlpha()
-  ).toStraightAlpha()
-
 proc blendDarken(backdrop, source: ColorRGBA): ColorRGBA =
   result.r = min(backdrop.r, source.r)
   result.g = min(backdrop.g, source.g)
@@ -510,14 +596,6 @@ proc blendDifference(backdrop, source: ColorRGBA): ColorRGBA =
   result.b = max(backdrop.b, source.b) - min(backdrop.b, source.b)
   result = alphaFix(backdrop, source, result)
 
-proc blendExclusion(backdrop, source: ColorRGBA): ColorRGBA =
-  proc blend(backdrop, source: int32): uint8 {.inline.} =
-    max(0, backdrop + source - (2 * backdrop * source) div 255).uint8
-  result.r = blend(backdrop.r.int32, source.r.int32)
-  result.g = blend(backdrop.g.int32, source.g.int32)
-  result.b = blend(backdrop.b.int32, source.b.int32)
-  result = alphaFix(backdrop, source, result)
-
 proc blendColor(backdrop, source: ColorRGBA): ColorRGBA =
   blendColorFloats(backdrop.color, source.color).rgba
 
@@ -529,48 +607,3 @@ proc blendHue(backdrop, source: ColorRGBA): ColorRGBA =
 
 proc blendSaturation(backdrop, source: ColorRGBA): ColorRGBA =
   blendSaturationFloats(backdrop.color, source.color).rgba
-
-proc blendMask(backdrop, source: ColorRGBA): ColorRGBA =
-  result = backdrop
-  result.a = min(backdrop.a, source.a)
-
-proc blendSubtractMask(backdrop, source: ColorRGBA): ColorRGBA =
-  result = backdrop
-  result.a = max(0, (backdrop.a.int32 * (255 - source.a.int32)) div 255).uint8
-
-proc blendIntersectMask(backdrop, source: ColorRGBA): ColorRGBA =
-  result = backdrop
-  result.a = ((backdrop.a.uint32 * (source.a.uint32)) div 255).uint8
-
-proc blendExcludeMask(backdrop, source: ColorRGBA): ColorRGBA =
-  result = backdrop
-  result.a = max(backdrop.a, source.a) - min(backdrop.a, source.a)
-
-proc blendOverwrite(backdrop, source: ColorRGBA): ColorRGBA =
-  source
-
-proc blender*(blendMode: BlendMode): Blender =
-  case blendMode:
-  of bmNormal: blendNormal
-  of bmDarken: blendDarken
-  of bmMultiply: blendMultiply
-  of bmLinearBurn: blendLinearBurn
-  of bmColorBurn: blendColorBurn
-  of bmLighten: blendLighten
-  of bmScreen: blendScreen
-  of bmLinearDodge: blendLinearDodge
-  of bmColorDodge: blendColorDodge
-  of bmOverlay: blendOverlay
-  of bmSoftLight: blendSoftLight
-  of bmHardLight: blendHardLight
-  of bmDifference: blendDifference
-  of bmExclusion: blendExclusion
-  of bmHue: blendHue
-  of bmSaturation: blendSaturation
-  of bmColor: blendColor
-  of bmLuminosity: blendLuminosity
-  of bmMask: blendMask
-  of bmOverwrite: blendOverwrite
-  of bmSubtractMask: blendSubtractMask
-  of bmIntersectMask: blendIntersectMask
-  of bmExcludeMask: blendExcludeMask

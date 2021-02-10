@@ -20,3 +20,8 @@ reset()
 
 timeIt "applyOpacity":
   mask.applyOpacity(0.5)
+
+reset()
+
+timeIt "blur":
+  mask.blur(40)

@@ -369,6 +369,50 @@ proc invert*(target: Image | Mask) =
     for j in i ..< target.data.len:
       target.data[j] = (255 - target.data[j]).uint8
 
+proc newMask*(image: Image): Mask =
+  ## Returns a new mask using the alpha values of the parameter image.
+  result = newMask(image.width, image.height)
+
+  var i: int
+  when defined(amd64) and not defined(pixieNoSimd):
+    let mask32 = cast[M128i]([uint32.high, 0, 0, 0])
+
+    for _ in countup(0, image.data.len - 16, 16):
+      var
+        a = mm_loadu_si128(image.data[i + 0].addr)
+        b = mm_loadu_si128(image.data[i + 4].addr)
+        c = mm_loadu_si128(image.data[i + 8].addr)
+        d = mm_loadu_si128(image.data[i + 12].addr)
+
+      template pack(v: var M128i) =
+        # Shuffle the alpha values for these 4 colors to the first 4 bytes
+        v = mm_srli_epi32(v, 24)
+        let
+          i = mm_srli_si128(v, 3)
+          j = mm_srli_si128(v, 6)
+          k = mm_srli_si128(v, 9)
+        v = mm_or_si128(mm_or_si128(v, i), mm_or_si128(j, k))
+        v = mm_and_si128(v, mask32)
+
+      pack(a)
+      pack(b)
+      pack(c)
+      pack(d)
+
+      b = mm_slli_si128(b, 4)
+      c = mm_slli_si128(c, 8)
+      d = mm_slli_si128(d, 12)
+
+      mm_storeu_si128(
+        result.data[i].addr,
+        mm_or_si128(mm_or_si128(a, b), mm_or_si128(c, d))
+      )
+
+      i += 16
+
+  for j in i ..< image.data.len:
+    result.data[j] = image.data[j].a
+
 proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA =
   let
     minX = floor(x)
@@ -393,21 +437,10 @@ proc drawCorrect(
 ) =
   ## Draws one image onto another using matrix with color blending.
 
-  proc validateMaskBlendMode() =
-    if blendMode notin {bmMask}:
-      raise newException(
-        PixieError,
-        "Blend mode " & $blendMode & " not supported for masks"
-      )
-
   when type(a) is Image:
-    when type(b) is Image:
-      let blender = blendMode.blenderPremultiplied()
-    else: # b is a Mask
-      validateMaskBlendMode()
+    let blender = blendMode.blender()
   else: # a is a Mask
-    when type(b) is Mask:
-      validateMaskBlendMode()
+    let masker = blendMode.masker()
 
   var
     matInv = mat.inverse()
@@ -435,27 +468,23 @@ proc drawCorrect(
         yFloat = samplePos.y - h
 
       when type(a) is Image:
-        let rgba = a.getRgbaUnsafe(x, y)
-        var blended: ColorRGBA
+        let backdrop = a.getRgbaUnsafe(x, y)
         when type(b) is Image:
-          let sample = b.getRgbaSmooth(xFloat, yFloat)
-          blended = blender(rgba, sample)
+          let
+            sample = b.getRgbaSmooth(xFloat, yFloat)
+            blended = blender(backdrop, sample)
         else: # b is a Mask
-          let sample = b.getValueSmooth(xFloat, yFloat).uint32
-          blended = rgba(
-            ((rgba.r * sample) div 255).uint8,
-            ((rgba.g * sample) div 255).uint8,
-            ((rgba.b * sample) div 255).uint8,
-            ((rgba.a * sample) div 255).uint8
-          )
+          let
+            sample = b.getValueSmooth(xFloat, yFloat)
+            blended =  blender(backdrop, rgba(0, 0, 0, sample))
         a.setRgbaUnsafe(x, y, blended)
-      else: # a is a Mask, b must be a mask
-        let value = a.getValueUnsafe(x, y)
+      else: # a is a Mask
+        let backdrop = a.getValueUnsafe(x, y)
         when type(b) is Image:
-          let sample = b.getRgbaSmooth(xFloat, yFloat).a.uint32
-        else: # a is a Mask
-          let sample = b.getValueSmooth(xFloat, yFloat).uint32
-        a.setValueUnsafe(x, y, ((value * sample) div 255).uint8)
+          let sample = b.getRgbaSmooth(xFloat, yFloat).a
+        else: # b is a Mask
+          let sample = b.getValueSmooth(xFloat, yFloat)
+        a.setValueUnsafe(x, y, masker(backdrop, sample))
 
 proc draw*(image: Image, mask: Mask, mat: Mat3, blendMode = bmMask) =
   image.drawCorrect(mask, mat, blendMode)
@@ -479,98 +508,109 @@ proc draw*(
 ) {.inline.} =
   mask.draw(image, translate(pos), blendMode)
 
-proc gaussianLookup(radius: int): seq[float32] =
-  ## Compute lookup table for 1d Gaussian kernel.
-  result.setLen(radius * 2 + 1)
-  var total = 0.0
-  for xb in -radius .. radius:
-    let
-      s = radius.float32 / 2.2 # 2.2 matches Figma.
-      x = xb.float32
-      a = 1 / sqrt(2 * PI * s^2) * exp(-1 * x^2 / (2 * s^2))
-    result[xb + radius] = a
-    total += a
-  for xb in -radius .. radius:
-    result[xb + radius] = result[xb + radius] / total
+proc blur*(target: Image | Mask, radius: float32) =
+  ## Applies Gaussian blur to the image given a radius.
+  let radius = round(radius).int
+  if radius == 0:
+    return
+
+  proc gaussianLookup(radius: int): seq[uint32] =
+    ## Compute lookup table for 1d Gaussian kernel.
+    ## Values are [0, 255] * 1024.
+    result.setLen(radius * 2 + 1)
+
+    var
+      floats = newSeq[float32](result.len)
+      total = 0.0
+    for xb in -radius .. radius:
+      let
+        s = radius.float32 / 2.2 # 2.2 matches Figma.
+        x = xb.float32
+        a = 1 / sqrt(2 * PI * s^2) * exp(-1 * x^2 / (2 * s^2))
+      floats[xb + radius] = a
+      total += a
+    for xb in -radius .. radius:
+      floats[xb + radius] = floats[xb + radius] / total
+
+    for i, f in floats:
+      result[i] = round(f * 255 * 1024).uint32
+
+  let lookup = gaussianLookup(radius)
+
+  when type(target) is Image:
+
+    template `*`(sample: ColorRGBA, a: uint32): array[4, uint32] =
+      [
+        sample.r * a,
+        sample.g * a,
+        sample.b * a,
+        sample.a * a
+      ]
+
+    template `+=`(values: var array[4, uint32], sample: array[4, uint32]) =
+      values[0] += sample[0]
+      values[1] += sample[1]
+      values[2] += sample[2]
+      values[3] += sample[3]
+
+    template rgba(values: array[4, uint32]): ColorRGBA =
+      rgba(
+        (values[0] div 1024 div 255).uint8,
+        (values[1] div 1024 div 255).uint8,
+        (values[2] div 1024 div 255).uint8,
+        (values[3] div 1024 div 255).uint8
+      )
+
+    # Blur in the X direction.
+    var blurX = newImage(target.width, target.height)
+    for y in 0 ..< target.height:
+      for x in 0 ..< target.width:
+        var values: array[4, uint32]
+        for xb in -radius .. radius:
+          let
+            sample = target[x + xb, y]
+            a = lookup[xb + radius].uint32
+          values += sample * a
+        blurX.setRgbaUnsafe(x, y, values.rgba())
+
+    # Blur in the Y direction.
+    for y in 0 ..< target.height:
+      for x in 0 ..< target.width:
+        var values: array[4, uint32]
+        for yb in -radius .. radius:
+          let
+            sample = blurX[x, y + yb]
+            a = lookup[yb + radius].uint32
+          values += sample * a
+        target.setRgbaUnsafe(x, y, values.rgba())
+
+  else: # target is a Mask
+
+    # Blur in the X direction.
+    var blurX = newMask(target.width, target.height)
+    for y in 0 ..< target.height:
+      for x in 0 ..< target.width:
+        var value: uint32
+        for xb in -radius .. radius:
+          let
+            sample = target[x + xb, y]
+            a = lookup[xb + radius].uint32
+          value += sample * a
+        blurX.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
+
+    # Blur in the Y direction and modify image.
+    for y in 0 ..< target.height:
+      for x in 0 ..< target.width:
+        var value: uint32
+        for yb in -radius .. radius:
+          let
+            sample = blurX[x, y + yb]
+            a = lookup[yb + radius].uint32
+          value += sample * a
+        target.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
 
 when defined(release):
   {.pop.}
-
-proc blur*(image: Image, radius: float32) =
-  ## Applies Gaussian blur to the image given a radius.
-  let radius = round(radius).int
-  if radius == 0:
-    return
-
-  let lookup = gaussianLookup(radius)
-
-  # Blur in the X direction.
-  var blurX = newImage(image.width, image.height)
-  for y in 0 ..< image.height:
-    for x in 0 ..< image.width:
-      var c: Color
-      var totalA = 0.0
-      for xb in -radius .. radius:
-        let c2 = image[x + xb, y].color
-        let a = lookup[xb + radius]
-        let aa = c2.a * a
-        totalA += aa
-        c.r += c2.r * aa
-        c.g += c2.g * aa
-        c.b += c2.b * aa
-        c.a += c2.a * a
-      c.r = c.r / totalA
-      c.g = c.g / totalA
-      c.b = c.b / totalA
-      blurX.setRgbaUnsafe(x, y, c.rgba)
-
-  # Blur in the Y direction.
-  for y in 0 ..< image.height:
-    for x in 0 ..< image.width:
-      var c: Color
-      var totalA = 0.0
-      for yb in -radius .. radius:
-        let c2 = blurX[x, y + yb].color
-        let a = lookup[yb + radius]
-        let aa = c2.a * a
-        totalA += aa
-        c.r += c2.r * aa
-        c.g += c2.g * aa
-        c.b += c2.b * aa
-        c.a += c2.a * a
-      c.r = c.r / totalA
-      c.g = c.g / totalA
-      c.b = c.b / totalA
-      image.setRgbaUnsafe(x, y, c.rgba)
-
-proc blurAlpha*(image: Image, radius: float32) =
-  ## Applies Gaussian blur to the image given a radius.
-  let radius = round(radius).int
-  if radius == 0:
-    return
-
-  let lookup = gaussianLookup(radius)
-
-  # Blur in the X direction.
-  var blurX = newImage(image.width, image.height)
-  for y in 0 ..< image.height:
-    for x in 0 ..< image.width:
-      var alpha: float32
-      for xb in -radius .. radius:
-        let c2 = image[x + xb, y]
-        let a = lookup[xb + radius]
-        alpha += c2.a.float32 * a
-      blurX.setRgbaUnsafe(x, y, rgba(0, 0, 0, alpha.uint8))
-
-  # Blur in the Y direction and modify image.
-  for y in 0 ..< image.height:
-    for x in 0 ..< image.width:
-      var alpha: float32
-      for yb in -radius .. radius:
-        let c2 = blurX[x, y + yb]
-        let a = lookup[yb + radius]
-        alpha += c2.a.float32 * a
-      image.setRgbaUnsafe(x, y, rgba(0, 0, 0, alpha.uint8))
 
 proc sharpOpacity*(image: Image) =
   ## Sharpens the opacity to extreme.
@@ -688,49 +728,28 @@ proc resize*(srcImage: Image, width, height: int): Image =
       bmOverwrite
     )
 
-proc shift*(image: Image, offset: Vec2) =
-  ## Shifts the image by offset.
+proc shift*(target: Image | Mask, offset: Vec2) =
+  ## Shifts the target by offset.
   if offset != vec2(0, 0):
-    let copy = image.copy() # Copy to read from.
-    image.fill(rgba(0, 0, 0, 0)) # Reset this for being drawn to.
-    image.draw(copy, offset, bmOverwrite) # Draw copy into image.
-
-proc spread*(image: Image, spread: float32) =
-  ## Grows the image as a mask by spread.
-  if spread == 0:
-    return
-  if spread < 0:
-    raise newException(PixieError, "Cannot apply negative spread")
-
-  let
-    copy = image.copy()
-    spread = round(spread).int
-  for y in 0 ..< image.height:
-    for x in 0 ..< image.width:
-      var maxAlpha = 0.uint8
-      block blurBox:
-        for bx in -spread .. spread:
-          for by in -spread .. spread:
-            let alpha = copy[x + bx, y + by].a
-            if alpha > maxAlpha:
-              maxAlpha = alpha
-            if maxAlpha == 255:
-              break blurBox
-      image.setRgbaUnsafe(x, y, rgba(0, 0, 0, maxAlpha))
+    let copy = target.copy() # Copy to read from
+    # Reset target for being drawn to
+    when type(target) is Image:
+      target.fill(rgba(0, 0, 0, 0))
+    else:
+      target.fill(0)
+    target.draw(copy, offset, bmOverwrite) # Draw copy at offset
 
 proc shadow*(
-  mask: Image, offset: Vec2, spread, blur: float32, color: ColorRGBA
+  image: Image, offset: Vec2, spread, blur: float32, color: ColorRGBA
 ): Image =
   ## Create a shadow of the image with the offset, spread and blur.
-  # TODO: copying is bad here due to this being slow already,
-  # we're doing it tho to avoid mutating param and returning new Image.
-  let copy = mask.copy()
+  let mask = image.newMask()
   if offset != vec2(0, 0):
-    copy.shift(offset)
+    mask.shift(offset)
   if spread > 0:
-    copy.spread(spread)
+    mask.spread(spread)
   if blur > 0:
-    copy.blurAlpha(blur)
+    mask.blur(blur)
   result = newImage(mask.width, mask.height)
   result.fill(color)
-  result.draw(copy, blendMode = bmMask)
+  result.draw(mask, blendMode = bmMask)
