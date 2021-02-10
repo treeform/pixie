@@ -29,7 +29,7 @@ type
     bmLuminosity
 
     bmMask  ## Special blend mode that is used for masking
-    bmOverwrite  ## Special that does not blend but copies the pixels from target.
+    bmOverwrite  ## Special blend mode that just copies pixels
     bmSubtractMask ## Inverse mask
     bmIntersectMask
     bmExcludeMask
