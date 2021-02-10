@@ -153,7 +153,7 @@ when defined(amd64) and not defined(pixieNoSimd):
 
   type BlenderSimd* = proc(blackdrop, source: M128i): M128i
 
-  proc blendNormalPremultipliedSimd*(backdrop, source: M128i): M128i =
+  proc blendNormalSimd*(backdrop, source: M128i): M128i =
     let
       alphaMask = mm_set1_epi32(cast[int32](0xff000000))
       oddMask = mm_set1_epi16(cast[int16](0xff00))
@@ -187,7 +187,7 @@ when defined(amd64) and not defined(pixieNoSimd):
 
   proc blenderSimd*(blendMode: BlendMode): BlenderSimd =
     case blendMode:
-    of bmNormal: blendNormalPremultipliedSimd
+    of bmNormal: blendNormalSimd
     of bmOverwrite: blendOverwriteSimd
     else:
       raise newException(PixieError, "No SIMD blender for " & $blendMode)
