@@ -291,10 +291,6 @@ proc alphaFix(backdrop, source, mixed: Color): Color =
   result.g /= result.a
   result.b /= result.a
 
-proc blendNormalFloats*(backdrop, source: Color): Color {.inline.} =
-  result = source
-  result = alphaFix(backdrop, source, result)
-
 proc blendDarkenFloats*(backdrop, source: Color): Color {.inline.} =
   result.r = min(backdrop.r, source.r)
   result.g = min(backdrop.g, source.g)
@@ -404,25 +400,6 @@ proc blendHueFloats*(backdrop, source: Color): Color {.inline.} =
 proc blendSaturationFloats*(backdrop, source: Color): Color {.inline.} =
   result = SetLum(SetSat(backdrop, Sat(source)), Lum(backdrop))
   result = alphaFix(backdrop, source, result)
-
-proc blendMaskFloats*(backdrop, source: Color): Color {.inline.} =
-  result = backdrop
-  result.a = min(backdrop.a, source.a)
-
-proc blendSubtractMaskFloats*(backdrop, source: Color): Color {.inline.} =
-  result = backdrop
-  result.a = backdrop.a * (1 - source.a)
-
-proc blendIntersectMaskFloats*(backdrop, source: Color): Color {.inline.} =
-  result = backdrop
-  result.a = backdrop.a * source.a
-
-proc blendExcludeMaskFloats*(backdrop, source: Color): Color {.inline.} =
-  result = backdrop
-  result.a = abs(backdrop.a - source.a)
-
-proc blendOverwriteFloats*(backdrop, source: Color): Color {.inline.} =
-  source
 
 when defined(amd64) and not defined(pixieNoSimd):
   proc alphaFix(backdrop, source: ColorRGBA, vb, vs, vm: M128): ColorRGBA =
