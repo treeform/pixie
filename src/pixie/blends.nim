@@ -54,6 +54,14 @@ proc blendNormal(backdrop, source: ColorRGBA): ColorRGBA =
   result.b = source.b + ((backdrop.b.uint32 * k) div 255).uint8
   result.a = blendAlpha(backdrop.a, source.a)
 
+proc blendExclusion(backdrop, source: ColorRGBA): ColorRGBA =
+  proc blend(backdrop, source: int32): uint8 {.inline.} =
+    max(0, backdrop + source - (2 * backdrop * source) div 255).uint8
+  result.r = blend(backdrop.r.int32, source.r.int32)
+  result.g = blend(backdrop.g.int32, source.g.int32)
+  result.b = blend(backdrop.b.int32, source.b.int32)
+  result.a = blendAlpha(backdrop.a, source.a)
+
 proc blendMask(backdrop, source: ColorRGBA): ColorRGBA =
   let k = source.a.uint32
   result.r = ((backdrop.r * k) div 255).uint8
@@ -81,6 +89,10 @@ proc blendExcludeMask(backdrop, source: ColorRGBA): ColorRGBA =
 proc blendOverwrite(backdrop, source: ColorRGBA): ColorRGBA =
   source
 
+proc blendWhite(backdrop, source: ColorRGBA): ColorRGBA =
+  ## For testing
+  rgba(255, 255, 255, 255)
+
 proc blender*(blendMode: BlendMode): Blender =
   case blendMode:
   of bmNormal: blendNormal
@@ -96,7 +108,7 @@ proc blender*(blendMode: BlendMode): Blender =
   # of bmSoftLight: blendSoftLight
   # of bmHardLight: blendHardLight
   # of bmDifference: blendDifference
-  # of bmExclusion: blendExclusion
+  of bmExclusion: blendExclusion
   # of bmHue: blendHue
   # of bmSaturation: blendSaturation
   # of bmColor: blendColor
@@ -107,6 +119,7 @@ proc blender*(blendMode: BlendMode): Blender =
   of bmIntersectMask: blendIntersectMask
   of bmExcludeMask: blendExcludeMask
   else:
+    # blendWhite
     blendNormal
     # raise newException(PixieError, "No blender for " & $blendMode)
 
@@ -477,12 +490,6 @@ proc hardLight(backdrop, source: uint32): uint8 {.inline.} =
   else:
     screen(backdrop, 2 * source - 255)
 
-proc blendNormalOld(backdrop, source: ColorRGBA): ColorRGBA =
-  blendNormal(
-    backdrop.toPremultipliedAlpha(),
-    source.toPremultipliedAlpha()
-  ).toStraightAlpha()
-
 proc blendDarken(backdrop, source: ColorRGBA): ColorRGBA =
   result.r = min(backdrop.r, source.r)
   result.g = min(backdrop.g, source.g)
@@ -588,14 +595,6 @@ proc blendDifference(backdrop, source: ColorRGBA): ColorRGBA =
   result.b = max(backdrop.b, source.b) - min(backdrop.b, source.b)
   result = alphaFix(backdrop, source, result)
 
-proc blendExclusion(backdrop, source: ColorRGBA): ColorRGBA =
-  proc blend(backdrop, source: int32): uint8 {.inline.} =
-    max(0, backdrop + source - (2 * backdrop * source) div 255).uint8
-  result.r = blend(backdrop.r.int32, source.r.int32)
-  result.g = blend(backdrop.g.int32, source.g.int32)
-  result.b = blend(backdrop.b.int32, source.b.int32)
-  result = alphaFix(backdrop, source, result)
-
 proc blendColor(backdrop, source: ColorRGBA): ColorRGBA =
   blendColorFloats(backdrop.color, source.color).rgba
 
@@ -607,29 +606,3 @@ proc blendHue(backdrop, source: ColorRGBA): ColorRGBA =
 
 proc blendSaturation(backdrop, source: ColorRGBA): ColorRGBA =
   blendSaturationFloats(backdrop.color, source.color).rgba
-
-# proc blender*(blendMode: BlendMode): Blender =
-#   case blendMode:
-#   of bmNormal: blendNormal
-#   of bmDarken: blendDarken
-#   of bmMultiply: blendMultiply
-#   of bmLinearBurn: blendLinearBurn
-#   of bmColorBurn: blendColorBurn
-#   of bmLighten: blendLighten
-#   of bmScreen: blendScreen
-#   of bmLinearDodge: blendLinearDodge
-#   of bmColorDodge: blendColorDodge
-#   of bmOverlay: blendOverlay
-#   of bmSoftLight: blendSoftLight
-#   of bmHardLight: blendHardLight
-#   of bmDifference: blendDifference
-#   of bmExclusion: blendExclusion
-#   of bmHue: blendHue
-#   of bmSaturation: blendSaturation
-#   of bmColor: blendColor
-#   of bmLuminosity: blendLuminosity
-#   of bmMask: blendMask
-#   of bmOverwrite: blendOverwrite
-#   of bmSubtractMask: blendSubtractMask
-#   of bmIntersectMask: blendIntersectMask
-#   of bmExcludeMask: blendExcludeMask
