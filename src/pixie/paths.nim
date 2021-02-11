@@ -373,11 +373,18 @@ proc roundedRect*(
     se = min(se, maxRadius)
     sw = min(sw, maxRadius)
 
-  path.moveTo(pos.x + nw, pos.y)
-  path.arcTo(pos.x + wh.x, pos.y, pos.x + wh.x, pos.y + wh.y, ne)
-  path.arcTo(pos.x + wh.x, pos.y + wh.y, pos.x, pos.y + wh.y, se)
-  path.arcTo(pos.x, pos.y + wh.y, pos.x, pos.y, sw)
-  path.arcTo(pos.x, pos.y, pos.x + wh.x, pos.y, nw)
+  if clockwise:
+    path.moveTo(pos.x + nw, pos.y)
+    path.arcTo(pos.x + wh.x, pos.y, pos.x + wh.x, pos.y + wh.y, ne)
+    path.arcTo(pos.x + wh.x, pos.y + wh.y, pos.x, pos.y + wh.y, se)
+    path.arcTo(pos.x, pos.y + wh.y, pos.x, pos.y, sw)
+    path.arcTo(pos.x, pos.y, pos.x + wh.x, pos.y, nw)
+  else:
+    path.moveTo(pos.x + wh.x + ne, pos.y)
+    path.arcTo(pos.x, pos.y, pos.x, pos.y + wh.y, nw)
+    path.arcTo(pos.x, pos.y + wh.y, pos.x + wh.x, pos.y + wh.y, sw)
+    path.arcTo(pos.x + wh.x, pos.y + wh.y, pos.x + wh.x, pos.y, se)
+    path.arcTo(pos.x + wh.x, pos.y, pos.x, pos.y, ne)
   path.closePath()
 
 proc ellipse*(path: var Path, cx, cy, rx, ry: float32) =
