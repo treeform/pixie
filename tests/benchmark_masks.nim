@@ -28,5 +28,5 @@ timeIt "blur":
 
 reset()
 
-timeIt "sharpen":
-  mask.sharpen()
+timeIt "ceil":
+  mask.ceil()

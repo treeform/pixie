@@ -91,3 +91,14 @@ block:
   a.spread(10)
 
   writeFile("tests/images/masks/spread.png", a.encodePng())
+
+block:
+  let mask = newMask(100, 100)
+
+  var path: Path
+  path.ellipse(mask.width / 2, mask.height / 2, 25, 25)
+
+  mask.fillPath(path)
+  mask.ceil()
+
+  writeFile("tests/images/masks/circleMaskSharpened.png", mask.encodePng())

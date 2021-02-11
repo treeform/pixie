@@ -135,7 +135,7 @@ proc spread*(mask: Mask, spread: float32) =
               break blurBox
       mask.setValueUnsafe(x, y, maxValue)
 
-proc sharpen*(mask: Mask) =
+proc ceil*(mask: Mask) =
   ## A value of 0 stays 0. Anything else turns into 255.
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
