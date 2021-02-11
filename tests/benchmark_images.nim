@@ -45,11 +45,6 @@ timeIt "applyOpacity":
 
 reset()
 
-timeIt "sharpOpacity":
-  image.sharpOpacity()
-
-reset()
-
 timeIt "toPremultipliedAlpha":
   image.toPremultipliedAlpha()
 

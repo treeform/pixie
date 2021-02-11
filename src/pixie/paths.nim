@@ -373,11 +373,18 @@ proc roundedRect*(
     se = min(se, maxRadius)
     sw = min(sw, maxRadius)
 
-  path.moveTo(pos.x + nw, pos.y)
-  path.arcTo(pos.x + wh.x, pos.y, pos.x + wh.x, pos.y + wh.y, ne)
-  path.arcTo(pos.x + wh.x, pos.y + wh.y, pos.x, pos.y + wh.y, se)
-  path.arcTo(pos.x, pos.y + wh.y, pos.x, pos.y, sw)
-  path.arcTo(pos.x, pos.y, pos.x + wh.x, pos.y, nw)
+  if clockwise:
+    path.moveTo(pos.x + nw, pos.y)
+    path.arcTo(pos.x + wh.x, pos.y, pos.x + wh.x, pos.y + wh.y, ne)
+    path.arcTo(pos.x + wh.x, pos.y + wh.y, pos.x, pos.y + wh.y, se)
+    path.arcTo(pos.x, pos.y + wh.y, pos.x, pos.y, sw)
+    path.arcTo(pos.x, pos.y, pos.x + wh.x, pos.y, nw)
+  else:
+    path.moveTo(pos.x + wh.x + ne, pos.y)
+    path.arcTo(pos.x, pos.y, pos.x, pos.y + wh.y, nw)
+    path.arcTo(pos.x, pos.y + wh.y, pos.x + wh.x, pos.y + wh.y, sw)
+    path.arcTo(pos.x + wh.x, pos.y + wh.y, pos.x + wh.x, pos.y, se)
+    path.arcTo(pos.x + wh.x, pos.y, pos.x, pos.y, ne)
   path.closePath()
 
 proc ellipse*(path: var Path, cx, cy, rx, ry: float32) =
@@ -1077,51 +1084,17 @@ proc fillShapes(
     var x = startX
     when defined(amd64) and not defined(pixieNoSimd):
       # When supported, SIMD blend as much as possible
-      let
-        oddMask = mm_set1_epi16(cast[int16](0xff00))
-        v255high = mm_set1_epi16(cast[int16](255.uint16 shl 8))
-        div255 = mm_set1_epi16(cast[int16](0x8081))
-
       for _ in countup(x, coverages.len - 16, 16):
         var coverage = mm_loadu_si128(coverages[x].addr)
 
         let eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
         if mm_movemask_epi8(eqZero) != 0xffff:
           # If the coverages are not all zero
-          var
-            coverageEven = mm_slli_epi16(mm_andnot_si128(oddMask, coverage), 8)
-            coverageOdd = mm_and_si128(coverage, oddMask)
-
-          let
-            evenK = mm_sub_epi16(v255high, coverageEven)
-            oddK = mm_sub_epi16(v255high, coverageOdd)
-
-          var
-            backdrop = mm_loadu_si128(mask.data[mask.dataIndex(x, y)].addr)
-            backdropEven = mm_slli_epi16(mm_andnot_si128(oddMask, backdrop), 8)
-            backdropOdd = mm_and_si128(backdrop, oddMask)
-
-          # backdrop * k
-          backdropEven = mm_mulhi_epu16(backdropEven, evenK)
-          backdropOdd = mm_mulhi_epu16(backdropOdd, oddK)
-
-          # div 255
-          backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
-          backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
-
-          # Shift from high to low bits
-          coverageEven = mm_srli_epi16(coverageEven, 8)
-          coverageOdd = mm_srli_epi16(coverageOdd, 8)
-
-          var
-            blendedEven = mm_add_epi16(coverageEven, backdropEven)
-            blendedOdd = mm_add_epi16(coverageOdd, backdropOdd)
-
-          blendedOdd = mm_slli_epi16(blendedOdd, 8)
+          let backdrop = mm_loadu_si128(mask.data[mask.dataIndex(x, y)].addr)
 
           mm_storeu_si128(
             mask.data[mask.dataIndex(x, y)].addr,
-            mm_or_si128(blendedEven, blendedOdd)
+            maskNormalSimd(backdrop, coverage)
           )
 
         x += 16

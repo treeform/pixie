@@ -612,15 +612,6 @@ proc blur*(target: Image | Mask, radius: float32) =
 when defined(release):
   {.pop.}
 
-proc sharpOpacity*(image: Image) =
-  ## Sharpens the opacity to extreme.
-  ## A = 0 stays 0. Anything else turns into 255.
-  for rgba in image.data.mitems:
-    if rgba.a == 0:
-      rgba = rgba(0, 0, 0, 0)
-    else:
-      rgba = rgba(255, 255, 255, 255)
-
 proc drawUber(
   a, b: Image,
   p, dx, dy: Vec2,
@@ -629,12 +620,29 @@ proc drawUber(
   smooth: bool
 ) =
   let blender = blendMode.blender()
-  for y in 0 ..< a.height:
+
+  # Determine where we should start and stop drawing in the y dimension
+  var yMin, yMax: int
+  if blendMode == bmIntersectMask:
+    yMin = 0
+    yMax = a.height
+  else:
+    yMin = a.height
+    yMax = 0
+    for segment in perimeter:
+        yMin = min(yMin, segment.at.y.floor.int)
+        yMax = max(yMax, segment.at.y.ceil.int)
+
+  yMin = yMin.clamp(0, a.height)
+  yMax = yMax.clamp(0, a.height)
+
+  for y in yMin ..< yMax:
+    # Determine where we should start and stop drawing in the x dimension
     var
       xMin = a.width
       xMax = 0
     for yOffset in [0.float32, 1]:
-      var scanLine = Line(
+      let scanLine = Line(
         a: vec2(-1000, y.float32 + yOffset),
         b: vec2(1000, y.float32 + yOffset)
       )
