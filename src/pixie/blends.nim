@@ -466,12 +466,13 @@ proc blender*(blendMode: BlendMode): Blender =
   of bmSubtractMask: blendSubtractMask
   of bmIntersectMask: blendIntersectMask
   of bmExcludeMask: blendExcludeMask
-  else:
-    # blendWhite
-    # blendNormal
-    raise newException(PixieError, "No blender for " & $blendMode)
+
+proc maskNormal(backdrop, source: uint8): uint8 =
+  ## Blending masks
+  blendAlpha(backdrop, source)
 
 proc maskMask(backdrop, source: uint8): uint8 =
+  ## Masking masks
   ((backdrop.uint32 * source) div 255).uint8
 
 proc maskSubtract(backdrop, source: uint8): uint8 =
@@ -488,6 +489,7 @@ proc maskOverwrite(backdrop, source: uint8): uint8 =
 
 proc masker*(blendMode: BlendMode): Masker =
   case blendMode:
+  of bmNormal: maskNormal
   of bmMask: maskMask
   of bmOverwrite: maskOverwrite
   of bmSubtractMask: maskSubtract
@@ -499,7 +501,9 @@ proc masker*(blendMode: BlendMode): Masker =
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
 
-  type BlenderSimd* = proc(blackdrop, source: M128i): M128i
+  type
+    BlenderSimd* = proc(blackdrop, source: M128i): M128i
+    MaskerSimd* = proc(blackdrop, source: M128i): M128i
 
   proc blendNormalSimd*(backdrop, source: M128i): M128i =
     let
@@ -539,6 +543,52 @@ when defined(amd64) and not defined(pixieNoSimd):
     of bmOverwrite: blendOverwriteSimd
     else:
       raise newException(PixieError, "No SIMD blender for " & $blendMode)
+
+  proc maskNormalSimd*(backdrop, source: M128i): M128i =
+    ## Blending masks
+    let
+      oddMask = mm_set1_epi16(cast[int16](0xff00))
+      v255high = mm_set1_epi16(cast[int16](255.uint16 shl 8))
+      div255 = mm_set1_epi16(cast[int16](0x8081))
+
+    var
+      sourceEven = mm_slli_epi16(mm_andnot_si128(oddMask, source), 8)
+      sourceOdd = mm_and_si128(source, oddMask)
+
+    let
+      evenK = mm_sub_epi16(v255high, sourceEven)
+      oddK = mm_sub_epi16(v255high, sourceOdd)
+
+    var
+      backdropEven = mm_slli_epi16(mm_andnot_si128(oddMask, backdrop), 8)
+      backdropOdd = mm_and_si128(backdrop, oddMask)
+
+    # backdrop * k
+    backdropEven = mm_mulhi_epu16(backdropEven, evenK)
+    backdropOdd = mm_mulhi_epu16(backdropOdd, oddK)
+
+    # div 255
+    backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
+    backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
+
+    # Shift from high to low bits
+    sourceEven = mm_srli_epi16(sourceEven, 8)
+    sourceOdd = mm_srli_epi16(sourceOdd, 8)
+
+    var
+      blendedEven = mm_add_epi16(sourceEven, backdropEven)
+      blendedOdd = mm_add_epi16(sourceOdd, backdropOdd)
+
+    blendedOdd = mm_slli_epi16(blendedOdd, 8)
+
+    mm_or_si128(blendedEven, blendedOdd)
+
+  proc maskerSimd*(blendMode: BlendMode): MaskerSimd =
+    case blendMode:
+    of bmNormal: maskNormalSimd
+    of bmOverwrite: blendOverwriteSimd
+    else:
+      raise newException(PixieError, "No SIMD masker for " & $blendMode)
 
 when defined(release):
   {.pop.}

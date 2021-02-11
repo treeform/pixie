@@ -25,3 +25,8 @@ reset()
 
 timeIt "blur":
   mask.blur(40)
+
+reset()
+
+timeIt "sharpen":
+  mask.sharpen()

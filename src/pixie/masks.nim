@@ -1,5 +1,8 @@
 import common, vmath, system/memory
 
+when defined(amd64) and not defined(pixieNoSimd):
+  import nimsimd/sse2
+
 type
   Mask* = ref object
     ## Mask object that holds mask opacity data.
@@ -131,6 +134,24 @@ proc spread*(mask: Mask, spread: float32) =
             if maxValue == 255:
               break blurBox
       mask.setValueUnsafe(x, y, maxValue)
+
+proc sharpen*(mask: Mask) =
+  ## A value of 0 stays 0. Anything else turns into 255.
+  var i: int
+  when defined(amd64) and not defined(pixieNoSimd):
+    let
+      vZero = mm_setzero_si128()
+      vMax = mm_set1_epi32(cast[int32](uint32.high))
+    for _ in countup(0, mask.data.len - 16, 16):
+      var values = mm_loadu_si128(mask.data[i].addr)
+      values = mm_cmpeq_epi8(values, vZero)
+      values = mm_andnot_si128(values, vMax)
+      mm_storeu_si128(mask.data[i].addr, values)
+      i += 16
+
+  for j in i ..< mask.data.len:
+    if mask.data[j] != 0:
+      mask.data[j] = 255
 
 when defined(release):
   {.pop.}

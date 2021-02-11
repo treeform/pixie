@@ -612,15 +612,6 @@ proc blur*(target: Image | Mask, radius: float32) =
 when defined(release):
   {.pop.}
 
-proc sharpOpacity*(image: Image) =
-  ## Sharpens the opacity to extreme.
-  ## A = 0 stays 0. Anything else turns into 255.
-  for rgba in image.data.mitems:
-    if rgba.a == 0:
-      rgba = rgba(0, 0, 0, 0)
-    else:
-      rgba = rgba(255, 255, 255, 255)
-
 proc drawUber(
   a, b: Image,
   p, dx, dy: Vec2,
