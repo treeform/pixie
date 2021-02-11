@@ -43,3 +43,20 @@ block:
   timeIt "draw big-on-bigger Smooth bmNormal":
     a.draw(b, translate(vec2(25.2, 25.2)), bmNormal)
     keep(b)
+
+block:
+  let
+    a = newImage(100, 100)
+    b = newImage(50, 50)
+
+  timeIt "shadow":
+    b.fill(rgba(0, 0, 0, 255))
+    a.draw(b, vec2(25, 25))
+
+    let shadow = a.shadow(
+      offset = vec2(0, 0),
+      spread = 10,
+      blur = 10,
+      color = rgba(0, 0, 0, 255)
+    )
+    keep(shadow)
