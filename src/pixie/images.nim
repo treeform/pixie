@@ -630,8 +630,8 @@ proc drawUber(
     yMin = a.height
     yMax = 0
     for segment in perimeter:
-        yMin = min(yMin, segment.at.y.floor.int)
-        yMax = max(yMax, segment.at.y.ceil.int)
+      yMin = min(yMin, segment.at.y.floor.int)
+      yMax = max(yMax, segment.at.y.ceil.int)
 
   yMin = yMin.clamp(0, a.height)
   yMax = yMax.clamp(0, a.height)
@@ -659,18 +659,43 @@ proc drawUber(
       if xMin > 0:
         zeroMem(a.data[a.dataIndex(0, y)].addr, 4 * xMin)
 
-    for x in xMin ..< xMax:
-      let
-        srcPos = p + dx * float32(x) + dy * float32(y)
-        xFloat = srcPos.x - h
-        yFloat = srcPos.y - h
-        rgba = a.getRgbaUnsafe(x, y)
-        rgba2 =
-          if smooth:
-            b.getRgbaSmooth(xFloat, yFloat)
-          else:
-            b.getRgbaUnsafe(xFloat.int, yFloat.int)
-      a.setRgbaUnsafe(x, y, blender(rgba, rgba2))
+    if smooth:
+      for x in xMin ..< xMax:
+        let
+          srcPos = p + dx * x.float32 + dy * y.float32
+          xFloat = srcPos.x - h
+          yFloat = srcPos.y - h
+          backdrop = a.getRgbaUnsafe(x, y)
+          source = b.getRgbaSmooth(xFloat, yFloat)
+        a.setRgbaUnsafe(x, y, blender(backdrop, source))
+    else:
+      var x = xMin
+      when defined(amd64) and not defined(pixieNoSimd):
+        if dx.y == 0 and dy.x == 0 and blendMode.hasSimdBlender():
+          # Check we are not rotated before using SIMD blends
+          let blenderSimd = blendMode.blenderSimd()
+          for _ in countup(x, xMax - 4, 4):
+            let
+              srcPos = p + dx * x.float32 + dy * y.float32
+              sx = srcPos.x.int
+              sy = srcPos.y.int
+              backdrop = mm_loadu_si128(a.data[a.dataIndex(x, y)].addr)
+              source = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
+            mm_storeu_si128(
+              a.data[a.dataIndex(x, y)].addr,
+              blenderSimd(backdrop, source)
+            )
+            x += 4
+
+      for _ in x ..< xMax:
+        let
+          srcPos = p + dx * x.float32 + dy * y.float32
+          xFloat = srcPos.x - h
+          yFloat = srcPos.y - h
+          backdrop = a.getRgbaUnsafe(x, y)
+          source = b.getRgbaUnsafe(xFloat.int, yFloat.int)
+        a.setRgbaUnsafe(x, y, blender(backdrop, source))
+        inc x
 
     if blendMode == bmIntersectMask:
       if a.width - xMax > 0:
