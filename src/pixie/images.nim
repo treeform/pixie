@@ -609,9 +609,6 @@ proc blur*(target: Image | Mask, radius: float32) =
           value += sample * a
         target.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
 
-when defined(release):
-  {.pop.}
-
 proc drawUber(
   a, b: Image,
   p, dx, dy: Vec2,
@@ -786,3 +783,6 @@ proc shadow*(
   result = newImage(mask.width, mask.height)
   result.fill(color)
   result.draw(mask, blendMode = bmMask)
+
+when defined(release):
+  {.pop.}
