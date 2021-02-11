@@ -12,11 +12,11 @@ type
     bmNormal
     bmDarken
     bmMultiply
-    bmLinearBurn
+    # bmLinearBurn
     bmColorBurn
     bmLighten
     bmScreen
-    bmLinearDodge
+    # bmLinearDodge
     bmColorDodge
     bmOverlay
     bmSoftLight
