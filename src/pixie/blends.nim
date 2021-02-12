@@ -505,6 +505,17 @@ when defined(amd64) and not defined(pixieNoSimd):
     BlenderSimd* = proc(blackdrop, source: M128i): M128i
     MaskerSimd* = proc(blackdrop, source: M128i): M128i
 
+  proc packAlphaValues*(v: M128i): M128i {.inline.} =
+    ## Shuffle the alpha values for these 4 colors to the first 4 bytes
+    result = mm_srli_epi32(v, 24)
+    let
+      i = mm_srli_si128(result, 3)
+      j = mm_srli_si128(result, 6)
+      k = mm_srli_si128(result, 9)
+      first32 = cast[M128i]([uint32.high, 0, 0, 0])
+    result = mm_or_si128(mm_or_si128(result, i), mm_or_si128(j, k))
+    result = mm_and_si128(result, first32)
+
   proc blendNormalSimd*(backdrop, source: M128i): M128i =
     let
       alphaMask = mm_set1_epi32(cast[int32](0xff000000))

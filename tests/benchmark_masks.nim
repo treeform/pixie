@@ -30,3 +30,8 @@ reset()
 
 timeIt "ceil":
   mask.ceil()
+
+reset()
+
+timeIt "spread":
+  mask.spread(10)
