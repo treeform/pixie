@@ -476,8 +476,6 @@ proc newMask*(image: Image): Mask =
 
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
-    let mask32 = cast[M128i]([uint32.high, 0, 0, 0])
-
     for _ in countup(0, image.data.len - 16, 16):
       var
         a = mm_loadu_si128(image.data[i + 0].addr)
@@ -485,20 +483,10 @@ proc newMask*(image: Image): Mask =
         c = mm_loadu_si128(image.data[i + 8].addr)
         d = mm_loadu_si128(image.data[i + 12].addr)
 
-      template pack(v: var M128i) =
-        # Shuffle the alpha values for these 4 colors to the first 4 bytes
-        v = mm_srli_epi32(v, 24)
-        let
-          i = mm_srli_si128(v, 3)
-          j = mm_srli_si128(v, 6)
-          k = mm_srli_si128(v, 9)
-        v = mm_or_si128(mm_or_si128(v, i), mm_or_si128(j, k))
-        v = mm_and_si128(v, mask32)
-
-      pack(a)
-      pack(b)
-      pack(c)
-      pack(d)
+      a = packAlphaValues(a)
+      b = packAlphaValues(b)
+      c = packAlphaValues(c)
+      d = packAlphaValues(d)
 
       b = mm_slli_si128(b, 4)
       c = mm_slli_si128(c, 8)
@@ -741,10 +729,38 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
           else: # is a Mask
             if blendMode.hasSimdMasker():
               let maskerSimd = blendMode.maskerSimd()
-              when type(b) is Image:
-                discard
-              else: # b is a Mask
-                discard
+              for _ in countup(x, xMax - 16, 16):
+                let
+                  srcPos = p + dx * x.float32 + dy * y.float32
+                  sx = srcPos.x.int
+                  sy = srcPos.y.int
+                  backdrop = mm_loadu_si128(a.data[a.dataIndex(x, y)].addr)
+                when type(b) is Image:
+                  # Need to read 16 colors and pack their alpha values
+                  var
+                    i = mm_loadu_si128(b.data[b.dataIndex(sx + 0, sy)].addr)
+                    j = mm_loadu_si128(b.data[b.dataIndex(sx + 4, sy)].addr)
+                    k = mm_loadu_si128(b.data[b.dataIndex(sx + 8, sy)].addr)
+                    l = mm_loadu_si128(b.data[b.dataIndex(sx + 12, sy)].addr)
+
+                  i = packAlphaValues(i)
+                  j = packAlphaValues(j)
+                  k = packAlphaValues(k)
+                  l = packAlphaValues(l)
+
+                  j = mm_slli_si128(j, 4)
+                  k = mm_slli_si128(k, 8)
+                  l = mm_slli_si128(l, 12)
+
+                  let source = mm_or_si128(mm_or_si128(i, j), mm_or_si128(k, l))
+                else: # b is a Mask
+                  let source = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
+
+                mm_storeu_si128(
+                  a.data[a.dataIndex(x, y)].addr,
+                  maskerSimd(backdrop, source)
+                )
+                x += 16
 
       for _ in x ..< xMax:
         let
