@@ -965,8 +965,8 @@ proc fillShapes(
     when defined(amd64) and not defined(pixieNoSimd):
       # When supported, SIMD blend as much as possible
       let
-        coverageMask1 = cast[M128i]([uint32.high, 0, 0, 0]) # First 32 bits
-        coverageMask2 = mm_set1_epi32(cast[int32](0x000000ff)) # Only `r`
+        first32 = cast[M128i]([uint32.high, 0, 0, 0]) # First 32 bits
+        redMask = mm_set1_epi32(cast[int32](0x000000ff)) # Only `r`
         oddMask = mm_set1_epi16(cast[int16](0xff00))
         div255 = mm_set1_epi16(cast[int16](0x8081))
         v255 = mm_set1_epi32(255)
@@ -974,7 +974,7 @@ proc fillShapes(
 
       for _ in countup(x, coverages.len - 16, 16):
         var coverage = mm_loadu_si128(coverages[x].addr)
-        coverage = mm_and_si128(coverage, coverageMask1)
+        coverage = mm_and_si128(coverage, first32)
 
         let eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
         if mm_movemask_epi8(eqZero) != 0xffff:
@@ -985,10 +985,10 @@ proc fillShapes(
           coverage = mm_shuffle_epi32(coverage, MM_SHUFFLE(1, 1, 0, 0))
 
           var
-            a = mm_and_si128(coverage, coverageMask1)
-            b = mm_and_si128(coverage, mm_slli_si128(coverageMask1, 4))
-            c = mm_and_si128(coverage, mm_slli_si128(coverageMask1, 8))
-            d = mm_and_si128(coverage, mm_slli_si128(coverageMask1, 12))
+            a = mm_and_si128(coverage, first32)
+            b = mm_and_si128(coverage, mm_slli_si128(first32, 4))
+            c = mm_and_si128(coverage, mm_slli_si128(first32, 8))
+            d = mm_and_si128(coverage, mm_slli_si128(first32, 12))
 
           # Shift the coverages to `r`
           a = mm_srli_si128(a, 2)
@@ -997,7 +997,7 @@ proc fillShapes(
 
           coverage = mm_and_si128(
             mm_or_si128(mm_or_si128(a, b), mm_or_si128(c, d)),
-            coverageMask2
+            redMask
           )
 
           if mm_movemask_epi8(mm_cmpeq_epi32(coverage, v255)) != 0xffff:
