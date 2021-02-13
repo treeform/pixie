@@ -1,4 +1,4 @@
-import cairo, math, benchy, pixie, pixie/paths, chroma
+import cairo, math, benchy, pixie, chroma
 
 var
   surface = imageSurfaceCreate(FORMAT_ARGB32, 1000, 1000)
@@ -18,7 +18,7 @@ timeIt "cairo":
   ctx.fill()
   surface.flush()
 
-discard surface.writeToPng("cairo.png")
+# discard surface.writeToPng("cairo.png")
 
 var a = newImage(1000, 1000)
 a.fill(rgba(0, 0, 0, 255))
@@ -32,4 +32,4 @@ timeIt "pixie":
   p.closePath()
   a.fillPath(p, rgba(0, 0, 255, 255))
 
-discard surface.writeToPng("pixie.png")
+# a.writeFile("pixie.png")
