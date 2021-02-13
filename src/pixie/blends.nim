@@ -622,24 +622,17 @@ when defined(amd64) and not defined(pixieNoSimd):
   proc maskMaskSimd*(backdrop, source: M128i): M128i =
     let
       oddMask = mm_set1_epi16(cast[int16](0xff00))
-      v255high = mm_set1_epi16(cast[int16](255.uint16 shl 8))
       div255 = mm_set1_epi16(cast[int16](0x8081))
-
-    var
       sourceEven = mm_slli_epi16(mm_andnot_si128(oddMask, source), 8)
       sourceOdd = mm_and_si128(source, oddMask)
-
-    let
-      evenK = mm_sub_epi16(v255high, sourceEven)
-      oddK = mm_sub_epi16(v255high, sourceOdd)
 
     var
       backdropEven = mm_slli_epi16(mm_andnot_si128(oddMask, backdrop), 8)
       backdropOdd = mm_and_si128(backdrop, oddMask)
 
-    # backdrop * k
-    backdropEven = mm_mulhi_epu16(backdropEven, evenK)
-    backdropOdd = mm_mulhi_epu16(backdropOdd, oddK)
+    # backdrop * source
+    backdropEven = mm_mulhi_epu16(backdropEven, sourceEven)
+    backdropOdd = mm_mulhi_epu16(backdropOdd, sourceOdd)
 
     # div 255
     backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
