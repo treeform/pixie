@@ -32,6 +32,6 @@ block:
 
 block:
   for bits in [32, 24]:
-    var image = decodeBmp(readFile("tests/images/bmp/knight." & $bits &
-        ".master.bmp"))
+    let image =
+      decodeBmp(readFile("tests/images/bmp/knight." & $bits & ".master.bmp"))
     writeFile("tests/images/bmp/knight." & $bits & ".bmp", encodeBmp(image))
