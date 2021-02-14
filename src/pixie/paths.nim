@@ -382,7 +382,7 @@ proc roundedRect*(
     h = wh.y
     s = splineCircleK
 
-    maxRadius = min(w/2, h/2)
+    maxRadius = min(w / 2, h / 2)
     nw = min(nw, maxRadius)
     ne = min(ne, maxRadius)
     se = min(se, maxRadius)
@@ -397,14 +397,14 @@ proc roundedRect*(
     l1 = vec2(x, y + h - sw)
     l2 = vec2(x, y + nw)
 
-    t1h = t1 + vec2(-nw*s, 0)
-    t2h = t2 + vec2(+ne*s, 0)
-    r1h = r1 + vec2(0, -ne*s)
-    r2h = r2 + vec2(0, +se*s)
-    b1h = b1 + vec2(+se*s, 0)
-    b2h = b2 + vec2(-sw*s, 0)
-    l1h = l1 + vec2(0, +sw*s)
-    l2h = l2 + vec2(0, -nw*s)
+    t1h = t1 + vec2(-nw * s, 0)
+    t2h = t2 + vec2(+ne * s, 0)
+    r1h = r1 + vec2(0, -ne * s)
+    r2h = r2 + vec2(0, +se * s)
+    b1h = b1 + vec2(+se * s, 0)
+    b2h = b2 + vec2(-sw * s, 0)
+    l1h = l1 + vec2(0, +sw * s)
+    l2h = l2 + vec2(0, -nw * s)
 
   if clockwise:
     path.moveTo(t1)
@@ -865,13 +865,11 @@ proc partitionSegments(
     segmentCount += shape.len - 1
 
   let
-    maxPartitions = max(1, height div 10)
-    numPartitions = min(maxPartitions, max(1, segmentCount div 10))
+    maxPartitions = max(1, height div 10).uint32
+    numPartitions = min(maxPartitions, max(1, segmentCount div 10).uint32)
+    partitionHeight = (height.uint32 div numPartitions)
 
-  result.setLen(numPartitions)
-
-  let partitionHeight = height div numPartitions
-
+  var partitions = newSeq[seq[(Segment, int16)]](numPartitions)
   for shape in shapes:
     for segment in shape.segments:
       if segment.at.y == segment.to.y: # Skip horizontal
@@ -884,41 +882,46 @@ proc partitionSegments(
         winding = -1
 
       if partitionHeight == 0:
-        result[0].add((segment, winding))
+        partitions[0].add((segment, winding))
       else:
-        let
-          atPartition = max(0, segment.at.y).int div partitionHeight
-          toPartition = max(0, ceil(segment.to.y)).int div partitionHeight
-        for i in min(atPartition, result.high) .. min(toPartition, result.high):
-          result[i].add((segment, winding))
+        var
+          atPartition = max(0, segment.at.y).uint32 div partitionHeight
+          toPartition = max(0, ceil(segment.to.y)).uint32 div partitionHeight
+        atPartition = clamp(atPartition, 0, partitions.high.uint32)
+        toPartition = clamp(toPartition, 0, partitions.high.uint32)
+        for i in atPartition .. toPartition:
+          partitions[i].add((segment, winding))
+
+  partitions
 
 proc computeCoverages(
   coverages: var seq[uint8],
   hits: var seq[(float32, int16)],
+  numHits: var int,
   size: Vec2,
   y: int,
   partitions: seq[seq[(Segment, int16)]],
+  partitionHeight: uint32,
   windingRule: WindingRule
-) =
+) {.inline.} =
   const
     quality = 5 # Must divide 255 cleanly (1, 3, 5, 15, 17, 51, 85)
-    sampleCoverage = 255.uint8 div quality
-    ep = 0.0001 * PI
+    sampleCoverage = (255 div quality).uint8
     offset = 1 / quality.float32
     initialOffset = offset / 2
 
-  var numHits: int
-
   let
-    partitionHeight = size.y.int div partitions.len
     partition =
       if partitionHeight == 0:
-        0
+        0.uint32
       else:
-        min(y div partitionHeight, partitions.high)
+        min(y.uint32 div partitionHeight, partitions.high.uint32)
+
+  zeroMem(coverages[0].addr, coverages.len)
 
   # Do scanlines for this row
   for m in 0 ..< quality:
+    const ep = 0.0001 * PI
     let
       yLine = y.float32 + initialOffset + offset * m.float32 + ep
       scanline = Line(a: vec2(0, yLine), b: vec2(size.x, yLine))
@@ -940,9 +943,9 @@ proc computeCoverages(
     for i in 0 ..< numHits:
       let (at, winding) = hits[i]
 
-      var
-        fillStart = x.int
-        leftCover = if at.int - x.int > 0: trunc(x) + 1 - x else: at - x
+      var fillStart = x.int
+
+      let leftCover = if at.int - x.int > 0: trunc(x) + 1 - x else: at - x
       if leftCover != 0:
         inc fillStart
         if shouldFill(windingRule, count):
@@ -978,7 +981,9 @@ proc fillShapes(
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
-  let partitions = partitionSegments(shapes, image.height)
+  let
+    partitions = partitionSegments(shapes, image.height)
+    partitionHeight = image.height.uint32 div partitions.len.uint32
 
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
@@ -995,17 +1000,17 @@ proc fillShapes(
   var
     coverages = newSeq[uint8](image.width)
     hits = newSeq[(float32, int16)](4)
+    numHits: int
 
   for y in startY ..< stopY:
-    # Reset buffer for this row
-    zeroMem(coverages[0].addr, coverages.len)
-
     computeCoverages(
       coverages,
       hits,
+      numHits,
       image.wh,
       y,
       partitions,
+      partitionHeight,
       windingRule
     )
 
@@ -1023,34 +1028,45 @@ proc fillShapes(
         var coverage = mm_loadu_si128(coverages[x].addr)
         coverage = mm_and_si128(coverage, first32)
 
-        let eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
+        let
+          index = image.dataIndex(x, y)
+          eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
         if mm_movemask_epi8(eqZero) != 0xffff:
           # If the coverages are not all zero
-          var source = vColor
-
-          if mm_movemask_epi8(mm_cmpeq_epi32(coverage, first32)) != 0xffff:
-            # If the coverages are not all 255
+          if mm_movemask_epi8(mm_cmpeq_epi32(coverage, first32)) == 0xffff:
+            # Coverages are all 255
+            if color.a == 255 and blendMode == bmNormal:
+              mm_storeu_si128(image.data[index].addr, vColor)
+            else:
+              let backdrop = mm_loadu_si128(image.data[index].addr)
+              mm_storeu_si128(
+                image.data[index].addr,
+                blenderSimd(backdrop, vColor)
+              )
+          else:
+            # Coverages are not all 255
             coverage = unpackAlphaValues(coverage)
             # Shift the coverages from `a` to `g` and `a` for multiplying
             coverage = mm_or_si128(coverage, mm_srli_epi32(coverage, 16))
 
             var
-              colorEven = mm_slli_epi16(source, 8)
-              colorOdd = mm_and_si128(source, oddMask)
+              source = vColor
+              sourceEven = mm_slli_epi16(source, 8)
+              sourceOdd = mm_and_si128(source, oddMask)
 
-            colorEven = mm_mulhi_epu16(colorEven, coverage)
-            colorOdd = mm_mulhi_epu16(colorOdd, coverage)
+            sourceEven = mm_mulhi_epu16(sourceEven, coverage)
+            sourceOdd = mm_mulhi_epu16(sourceOdd, coverage)
 
-            colorEven = mm_srli_epi16(mm_mulhi_epu16(colorEven, div255), 7)
-            colorOdd = mm_srli_epi16(mm_mulhi_epu16(colorOdd, div255), 7)
+            sourceEven = mm_srli_epi16(mm_mulhi_epu16(sourceEven, div255), 7)
+            sourceOdd = mm_srli_epi16(mm_mulhi_epu16(sourceOdd, div255), 7)
 
-            source = mm_or_si128(colorEven, mm_slli_epi16(colorOdd, 8))
+            source = mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
 
-          let
-            index = image.dataIndex(x, y)
-            backdrop = mm_loadu_si128(image.data[index].addr)
-          mm_storeu_si128(image.data[index].addr, blenderSimd(backdrop, source))
-
+            let backdrop = mm_loadu_si128(image.data[index].addr)
+            mm_storeu_si128(
+              image.data[index].addr,
+              blenderSimd(backdrop, source)
+            )
         x += 4
 
     while x < image.width:
@@ -1069,8 +1085,12 @@ proc fillShapes(
           source.b = ((color.b.uint16 * coverage) div 255).uint8
           source.a = ((color.a.uint16 * coverage) div 255).uint8
 
-        let backdrop = image.getRgbaUnsafe(x, y)
-        image.setRgbaUnsafe(x, y, blender(backdrop, source))
+        if source.a == 255 and blendMode == bmNormal:
+          # Skip blending
+          image.setRgbaUnsafe(x, y, source)
+        else:
+          let backdrop = image.getRgbaUnsafe(x, y)
+          image.setRgbaUnsafe(x, y, blender(backdrop, source))
       inc x
 
 proc fillShapes(
@@ -1078,7 +1098,9 @@ proc fillShapes(
   shapes: seq[seq[Vec2]],
   windingRule: WindingRule
 ) =
-  let partitions = partitionSegments(shapes, mask.height)
+  let
+    partitions = partitionSegments(shapes, mask.height)
+    partitionHeight = mask.height.uint32 div partitions.len.uint32
 
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
@@ -1088,24 +1110,23 @@ proc fillShapes(
     startY = max(0, bounds.y.int)
     stopY = min(mask.height, (bounds.y + bounds.h).int)
 
-  var
-    coverages = newSeq[uint8](mask.width)
-    hits = newSeq[(float32, int16)](4)
-
-
   when defined(amd64) and not defined(pixieNoSimd):
     let maskerSimd = bmNormal.maskerSimd()
 
-  for y in startY ..< stopY:
-    # Reset buffer for this row
-    zeroMem(coverages[0].addr, coverages.len)
+  var
+    coverages = newSeq[uint8](mask.width)
+    hits = newSeq[(float32, int16)](4)
+    numHits: int
 
+  for y in startY ..< stopY:
     computeCoverages(
       coverages,
       hits,
+      numHits,
       mask.wh,
       y,
       partitions,
+      partitionHeight,
       windingRule
     )
 

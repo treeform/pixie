@@ -84,7 +84,7 @@ proc minifyBy2*(mask: Mask, power = 1): Mask =
           mask.getValueUnsafe(x * 2 + 0, y * 2 + 1)
         result.setValueUnsafe(x, y, (value div 4).uint8)
 
-proc fillUnsafe(data: var seq[uint8], value: uint8, start, len: int) =
+proc fillUnsafe*(data: var seq[uint8], value: uint8, start, len: int) =
   ## Fills the mask data with the parameter value starting at index start and
   ## continuing for len indices.
   nimSetMem(data[start].addr, value.cint, len)

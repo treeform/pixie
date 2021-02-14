@@ -68,7 +68,7 @@ proc `[]=`*(image: Image, x, y: int, rgba: ColorRGBA) {.inline.} =
   if image.inside(x, y):
     image.setRgbaUnsafe(x, y, rgba)
 
-proc fillUnsafe(data: var seq[ColorRGBA], rgba: ColorRGBA, start, len: int) =
+proc fillUnsafe*(data: var seq[ColorRGBA], rgba: ColorRGBA, start, len: int) =
   ## Fills the image data with the parameter color starting at index start and
   ## continuing for len indices.
 
