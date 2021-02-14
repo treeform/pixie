@@ -4,13 +4,18 @@
 
 Pixie is a 2D graphics library similar to [Cairo](https://www.cairographics.org/) and [Skia](https://skia.org) written (almost) entirely in Nim.
 
-Features include:
-* Drawing paths, shapes and curves
-* Complex masking
-* Shadows, glows and effects
-* Loading image file formats (PNG, BMP, JPG, SVG + more in development)
-
 This library is being actively developed and is not yet ready for use. Since you've managed to stumble onto it, give it a star and check back soon!
+
+`nimble install pixie`
+
+Features:
+* Drawing paths, shapes and curves, with even-odd and non-zero windings.
+* Strokes with joins and caps.
+* Shadows, glows and blurs.
+* Complex masking: Subtract, Intersect, Exclude.
+* Complex blends: Darken, Multiply, Color Dodge, Hue, Luminosity... etc.
+* Pixel perfect AA quality.
+* Supported file formats: PNG, BMP, JPG, SVG + more in development.
 
 ## Testing
 
