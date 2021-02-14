@@ -859,7 +859,7 @@ proc computeCoverages(
   windingRule: WindingRule
 ) =
   const
-    quality = 5 # Must divide 255 cleanly
+    quality = 5 # Must divide 255 cleanly (1, 3, 5, 15, 17, 51, 85)
     sampleCoverage = 255.uint8 div quality
     ep = 0.0001 * PI
     offset = 1 / quality.float32
