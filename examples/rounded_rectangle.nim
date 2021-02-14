@@ -13,6 +13,6 @@ let
 var path: Path
 path.roundedRect(vec2(x, y), vec2(w, h), r, r, r, r)
 
-image.fillPath(path, rgba(255, 0, 0, 255))
+image.fillPath(path, rgba(0, 255, 0, 255))
 
 image.writeFile("examples/rounded_rectangle.png")

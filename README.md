@@ -23,6 +23,70 @@ Features:
 
 ## Examples
 
+### Square
+[examples/square.nim](examples/square.nim)
+```nim
+var p: Path
+p.rect(50, 50, 100, 100)
+
+image.fillPath(p, rgba(255, 0, 0, 255))
+```
+![example output](examples/square.png)
+
+### Rounded rectangle
+[examples/rounded_rectangle.nim](examples/rounded_rectangle.nim)
+```nim
+let
+  x = 50.0
+  y = 50.0
+  w = 100.0
+  h = 100.0
+  r = 25.0
+
+var path: Path
+path.roundedRect(vec2(x, y), vec2(w, h), r, r, r, r)
+
+image.fillPath(path, rgba(0, 255, 0, 255))
+```
+![example output](examples/rounded_rectangle.png)
+
+### Heart
+[examples/heart.nim](examples/heart.nim)
+```nim
+image.fillPath(
+  """
+    M 20 60
+    A 40 40 90 0 1 100 60
+    A 40 40 90 0 1 180 60
+    Q 180 120 100 180
+    Q 20 120 20 60
+    z
+  """,
+  parseHtmlColor("#FC427B").rgba
+)
+```
+![example output](examples/heart.png)
+
+### Shadow
+[examples/shadow.nim](examples/shadow.nim)
+```nim
+var p: Path
+p.polygon(100, 100, 70, sides=8)
+p.closePath()
+
+var polyImage = newImage(200, 200)
+polyImage.fillPath(p, rgba(255, 255, 255, 255))
+
+image.draw(polyImage.shadow(
+  offset = vec2(2, 2),
+  spread = 2,
+  blur = 10,
+  color = rgba(0, 0, 0, 200)
+))
+image.draw(polyImage)
+```
+![example output](examples/shadow.png)
+
 ### Blur
 [examples/blur.nim](examples/blur.nim)
 ```nim
@@ -40,33 +104,6 @@ image.draw(trees)
 image.draw(blur)
 ```
 ![example output](examples/blur.png)
-
-### Rounded rectangle
-[examples/rounded_rectangle.nim](examples/rounded_rectangle.nim)
-```nim
-let
-  x = 50.0
-  y = 50.0
-  w = 100.0
-  h = 100.0
-  r = 25.0
-
-var path: Path
-path.roundedRect(vec2(x, y), vec2(w, h), r, r, r, r)
-
-image.fillPath(path, rgba(255, 0, 0, 255))
-```
-![example output](examples/rounded_rectangle.png)
-
-### Square
-[examples/square.nim](examples/square.nim)
-```nim
-var p: Path
-p.rect(50, 50, 100, 100)
-
-image.fillPath(p, rgba(255, 0, 0, 255))
-```
-![example output](examples/square.png)
 
 ### Tiger
 [examples/tiger.nim](examples/tiger.nim)
