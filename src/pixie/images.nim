@@ -686,10 +686,7 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
           # Check we are not rotated before using SIMD blends
           when type(a) is Image:
             if blendMode.hasSimdBlender():
-              let
-                blenderSimd = blendMode.blenderSimd()
-                first32 = cast[M128i]([uint32.high, 0, 0, 0]) # First 32 bits
-                alphaMask = mm_set1_epi32(cast[int32](0xff000000)) # Only `a`
+              let blenderSimd = blendMode.blenderSimd()
               for _ in countup(x, xMax - 4, 4):
                 let
                   srcPos = p + dx * x.float32 + dy * y.float32
@@ -701,24 +698,7 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
                 else: # b is a Mask
                   # Need to move 4 mask values into the alpha slots
                   var source = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
-                  source = mm_slli_si128(source, 2)
-                  source = mm_shuffle_epi32(source, MM_SHUFFLE(1, 1, 0, 0))
-
-                  var
-                    i = mm_and_si128(source, first32)
-                    j = mm_and_si128(source, mm_slli_si128(first32, 4))
-                    k = mm_and_si128(source, mm_slli_si128(first32, 8))
-                    l = mm_and_si128(source, mm_slli_si128(first32, 12))
-
-                  # Shift the values to `a`
-                  i = mm_slli_si128(i, 1)
-                  k = mm_slli_si128(k, 3)
-                  l = mm_slli_si128(l, 2)
-
-                  source = mm_and_si128(
-                    mm_or_si128(mm_or_si128(i, j), mm_or_si128(k, l)),
-                    alphaMask
-                  )
+                  source = unpackAlphaValues(source)
 
                 mm_storeu_si128(
                   a.data[a.dataIndex(x, y)].addr,
