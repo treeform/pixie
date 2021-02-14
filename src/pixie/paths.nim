@@ -1050,6 +1050,10 @@ proc fillShapes(
     coverages = newSeq[uint8](mask.width)
     hits = newSeq[(float32, int16)](4)
 
+
+  when defined(amd64) and not defined(pixieNoSimd):
+    let maskerSimd = bmNormal.maskerSimd()
+
   for y in startY ..< stopY:
     # Reset buffer for this row
     zeroMem(coverages[0].addr, coverages.len)
@@ -1076,7 +1080,7 @@ proc fillShapes(
           let backdrop = mm_loadu_si128(mask.data[mask.dataIndex(x, y)].addr)
           mm_storeu_si128(
             mask.data[mask.dataIndex(x, y)].addr,
-            maskNormalSimd(backdrop, coverage)
+            maskerSimd(backdrop, coverage)
           )
         x += 16
 

@@ -160,7 +160,7 @@ proc SetSat(C: Color, s: float32): Color {.inline.} =
   if satC > 0:
     result = (C - min([C.r, C.g, C.b])) * s / satC
 
-proc blendNormal*(backdrop, source: ColorRGBA): ColorRGBA =
+proc blendNormal(backdrop, source: ColorRGBA): ColorRGBA =
   if backdrop.a == 0:
     return source
   if source.a == 255:
@@ -541,7 +541,7 @@ when defined(amd64) and not defined(pixieNoSimd):
       alphaMask
     )
 
-  proc blendNormalSimd*(backdrop, source: M128i): M128i =
+  proc blendNormalSimd(backdrop, source: M128i): M128i =
     let
       alphaMask = mm_set1_epi32(cast[int32](0xff000000))
       oddMask = mm_set1_epi16(cast[int16](0xff00))
@@ -570,7 +570,7 @@ when defined(amd64) and not defined(pixieNoSimd):
       mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
     )
 
-  proc blendMaskSimd*(backdrop, source: M128i): M128i =
+  proc blendMaskSimd(backdrop, source: M128i): M128i =
     let
       alphaMask = mm_set1_epi32(cast[int32](0xff000000))
       oddMask = mm_set1_epi16(cast[int16](0xff00))
@@ -591,7 +591,7 @@ when defined(amd64) and not defined(pixieNoSimd):
 
     mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
 
-  proc blendOverwriteSimd*(backdrop, source: M128i): M128i =
+  proc blendOverwriteSimd(backdrop, source: M128i): M128i =
     source
 
   proc blenderSimd*(blendMode: BlendMode): BlenderSimd =
@@ -605,7 +605,7 @@ when defined(amd64) and not defined(pixieNoSimd):
   proc hasSimdBlender*(blendMode: BlendMode): bool =
     blendMode in {bmNormal, bmMask, bmOverwrite}
 
-  proc maskNormalSimd*(backdrop, source: M128i): M128i =
+  proc maskNormalSimd(backdrop, source: M128i): M128i =
     ## Blending masks
     let
       oddMask = mm_set1_epi16(cast[int16](0xff00))
@@ -642,7 +642,7 @@ when defined(amd64) and not defined(pixieNoSimd):
 
     mm_or_si128(blendedEven, mm_slli_epi16(blendedOdd, 8))
 
-  proc maskMaskSimd*(backdrop, source: M128i): M128i =
+  proc maskMaskSimd(backdrop, source: M128i): M128i =
     let
       oddMask = mm_set1_epi16(cast[int16](0xff00))
       div255 = mm_set1_epi16(cast[int16](0x8081))
