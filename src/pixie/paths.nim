@@ -783,14 +783,14 @@ proc quickSort(a: var seq[(float32, int16)], inl, inr: int) =
   quickSort(a, inl, r)
   quickSort(a, l, inr)
 
-proc computeBounds(seqs: varargs[seq[(Segment, int16)]]): Rect =
+proc computeBounds(partitions: seq[seq[(Segment, int16)]]): Rect =
   var
     xMin = float32.high
     xMax = float32.low
     yMin = float32.high
     yMax = float32.low
-  for s in seqs:
-    for (segment, _) in s:
+  for partition in partitions:
+    for (segment, _) in partition:
       xMin = min(xMin, min(segment.at.x, segment.to.x))
       xMax = max(xMax, max(segment.at.x, segment.to.x))
       yMin = min(yMin, min(segment.at.y, segment.to.y))
@@ -813,11 +813,23 @@ proc shouldFill(windingRule: WindingRule, count: int): bool {.inline.} =
   of wrEvenOdd:
     count mod 2 != 0
 
-proc partitionSegments(shapes: seq[seq[Vec2]], middle: int): tuple[
-  topHalf: seq[(Segment, int16)],
-  bottomHalf: seq[(Segment, int16)],
-  fullHeight: seq[(Segment, int16)]
-] =
+proc partitionSegments(
+  shapes: seq[seq[Vec2]], height: int
+): seq[seq[(Segment, int16)]] =
+  ## Puts segments into the height partitions they intersect with.
+
+  var segmentCount: int
+  for shape in shapes:
+    segmentCount += shape.len - 1
+
+  let
+    maxPartitions = max(1, height div 10)
+    numPartitions = min(maxPartitions, max(1, segmentCount div 10))
+
+  result.setLen(numPartitions)
+
+  let partitionHeight = height div numPartitions
+
   for shape in shapes:
     for segment in shape.segments:
       if segment.at.y == segment.to.y: # Skip horizontal
@@ -828,19 +840,22 @@ proc partitionSegments(shapes: seq[seq[Vec2]], middle: int): tuple[
       if segment.at.y > segment.to.y:
         swap(segment.at, segment.to)
         winding = -1
-      if ceil(segment.to.y).int < middle:
-        result.topHalf.add((segment, winding))
-      elif segment.at.y.int >= middle:
-        result.bottomHalf.add((segment, winding))
+
+      if partitionHeight == 0:
+        result[0].add((segment, winding))
       else:
-        result.fullHeight.add((segment, winding))
+        let
+          atPartition = max(0, segment.at.y).int div partitionHeight
+          toPartition = max(0, ceil(segment.to.y)).int div partitionHeight
+        for i in min(atPartition, result.high) .. min(toPartition, result.high):
+          result[i].add((segment, winding))
 
 proc computeCoverages(
   coverages: var seq[uint8],
   hits: var seq[(float32, int16)],
   size: Vec2,
   y: int,
-  topHalf, bottomHalf, fullHeight: seq[(Segment, int16)],
+  partitions: seq[seq[(Segment, int16)]],
   windingRule: WindingRule
 ) =
   const
@@ -850,22 +865,15 @@ proc computeCoverages(
     offset = 1 / quality.float32
     initialOffset = offset / 2
 
-  proc intersects(
-    scanline: Line,
-    segment: Segment,
-    winding: int16,
-    hits: var seq[(float32, int16)],
-    numHits: var int
-  ) {.inline.} =
-    if segment.at.y <= scanline.a.y and segment.to.y >= scanline.a.y:
-      var at: Vec2
-      if scanline.intersects(segment, at):# and segment.to != at:
-        if numHits == hits.len:
-          hits.setLen(hits.len * 2)
-        hits[numHits] = (at.x.clamp(0, scanline.b.x), winding)
-        inc numHits
-
   var numHits: int
+
+  let
+    partitionHeight = size.y.int div partitions.len
+    partition =
+      if partitionHeight == 0:
+        0
+      else:
+        min(y div partitionHeight, partitions.high)
 
   # Do scanlines for this row
   for m in 0 ..< quality:
@@ -873,14 +881,14 @@ proc computeCoverages(
       yLine = y.float32 + initialOffset + offset * m.float32 + ep
       scanline = Line(a: vec2(0, yLine), b: vec2(size.x, yLine))
     numHits = 0
-    if y < size.y.int div 2:
-      for (segment, winding) in topHalf:
-        scanline.intersects(segment, winding, hits, numHits)
-    else:
-      for (segment, winding) in bottomHalf:
-        scanline.intersects(segment, winding, hits, numHits)
-    for (segment, winding) in fullHeight:
-      scanline.intersects(segment, winding, hits, numHits)
+    for (segment, winding) in partitions[partition]:
+      if segment.at.y <= scanline.a.y and segment.to.y >= scanline.a.y:
+        var at: Vec2
+        if scanline.intersects(segment, at):# and segment.to != at:
+          if numHits == hits.len:
+            hits.setLen(hits.len * 2)
+          hits[numHits] = (at.x.clamp(0, scanline.b.x), winding)
+          inc numHits
 
     quickSort(hits, 0, numHits - 1)
 
@@ -928,13 +936,12 @@ proc fillShapes(
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
-  let (topHalf, bottomHalf, fullHeight) =
-    partitionSegments(shapes, image.height div 2)
+  let partitions = partitionSegments(shapes, image.height)
 
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
   let
-    bounds = computeBounds(topHalf, bottomHalf, fullHeight)
+    bounds = computeBounds(partitions)
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
     stopY = min(image.height, (bounds.y + bounds.h).int)
@@ -956,7 +963,7 @@ proc fillShapes(
       hits,
       image.wh,
       y,
-      topHalf, bottomHalf, fullHeight,
+      partitions,
       windingRule
     )
 
@@ -1029,13 +1036,12 @@ proc fillShapes(
   shapes: seq[seq[Vec2]],
   windingRule: WindingRule
 ) =
-  let (topHalf, bottomHalf, fullHeight) =
-    partitionSegments(shapes, mask.height div 2)
+  let partitions = partitionSegments(shapes, mask.height)
 
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
   let
-    bounds = computeBounds(topHalf, bottomHalf, fullHeight)
+    bounds = computeBounds(partitions)
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
     stopY = min(mask.height, (bounds.y + bounds.h).int)
@@ -1053,7 +1059,7 @@ proc fillShapes(
       hits,
       mask.wh,
       y,
-      topHalf, bottomHalf, fullHeight,
+      partitions,
       windingRule
     )
 
