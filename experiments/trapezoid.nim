@@ -27,7 +27,7 @@ proc roundBy*(v: Vec2, n: float32): Vec2 {.inline.} =
 
 proc pathToTrapezoids(p: Path): seq[Trapezoid] =
 
-  var polygons = p.commands.commandsToPolygons()
+  var polygons = p.commandsToShapes()
 
   const q = 1/256.0
 
@@ -179,7 +179,7 @@ block:
   var image = newImage(200, 200)
   image.fill(rgba(255, 255, 255, 255))
 
-  var p = newPath()
+  var p: Path
   p.moveTo(50, 50)
   p.lineTo(50, 150)
   p.lineTo(150, 150)
@@ -189,7 +189,7 @@ block:
   var trapezoids = p.pathToTrapezoids()
   image.drawTrapezoids(trapezoids)
 
-  image.writeFile("trapezoids/rect.png")
+  image.writeFile("experiments/trapezoids/rect.png")
 
 block:
   # Rhombus
@@ -197,7 +197,7 @@ block:
   var image = newImage(200, 200)
   image.fill(rgba(255, 255, 255, 255))
 
-  var p = newPath()
+  var p: Path
   p.moveTo(100, 50)
   p.lineTo(150, 100)
   p.lineTo(100, 150)
@@ -207,7 +207,7 @@ block:
   var trapezoids = p.pathToTrapezoids()
   image.drawTrapezoids(trapezoids)
 
-  image.writeFile("trapezoids/rhombus.png")
+  image.writeFile("experiments/trapezoids/rhombus.png")
 
 block:
   # heart
@@ -223,7 +223,7 @@ block:
   var trapezoids = p.pathToTrapezoids()
   image.drawTrapezoids(trapezoids)
 
-  image.writeFile("trapezoids/heart.png")
+  image.writeFile("experiments/trapezoids/heart.png")
 
 block:
   # l
@@ -240,7 +240,7 @@ block:
   var trapezoids = p.pathToTrapezoids()
   image.drawTrapezoids(trapezoids)
 
-  image.writeFile("trapezoids/l.png")
+  image.writeFile("experiments/trapezoids/l.png")
 
 block:
   # g
@@ -257,4 +257,4 @@ block:
   var trapezoids = p.pathToTrapezoids()
   image.drawTrapezoids(trapezoids)
 
-  image.writeFile("trapezoids/g.png")
+  image.writeFile("experiments/trapezoids/g.png")
