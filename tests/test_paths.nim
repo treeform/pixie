@@ -1,4 +1,4 @@
-import pixie, chroma, pixie/fileformats/png
+import chroma, pixie, pixie/fileformats/png
 
 block:
   let pathStr = """

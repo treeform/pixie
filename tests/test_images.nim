@@ -1,4 +1,4 @@
-import pixie, chroma, vmath
+import chroma, pixie, vmath
 
 block:
   let image = newImage(10, 10)

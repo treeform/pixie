@@ -1,4 +1,4 @@
-import random, strformat, pixie/paths, pixie/common, strformat
+import pixie/common, pixie/paths, random, strformat
 
 randomize()
 

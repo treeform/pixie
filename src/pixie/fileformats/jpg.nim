@@ -1,4 +1,4 @@
-import pixie/images, pixie/common
+import pixie/common, pixie/images
 
 when defined(pixieUseStb):
   import pixie/fileformats/stb_image/stb_image

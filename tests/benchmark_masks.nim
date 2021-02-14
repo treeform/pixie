@@ -1,4 +1,4 @@
-import chroma, pixie, benchy
+import benchy, chroma, pixie
 
 let mask = newMask(2560, 1440)
 

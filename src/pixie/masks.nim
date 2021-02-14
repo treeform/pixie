@@ -1,4 +1,4 @@
-import common, vmath, system/memory
+import common, system/memory, vmath
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2

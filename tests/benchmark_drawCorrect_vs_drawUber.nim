@@ -1,4 +1,5 @@
-import chroma, vmath, benchy
+import benchy, chroma, vmath
+
 include pixie/images
 
 block:
@@ -22,7 +23,6 @@ block:
   timeIt "drawUber small-on-big":
     a.drawUber(b, translate(vec2(25, 25)), bmNormal)
     keep(b)
-
 
 block:
   let

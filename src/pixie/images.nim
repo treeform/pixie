@@ -1,4 +1,4 @@
-import chroma, blends, bumpy, vmath, common, system/memory, masks
+import blends, bumpy, chroma, common, masks, system/memory, vmath
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -571,7 +571,7 @@ proc drawCorrect(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
         else: # b is a Mask
           let
             sample = b.getValueSmooth(xFloat, yFloat)
-            blended =  blender(backdrop, rgba(0, 0, 0, sample))
+            blended = blender(backdrop, rgba(0, 0, 0, sample))
         a.setRgbaUnsafe(x, y, blended)
       else: # a is a Mask
         let backdrop = a.getValueUnsafe(x, y)
@@ -678,7 +678,7 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
           else: # b is a Mask
             let
               sample = b.getValueSmooth(xFloat, yFloat)
-              blended =  blender(backdrop, rgba(0, 0, 0, sample))
+              blended = blender(backdrop, rgba(0, 0, 0, sample))
           a.setRgbaUnsafe(x, y, blended)
         else: # a is a Mask
           let backdrop = a.getValueUnsafe(x, y)
@@ -765,7 +765,7 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
           else: # b is a Mask
             let
               sample = b.getValueUnsafe(xFloat.int, yFloat.int)
-              blended =  blender(backdrop, rgba(0, 0, 0, sample))
+              blended = blender(backdrop, rgba(0, 0, 0, sample))
           a.setRgbaUnsafe(x, y, blended)
         else: # a is a Mask
           let backdrop = a.getValueUnsafe(x, y)
@@ -827,11 +827,13 @@ proc shift*(target: Image | Mask, offset: Vec2) =
   ## Shifts the target by offset.
   if offset != vec2(0, 0):
     let copy = target.copy() # Copy to read from
+
     # Reset target for being drawn to
     when type(target) is Image:
       target.fill(rgba(0, 0, 0, 0))
     else:
       target.fill(0)
+
     target.draw(copy, offset, bmOverwrite) # Draw copy at offset
 
 proc shadow*(

@@ -1,4 +1,4 @@
-import os, strutils, osproc, sequtils, algorithm
+import algorithm, os, osproc, sequtils, strutils
 
 proc cutBetween(str, a, b: string): string =
   let
@@ -30,7 +30,8 @@ for path in exampleFiles:
     md.add "```nim"
     md.add innerCode.strip()
     md.add "```"
-    md.add "![example output](" & path.replace(".nim", ".png").replace("\\", "/") & ")"
+    md.add "![example output](" & path.replace(".nim", ".png").replace("\\",
+        "/") & ")"
     md.add ""
 
 var readme = readFile("README.md")

@@ -1,4 +1,4 @@
-import pixie, chroma, vmath
+import chroma, pixie, vmath
 
 let
   image = newImage(200, 200)

@@ -1,4 +1,4 @@
-import pixie/fileformats/jpg, benchy
+import benchy, pixie/fileformats/jpg
 
 let data = readFile("tests/images/jpg/jpeg420exif.jpg")
 

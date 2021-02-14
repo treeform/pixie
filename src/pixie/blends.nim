@@ -1,5 +1,6 @@
 ## Blending modes.
-import chroma, math, common
+
+import chroma, common, math
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -28,8 +29,8 @@ type
     bmColor
     bmLuminosity
 
-    bmMask  ## Special blend mode that is used for masking
-    bmOverwrite  ## Special blend mode that just copies pixels
+    bmMask         ## Special blend mode that is used for masking
+    bmOverwrite    ## Special blend mode that just copies pixels
     bmSubtractMask ## Inverse mask
     bmIntersectMask
     bmExcludeMask
@@ -141,9 +142,9 @@ proc ClipColor(C: var Color) {.inline.} =
     n = min([C.r, C.g, C.b])
     x = max([C.r, C.g, C.b])
   if n < 0:
-      C = L + (((C - L) * L) / (L - n))
+    C = L + (((C - L) * L) / (L - n))
   if x > 1:
-      C = L + (((C - L) * (1 - L)) / (x - L))
+    C = L + (((C - L) * (1 - L)) / (x - L))
 
 proc SetLum(C: Color, l: float32): Color {.inline.} =
   let d = l - Lum(C)
@@ -297,7 +298,12 @@ proc blendSoftLight(backdrop, source: ColorRGBA): ColorRGBA =
 
   when defined(amd64) and not defined(pixieNoSimd):
     let
-      vb = mm_setr_ps(backdrop.r.float32, backdrop.g.float32, backdrop.b.float32, 0)
+      vb = mm_setr_ps(
+        backdrop.r.float32,
+        backdrop.g.float32,
+        backdrop.b.float32,
+        0
+      )
       vs = mm_setr_ps(source.r.float32, source.g.float32, source.b.float32, 0)
       v2 = mm_set1_ps(2)
       v255 = mm_set1_ps(255)
@@ -519,8 +525,8 @@ when defined(amd64) and not defined(pixieNoSimd):
   proc unpackAlphaValues*(v: M128i): M128i {.inline.} =
     ## Unpack the first 32 bits into 4 rgba(0, 0, 0, value)
     let
-      first32 = cast[M128i]([uint32.high, 0, 0, 0]) # First 32 bits
-      alphaMask = mm_set1_epi32(cast[int32](0xff000000)) # Only `a`
+      first32 = cast[M128i]([uint32.high, 0, 0, 0])                # First 32 bits
+      alphaMask = mm_set1_epi32(cast[int32](0xff000000))           # Only `a`
 
     result = mm_shuffle_epi32(v, MM_SHUFFLE(0, 0, 0, 0))
 

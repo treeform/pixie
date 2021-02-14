@@ -1,4 +1,4 @@
-import benchy, chroma, vmath, pixie/images
+import benchy, chroma, pixie/images, vmath
 
 include pixie/blends
 

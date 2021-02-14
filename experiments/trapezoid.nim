@@ -1,9 +1,8 @@
 
-
-import pixie, pixie/paths, pixie/images, chroma, print, vmath, algorithm, sequtils, bumpy
+import algorithm, bumpy, chroma, pixie, pixie/images, pixie/paths, print,
+    sequtils, vmath
 
 printColors = false
-
 
 proc intersectsInner*(a, b: Segment, at: var Vec2): bool {.inline.} =
   ## Checks if the a segment intersects b segment.
@@ -73,7 +72,7 @@ proc pathToTrapezoids(p: Path): seq[Trapezoid] =
     var collision = false
     for y in yScanLines:
       var at: Vec2
-      if intersects(line(vec2(0,y), vec2(1,y)), s, at):
+      if intersects(line(vec2(0, y), vec2(1, y)), s, at):
         at = at.roundBy(q)
         at.y = y
         if s.at.y != at.y and s.to.y != at.y:
@@ -136,9 +135,9 @@ proc pathToTrapezoids(p: Path): seq[Trapezoid] =
         Trapezoid(
           nw: a.at,
           ne: b.at,
-          se: b.to,# + vec2(0,0.7),
-          sw: a.to# + vec2(0,0.7)
-        )
+          se: b.to, # + vec2(0,0.7),
+        sw: a.to # + vec2(0,0.7)
+      )
       )
 
 proc trapFill(image: Image, t: Trapezoid, color: ColorRGBA) =

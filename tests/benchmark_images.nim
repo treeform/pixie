@@ -1,4 +1,4 @@
-import chroma, pixie, benchy
+import benchy, chroma, pixie
 
 let image = newImage(2560, 1440)
 

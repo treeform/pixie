@@ -1,8 +1,8 @@
-import pixie/images, pixie/masks, pixie/paths, pixie/common, pixie/blends,
-  pixie/fileformats/bmp, pixie/fileformats/png, pixie/fileformats/jpg,
-  pixie/fileformats/svg, flatty/binny, os, pixie/gradients
+import flatty/binny, os, pixie/blends, pixie/common, pixie/fileformats/bmp,
+    pixie/fileformats/jpg, pixie/fileformats/png, pixie/fileformats/svg,
+    pixie/images, pixie/masks, pixie/paths
 
-export images, masks, paths, common, blends, gradients
+export blends, common, images, masks, paths
 
 type
   FileFormat* = enum

@@ -1,4 +1,4 @@
-import common, strutils, vmath, images, masks, chroma, bumpy, blends
+import blends, bumpy, chroma, common, images, masks, strutils, vmath
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -571,15 +571,15 @@ proc commandsToShapes*(path: Path): seq[seq[Vec2]] =
 
       var q = sqrt(max(0, pq))
       if large == sweep:
-          q = -q
+        q = -q
 
       proc svgAngle(u, v: Vec2): float32 =
         let
-          dot = dot(u,v)
+          dot = dot(u, v)
           len = length(u) * length(v)
         result = arccos(clamp(dot / len, -1, 1))
         if (u.x * v.y - u.y * v.x) < 0:
-            result = -result
+          result = -result
 
       let
         cp = vec2(q * radii.x * p.y / radii.y, -q * radii.y * p.x / radii.x)
@@ -929,7 +929,7 @@ proc computeCoverages(
     for (segment, winding) in partitions[partition]:
       if segment.at.y <= scanline.a.y and segment.to.y >= scanline.a.y:
         var at: Vec2
-        if scanline.intersects(segment, at):# and segment.to != at:
+        if scanline.intersects(segment, at): # and segment.to != at:
           if numHits == hits.len:
             hits.setLen(hits.len * 2)
           hits[numHits] = (at.x.clamp(0, scanline.b.x), winding)
@@ -1153,6 +1153,7 @@ proc fillShapes(
         if peeked == 0:
           x += 8
           continue
+
       let coverage = coverages[x]
       if coverage != 0:
         let

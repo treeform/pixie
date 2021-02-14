@@ -1,7 +1,7 @@
 ## Load and Save SVG files.
 
-import chroma, pixie/images, pixie/common, pixie/paths, vmath, xmlparser,
-  xmltree, strutils, strutils, cairo
+import cairo, chroma, pixie/common, pixie/images, pixie/paths, strutils, vmath,
+    xmlparser, xmltree
 
 type Path = paths.Path
 

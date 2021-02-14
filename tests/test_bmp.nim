@@ -1,4 +1,4 @@
-import pixie, pixie/fileformats/bmp, chroma
+import chroma, pixie, pixie/fileformats/bmp
 
 block:
   var image = newImage(4, 2)
@@ -32,5 +32,6 @@ block:
 
 block:
   for bits in [32, 24]:
-    var image = decodeBmp(readFile("tests/images/bmp/knight." & $bits & ".master.bmp"))
+    var image = decodeBmp(readFile("tests/images/bmp/knight." & $bits &
+        ".master.bmp"))
     writeFile("tests/images/bmp/knight." & $bits & ".bmp", encodeBmp(image))
