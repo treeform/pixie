@@ -353,44 +353,86 @@ proc arcTo*(path: var Path, ctrl1, ctrl2: Vec2, radius: float32) {.inline.} =
 proc arcTo*(path: var Path, x1, y1, x2, y2, radius: float32) =
   path.arcTo(vec2(x1, y1), vec2(x2, y2), radius)
 
-proc rect*(path: var Path, x, y, w, h: float32) =
-  path.moveTo(x, y)
-  path.lineTo(x + w, y)
-  path.lineTo(x + w, y + h)
-  path.lineTo(x, y + h)
-  path.closePath()
+proc rect*(path: var Path, x, y, w, h: float32, clockwise = true) =
+  if clockwise:
+    path.moveTo(x, y)
+    path.lineTo(x + w, y)
+    path.lineTo(x + w, y + h)
+    path.lineTo(x, y + h)
+    path.closePath()
+  else:
+    path.moveTo(x, y)
+    path.lineTo(x, y + h)
+    path.lineTo(x + w, y + h)
+    path.lineTo(x + w, y)
+    path.closePath()
 
-proc rect*(path: var Path, pos: Vec2, wh: Vec2) {.inline.} =
-  path.rect(pos.x, pos.y, wh.x, wh.y)
+proc rect*(path: var Path, pos: Vec2, wh: Vec2, clockwise = true) {.inline.} =
+  path.rect(pos.x, pos.y, wh.x, wh.y, clockwise)
+
+const splineCircleK = 4.0 * (-1.0 + sqrt(2.0)) / 3
 
 proc roundedRect*(
   path: var Path, pos, wh: Vec2, nw, ne, se, sw: float32, clockwise = true
 ) =
   let
-    maxRadius = min(wh.x / 2, wh.y / 2)
+    x = pos.x
+    y = pos.y
+    w = wh.x
+    h = wh.y
+    s = splineCircleK
+
+    maxRadius = min(w/2, h/2)
     nw = min(nw, maxRadius)
     ne = min(ne, maxRadius)
     se = min(se, maxRadius)
     sw = min(sw, maxRadius)
 
+    t1 = vec2(x + nw, y)
+    t2 = vec2(x + w - ne, y)
+    r1 = vec2(x + w, y + ne)
+    r2 = vec2(x + w, y + h - se)
+    b1 = vec2(x + w - se, y + h)
+    b2 = vec2(x + sw, y + h)
+    l1 = vec2(x, y + h - sw)
+    l2 = vec2(x, y + nw)
+
+    t1h = t1 + vec2(-nw*s, 0)
+    t2h = t2 + vec2(+ne*s, 0)
+    r1h = r1 + vec2(0, -ne*s)
+    r2h = r2 + vec2(0, +se*s)
+    b1h = b1 + vec2(+se*s, 0)
+    b2h = b2 + vec2(-sw*s, 0)
+    l1h = l1 + vec2(0, +sw*s)
+    l2h = l2 + vec2(0, -nw*s)
+
   if clockwise:
-    path.moveTo(pos.x + nw, pos.y)
-    path.arcTo(pos.x + wh.x, pos.y, pos.x + wh.x, pos.y + wh.y, ne)
-    path.arcTo(pos.x + wh.x, pos.y + wh.y, pos.x, pos.y + wh.y, se)
-    path.arcTo(pos.x, pos.y + wh.y, pos.x, pos.y, sw)
-    path.arcTo(pos.x, pos.y, pos.x + wh.x, pos.y, nw)
+    path.moveTo(t1)
+    path.lineTo(t2)
+    path.bezierCurveTo(t2h, r1h, r1)
+    path.lineTo(r2)
+    path.bezierCurveTo(r2h, b1h, b1)
+    path.lineTo(b2)
+    path.bezierCurveTo(b2h, l1h, l1)
+    path.lineTo(l2)
+    path.bezierCurveTo(l2h, t1h, t1)
   else:
-    path.moveTo(pos.x + wh.x + ne, pos.y)
-    path.arcTo(pos.x, pos.y, pos.x, pos.y + wh.y, nw)
-    path.arcTo(pos.x, pos.y + wh.y, pos.x + wh.x, pos.y + wh.y, sw)
-    path.arcTo(pos.x + wh.x, pos.y + wh.y, pos.x + wh.x, pos.y, se)
-    path.arcTo(pos.x + wh.x, pos.y, pos.x, pos.y, ne)
+    path.moveTo(t1)
+    path.bezierCurveTo(t1h, l2h, l2)
+    path.lineTo(l1)
+    path.bezierCurveTo(l1h, b2h, b2)
+    path.lineTo(b1)
+    path.bezierCurveTo(b1h, r2h, r2)
+    path.lineTo(r1)
+    path.bezierCurveTo(r1h, t2h, t2)
+    path.lineTo(t1)
+
   path.closePath()
 
 proc ellipse*(path: var Path, cx, cy, rx, ry: float32) =
   let
-    magicX = (4.0 * (-1.0 + sqrt(2.0)) / 3) * rx
-    magicY = (4.0 * (-1.0 + sqrt(2.0)) / 3) * ry
+    magicX = splineCircleK * rx
+    magicY = splineCircleK * ry
 
   path.moveTo(cx + rx, cy)
   path.bezierCurveTo(cx + rx, cy + magicY, cx + magicX, cy + ry, cx, cy + ry)
