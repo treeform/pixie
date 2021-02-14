@@ -966,13 +966,11 @@ proc fillShapes(
       # When supported, SIMD blend as much as possible
       let
         first32 = cast[M128i]([uint32.high, 0, 0, 0]) # First 32 bits
-        redMask = mm_set1_epi32(cast[int32](0x000000ff)) # Only `r`
         oddMask = mm_set1_epi16(cast[int16](0xff00))
         div255 = mm_set1_epi16(cast[int16](0x8081))
-        v255 = mm_set1_epi32(255)
         vColor = mm_set1_epi32(cast[int32](color))
 
-      for _ in countup(x, coverages.len - 16, 16):
+      for _ in countup(x, image.width - 16, 4):
         var coverage = mm_loadu_si128(coverages[x].addr)
         coverage = mm_and_si128(coverage, first32)
 
@@ -981,32 +979,11 @@ proc fillShapes(
           # If the coverages are not all zero
           var source = vColor
 
-          coverage = mm_slli_si128(coverage, 2)
-          coverage = mm_shuffle_epi32(coverage, MM_SHUFFLE(1, 1, 0, 0))
-
-          var
-            a = mm_and_si128(coverage, first32)
-            b = mm_and_si128(coverage, mm_slli_si128(first32, 4))
-            c = mm_and_si128(coverage, mm_slli_si128(first32, 8))
-            d = mm_and_si128(coverage, mm_slli_si128(first32, 12))
-
-          # Shift the coverages to `r`
-          a = mm_srli_si128(a, 2)
-          b = mm_srli_si128(b, 3)
-          d = mm_srli_si128(d, 1)
-
-          coverage = mm_and_si128(
-            mm_or_si128(mm_or_si128(a, b), mm_or_si128(c, d)),
-            redMask
-          )
-
-          if mm_movemask_epi8(mm_cmpeq_epi32(coverage, v255)) != 0xffff:
+          if mm_movemask_epi8(mm_cmpeq_epi32(coverage, first32)) != 0xffff:
             # If the coverages are not all 255
-
-            # Shift the coverages from `r` to `g` and `a` for multiplying later
-            coverage = mm_or_si128(
-              mm_slli_epi32(coverage, 8), mm_slli_epi32(coverage, 24)
-            )
+            coverage = unpackAlphaValues(coverage)
+            # Shift the coverages from `a` to `g` and `a` for multiplying
+            coverage = mm_or_si128(coverage, mm_srli_epi32(coverage, 16))
 
             var
               colorEven = mm_slli_epi16(source, 8)
@@ -1085,18 +1062,16 @@ proc fillShapes(
     when defined(amd64) and not defined(pixieNoSimd):
       # When supported, SIMD blend as much as possible
       for _ in countup(x, coverages.len - 16, 16):
-        var coverage = mm_loadu_si128(coverages[x].addr)
-
-        let eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
+        let
+          coverage = mm_loadu_si128(coverages[x].addr)
+          eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
         if mm_movemask_epi8(eqZero) != 0xffff:
           # If the coverages are not all zero
           let backdrop = mm_loadu_si128(mask.data[mask.dataIndex(x, y)].addr)
-
           mm_storeu_si128(
             mask.data[mask.dataIndex(x, y)].addr,
             maskNormalSimd(backdrop, coverage)
           )
-
         x += 16
 
     while x < mask.width:
