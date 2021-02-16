@@ -61,11 +61,11 @@ proc fillRadialGradient*(
   let
     distanceX = dist(center, edge)
     distanceY = dist(center, skew)
-    gradientAngle = normalize(edge - center).angle().fixAngle()
+    gradientAngle = normalize(center - edge).angle().fixAngle()
     mat = (
       translate(center) *
-      scale(vec2(distanceX, distanceY)) *
-      rotationMat3(gradientAngle)
+      rotationMat3(-gradientAngle) *
+      scale(vec2(distanceX, distanceY))
     ).inverse()
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
