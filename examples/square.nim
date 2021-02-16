@@ -1,4 +1,4 @@
-import pixie, chroma
+import chroma, pixie
 
 var image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))

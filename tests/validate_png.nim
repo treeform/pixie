@@ -1,4 +1,4 @@
-import chroma, pixie/fileformats/png, stb_image/read as stbi, strformat, pngsuite
+import chroma, pixie/fileformats/png, pngsuite, stb_image/read as stbi, strformat
 
 for file in pngSuiteFiles:
   let

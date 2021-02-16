@@ -1,4 +1,4 @@
-import pixie, chroma, vmath
+import chroma, pixie, vmath
 
 let
   trees = readImage("examples/data/trees.png")
@@ -8,7 +8,7 @@ let
 image.fill(rgba(255, 255, 255, 255))
 
 var p: Path
-p.polygon(100, 100, 70, sides=6)
+p.polygon(100, 100, 70, sides = 6)
 p.closePath()
 
 let mask = newMask(200, 200)

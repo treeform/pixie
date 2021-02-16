@@ -1,4 +1,4 @@
-import pixie/fileformats/svg, pixie, strformat
+import pixie, pixie/fileformats/svg, strformat
 
 const files = [
   "line01",

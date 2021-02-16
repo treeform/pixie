@@ -1,4 +1,4 @@
-import flatty/binny, chroma, pixie/common, pixie/images
+import chroma, flatty/binny, pixie/common, pixie/images
 
 # See: https://en.wikipedia.org/wiki/BMP_file_format
 

@@ -1,4 +1,4 @@
-import pixie/fileformats/png, strformat, pngsuite, pixie/common
+import pixie/common, pixie/fileformats/png, pngsuite, strformat
 
 for file in pngSuiteFiles:
   let

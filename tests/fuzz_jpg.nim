@@ -1,4 +1,4 @@
-import random, strformat, pixie/fileformats/jpg, pixie/common
+import pixie/common, pixie/fileformats/jpg, random, strformat
 
 randomize()
 

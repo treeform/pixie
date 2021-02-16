@@ -1,4 +1,4 @@
-import pixie, chroma, vmath, benchy
+import benchy, chroma, pixie, vmath
 
 block:
   let

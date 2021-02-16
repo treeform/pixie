@@ -1,4 +1,4 @@
-import svg_cairo, pixie, strformat
+import pixie, strformat, svg_cairo
 
 const files = [
   "line01",
