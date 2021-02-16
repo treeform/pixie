@@ -369,7 +369,7 @@ proc invert*(target: Image | Mask) =
     for j in i ..< target.data.len:
       target.data[j] = (255 - target.data[j]).uint8
 
-proc blur*(target: Image | Mask, radius: float32) =
+proc blur*(target: Image | Mask, radius: float32, offBounds: uint32 = 0) =
   ## Applies Gaussian blur to the image given a radius.
   let radius = round(radius).int
   if radius == 0:
@@ -399,6 +399,8 @@ proc blur*(target: Image | Mask, radius: float32) =
   let lookup = gaussianLookup(radius)
 
   when type(target) is Image:
+    # TODO support offBounds for images.
+    doAssert offBounds == 0
 
     template `*`(sample: ColorRGBA, a: uint32): array[4, uint32] =
       [
@@ -453,9 +455,12 @@ proc blur*(target: Image | Mask, radius: float32) =
       for x in 0 ..< target.width:
         var value: uint32
         for xb in -radius .. radius:
-          let
-            sample = target[x + xb, y]
-            a = lookup[xb + radius].uint32
+          var sample: uint32
+          if target.inside(x + xb, y):
+            sample = target.getValueUnsafe(x + xb, y)
+          else:
+            sample = offBounds
+          let a = lookup[xb + radius].uint32
           value += sample * a
         blurX.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
 
@@ -464,9 +469,12 @@ proc blur*(target: Image | Mask, radius: float32) =
       for x in 0 ..< target.width:
         var value: uint32
         for yb in -radius .. radius:
-          let
-            sample = blurX[x, y + yb]
-            a = lookup[yb + radius].uint32
+          var sample: uint32
+          if blurX.inside(x, y + yb):
+            sample = blurX.getValueUnsafe(x, y + yb)
+          else:
+            sample = offBounds
+          let a = lookup[yb + radius].uint32
           value += sample * a
         target.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
 
