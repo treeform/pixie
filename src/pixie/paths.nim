@@ -968,12 +968,10 @@ template computeCoverages(
             var i = fillStart
             when defined(amd64) and not defined(pixieNoSimd):
               let vSampleCoverage = mm_set1_epi8(cast[int8](sampleCoverage))
-              for _ in countup(i, fillStart + fillLen - 16, 16):
-                let current = mm_loadu_si128(coverages[i].addr)
-                mm_storeu_si128(
-                  coverages[i].addr,
-                  mm_add_epi8(current, vSampleCoverage)
-                )
+              for j in countup(i, fillStart + fillLen - 16, 16):
+                var coverage = mm_loadu_si128(coverages[j].addr)
+                coverage = mm_add_epi8(coverage, vSampleCoverage)
+                mm_storeu_si128(coverages[j].addr, coverage)
                 i += 16
             for j in i ..< fillStart + fillLen:
               coverages[j] += sampleCoverage
