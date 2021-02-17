@@ -905,10 +905,11 @@ proc computeCoverages(
   windingRule: WindingRule
 ) {.inline.} =
   const
+    ep = 0.0001 * PI
     quality = 5 # Must divide 255 cleanly (1, 3, 5, 15, 17, 51, 85)
     sampleCoverage = (255 div quality).uint8
     offset = 1 / quality.float32
-    initialOffset = offset / 2
+    initialOffset = offset / 2 + ep
 
   let
     partition =
@@ -921,9 +922,8 @@ proc computeCoverages(
 
   # Do scanlines for this row
   for m in 0 ..< quality:
-    const ep = 0.0001 * PI
     let
-      yLine = y.float32 + initialOffset + offset * m.float32 + ep
+      yLine = y.float32 + initialOffset + offset * m.float32
       scanline = Line(a: vec2(0, yLine), b: vec2(size.x, yLine))
     numHits = 0
     for (segment, winding) in partitions[partition]:
