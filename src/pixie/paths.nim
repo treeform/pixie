@@ -894,7 +894,7 @@ proc partitionSegments(
 
   partitions
 
-proc computeCoverages(
+template computeCoverages(
   coverages: var seq[uint8],
   hits: var seq[(float32, int16)],
   numHits: var int,
@@ -903,7 +903,7 @@ proc computeCoverages(
   partitions: seq[seq[(Segment, int16)]],
   partitionHeight: uint32,
   windingRule: WindingRule
-) {.inline.} =
+) =
   const
     ep = 0.0001 * PI
     quality = 5 # Must divide 255 cleanly (1, 3, 5, 15, 17, 51, 85)
@@ -913,7 +913,7 @@ proc computeCoverages(
 
   let
     partition =
-      if partitionHeight == 0:
+      if partitionHeight == 0 or partitions.len == 1:
         0.uint32
       else:
         min(y.uint32 div partitionHeight, partitions.high.uint32)
@@ -921,10 +921,10 @@ proc computeCoverages(
   zeroMem(coverages[0].addr, coverages.len)
 
   # Do scanlines for this row
+  var yLine = y.float32 + initialOffset - offset
   for m in 0 ..< quality:
-    let
-      yLine = y.float32 + initialOffset + offset * m.float32
-      scanline = Line(a: vec2(0, yLine), b: vec2(size.x, yLine))
+    yLine += offset
+    let scanline = line(vec2(0, yLine), vec2(size.x, yLine))
     numHits = 0
     for (segment, winding) in partitions[partition]:
       if segment.at.y <= scanline.a.y and segment.to.y >= scanline.a.y:
@@ -932,47 +932,55 @@ proc computeCoverages(
         if scanline.intersects(segment, at): # and segment.to != at:
           if numHits == hits.len:
             hits.setLen(hits.len * 2)
-          hits[numHits] = (at.x.clamp(0, scanline.b.x), winding)
+          hits[numHits] = (min(at.x, size.x), winding)
           inc numHits
 
     quickSort(hits, 0, numHits - 1)
 
     var
-      x: float32
+      prevAt: float32
       count: int
     for i in 0 ..< numHits:
       let (at, winding) = hits[i]
-
-      var fillStart = x.int
-
-      let leftCover = if at.int - x.int > 0: trunc(x) + 1 - x else: at - x
-      if leftCover != 0:
-        inc fillStart
+      if at > 0:
         if shouldFill(windingRule, count):
-          coverages[x.int] += (leftCover * sampleCoverage.float32).uint8
+          var fillStart = prevAt.int
 
-      if at.int - x.int > 0:
-        let rightCover = at - trunc(at)
-        if rightCover > 0 and shouldFill(windingRule, count):
-          coverages[at.int] += (rightCover * sampleCoverage.float32).uint8
+          let
+            pixelCrossed = at.int - prevAt.int > 0
+            leftCover =
+              if pixelCrossed:
+                trunc(prevAt) + 1 - prevAt
+              else:
+                at - prevAt
+          if leftCover != 0:
+            inc fillStart
+            coverages[prevAt.int] +=
+              (leftCover * sampleCoverage.float32).uint8
 
-      let fillLen = at.int - fillStart
-      if fillLen > 0 and shouldFill(windingRule, count):
-        var i = fillStart
-        when defined(amd64) and not defined(pixieNoSimd):
-          let vSampleCoverage = mm_set1_epi8(cast[int8](sampleCoverage))
-          for j in countup(i, fillStart + fillLen - 16, 16):
-            let current = mm_loadu_si128(coverages[j].addr)
-            mm_storeu_si128(
-              coverages[j].addr,
-              mm_add_epi8(current, vSampleCoverage)
-            )
-            i += 16
-        for j in i ..< fillStart + fillLen:
-          coverages[j] += sampleCoverage
+          if pixelCrossed:
+            let rightCover = at - trunc(at)
+            if rightCover > 0:
+              coverages[at.int] += (rightCover * sampleCoverage.float32).uint8
+
+          let fillLen = at.int - fillStart
+          if fillLen > 0:
+            var i = fillStart
+            when defined(amd64) and not defined(pixieNoSimd):
+              let vSampleCoverage = mm_set1_epi8(cast[int8](sampleCoverage))
+              for _ in countup(i, fillStart + fillLen - 16, 16):
+                let current = mm_loadu_si128(coverages[i].addr)
+                mm_storeu_si128(
+                  coverages[i].addr,
+                  mm_add_epi8(current, vSampleCoverage)
+                )
+                i += 16
+            for j in i ..< fillStart + fillLen:
+              coverages[j] += sampleCoverage
+
+        prevAt = at
 
       count += winding
-      x = at
 
 proc fillShapes(
   image: Image,
