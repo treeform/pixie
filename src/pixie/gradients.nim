@@ -1,4 +1,4 @@
-import images, vmath, chroma, common
+import chroma, common, images, vmath
 
 type ColorStop* = object
   ## Represents color on a gradient curve.
