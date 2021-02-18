@@ -1,18 +1,13 @@
 import pixie
 
-let
-  image = newImage(200, 200)
-
+let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
 
-var p: Path
-p.moveTo(25, 25)
-p.lineTo(175, 175)
+let
+  start = vec2(25, 25)
+  stop = vec2(175, 175)
+  color = parseHtmlColor("#FF5C00").rgba
 
-image.strokePath(
-  p,
-  parseHtmlColor("#FF5C00").rgba,
-  strokeWidth = 10,
-)
+image.drawSegment(segment(start, stop), color, strokeWidth = 10)
 
 image.writeFile("examples/line.png")

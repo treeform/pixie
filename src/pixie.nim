@@ -61,3 +61,21 @@ proc drawRect*(mask: Mask, rect: Rect) =
   var path: Path
   path.rect(rect)
   mask.fillPath(path)
+
+proc drawSegment*(
+  image: Image,
+  segment: Segment,
+  color: ColorRGBA,
+  strokeWidth = 1.0,
+  blendMode = bmNormal
+) =
+  var path: Path
+  path.moveTo(segment.at)
+  path.lineTo(segment.to)
+  image.strokePath(path, color, strokeWidth, wrNonZero, blendMode)
+
+proc drawSegment*(mask: Mask, segment: Segment, strokeWidth: float32) =
+  var path: Path
+  path.moveTo(segment.at)
+  path.lineTo(segment.to)
+  mask.strokePath(path, strokeWidth)

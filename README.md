@@ -26,25 +26,23 @@ Features:
 ### Square
 [examples/square.nim](examples/square.nim)
 ```nim
-var p: Path
-p.rect(50, 50, 100, 100)
+let
+  pos = vec2(50, 50)
+  wh = vec2(100, 100)
 
-image.fillPath(p, rgba(255, 0, 0, 255))
+image.drawRect(rect(pos, wh), rgba(255, 0, 0, 255))
 ```
 ![example output](examples/square.png)
 
 ### Line
 [examples/line.nim](examples/line.nim)
 ```nim
-var p: Path
-p.moveTo(25, 25)
-p.lineTo(175, 175)
+let
+  start = vec2(25, 25)
+  stop = vec2(175, 175)
+  color = parseHtmlColor("#FF5C00").rgba
 
-image.strokePath(
-  p,
-  parseHtmlColor("#FF5C00").rgba,
-  strokeWidth = 10,
-)
+image.drawSegment(segment(start, stop), color, strokeWidth = 10)
 ```
 ![example output](examples/line.png)
 
