@@ -1165,8 +1165,7 @@ proc fillShapes(
 
 proc strokeShapes(
   shapes: seq[seq[Vec2]],
-  strokeWidth: float32,
-  windingRule: WindingRule
+  strokeWidth: float32
 ): seq[seq[Vec2]] =
   if strokeWidth == 0:
     return
@@ -1288,11 +1287,7 @@ proc strokePath*(
   windingRule = wrNonZero,
   blendMode = bmNormal
 ) =
-  let strokeShapes = strokeShapes(
-    parseSomePath(path),
-    strokeWidth,
-    windingRule
-  )
+  let strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
   image.fillShapes(strokeShapes, color, windingRule, blendMode)
 
 proc strokePath*(
@@ -1304,11 +1299,7 @@ proc strokePath*(
   windingRule = wrNonZero,
   blendMode = bmNormal
 ) =
-  var strokeShapes = strokeShapes(
-    parseSomePath(path),
-    strokeWidth,
-    windingRule
-  )
+  var strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
   for shape in strokeShapes.mitems:
     for segment in shape.mitems:
       segment += pos
@@ -1323,11 +1314,7 @@ proc strokePath*(
   windingRule = wrNonZero,
   blendMode = bmNormal
 ) =
-  var strokeShapes = strokeShapes(
-    parseSomePath(path),
-    strokeWidth,
-    windingRule
-  )
+  var strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
   for shape in strokeShapes.mitems:
     for segment in shape.mitems:
       segment = mat * segment
@@ -1339,11 +1326,7 @@ proc strokePath*(
   strokeWidth = 1.0,
   windingRule = wrNonZero
 ) =
-  let strokeShapes = strokeShapes(
-    parseSomePath(path),
-    strokeWidth,
-    windingRule
-  )
+  let strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
   mask.fillShapes(strokeShapes, windingRule)
 
 proc strokePath*(
@@ -1353,11 +1336,7 @@ proc strokePath*(
   pos: Vec2,
   windingRule = wrNonZero
 ) =
-  var strokeShapes = strokeShapes(
-    parseSomePath(path),
-    strokeWidth,
-    windingRule
-  )
+  var strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
   for shape in strokeShapes.mitems:
     for segment in shape.mitems:
       segment += pos
@@ -1370,11 +1349,7 @@ proc strokePath*(
   mat: Mat3,
   windingRule = wrNonZero
 ) =
-  var strokeShapes = strokeShapes(
-    parseSomePath(path),
-    strokeWidth,
-    windingRule
-  )
+  var strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
   for shape in strokeShapes.mitems:
     for segment in shape.mitems:
       segment = mat * segment
