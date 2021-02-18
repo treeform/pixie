@@ -151,3 +151,25 @@ proc drawCircle*(
   var path: Path
   path.ellipse(center, radius, radius)
   mask.fillPath(path)
+
+proc drawPolygon*(
+  image: Image,
+  pos: Vec2,
+  size: float32,
+  sides: int,
+  color: ColorRGBA,
+  blendMode = bmNormal
+) =
+  var path: Path
+  path.polygon(pos, size, sides)
+  image.fillPath(path, color, wrNonZero, blendMode)
+
+proc drawPolygon*(
+  mask: Mask,
+  pos: Vec2,
+  size: float32,
+  sides: int
+) =
+  var path: Path
+  path.polygon(pos, size, sides)
+  mask.fillPath(path)

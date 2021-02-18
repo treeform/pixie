@@ -125,3 +125,8 @@ block:
   let mask = newMask(100, 100)
   mask.drawEllipse(vec2(50, 50), 20, 10)
   writeFile("tests/images/masks/drawEllipse.png", mask.encodePng())
+
+block:
+  let mask = newMask(100, 100)
+  mask.drawPolygon(vec2(50, 50), 30, 6)
+  writeFile("tests/images/masks/drawPolygon.png", mask.encodePng())

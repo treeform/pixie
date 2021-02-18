@@ -86,3 +86,14 @@ block:
     rgba(255, 255, 0, 255)
   )
   image.writeFile("tests/images/drawEllipse.png")
+
+block:
+  let image = newImage(100, 100)
+  image.fill(rgba(0, 255, 255, 255))
+  image.drawPolygon(
+    vec2(50, 50),
+    30,
+    6,
+    rgba(255, 255, 0, 255)
+  )
+  image.writeFile("tests/images/drawPolygon.png")

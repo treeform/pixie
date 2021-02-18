@@ -462,6 +462,9 @@ proc polygon*(path: var Path, x, y, size: float32, sides: int) =
       y + size * sin(side.float32 * 2.0 * PI / sides.float32)
     )
 
+proc polygon*(path: var Path, pos: Vec2, size: float32, sides: int) {.inline.} =
+  path.polygon(pos.x, pos.y, size, sides)
+
 proc commandsToShapes*(path: Path): seq[seq[Vec2]] =
   ## Converts SVG-like commands to line segments.
 
