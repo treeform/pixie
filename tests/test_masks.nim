@@ -110,8 +110,23 @@ block:
 
 block:
   let mask = newMask(100, 100)
+  mask.drawRoundedRect(rect(vec2(10, 10), vec2(30, 30)), 10)
+  writeFile("tests/images/masks/drawRoundedRect.png", mask.encodePng())
+
+block:
+  let mask = newMask(100, 100)
   mask.drawSegment(
     segment(vec2(10, 10), vec2(90, 90)),
     strokeWidth = 10
   )
   writeFile("tests/images/masks/drawSegment.png", mask.encodePng())
+
+block:
+  let mask = newMask(100, 100)
+  mask.drawEllipse(vec2(50, 50), 20, 10)
+  writeFile("tests/images/masks/drawEllipse.png", mask.encodePng())
+
+block:
+  let mask = newMask(100, 100)
+  mask.drawPolygon(vec2(50, 50), 30, 6)
+  writeFile("tests/images/masks/drawPolygon.png", mask.encodePng())

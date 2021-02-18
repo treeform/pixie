@@ -59,9 +59,41 @@ block:
 block:
   let image = newImage(100, 100)
   image.fill(rgba(0, 255, 255, 255))
+  image.drawRoundedRect(
+    rect(vec2(10, 10), vec2(30, 30)),
+    10,
+    rgba(255, 255, 0, 255)
+  )
+  image.writeFile("tests/images/drawRoundedRect.png")
+
+block:
+  let image = newImage(100, 100)
+  image.fill(rgba(0, 255, 255, 255))
   image.drawSegment(
     segment(vec2(10, 10), vec2(90, 90)),
     rgba(255, 255, 0, 255),
     strokeWidth = 10
   )
   image.writeFile("tests/images/drawSegment.png")
+
+block:
+  let image = newImage(100, 100)
+  image.fill(rgba(0, 255, 255, 255))
+  image.drawEllipse(
+    vec2(50, 50),
+    25,
+    25,
+    rgba(255, 255, 0, 255)
+  )
+  image.writeFile("tests/images/drawEllipse.png")
+
+block:
+  let image = newImage(100, 100)
+  image.fill(rgba(0, 255, 255, 255))
+  image.drawPolygon(
+    vec2(50, 50),
+    30,
+    6,
+    rgba(255, 255, 0, 255)
+  )
+  image.writeFile("tests/images/drawPolygon.png")

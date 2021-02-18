@@ -7,12 +7,8 @@ let
 
 image.fill(rgba(255, 255, 255, 255))
 
-var p: Path
-p.polygon(100, 100, 70, sides = 6)
-p.closePath()
-
 let mask = newMask(200, 200)
-mask.fillPath(p)
+mask.drawPolygon(vec2(100, 100), 70, sides = 6)
 
 blur.blur(20)
 blur.draw(mask, blendMode = bmMask)

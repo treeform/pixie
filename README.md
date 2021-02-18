@@ -50,16 +50,11 @@ image.drawSegment(segment(start, stop), color, strokeWidth = 10)
 [examples/rounded_rectangle.nim](examples/rounded_rectangle.nim)
 ```nim
 let
-  x = 50.0
-  y = 50.0
-  w = 100.0
-  h = 100.0
+  pos = vec2(50, 50)
+  wh = vec2(100, 100)
   r = 25.0
 
-var path: Path
-path.roundedRect(vec2(x, y), vec2(w, h), r, r, r, r)
-
-image.fillPath(path, rgba(0, 255, 0, 255))
+image.drawRoundedRect(rect(pos, wh), r, rgba(0, 255, 0, 255))
 ```
 ![example output](examples/rounded_rectangle.png)
 
@@ -83,32 +78,29 @@ image.fillPath(
 ### Shadow
 [examples/shadow.nim](examples/shadow.nim)
 ```nim
-var p: Path
-p.polygon(100, 100, 70, sides = 8)
-p.closePath()
+let polygonImage = newImage(200, 200)
+polygonImage.drawPolygon(
+  vec2(100, 100),
+  70,
+  sides = 8,
+  rgba(255, 255, 255, 255)
+)
 
-var polyImage = newImage(200, 200)
-polyImage.fillPath(p, rgba(255, 255, 255, 255))
-
-image.draw(polyImage.shadow(
+image.draw(polygonImage.shadow(
   offset = vec2(2, 2),
   spread = 2,
   blur = 10,
   color = rgba(0, 0, 0, 200)
 ))
-image.draw(polyImage)
+image.draw(polygonImage)
 ```
 ![example output](examples/shadow.png)
 
 ### Blur
 [examples/blur.nim](examples/blur.nim)
 ```nim
-var p: Path
-p.polygon(100, 100, 70, sides = 6)
-p.closePath()
-
 let mask = newMask(200, 200)
-mask.fillPath(p)
+mask.drawPolygon(vec2(100, 100), 70, sides = 6)
 
 blur.blur(20)
 blur.draw(mask, blendMode = bmMask)

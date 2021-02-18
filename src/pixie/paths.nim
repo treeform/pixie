@@ -376,13 +376,9 @@ proc rect*(path: var Path, rect: Rect, clockwise = true) {.inline.} =
 const splineCircleK = 4.0 * (-1.0 + sqrt(2.0)) / 3
 
 proc roundedRect*(
-  path: var Path, pos, wh: Vec2, nw, ne, se, sw: float32, clockwise = true
+  path: var Path, x, y, w, h, nw, ne, se, sw: float32, clockwise = true
 ) =
   let
-    x = pos.x
-    y = pos.y
-    w = wh.x
-    h = wh.y
     s = splineCircleK
 
     maxRadius = min(w / 2, h / 2)
@@ -432,6 +428,16 @@ proc roundedRect*(
 
   path.closePath()
 
+proc roundedRect*(
+  path: var Path, pos, wh: Vec2, nw, ne, se, sw: float32, clockwise = true
+) {.inline.} =
+  path.roundedRect(pos.x, pos.y, wh.x, wh.y, nw, ne, se, sw, clockwise)
+
+proc roundedRect*(
+  path: var Path, rect: Rect, nw, ne, se, sw: float32, clockwise = true
+) {.inline.} =
+  path.roundedRect(rect.x, rect.y, rect.w, rect.h, nw, ne, se, sw, clockwise)
+
 proc ellipse*(path: var Path, cx, cy, rx, ry: float32) =
   let
     magicX = splineCircleK * rx
@@ -444,6 +450,9 @@ proc ellipse*(path: var Path, cx, cy, rx, ry: float32) =
   path.bezierCurveTo(cx + magicX, cy - ry, cx + rx, cy - magicY, cx + rx, cy)
   path.closePath()
 
+proc ellipse*(path: var Path, center: Vec2, rx, ry: float32) {.inline.} =
+  path.ellipse(center.x, center.y, rx, ry)
+
 proc polygon*(path: var Path, x, y, size: float32, sides: int) =
   ## Draws a n sided regular polygon at (x, y) with size.
   path.moveTo(x + size * cos(0.0), y + size * sin(0.0))
@@ -452,6 +461,9 @@ proc polygon*(path: var Path, x, y, size: float32, sides: int) =
       x + size * cos(side.float32 * 2.0 * PI / sides.float32),
       y + size * sin(side.float32 * 2.0 * PI / sides.float32)
     )
+
+proc polygon*(path: var Path, pos: Vec2, size: float32, sides: int) {.inline.} =
+  path.polygon(pos.x, pos.y, size, sides)
 
 proc commandsToShapes*(path: Path): seq[seq[Vec2]] =
   ## Converts SVG-like commands to line segments.

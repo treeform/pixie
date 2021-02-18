@@ -62,6 +62,38 @@ proc drawRect*(mask: Mask, rect: Rect) =
   path.rect(rect)
   mask.fillPath(path)
 
+proc drawRoundedRect*(
+  image: Image,
+  rect: Rect,
+  nw, ne, se, sw: float32,
+  color: ColorRGBA,
+  blendMode = bmNormal
+) =
+  var path: Path
+  path.roundedRect(rect, nw, ne, se, sw)
+  image.fillPath(path, color, wrNonZero, blendMode)
+
+proc drawRoundedRect*(
+  image: Image,
+  rect: Rect,
+  radius: float32,
+  color: ColorRGBA,
+  blendMode = bmNormal
+) =
+  var path: Path
+  path.roundedRect(rect, radius, radius, radius, radius)
+  image.fillPath(path, color, wrNonZero, blendMode)
+
+proc drawRoundedRect*(mask: Mask, rect: Rect, nw, ne, se, sw: float32) =
+  var path: Path
+  path.roundedRect(rect, nw, ne, se, sw)
+  mask.fillPath(path)
+
+proc drawRoundedRect*(mask: Mask, rect: Rect, radius: float32) =
+  var path: Path
+  path.roundedRect(rect, radius, radius, radius, radius)
+  mask.fillPath(path)
+
 proc drawSegment*(
   image: Image,
   segment: Segment,
@@ -79,3 +111,65 @@ proc drawSegment*(mask: Mask, segment: Segment, strokeWidth: float32) =
   path.moveTo(segment.at)
   path.lineTo(segment.to)
   mask.strokePath(path, strokeWidth)
+
+proc drawEllipse*(
+  image: Image,
+  center: Vec2,
+  rx, ry: float32,
+  color: ColorRGBA,
+  blendMode = bmNormal
+) =
+  var path: Path
+  path.ellipse(center, rx, ry)
+  image.fillPath(path, color, wrNonZero, blendMode)
+
+proc drawEllipse*(
+  mask: Mask,
+  center: Vec2,
+  rx, ry: float32
+) =
+  var path: Path
+  path.ellipse(center, rx, ry)
+  mask.fillPath(path)
+
+proc drawCircle*(
+  image: Image,
+  center: Vec2,
+  radius: float32,
+  color: ColorRGBA,
+  blendMode = bmNormal
+) =
+  var path: Path
+  path.ellipse(center, radius, radius)
+  image.fillPath(path, color, wrNonZero, blendMode)
+
+proc drawCircle*(
+  mask: Mask,
+  center: Vec2,
+  radius: float32
+) =
+  var path: Path
+  path.ellipse(center, radius, radius)
+  mask.fillPath(path)
+
+proc drawPolygon*(
+  image: Image,
+  pos: Vec2,
+  size: float32,
+  sides: int,
+  color: ColorRGBA,
+  blendMode = bmNormal
+) =
+  var path: Path
+  path.polygon(pos, size, sides)
+  image.fillPath(path, color, wrNonZero, blendMode)
+
+proc drawPolygon*(
+  mask: Mask,
+  pos: Vec2,
+  size: float32,
+  sides: int
+) =
+  var path: Path
+  path.polygon(pos, size, sides)
+  mask.fillPath(path)
