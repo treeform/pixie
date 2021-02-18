@@ -110,6 +110,11 @@ block:
 
 block:
   let mask = newMask(100, 100)
+  mask.drawRoundedRect(rect(vec2(10, 10), vec2(30, 30)), 10)
+  writeFile("tests/images/masks/drawRoundedRect.png", mask.encodePng())
+
+block:
+  let mask = newMask(100, 100)
   mask.drawSegment(
     segment(vec2(10, 10), vec2(90, 90)),
     strokeWidth = 10

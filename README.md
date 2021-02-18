@@ -46,23 +46,6 @@ image.drawSegment(segment(start, stop), color, strokeWidth = 10)
 ```
 ![example output](examples/line.png)
 
-### Rounded rectangle
-[examples/rounded_rectangle.nim](examples/rounded_rectangle.nim)
-```nim
-let
-  x = 50.0
-  y = 50.0
-  w = 100.0
-  h = 100.0
-  r = 25.0
-
-var path: Path
-path.roundedRect(vec2(x, y), vec2(w, h), r, r, r, r)
-
-image.fillPath(path, rgba(0, 255, 0, 255))
-```
-![example output](examples/rounded_rectangle.png)
-
 ### Heart
 [examples/heart.nim](examples/heart.nim)
 ```nim

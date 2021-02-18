@@ -59,6 +59,16 @@ block:
 block:
   let image = newImage(100, 100)
   image.fill(rgba(0, 255, 255, 255))
+  image.drawRoundedRect(
+    rect(vec2(10, 10), vec2(30, 30)),
+    10,
+    rgba(255, 255, 0, 255)
+  )
+  image.writeFile("tests/images/drawRoundedRect.png")
+
+block:
+  let image = newImage(100, 100)
+  image.fill(rgba(0, 255, 255, 255))
   image.drawSegment(
     segment(vec2(10, 10), vec2(90, 90)),
     rgba(255, 255, 0, 255),

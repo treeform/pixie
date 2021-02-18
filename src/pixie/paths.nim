@@ -376,13 +376,9 @@ proc rect*(path: var Path, rect: Rect, clockwise = true) {.inline.} =
 const splineCircleK = 4.0 * (-1.0 + sqrt(2.0)) / 3
 
 proc roundedRect*(
-  path: var Path, pos, wh: Vec2, nw, ne, se, sw: float32, clockwise = true
+  path: var Path, x, y, w, h, nw, ne, se, sw: float32, clockwise = true
 ) =
   let
-    x = pos.x
-    y = pos.y
-    w = wh.x
-    h = wh.y
     s = splineCircleK
 
     maxRadius = min(w / 2, h / 2)
@@ -431,6 +427,16 @@ proc roundedRect*(
     path.lineTo(t1)
 
   path.closePath()
+
+proc roundedRect*(
+  path: var Path, pos, wh: Vec2, nw, ne, se, sw: float32, clockwise = true
+) {.inline.} =
+  path.roundedRect(pos.x, pos.y, wh.x, wh.y, nw, ne, se, sw, clockwise)
+
+proc roundedRect*(
+  path: var Path, rect: Rect, nw, ne, se, sw: float32, clockwise = true
+) {.inline.} =
+  path.roundedRect(rect.x, rect.y, rect.w, rect.h, nw, ne, se, sw, clockwise)
 
 proc ellipse*(path: var Path, cx, cy, rx, ry: float32) =
   let
