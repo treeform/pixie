@@ -33,6 +33,21 @@ image.fillPath(p, rgba(255, 0, 0, 255))
 ```
 ![example output](examples/square.png)
 
+### Line
+[examples/line.nim](examples/line.nim)
+```nim
+var p: Path
+p.moveTo(25, 25)
+p.lineTo(175, 175)
+
+image.strokePath(
+  p,
+  parseHtmlColor("#FF5C00").rgba,
+  strokeWidth = 10,
+)
+```
+![example output](examples/line.png)
+
 ### Rounded rectangle
 [examples/rounded_rectangle.nim](examples/rounded_rectangle.nim)
 ```nim
@@ -71,7 +86,7 @@ image.fillPath(
 [examples/shadow.nim](examples/shadow.nim)
 ```nim
 var p: Path
-p.polygon(100, 100, 70, sides=8)
+p.polygon(100, 100, 70, sides = 8)
 p.closePath()
 
 var polyImage = newImage(200, 200)
@@ -91,7 +106,7 @@ image.draw(polyImage)
 [examples/blur.nim](examples/blur.nim)
 ```nim
 var p: Path
-p.polygon(100, 100, 70, sides=6)
+p.polygon(100, 100, 70, sides = 6)
 p.closePath()
 
 let mask = newMask(200, 200)

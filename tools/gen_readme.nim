@@ -12,6 +12,7 @@ var md: seq[string]
 
 var exampleFiles = [
   "examples/square.nim",
+  "examples/line.nim",
   "examples/rounded_rectangle.nim",
   "examples/heart.nim",
   "examples/shadow.nim",
