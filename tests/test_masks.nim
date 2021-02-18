@@ -1,4 +1,4 @@
-import chroma, pixie, pixie/fileformats/png, vmath
+import pixie, pixie/fileformats/png
 
 block:
   let mask = newMask(100, 100)
@@ -102,3 +102,8 @@ block:
   mask.ceil()
 
   writeFile("tests/images/masks/circleMaskSharpened.png", mask.encodePng())
+
+block:
+  let mask = newMask(100, 100)
+  mask.drawRect(rect(vec2(10, 10), vec2(30, 30)))
+  writeFile("tests/images/masks/drawRect.png", mask.encodePng())

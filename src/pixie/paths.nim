@@ -370,6 +370,9 @@ proc rect*(path: var Path, x, y, w, h: float32, clockwise = true) =
 proc rect*(path: var Path, pos: Vec2, wh: Vec2, clockwise = true) {.inline.} =
   path.rect(pos.x, pos.y, wh.x, wh.y, clockwise)
 
+proc rect*(path: var Path, rect: Rect, clockwise = true) {.inline.} =
+  path.rect(rect.x, rect.y, rect.w, rect.h, clockwise)
+
 const splineCircleK = 4.0 * (-1.0 + sqrt(2.0)) / 3
 
 proc roundedRect*(

@@ -1,4 +1,4 @@
-import chroma, pixie, vmath
+import pixie
 
 block:
   let
@@ -49,3 +49,9 @@ block:
 
   a.draw(b, translate(vec2(250, 250)) * rotationMat3(360 * PI / 180))
   a.writeFile("tests/images/rotate360.png")
+
+block:
+  let image = newImage(100, 100)
+  image.fill(rgba(0, 255, 255, 255))
+  image.drawRect(rect(vec2(10, 10), vec2(30, 30)), rgba(255, 255, 0, 255))
+  image.writeFile("tests/images/drawRect.png")

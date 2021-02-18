@@ -1,8 +1,9 @@
-import flatty/binny, os, pixie/blends, pixie/common, pixie/fileformats/bmp,
-    pixie/fileformats/jpg, pixie/fileformats/png, pixie/fileformats/svg,
-    pixie/images, pixie/masks, pixie/paths, pixie/gradients
+import bumpy, chroma, flatty/binny, os, pixie/blends, pixie/common,
+    pixie/fileformats/bmp, pixie/fileformats/jpg, pixie/fileformats/png,
+    pixie/fileformats/svg, pixie/gradients, pixie/images, pixie/masks,
+    pixie/paths, vmath
 
-export blends, common, images, masks, paths, gradients
+export blends, bumpy, chroma, common, gradients, images, masks, paths, vmath
 
 type
   FileFormat* = enum
@@ -48,3 +49,15 @@ proc writeFile*(image: Image, filePath: string) =
     else:
       raise newException(PixieError, "Unsupported image file extension")
   image.writeFile(filePath, fileformat)
+
+proc drawRect*(
+  image: Image, rect: Rect, color: ColorRGBA, blendMode = bmNormal
+) =
+  var path: Path
+  path.rect(rect)
+  image.fillPath(path, color, wrNonZero, blendMode)
+
+proc drawRect*(mask: Mask, rect: Rect) =
+  var path: Path
+  path.rect(rect)
+  mask.fillPath(path)
