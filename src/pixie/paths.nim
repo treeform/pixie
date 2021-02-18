@@ -897,7 +897,6 @@ proc partitionSegments(
 template computeCoverages(
   coverages: var seq[uint8],
   hits: var seq[(float32, int16)],
-  numHits: var int,
   size: Vec2,
   y: int,
   partitions: seq[seq[(Segment, int16)]],
@@ -921,7 +920,9 @@ template computeCoverages(
   zeroMem(coverages[0].addr, coverages.len)
 
   # Do scanlines for this row
-  var yLine = y.float32 + initialOffset - offset
+  var
+    yLine = y.float32 + initialOffset - offset
+    numHits: int
   for m in 0 ..< quality:
     yLine += offset
     let scanline = line(vec2(0, yLine), vec2(size.x, yLine))
@@ -955,8 +956,7 @@ template computeCoverages(
                 at - prevAt
           if leftCover != 0:
             inc fillStart
-            coverages[prevAt.int] +=
-              (leftCover * sampleCoverage.float32).uint8
+            coverages[prevAt.int] += (leftCover * sampleCoverage.float32).uint8
 
           if pixelCrossed:
             let rightCover = at - trunc(at)
@@ -1001,18 +1001,21 @@ proc fillShapes(
     blender = blendMode.blender()
 
   when defined(amd64) and not defined(pixieNoSimd):
-    let blenderSimd = blendMode.blenderSimd()
+    let
+      blenderSimd = blendMode.blenderSimd()
+      first32 = cast[M128i]([uint32.high, 0, 0, 0]) # First 32 bits
+      oddMask = mm_set1_epi16(cast[int16](0xff00))
+      div255 = mm_set1_epi16(cast[int16](0x8081))
+      vColor = mm_set1_epi32(cast[int32](color))
 
   var
     coverages = newSeq[uint8](image.width)
     hits = newSeq[(float32, int16)](4)
-    numHits: int
 
   for y in startY ..< stopY:
     computeCoverages(
       coverages,
       hits,
-      numHits,
       image.wh,
       y,
       partitions,
@@ -1024,12 +1027,6 @@ proc fillShapes(
     var x = startX
     when defined(amd64) and not defined(pixieNoSimd):
       # When supported, SIMD blend as much as possible
-      let
-        first32 = cast[M128i]([uint32.high, 0, 0, 0]) # First 32 bits
-        oddMask = mm_set1_epi16(cast[int16](0xff00))
-        div255 = mm_set1_epi16(cast[int16](0x8081))
-        vColor = mm_set1_epi32(cast[int32](color))
-
       for _ in countup(x, image.width - 16, 4):
         var coverage = mm_loadu_si128(coverages[x].addr)
         coverage = mm_and_si128(coverage, first32)
@@ -1086,10 +1083,10 @@ proc fillShapes(
       if coverage != 0:
         var source = color
         if coverage != 255:
-          source.r = ((color.r.uint16 * coverage) div 255).uint8
-          source.g = ((color.g.uint16 * coverage) div 255).uint8
-          source.b = ((color.b.uint16 * coverage) div 255).uint8
-          source.a = ((color.a.uint16 * coverage) div 255).uint8
+          source.r = ((color.r.uint32 * coverage) div 255).uint8
+          source.g = ((color.g.uint32 * coverage) div 255).uint8
+          source.b = ((color.b.uint32 * coverage) div 255).uint8
+          source.a = ((color.a.uint32 * coverage) div 255).uint8
 
         if source.a == 255 and blendMode == bmNormal:
           # Skip blending
@@ -1122,13 +1119,11 @@ proc fillShapes(
   var
     coverages = newSeq[uint8](mask.width)
     hits = newSeq[(float32, int16)](4)
-    numHits: int
 
   for y in startY ..< stopY:
     computeCoverages(
       coverages,
       hits,
-      numHits,
       mask.wh,
       y,
       partitions,
