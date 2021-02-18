@@ -450,6 +450,9 @@ proc ellipse*(path: var Path, cx, cy, rx, ry: float32) =
   path.bezierCurveTo(cx + magicX, cy - ry, cx + rx, cy - magicY, cx + rx, cy)
   path.closePath()
 
+proc ellipse*(path: var Path, center: Vec2, rx, ry: float32) {.inline.} =
+  path.ellipse(center.x, center.y, rx, ry)
+
 proc polygon*(path: var Path, x, y, size: float32, sides: int) =
   ## Draws a n sided regular polygon at (x, y) with size.
   path.moveTo(x + size * cos(0.0), y + size * sin(0.0))

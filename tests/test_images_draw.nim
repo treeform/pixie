@@ -75,3 +75,14 @@ block:
     strokeWidth = 10
   )
   image.writeFile("tests/images/drawSegment.png")
+
+block:
+  let image = newImage(100, 100)
+  image.fill(rgba(0, 255, 255, 255))
+  image.drawEllipse(
+    vec2(50, 50),
+    25,
+    25,
+    rgba(255, 255, 0, 255)
+  )
+  image.writeFile("tests/images/drawEllipse.png")

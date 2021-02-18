@@ -46,6 +46,18 @@ image.drawSegment(segment(start, stop), color, strokeWidth = 10)
 ```
 ![example output](examples/line.png)
 
+### Rounded rectangle
+[examples/rounded_rectangle.nim](examples/rounded_rectangle.nim)
+```nim
+let
+  pos = vec2(50, 50)
+  wh = vec2(100, 100)
+  r = 25.0
+
+image.drawRoundedRect(rect(pos, wh), r, rgba(0, 255, 0, 255))
+```
+![example output](examples/rounded_rectangle.png)
+
 ### Heart
 [examples/heart.nim](examples/heart.nim)
 ```nim

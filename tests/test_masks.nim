@@ -120,3 +120,8 @@ block:
     strokeWidth = 10
   )
   writeFile("tests/images/masks/drawSegment.png", mask.encodePng())
+
+block:
+  let mask = newMask(100, 100)
+  mask.drawEllipse(vec2(50, 50), 20, 10)
+  writeFile("tests/images/masks/drawEllipse.png", mask.encodePng())

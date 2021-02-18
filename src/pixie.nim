@@ -111,3 +111,43 @@ proc drawSegment*(mask: Mask, segment: Segment, strokeWidth: float32) =
   path.moveTo(segment.at)
   path.lineTo(segment.to)
   mask.strokePath(path, strokeWidth)
+
+proc drawEllipse*(
+  image: Image,
+  center: Vec2,
+  rx, ry: float32,
+  color: ColorRGBA,
+  blendMode = bmNormal
+) =
+  var path: Path
+  path.ellipse(center, rx, ry)
+  image.fillPath(path, color, wrNonZero, blendMode)
+
+proc drawEllipse*(
+  mask: Mask,
+  center: Vec2,
+  rx, ry: float32
+) =
+  var path: Path
+  path.ellipse(center, rx, ry)
+  mask.fillPath(path)
+
+proc drawCircle*(
+  image: Image,
+  center: Vec2,
+  radius: float32,
+  color: ColorRGBA,
+  blendMode = bmNormal
+) =
+  var path: Path
+  path.ellipse(center, radius, radius)
+  image.fillPath(path, color, wrNonZero, blendMode)
+
+proc drawCircle*(
+  mask: Mask,
+  center: Vec2,
+  radius: float32
+) =
+  var path: Path
+  path.ellipse(center, radius, radius)
+  mask.fillPath(path)

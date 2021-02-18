@@ -9,3 +9,5 @@ let
   r = 25.0
 
 image.drawRoundedRect(rect(pos, wh), r, rgba(0, 255, 0, 255))
+
+image.writeFile("examples/rounded_rectangle.png")
