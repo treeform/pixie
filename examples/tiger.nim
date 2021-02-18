@@ -1,4 +1,4 @@
-import chroma, pixie, vmath
+import pixie
 
 let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))

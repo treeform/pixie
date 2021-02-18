@@ -1,4 +1,4 @@
-import chroma, pixie, vmath
+import pixie
 
 let
   trees = readImage("examples/data/trees.png")
