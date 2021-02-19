@@ -53,13 +53,19 @@ block:
 block:
   let image = newImage(100, 100)
   image.fill(rgba(0, 255, 255, 255))
-  image.drawRect(rect(vec2(10, 10), vec2(30, 30)), rgba(255, 255, 0, 255))
+  image.fillRect(rect(vec2(10, 10), vec2(30, 30)), rgba(255, 255, 0, 255))
   image.writeFile("tests/images/drawRect.png")
 
 block:
   let image = newImage(100, 100)
   image.fill(rgba(0, 255, 255, 255))
-  image.drawRoundedRect(
+  image.strokeRect(rect(vec2(10, 10), vec2(30, 30)), rgba(255, 255, 0, 255), 10)
+  image.writeFile("tests/images/strokeRect.png")
+
+block:
+  let image = newImage(100, 100)
+  image.fill(rgba(0, 255, 255, 255))
+  image.fillRoundedRect(
     rect(vec2(10, 10), vec2(30, 30)),
     10,
     rgba(255, 255, 0, 255)
@@ -69,7 +75,18 @@ block:
 block:
   let image = newImage(100, 100)
   image.fill(rgba(0, 255, 255, 255))
-  image.drawSegment(
+  image.strokeRoundedRect(
+    rect(vec2(10, 10), vec2(30, 30)),
+    10,
+    rgba(255, 255, 0, 255),
+    10
+  )
+  image.writeFile("tests/images/strokeRoundedRect.png")
+
+block:
+  let image = newImage(100, 100)
+  image.fill(rgba(0, 255, 255, 255))
+  image.strokeSegment(
     segment(vec2(10, 10), vec2(90, 90)),
     rgba(255, 255, 0, 255),
     strokeWidth = 10
@@ -79,7 +96,7 @@ block:
 block:
   let image = newImage(100, 100)
   image.fill(rgba(0, 255, 255, 255))
-  image.drawEllipse(
+  image.fillEllipse(
     vec2(50, 50),
     25,
     25,
@@ -90,10 +107,34 @@ block:
 block:
   let image = newImage(100, 100)
   image.fill(rgba(0, 255, 255, 255))
-  image.drawPolygon(
+  image.strokeEllipse(
+    vec2(50, 50),
+    25,
+    25,
+    rgba(255, 255, 0, 255),
+    10
+  )
+  image.writeFile("tests/images/strokeEllipse.png")
+
+block:
+  let image = newImage(100, 100)
+  image.fill(rgba(0, 255, 255, 255))
+  image.fillPolygon(
     vec2(50, 50),
     30,
     6,
     rgba(255, 255, 0, 255)
   )
   image.writeFile("tests/images/drawPolygon.png")
+
+block:
+  let image = newImage(100, 100)
+  image.fill(rgba(0, 255, 255, 255))
+  image.strokePolygon(
+    vec2(50, 50),
+    30,
+    6,
+    rgba(255, 255, 0, 255),
+    10
+  )
+  image.writeFile("tests/images/strokePolygon.png")

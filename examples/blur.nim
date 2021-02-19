@@ -8,7 +8,7 @@ let
 image.fill(rgba(255, 255, 255, 255))
 
 let mask = newMask(200, 200)
-mask.drawPolygon(vec2(100, 100), 70, sides = 6)
+mask.fillPolygon(vec2(100, 100), 70, sides = 6)
 
 blur.blur(20)
 blur.draw(mask, blendMode = bmMask)

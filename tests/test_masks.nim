@@ -105,17 +105,27 @@ block:
 
 block:
   let mask = newMask(100, 100)
-  mask.drawRect(rect(vec2(10, 10), vec2(30, 30)))
+  mask.fillRect(rect(vec2(10, 10), vec2(30, 30)))
   writeFile("tests/images/masks/drawRect.png", mask.encodePng())
 
 block:
   let mask = newMask(100, 100)
-  mask.drawRoundedRect(rect(vec2(10, 10), vec2(30, 30)), 10)
+  mask.strokeRect(rect(vec2(10, 10), vec2(30, 30)), 10)
+  writeFile("tests/images/masks/strokeRect.png", mask.encodePng())
+
+block:
+  let mask = newMask(100, 100)
+  mask.fillRoundedRect(rect(vec2(10, 10), vec2(30, 30)), 10)
   writeFile("tests/images/masks/drawRoundedRect.png", mask.encodePng())
 
 block:
   let mask = newMask(100, 100)
-  mask.drawSegment(
+  mask.strokeRoundedRect(rect(vec2(10, 10), vec2(30, 30)), 10, 10)
+  writeFile("tests/images/masks/strokeRoundedRect.png", mask.encodePng())
+
+block:
+  let mask = newMask(100, 100)
+  mask.strokeSegment(
     segment(vec2(10, 10), vec2(90, 90)),
     strokeWidth = 10
   )
@@ -123,10 +133,20 @@ block:
 
 block:
   let mask = newMask(100, 100)
-  mask.drawEllipse(vec2(50, 50), 20, 10)
+  mask.fillEllipse(vec2(50, 50), 20, 10)
   writeFile("tests/images/masks/drawEllipse.png", mask.encodePng())
 
 block:
   let mask = newMask(100, 100)
-  mask.drawPolygon(vec2(50, 50), 30, 6)
+  mask.strokeEllipse(vec2(50, 50), 20, 10, 10)
+  writeFile("tests/images/masks/strokeEllipse.png", mask.encodePng())
+
+block:
+  let mask = newMask(100, 100)
+  mask.fillPolygon(vec2(50, 50), 30, 6)
   writeFile("tests/images/masks/drawPolygon.png", mask.encodePng())
+
+block:
+  let mask = newMask(100, 100)
+  mask.strokePolygon(vec2(50, 50), 30, 6, 10)
+  writeFile("tests/images/masks/strokePolygon.png", mask.encodePng())

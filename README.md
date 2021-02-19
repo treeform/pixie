@@ -30,7 +30,7 @@ let
   pos = vec2(50, 50)
   wh = vec2(100, 100)
 
-image.drawRect(rect(pos, wh), rgba(255, 0, 0, 255))
+image.fillRect(rect(pos, wh), rgba(255, 0, 0, 255))
 ```
 ![example output](examples/square.png)
 
@@ -42,7 +42,7 @@ let
   stop = vec2(175, 175)
   color = parseHtmlColor("#FF5C00").rgba
 
-image.drawSegment(segment(start, stop), color, strokeWidth = 10)
+image.strokeSegment(segment(start, stop), color, strokeWidth = 10)
 ```
 ![example output](examples/line.png)
 
@@ -54,7 +54,7 @@ let
   wh = vec2(100, 100)
   r = 25.0
 
-image.drawRoundedRect(rect(pos, wh), r, rgba(0, 255, 0, 255))
+image.fillRoundedRect(rect(pos, wh), r, rgba(0, 255, 0, 255))
 ```
 ![example output](examples/rounded_rectangle.png)
 
@@ -79,19 +79,21 @@ image.fillPath(
 [examples/shadow.nim](examples/shadow.nim)
 ```nim
 let polygonImage = newImage(200, 200)
-polygonImage.drawPolygon(
+polygonImage.fillPolygon(
   vec2(100, 100),
   70,
   sides = 8,
   rgba(255, 255, 255, 255)
 )
 
-image.draw(polygonImage.shadow(
+let shadow = polygonImage.shadow(
   offset = vec2(2, 2),
   spread = 2,
   blur = 10,
   color = rgba(0, 0, 0, 200)
-))
+)
+
+image.draw(shadow)
 image.draw(polygonImage)
 ```
 ![example output](examples/shadow.png)
@@ -100,7 +102,7 @@ image.draw(polygonImage)
 [examples/blur.nim](examples/blur.nim)
 ```nim
 let mask = newMask(200, 200)
-mask.drawPolygon(vec2(100, 100), 70, sides = 6)
+mask.fillPolygon(vec2(100, 100), 70, sides = 6)
 
 blur.blur(20)
 blur.draw(mask, blendMode = bmMask)

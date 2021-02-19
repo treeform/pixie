@@ -50,51 +50,95 @@ proc writeFile*(image: Image, filePath: string) =
       raise newException(PixieError, "Unsupported image file extension")
   image.writeFile(filePath, fileformat)
 
-proc drawRect*(
-  image: Image, rect: Rect, color: ColorRGBA, blendMode = bmNormal
-) =
+proc fillRect*(image: Image, rect: Rect, color: ColorRGBA) =
   var path: Path
   path.rect(rect)
-  image.fillPath(path, color, wrNonZero, blendMode)
+  image.fillPath(path, color)
 
-proc drawRect*(mask: Mask, rect: Rect) =
+proc fillRect*(mask: Mask, rect: Rect) =
   var path: Path
   path.rect(rect)
   mask.fillPath(path)
 
-proc drawRoundedRect*(
+proc strokeRect*(
+  image: Image, rect: Rect, color: ColorRGBA, strokeWidth = 1.0
+) =
+  var path: Path
+  path.rect(rect)
+  image.strokePath(path, color, strokeWidth)
+
+proc strokeRect*(mask: Mask, rect: Rect, strokeWidth = 1.0) =
+  var path: Path
+  path.rect(rect)
+  mask.strokePath(path, strokeWidth)
+
+proc fillRoundedRect*(
+  image: Image,
+  rect: Rect,
+  nw, ne, se, sw: float32,
+  color: ColorRGBA
+) =
+  var path: Path
+  path.roundedRect(rect, nw, ne, se, sw)
+  image.fillPath(path, color)
+
+proc fillRoundedRect*(
+  image: Image,
+  rect: Rect,
+  radius: float32,
+  color: ColorRGBA
+) =
+  var path: Path
+  path.roundedRect(rect, radius, radius, radius, radius)
+  image.fillPath(path, color)
+
+proc fillRoundedRect*(mask: Mask, rect: Rect, nw, ne, se, sw: float32) =
+  var path: Path
+  path.roundedRect(rect, nw, ne, se, sw)
+  mask.fillPath(path)
+
+proc fillRoundedRect*(mask: Mask, rect: Rect, radius: float32) =
+  var path: Path
+  path.roundedRect(rect, radius, radius, radius, radius)
+  mask.fillPath(path)
+
+proc strokeRoundedRect*(
   image: Image,
   rect: Rect,
   nw, ne, se, sw: float32,
   color: ColorRGBA,
-  blendMode = bmNormal
+  strokeWidth = 1.0
 ) =
   var path: Path
   path.roundedRect(rect, nw, ne, se, sw)
-  image.fillPath(path, color, wrNonZero, blendMode)
+  image.strokePath(path, color, strokeWidth)
 
-proc drawRoundedRect*(
+proc strokeRoundedRect*(
   image: Image,
   rect: Rect,
   radius: float32,
   color: ColorRGBA,
-  blendMode = bmNormal
+  strokeWidth = 1.0
 ) =
   var path: Path
   path.roundedRect(rect, radius, radius, radius, radius)
-  image.fillPath(path, color, wrNonZero, blendMode)
+  image.strokePath(path, color, strokeWidth)
 
-proc drawRoundedRect*(mask: Mask, rect: Rect, nw, ne, se, sw: float32) =
+proc strokeRoundedRect*(
+  mask: Mask, rect: Rect, nw, ne, se, sw: float32, strokeWidth = 1.0
+) =
   var path: Path
   path.roundedRect(rect, nw, ne, se, sw)
-  mask.fillPath(path)
+  mask.strokePath(path, strokeWidth)
 
-proc drawRoundedRect*(mask: Mask, rect: Rect, radius: float32) =
+proc strokeRoundedRect*(
+  mask: Mask, rect: Rect, radius: float32, strokeWidth = 1.0
+) =
   var path: Path
   path.roundedRect(rect, radius, radius, radius, radius)
-  mask.fillPath(path)
+  mask.strokePath(path, strokeWidth)
 
-proc drawSegment*(
+proc strokeSegment*(
   image: Image,
   segment: Segment,
   color: ColorRGBA,
@@ -106,13 +150,13 @@ proc drawSegment*(
   path.lineTo(segment.to)
   image.strokePath(path, color, strokeWidth, wrNonZero, blendMode)
 
-proc drawSegment*(mask: Mask, segment: Segment, strokeWidth: float32) =
+proc strokeSegment*(mask: Mask, segment: Segment, strokeWidth: float32) =
   var path: Path
   path.moveTo(segment.at)
   path.lineTo(segment.to)
   mask.strokePath(path, strokeWidth)
 
-proc drawEllipse*(
+proc fillEllipse*(
   image: Image,
   center: Vec2,
   rx, ry: float32,
@@ -123,7 +167,7 @@ proc drawEllipse*(
   path.ellipse(center, rx, ry)
   image.fillPath(path, color, wrNonZero, blendMode)
 
-proc drawEllipse*(
+proc fillEllipse*(
   mask: Mask,
   center: Vec2,
   rx, ry: float32
@@ -132,18 +176,38 @@ proc drawEllipse*(
   path.ellipse(center, rx, ry)
   mask.fillPath(path)
 
-proc drawCircle*(
+proc strokeEllipse*(
+  image: Image,
+  center: Vec2,
+  rx, ry: float32,
+  color: ColorRGBA,
+  strokeWidth = 1.0
+) =
+  var path: Path
+  path.ellipse(center, rx, ry)
+  image.strokePath(path, color, strokeWidth)
+
+proc strokeEllipse*(
+  mask: Mask,
+  center: Vec2,
+  rx, ry: float32,
+  strokeWidth = 1.0
+) =
+  var path: Path
+  path.ellipse(center, rx, ry)
+  mask.strokePath(path, strokeWidth)
+
+proc fillCircle*(
   image: Image,
   center: Vec2,
   radius: float32,
-  color: ColorRGBA,
-  blendMode = bmNormal
+  color: ColorRGBA
 ) =
   var path: Path
   path.ellipse(center, radius, radius)
-  image.fillPath(path, color, wrNonZero, blendMode)
+  image.fillPath(path, color)
 
-proc drawCircle*(
+proc fillCircle*(
   mask: Mask,
   center: Vec2,
   radius: float32
@@ -152,19 +216,39 @@ proc drawCircle*(
   path.ellipse(center, radius, radius)
   mask.fillPath(path)
 
-proc drawPolygon*(
+proc strokeCircle*(
+  image: Image,
+  center: Vec2,
+  radius: float32,
+  color: ColorRGBA,
+  strokeWidth = 1.0
+) =
+  var path: Path
+  path.ellipse(center, radius, radius)
+  image.fillPath(path, color)
+
+proc strokeCircle*(
+  mask: Mask,
+  center: Vec2,
+  radius: float32,
+  strokeWidth = 1.0
+) =
+  var path: Path
+  path.ellipse(center, radius, radius)
+  mask.fillPath(path)
+
+proc fillPolygon*(
   image: Image,
   pos: Vec2,
   size: float32,
   sides: int,
-  color: ColorRGBA,
-  blendMode = bmNormal
+  color: ColorRGBA
 ) =
   var path: Path
   path.polygon(pos, size, sides)
-  image.fillPath(path, color, wrNonZero, blendMode)
+  image.fillPath(path, color)
 
-proc drawPolygon*(
+proc fillPolygon*(
   mask: Mask,
   pos: Vec2,
   size: float32,
@@ -173,3 +257,26 @@ proc drawPolygon*(
   var path: Path
   path.polygon(pos, size, sides)
   mask.fillPath(path)
+
+proc strokePolygon*(
+  image: Image,
+  pos: Vec2,
+  size: float32,
+  sides: int,
+  color: ColorRGBA,
+  strokeWidth = 1.0
+) =
+  var path: Path
+  path.polygon(pos, size, sides)
+  image.strokePath(path, color, strokeWidth)
+
+proc strokePolygon*(
+  mask: Mask,
+  pos: Vec2,
+  size: float32,
+  sides: int,
+  strokeWidth = 1.0
+) =
+  var path: Path
+  path.polygon(pos, size, sides)
+  mask.strokePath(path, strokeWidth)
