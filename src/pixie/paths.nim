@@ -353,6 +353,21 @@ proc arcTo*(path: var Path, ctrl1, ctrl2: Vec2, radius: float32) {.inline.} =
 proc arcTo*(path: var Path, x1, y1, x2, y2, radius: float32) =
   path.arcTo(vec2(x1, y1), vec2(x2, y2), radius)
 
+proc ellipticalArcTo*(
+  path: var Path,
+  rx, ry: float32,
+  xAxisRotation: float32,
+  largeArcFlag, sweepFlag: bool,
+  x, y: float32
+) =
+  path.commands.add(PathCommand(
+    kind: Arc,
+    numbers: @[
+      rx, ry, xAxisRotation, largeArcFlag.float32, sweepFlag.float32, x, y
+    ]
+  ))
+  path.at = vec2(x, y)
+
 proc rect*(path: var Path, x, y, w, h: float32, clockwise = true) =
   if clockwise:
     path.moveTo(x, y)

@@ -169,8 +169,32 @@ proc draw(
       width = parseFloat(node.attr("width"))
       height = parseFloat(node.attr("height"))
 
+    var rx, ry: float32
+    if node.attr("rx").len > 0:
+      rx = max(parseFloat(node.attr("rx")), 0)
+    if node.attr("ry").len > 0:
+      ry = max(parseFloat(node.attr("ry")), 0)
+
     var path: Path
-    path.rect(x, y, width, height)
+    if rx > 0 or ry > 0:
+      if rx == 0:
+        rx = ry
+      elif ry == 0:
+        ry = rx
+      rx = min(rx, width / 2)
+      ry = min(ry, height / 2)
+
+      path.moveTo(x + rx, y)
+      path.lineTo(x + width - rx, y)
+      path.ellipticalArcTo(rx, ry, 0, false, true, x + width, y + ry)
+      path.lineTo(x + width, y + height - ry)
+      path.ellipticalArcTo(rx, ry, 0, false, true, x + width - rx, y + height)
+      path.lineTo(x + rx, y + height)
+      path.ellipticalArcTo(rx, ry, 0, false, true, x, y + height - ry)
+      path.lineTo(x, y + ry)
+      path.ellipticalArcTo(rx, ry, 0, false, true, x + rx, y)
+    else:
+      path.rect(x, y, width, height)
 
     if ctx.fill != ColorRGBA():
       img.fillPath(path, ctx.fill, ctx.transform)
