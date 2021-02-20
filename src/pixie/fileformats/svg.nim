@@ -8,6 +8,8 @@ const svgSignature* = "<?xml"
 type Ctx = object
   fill, stroke: ColorRGBA
   strokeWidth: float32
+  strokeLineCap: LineCap
+  strokeLineJoin: LineJoin
   transform: Mat3
 
 template failInvalid() =
@@ -25,6 +27,8 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
     fill = node.attr("fill")
     stroke = node.attr("stroke")
     strokeWidth = node.attr("stroke-width")
+    strokeLineCap = node.attr("stroke-linecap")
+    strokeLineJoin = node.attr("stroke-linejoin")
     transform = node.attr("transform")
 
   if fill == "":
@@ -45,6 +49,40 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
     discard # Inherit
   else:
     result.strokeWidth = parseFloat(strokeWidth)
+
+  if strokeLineCap == "":
+    discard # Inherit
+  else:
+    case strokeLineCap:
+    of "butt":
+      result.strokeLineCap = lcButt
+    of "round":
+      result.strokeLineCap = lcRound
+    of "square":
+      result.strokeLineCap = lcSquare
+    of "inherit":
+      discard
+    else:
+      raise newException(
+        PixieError, "Invalid stroke-linecap value " & strokeLineCap
+      )
+
+  if strokeLineJoin == "":
+    discard # Inherit
+  else:
+    case strokeLineJoin:
+    of "miter":
+      result.strokeLineJoin = ljMiter
+    of "round":
+      result.strokeLineJoin = ljRound
+    of "bevel":
+      result.strokeLineJoin = ljBevel
+    of "inherit":
+      discard
+    else:
+      raise newException(
+        PixieError, "Invalid stroke-linejoin value " & strokeLineJoin
+      )
 
   if transform == "":
     discard # Inherit

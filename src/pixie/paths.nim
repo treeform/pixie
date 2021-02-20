@@ -8,6 +8,12 @@ type
     wrNonZero
     wrEvenOdd
 
+  LineCap* = enum
+    lcButt, lcRound, lcSquare
+
+  LineJoin* = enum
+    ljMiter, ljRound, ljBevel
+
   PathCommandKind* = enum
     ## Type of path commands
     Close,
