@@ -1320,11 +1320,10 @@ proc strokePath*(
   path: SomePath,
   color: ColorRGBA,
   strokeWidth = 1.0,
-  windingRule = wrNonZero,
   blendMode = bmNormal
 ) =
   let strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
-  image.fillShapes(strokeShapes, color, windingRule, blendMode)
+  image.fillShapes(strokeShapes, color, wrNonZero, blendMode)
 
 proc strokePath*(
   image: Image,
@@ -1332,14 +1331,13 @@ proc strokePath*(
   color: ColorRGBA,
   strokeWidth = 1.0,
   pos: Vec2,
-  windingRule = wrNonZero,
   blendMode = bmNormal
 ) =
   var strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
   for shape in strokeShapes.mitems:
     for segment in shape.mitems:
       segment += pos
-  image.fillShapes(strokeShapes, color, windingRule, blendMode)
+  image.fillShapes(strokeShapes, color, wrNonZero, blendMode)
 
 proc strokePath*(
   image: Image,
@@ -1347,49 +1345,45 @@ proc strokePath*(
   color: ColorRGBA,
   strokeWidth = 1.0,
   mat: Mat3,
-  windingRule = wrNonZero,
   blendMode = bmNormal
 ) =
   var strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
   for shape in strokeShapes.mitems:
     for segment in shape.mitems:
       segment = mat * segment
-  image.fillShapes(strokeShapes, color, windingRule, blendMode)
+  image.fillShapes(strokeShapes, color, wrNonZero, blendMode)
 
 proc strokePath*(
   mask: Mask,
   path: SomePath,
-  strokeWidth = 1.0,
-  windingRule = wrNonZero
+  strokeWidth = 1.0
 ) =
   let strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
-  mask.fillShapes(strokeShapes, windingRule)
+  mask.fillShapes(strokeShapes, wrNonZero)
 
 proc strokePath*(
   mask: Mask,
   path: SomePath,
   strokeWidth = 1.0,
-  pos: Vec2,
-  windingRule = wrNonZero
+  pos: Vec2
 ) =
   var strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
   for shape in strokeShapes.mitems:
     for segment in shape.mitems:
       segment += pos
-  mask.fillShapes(strokeShapes, windingRule)
+  mask.fillShapes(strokeShapes, wrNonZero)
 
 proc strokePath*(
   mask: Mask,
   path: SomePath,
   strokeWidth = 1.0,
-  mat: Mat3,
-  windingRule = wrNonZero
+  mat: Mat3
 ) =
   var strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
   for shape in strokeShapes.mitems:
     for segment in shape.mitems:
       segment = mat * segment
-  mask.fillShapes(strokeShapes, windingRule)
+  mask.fillShapes(strokeShapes, wrNonZero)
 
 when defined(release):
   {.pop.}

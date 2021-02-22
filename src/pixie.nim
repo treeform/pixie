@@ -142,13 +142,12 @@ proc strokeSegment*(
   image: Image,
   segment: Segment,
   color: ColorRGBA,
-  strokeWidth = 1.0,
-  blendMode = bmNormal
+  strokeWidth = 1.0
 ) =
   var path: Path
   path.moveTo(segment.at)
   path.lineTo(segment.to)
-  image.strokePath(path, color, strokeWidth, wrNonZero, blendMode)
+  image.strokePath(path, color, strokeWidth)
 
 proc strokeSegment*(mask: Mask, segment: Segment, strokeWidth: float32) =
   var path: Path
