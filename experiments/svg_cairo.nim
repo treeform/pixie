@@ -112,9 +112,13 @@ proc strokePath(
 const svgSignature* = "<?xml"
 
 type Ctx = object
+  fillRule: WindingRule
   fill, stroke: ColorRGBA
   strokeWidth: float32
+  strokeLineCap: paths.LineCap
+  strokeLineJoin: paths.LineJoin
   transform: Mat3
+  shouldStroke: bool
 
 when defined(pixieTestCairo):
   type RenderTarget = ptr Context
@@ -124,21 +128,64 @@ else:
 template failInvalid() =
   raise newException(PixieError, "Invalid SVG data")
 
+proc attrOrDefault(node: XmlNode, name, default: string): string =
+  result = node.attr(name)
+  if result.len == 0:
+    result = default
+
 proc initCtx(): Ctx =
-  result.fill = parseHtmlColor("black").rgba.toPremultipliedAlpha()
+  result.fill = parseHtmlColor("black").rgba
+  result.stroke = parseHtmlColor("black").rgba
   result.strokeWidth = 1
   result.transform = mat3()
 
 proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
   result = inherited
 
-  let
+  var
+    fillRule = node.attr("fill-rule")
     fill = node.attr("fill")
     stroke = node.attr("stroke")
     strokeWidth = node.attr("stroke-width")
+    strokeLineCap = node.attr("stroke-linecap")
+    strokeLineJoin = node.attr("stroke-linejoin")
     transform = node.attr("transform")
+    style = node.attr("style")
 
-  if fill == "":
+  let pairs = style.split(';')
+  for pair in pairs:
+    let parts = pair.split(':')
+    if parts.len == 2:
+      # Do not override element properties
+      case parts[0].strip():
+      of "fill":
+        if fill.len == 0:
+          fill = parts[1].strip()
+      of "stroke":
+        if stroke.len == 0:
+          stroke = parts[1].strip()
+      of "stroke-linecap":
+        if strokeLineCap.len == 0:
+          strokeLineCap = parts[1].strip()
+      of "stroke-linejoin":
+        if strokeLineJoin.len == 0:
+          strokeLineJoin = parts[1].strip()
+      of "stroke-width":
+        if strokeWidth.len == 0:
+          strokeWidth = parts[1].strip()
+
+  if fillRule == "":
+    discard # Inherit
+  elif fillRule == "nonzero":
+    result.fillRule = wrNonZero
+  elif fillRule == "evenodd":
+    result.fillRule = wrEvenOdd
+  else:
+    raise newException(
+      PixieError, "Invalid fill-rule value " & fillRule
+    )
+
+  if fill == "" or fill == "currentColor":
     discard # Inherit
   elif fill == "none":
     result.fill = ColorRGBA()
@@ -147,15 +194,58 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
 
   if stroke == "":
     discard # Inherit
+  elif stroke == "currentColor":
+    result.shouldStroke = true
   elif stroke == "none":
     result.stroke = ColorRGBA()
   else:
     result.stroke = parseHtmlColor(stroke).rgba.toPremultipliedAlpha()
+    result.shouldStroke = true
 
   if strokeWidth == "":
     discard # Inherit
   else:
+    if strokeWidth.endsWith("px"):
+      strokeWidth = strokeWidth[0 .. ^3]
     result.strokeWidth = parseFloat(strokeWidth)
+    result.shouldStroke = true
+
+  if result.stroke == ColorRGBA() or result.strokeWidth <= 0:
+    result.shouldStroke = false
+
+  if strokeLineCap == "":
+    discard # Inherit
+  else:
+    case strokeLineCap:
+    of "butt":
+      result.strokeLineCap = lcButt
+    of "round":
+      result.strokeLineCap = lcRound
+    of "square":
+      result.strokeLineCap = lcSquare
+    of "inherit":
+      discard
+    else:
+      raise newException(
+        PixieError, "Invalid stroke-linecap value " & strokeLineCap
+      )
+
+  if strokeLineJoin == "":
+    discard # Inherit
+  else:
+    case strokeLineJoin:
+    of "miter":
+      result.strokeLineJoin = ljMiter
+    of "round":
+      result.strokeLineJoin = ljRound
+    of "bevel":
+      result.strokeLineJoin = ljBevel
+    of "inherit":
+      discard
+    else:
+      raise newException(
+        PixieError, "Invalid stroke-linejoin value " & strokeLineJoin
+      )
 
   if transform == "":
     discard # Inherit
@@ -174,38 +264,53 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
       remaining = remaining[index + 1 .. ^1]
 
       if f.startsWith("matrix("):
-        let arr = f[7 .. ^2].split(",")
+        let arr =
+          if f.contains(","):
+            f[7 .. ^2].split(",")
+          else:
+            f[7 .. ^2].split(" ")
         if arr.len != 6:
           failInvalidTransform(transform)
         var m = mat3()
-        m[0] = parseFloat(arr[0])
-        m[1] = parseFloat(arr[1])
-        m[3] = parseFloat(arr[2])
-        m[4] = parseFloat(arr[3])
-        m[6] = parseFloat(arr[4])
-        m[7] = parseFloat(arr[5])
+        m[0] = parseFloat(arr[0].strip())
+        m[1] = parseFloat(arr[1].strip())
+        m[3] = parseFloat(arr[2].strip())
+        m[4] = parseFloat(arr[3].strip())
+        m[6] = parseFloat(arr[4].strip())
+        m[7] = parseFloat(arr[5].strip())
         result.transform = result.transform * m
       elif f.startsWith("translate("):
         let
           components = f[10 .. ^2].split(" ")
-          tx = parseFloat(components[0])
-          ty = parseFloat(components[1])
+          tx = parseFloat(components[0].strip())
+          ty =
+            if components[1].len == 0:
+              0.0
+            else:
+              parseFloat(components[1].strip())
         result.transform = result.transform * translate(vec2(tx, ty))
       elif f.startsWith("rotate("):
-        let angle = parseFloat(f[7 .. ^2]) * -PI / 180
-        result.transform = result.transform * rotationMat3(angle)
+        let
+          values = f[7 .. ^2].split(" ")
+          angle = parseFloat(values[0].strip()) * -PI / 180
+        var cx, cy: float32
+        if values.len > 1:
+          cx = parseFloat(values[1].strip())
+        if values.len > 2:
+          cy = parseFloat(values[2].strip())
+        let center = vec2(cx, cy)
+        result.transform = result.transform *
+          translate(center) * rotationMat3(angle) * translate(-center)
       else:
         failInvalidTransform(transform)
 
-proc draw(
-  img: ptr Context, node: XmlNode, ctxStack: var seq[Ctx]
-) =
+proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
   if node.kind != xnElement:
     # Skip <!-- comments -->
     return
 
   case node.tag:
-  of "title", "desc":
+  of "title", "desc", "defs":
     discard
 
   of "g":
@@ -221,17 +326,17 @@ proc draw(
       ctx = decodeCtx(ctxStack[^1], node)
       path = parsePath(d)
     if ctx.fill != ColorRGBA():
-      img.fillPath(path, ctx.fill, ctx.transform)
-    if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
-      img.strokePath(path, ctx.stroke, ctx.strokeWidth, ctx.transform)
+      img.fillPath(path, ctx.fill, ctx.transform, ctx.fillRule)
+    if ctx.shouldStroke:
+      img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)
 
   of "line":
     let
       ctx = decodeCtx(ctxStack[^1], node)
-      x1 = parseFloat(node.attr("x1"))
-      y1 = parseFloat(node.attr("y1"))
-      x2 = parseFloat(node.attr("x2"))
-      y2 = parseFloat(node.attr("y2"))
+      x1 = parseFloat(node.attrOrDefault("x1", "0"))
+      y1 = parseFloat(node.attrOrDefault("y1", "0"))
+      x2 = parseFloat(node.attrOrDefault("x2", "0"))
+      y2 = parseFloat(node.attrOrDefault("y2", "0"))
 
     var path: Path
     path.moveTo(x1, y1)
@@ -240,8 +345,8 @@ proc draw(
 
     if ctx.fill != ColorRGBA():
       img.fillPath(path, ctx.fill, ctx.transform)
-    if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
-      img.strokePath(path, ctx.stroke, ctx.strokeWidth, ctx.transform)
+    if ctx.shouldStroke:
+      img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)
 
   of "polyline", "polygon":
     let
@@ -249,11 +354,18 @@ proc draw(
       points = node.attr("points")
 
     var vecs: seq[Vec2]
-    for pair in points.split(" "):
-      let parts = pair.split(",")
-      if parts.len != 2:
+    if points.contains(","):
+      for pair in points.split(" "):
+        let parts = pair.split(",")
+        if parts.len != 2:
+          failInvalid()
+        vecs.add(vec2(parseFloat(parts[0]), parseFloat(parts[1])))
+    else:
+      let points = points.split(" ")
+      if points.len mod 2 != 0:
         failInvalid()
-      vecs.add(vec2(parseFloat(parts[0]), parseFloat(parts[1])))
+      for i in countup(0, points.len - 2, 2):
+        vecs.add(vec2(parseFloat(points[i]), parseFloat(points[i + 1])))
 
     if vecs.len == 0:
       failInvalid()
@@ -269,65 +381,73 @@ proc draw(
 
     if ctx.fill != ColorRGBA():
       img.fillPath(path, ctx.fill, ctx.transform)
-    if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
-      img.strokePath(path, ctx.stroke, ctx.strokeWidth, ctx.transform)
+    if ctx.shouldStroke:
+      img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)
 
   of "rect":
     let
       ctx = decodeCtx(ctxStack[^1], node)
-      x = parseFloat(node.attr("x"))
-      y = parseFloat(node.attr("y"))
+      x = parseFloat(node.attrOrDefault("x", "0"))
+      y = parseFloat(node.attrOrDefault("y", "0"))
       width = parseFloat(node.attr("width"))
       height = parseFloat(node.attr("height"))
 
+    var
+      rx = max(parseFloat(node.attrOrDefault("rx", "0")), 0)
+      ry = max(parseFloat(node.attrOrDefault("ry", "0")), 0)
+
     var path: Path
-    path.rect(x, y, width, height)
+    if rx > 0 or ry > 0:
+      if rx == 0:
+        rx = ry
+      elif ry == 0:
+        ry = rx
+      rx = min(rx, width / 2)
+      ry = min(ry, height / 2)
+
+      path.moveTo(x + rx, y)
+      path.lineTo(x + width - rx, y)
+      path.ellipticalArcTo(rx, ry, 0, false, true, x + width, y + ry)
+      path.lineTo(x + width, y + height - ry)
+      path.ellipticalArcTo(rx, ry, 0, false, true, x + width - rx, y + height)
+      path.lineTo(x + rx, y + height)
+      path.ellipticalArcTo(rx, ry, 0, false, true, x, y + height - ry)
+      path.lineTo(x, y + ry)
+      path.ellipticalArcTo(rx, ry, 0, false, true, x + rx, y)
+    else:
+      path.rect(x, y, width, height)
 
     if ctx.fill != ColorRGBA():
       img.fillPath(path, ctx.fill, ctx.transform)
-    if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
-      img.strokePath(path, ctx.stroke, ctx.strokeWidth, ctx.transform)
+    if ctx.shouldStroke:
+      img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)
 
   of "circle", "ellipse":
-    # Reference for magic constant:
-    # https://dl3.pushbulletusercontent.com/a3fLVC8boTzRoxevD1OgCzRzERB9z2EZ/unknown.png
-    let ctx = decodeCtx(ctxStack[^1], node)
-
-    var cx, cy: float32 # Default to 0.0 unless set by cx and cy on node
-    if node.attr("cx") != "":
-      cx = parseFloat(node.attr("cx"))
-    if node.attr("cy") != "":
-      cy = parseFloat(node.attr("cy"))
+    let
+      ctx = decodeCtx(ctxStack[^1], node)
+      cx = parseFloat(node.attrOrDefault("cx", "0"))
+      cy = parseFloat(node.attrOrDefault("cy", "0"))
 
     var rx, ry: float32
     if node.tag == "circle":
       rx = parseFloat(node.attr("r"))
       ry = rx
     else:
-      rx = parseFloat(node.attr("rx"))
-      ry = parseFloat(node.attr("ry"))
-
-    let
-      magicX = (4.0 * (-1.0 + sqrt(2.0)) / 3) * rx
-      magicY = (4.0 * (-1.0 + sqrt(2.0)) / 3) * ry
+      rx = parseFloat(node.attrOrDefault("rx", "0"))
+      ry = parseFloat(node.attrOrDefault("ry", "0"))
 
     var path: Path
-    path.moveTo(cx + rx, cy)
-    path.bezierCurveTo(cx + rx, cy + magicY, cx + magicX, cy + ry, cx, cy + ry)
-    path.bezierCurveTo(cx - magicX, cy + ry, cx - rx, cy + magicY, cx - rx, cy)
-    path.bezierCurveTo(cx - rx, cy - magicY, cx - magicX, cy - ry, cx, cy - ry)
-    path.bezierCurveTo(cx + magicX, cy - ry, cx + rx, cy - magicY, cx + rx, cy)
-    path.closePath()
+    path.ellipse(cx, cy, rx, ry)
 
     if ctx.fill != ColorRGBA():
       img.fillPath(path, ctx.fill, ctx.transform)
-    if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
-      img.strokePath(path, ctx.stroke, ctx.strokeWidth, ctx.transform)
+    if ctx.shouldStroke:
+      img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)
 
   else:
     raise newException(PixieError, "Unsupported SVG tag: " & node.tag & ".")
 
-proc decodeSvg*(data: string): Image =
+proc decodeSvg*(data: string, width = 0, height = 0): Image =
   ## Render SVG file and return the image.
   try:
     let root = parseXml(data)
@@ -337,27 +457,24 @@ proc decodeSvg*(data: string): Image =
     let
       viewBox = root.attr("viewBox")
       box = viewBox.split(" ")
-    if parseInt(box[0]) != 0 or parseInt(box[1]) != 0:
-      failInvalid()
+      viewBoxWidth = parseInt(box[2])
+      viewBoxHeight = parseInt(box[3])
 
-    let
-      width = parseInt(box[2])
-      height = parseInt(box[3])
-    var ctxStack = @[initCtx()]
-    result = newImage(width, height)
-    let
-      surface = imageSurfaceCreate(FORMAT_ARGB32, width.int32, height.int32)
-      c = surface.create()
+    var rootCtx = initCtx()
+    rootCtx = decodeCtx(rootCtx, root)
+    if width == 0 and height == 0: # Default to the view box size
+      result = newImage(viewBoxWidth, viewBoxHeight)
+    else:
+      result = newImage(width, height)
+
+      let
+        scaleX = width.float32 / viewBoxWidth.float32
+        scaleY = height.float32 / viewBoxHeight.float32
+      rootCtx.transform = scale(vec2(scaleX, scaleY))
+
+    var ctxStack = @[rootCtx]
     for node in root:
-      c.draw(node, ctxStack)
-    surface.flush()
-    let pixels = cast[ptr UncheckedArray[array[4, uint8]]](surface.getData())
-    for y in 0 ..< result.height:
-      for x in 0 ..< result.width:
-        let
-          bgra = pixels[result.dataIndex(x, y)]
-          rgba = rgba(bgra[2], bgra[1], bgra[0], bgra[3])
-        result.setRgbaUnsafe(x, y, rgba)
+      result.draw(node, ctxStack)
     result.toStraightAlpha()
   except PixieError as e:
     raise e
