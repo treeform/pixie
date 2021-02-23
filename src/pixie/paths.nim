@@ -124,6 +124,9 @@ proc parsePath*(path: string): Path =
 
     armed = true
 
+  template expectsArcFlag(): bool =
+    kind in {Arc, RArc} and numbers.len mod 7 in {3, 4}
+
   while p < path.len:
     case path[p]:
     # Relative
@@ -195,7 +198,7 @@ proc parsePath*(path: string): Path =
         finishNumber()
         numberStart = p
     of '.':
-      if hitDecimal:
+      if hitDecimal or expectsArcFlag():
         finishNumber()
       hitDecimal = true
       if numberStart == 0:
@@ -203,6 +206,12 @@ proc parsePath*(path: string): Path =
     of ' ', ',', '\r', '\n', '\t':
       finishNumber()
     else:
+      if numberStart > 0 and expectsArcFlag():
+        finishNumber()
+      if p - 1 == numberStart and path[p - 1] == '0':
+        # If the number starts with 0 and we've hit another digit, finish the 0
+        # .. 01.3.. -> [..0, 1.3..]
+        finishNumber()
       if numberStart == 0:
         numberStart = p
 
@@ -698,6 +707,9 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
 
     case command.kind:
     of Move:
+      if shape.len > 0:
+        result.add(shape)
+        shape.setLen(0)
       at.x = command.numbers[0]
       at.y = command.numbers[1]
       start = at
@@ -769,6 +781,9 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
       at = to
 
     of RMove:
+      if shape.len > 0:
+        result.add(shape)
+        shape.setLen(0)
       at.x += command.numbers[0]
       at.y += command.numbers[1]
       start = at
@@ -1256,7 +1271,9 @@ proc strokeShapes(
     if strokeShape.len > 0:
       result.add(strokeShape)
 
-proc parseSomePath(path: SomePath, pixelScale:float32 = 1.0): seq[seq[Vec2]] {.inline.} =
+proc parseSomePath(
+  path: SomePath, pixelScale: float32 = 1.0
+): seq[seq[Vec2]] {.inline.} =
   when type(path) is string:
     parsePath(path).commandsToShapes(pixelScale)
   elif type(path) is Path:
