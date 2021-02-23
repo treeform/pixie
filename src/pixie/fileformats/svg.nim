@@ -143,6 +143,9 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
           ty = parseFloat(components[1])
         result.transform = result.transform * translate(vec2(tx, ty))
       elif f.startsWith("rotate("):
+        # let
+        #   values = f[7 .. ^2].split(" ")
+        #   angle = parseFloat(values[0]) * -PI / 180
         let angle = parseFloat(f[7 .. ^2]) * -PI / 180
         result.transform = result.transform * rotationMat3(angle)
       else:
@@ -198,11 +201,18 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
       points = node.attr("points")
 
     var vecs: seq[Vec2]
-    for pair in points.split(" "):
-      let parts = pair.split(",")
-      if parts.len != 2:
+    if points.contains(","):
+      for pair in points.split(" "):
+        let parts = pair.split(",")
+        if parts.len != 2:
+          failInvalid()
+        vecs.add(vec2(parseFloat(parts[0]), parseFloat(parts[1])))
+    else:
+      let points = points.split(" ")
+      if points.len mod 2 != 0:
         failInvalid()
-      vecs.add(vec2(parseFloat(parts[0]), parseFloat(parts[1])))
+      for i in countup(0, points.len - 2, 2):
+        vecs.add(vec2(parseFloat(points[i]), parseFloat(points[i + 1])))
 
     if vecs.len == 0:
       failInvalid()
@@ -295,8 +305,8 @@ proc decodeSvg*(data: string, width = 0, height = 0): Image =
       viewBox = root.attr("viewBox")
       box = viewBox.split(" ")
 
-    if parseInt(box[0]) != 0 or parseInt(box[1]) != 0:
-      failInvalid()
+    # if parseInt(box[0]) != 0 or parseInt(box[1]) != 0:
+    #   failInvalid()
 
     let
       viewBoxWidth = parseInt(box[2])
@@ -319,5 +329,5 @@ proc decodeSvg*(data: string, width = 0, height = 0): Image =
     result.toStraightAlpha()
   except PixieError as e:
     raise e
-  except:
-    raise newException(PixieError, "Unable to load SVG")
+  # except:
+  #   raise newException(PixieError, "Unable to load SVG")
