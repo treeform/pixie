@@ -1269,28 +1269,17 @@ proc fillPath*(
   image: Image,
   path: SomePath,
   color: ColorRGBA,
-  pos: Vec2,
+  transform: Vec2 | Mat3,
   windingRule = wrNonZero,
   blendMode = bmNormal
 ) =
   var shapes = parseSomePath(path)
   for shape in shapes.mitems:
     for segment in shape.mitems:
-      segment += pos
-  image.fillShapes(shapes, color, windingRule, blendMode)
-
-proc fillPath*(
-  image: Image,
-  path: SomePath,
-  color: ColorRGBA,
-  mat: Mat3,
-  windingRule = wrNonZero,
-  blendMode = bmNormal
-) =
-  var shapes = parseSomePath(path)
-  for shape in shapes.mitems:
-    for segment in shape.mitems:
-      segment = mat * segment
+      when type(transform) is Vec2:
+        segment += transform
+      else:
+        segment = transform * segment
   image.fillShapes(shapes, color, windingRule, blendMode)
 
 proc fillPath*(
@@ -1303,26 +1292,17 @@ proc fillPath*(
 proc fillPath*(
   mask: Mask,
   path: SomePath,
-  pos: Vec2,
+  transform: Vec2 | Mat3,
   windingRule = wrNonZero
 ) =
   var shapes = parseSomePath(path)
   for shape in shapes.mitems:
     for segment in shape.mitems:
-      segment += pos
+      when type(transform) is Vec2:
+        segment += transform
+      else:
+        segment = transform * segment
   mask.fillShapes(shapes, color, windingRule)
-
-proc fillPath*(
-  mask: Mask,
-  path: SomePath,
-  mat: Mat3,
-  windingRule = wrNonZero
-) =
-  var shapes = parseSomePath(path)
-  for shape in shapes.mitems:
-    for segment in shape.mitems:
-      segment = mat * segment
-  mask.fillShapes(shapes, windingRule)
 
 proc strokePath*(
   image: Image,
@@ -1338,28 +1318,17 @@ proc strokePath*(
   image: Image,
   path: SomePath,
   color: ColorRGBA,
+  transform: Vec2 | Mat3,
   strokeWidth = 1.0,
-  pos: Vec2,
   blendMode = bmNormal
 ) =
   var strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
   for shape in strokeShapes.mitems:
     for segment in shape.mitems:
-      segment += pos
-  image.fillShapes(strokeShapes, color, wrNonZero, blendMode)
-
-proc strokePath*(
-  image: Image,
-  path: SomePath,
-  color: ColorRGBA,
-  strokeWidth = 1.0,
-  mat: Mat3,
-  blendMode = bmNormal
-) =
-  var strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
-  for shape in strokeShapes.mitems:
-    for segment in shape.mitems:
-      segment = mat * segment
+      when type(transform) is Vec2:
+        segment += transform
+      else:
+        segment = transform * segment
   image.fillShapes(strokeShapes, color, wrNonZero, blendMode)
 
 proc strokePath*(
@@ -1374,24 +1343,15 @@ proc strokePath*(
   mask: Mask,
   path: SomePath,
   strokeWidth = 1.0,
-  pos: Vec2
+  transform: Vec2 | Mat3
 ) =
   var strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
   for shape in strokeShapes.mitems:
     for segment in shape.mitems:
-      segment += pos
-  mask.fillShapes(strokeShapes, wrNonZero)
-
-proc strokePath*(
-  mask: Mask,
-  path: SomePath,
-  strokeWidth = 1.0,
-  mat: Mat3
-) =
-  var strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
-  for shape in strokeShapes.mitems:
-    for segment in shape.mitems:
-      segment = mat * segment
+      when type(transform) is Vec2:
+        segment += transform
+      else:
+        segment = transform * segment
   mask.fillShapes(strokeShapes, wrNonZero)
 
 when defined(release):
