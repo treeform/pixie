@@ -698,6 +698,9 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
 
     case command.kind:
     of Move:
+      if shape.len > 0:
+        result.add(shape)
+        shape.setLen(0)
       at.x = command.numbers[0]
       at.y = command.numbers[1]
       start = at
@@ -769,6 +772,9 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
       at = to
 
     of RMove:
+      if shape.len > 0:
+        result.add(shape)
+        shape.setLen(0)
       at.x += command.numbers[0]
       at.y += command.numbers[1]
       start = at
