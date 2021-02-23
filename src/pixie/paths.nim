@@ -203,6 +203,10 @@ proc parsePath*(path: string): Path =
     of ' ', ',', '\r', '\n', '\t':
       finishNumber()
     else:
+      if p - 1 == numberStart and path[p - 1] == '0':
+        # If the number starts with 0 and we've hit another digit, finish the 0
+        # .. 01.3.. -> [..0, 1.3..]
+        finishNumber()
       if numberStart == 0:
         numberStart = p
 
