@@ -1,4 +1,4 @@
-import os, pixie, strformat
+import os, pixie, pixie/fileformats/svg, strformat
 
 # Clone https://github.com/twbs/icons
 # Check out commit f364cb14dfc0703b9e3ef10c8b490a71dfef1e9d

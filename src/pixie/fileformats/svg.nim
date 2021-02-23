@@ -148,9 +148,7 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
       else:
         failInvalidTransform(transform)
 
-proc draw(
-  img: Image, node: XmlNode, ctxStack: var seq[Ctx]
-) =
+proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
   if node.kind != xnElement:
     # Skip <!-- comments -->
     return
