@@ -640,7 +640,9 @@ proc commandsToShapes*(path: Path): seq[seq[Vec2]] =
         )
       delta = delta mod (PI * 2)
 
-      if not sweep:
+      if sweep and delta < 0:
+        delta += 2 * PI
+      elif not sweep and delta > 0:
         delta -= 2 * PI
 
       # Normalize the delta
