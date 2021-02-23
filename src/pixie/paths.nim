@@ -36,8 +36,8 @@ when defined(release):
 
 proc maxScale(m: Mat3): float32 =
   max(
-    vec2(transform[0, 0], transform[0, 1]).length,
-    vec2(transform[1, 0], transform[1, 1]).length
+    vec2(m[0, 0], m[0, 1]).length,
+    vec2(m[1, 0], m[1, 1]).length
   )
 
 proc parameterCount(kind: PathCommandKind): int =
@@ -1282,7 +1282,7 @@ proc fillPath*(
   blendMode = bmNormal
 ) =
   when type(transform) is Mat3:
-    let pixelScale = vec2(transform[0, 0], transform[0, 1]).length
+    let pixelScale = transform.maxScale()
   else:
     let pixelScale = 1.0
   var shapes = parseSomePath(path, pixelScale)
@@ -1335,7 +1335,7 @@ proc strokePath*(
   blendMode = bmNormal
 ) =
   when type(transform) is Mat3:
-    let pixelScale = vec2(transform[0, 0], transform[0, 1]).length
+    let pixelScale = transform.maxScale()
   else:
     let pixelScale = 1.0
   var strokeShapes = strokeShapes(parseSomePath(path, pixelScale), strokeWidth)
