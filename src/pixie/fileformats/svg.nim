@@ -31,7 +31,7 @@ proc initCtx(): Ctx =
 proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
   result = inherited
 
-  let
+  var
     fillRule = node.attr("fill-rule")
     fill = node.attr("fill")
     stroke = node.attr("stroke")
@@ -39,6 +39,29 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
     strokeLineCap = node.attr("stroke-linecap")
     strokeLineJoin = node.attr("stroke-linejoin")
     transform = node.attr("transform")
+    style = node.attr("style")
+
+  let pairs = style.split(';')
+  for pair in pairs:
+    let parts = pair.split(':')
+    if parts.len == 2:
+      # Do not override element properties
+      case parts[0].strip():
+      of "fill":
+        if fill.len == 0:
+          fill = parts[1].strip()
+      of "stroke":
+        if stroke.len == 0:
+          stroke = parts[1].strip()
+      of "stroke-linecap":
+        if strokeLineCap.len == 0:
+          strokeLineCap = parts[1].strip()
+      of "stroke-linejoin":
+        if strokeLineJoin.len == 0:
+          strokeLineJoin = parts[1].strip()
+      of "stroke-width":
+        if strokeWidth.len == 0:
+          strokeWidth = parts[1].strip()
 
   if fillRule == "":
     discard # Inherit
@@ -68,6 +91,8 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
   if strokeWidth == "":
     discard # Inherit
   else:
+    if strokeWidth.endsWith("px"):
+      strokeWidth = strokeWidth[0 .. ^3]
     result.strokeWidth = parseFloat(strokeWidth)
 
   if strokeLineCap == "":
