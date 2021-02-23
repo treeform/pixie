@@ -329,5 +329,5 @@ proc decodeSvg*(data: string, width = 0, height = 0): Image =
     result.toStraightAlpha()
   except PixieError as e:
     raise e
-  # except:
-  #   raise newException(PixieError, "Unable to load SVG")
+  except:
+    raise newException(PixieError, "Unable to load SVG")
