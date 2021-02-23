@@ -34,6 +34,12 @@ type
 when defined(release):
   {.push checks: off.}
 
+proc maxScale(m: Mat3): float32 =
+  max(
+    vec2(transform[0, 0], transform[0, 1]).length,
+    vec2(transform[1, 0], transform[1, 1]).length
+  )
+
 proc parameterCount(kind: PathCommandKind): int =
   case kind:
   of Close: 0
