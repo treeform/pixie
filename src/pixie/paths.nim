@@ -495,7 +495,7 @@ proc polygon*(path: var Path, x, y, size: float32, sides: int) =
 proc polygon*(path: var Path, pos: Vec2, size: float32, sides: int) {.inline.} =
   path.polygon(pos.x, pos.y, size, sides)
 
-proc commandsToShapes*(path: Path): seq[seq[Vec2]] =
+proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
   ## Converts SVG-like commands to line segments.
 
   var
@@ -507,7 +507,7 @@ proc commandsToShapes*(path: Path): seq[seq[Vec2]] =
     prevCommandKind = Move
     prevCtrl, prevCtrl2: Vec2
 
-  const errorMargin = 0.2
+  let errorMargin = 0.2 / pixelScale
 
   proc addSegment(shape: var seq[Vec2], at, to: Vec2) =
     # Don't add any 0 length lines
@@ -1250,11 +1250,11 @@ proc strokeShapes(
     if strokeShape.len > 0:
       result.add(strokeShape)
 
-proc parseSomePath(path: SomePath): seq[seq[Vec2]] {.inline.} =
+proc parseSomePath(path: SomePath, pixelScale:float32 = 1.0): seq[seq[Vec2]] {.inline.} =
   when type(path) is string:
-    parsePath(path).commandsToShapes()
+    parsePath(path).commandsToShapes(pixelScale)
   elif type(path) is Path:
-    path.commandsToShapes()
+    path.commandsToShapes(pixelScale)
   elif type(path) is seq[seq[Segment]]:
     path
 
@@ -1275,7 +1275,11 @@ proc fillPath*(
   windingRule = wrNonZero,
   blendMode = bmNormal
 ) =
-  var shapes = parseSomePath(path)
+  when type(transform) is Mat3:
+    let pixelScale = vec2(transform[0, 0], transform[0, 1]).length
+  else:
+    let pixelScale = 1.0
+  var shapes = parseSomePath(path, pixelScale)
   for shape in shapes.mitems:
     for segment in shape.mitems:
       when type(transform) is Vec2:
@@ -1324,7 +1328,11 @@ proc strokePath*(
   strokeWidth = 1.0,
   blendMode = bmNormal
 ) =
-  var strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
+  when type(transform) is Mat3:
+    let pixelScale = vec2(transform[0, 0], transform[0, 1]).length
+  else:
+    let pixelScale = 1.0
+  var strokeShapes = strokeShapes(parseSomePath(path, pixelScale), strokeWidth)
   for shape in strokeShapes.mitems:
     for segment in shape.mitems:
       when type(transform) is Vec2:
