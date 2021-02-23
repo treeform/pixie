@@ -18,7 +18,7 @@ for path in walkFiles(iconsPath):
   images.add((name, image))
 
 let
-  columns = 10
+  columns = 50
   rows = (images.len + columns - 1) div columns
   rendered = newImage((width + 4) * columns, (height + 4) * rows)
 
