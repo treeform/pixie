@@ -174,7 +174,7 @@ proc draw(
     if ctx.fill != ColorRGBA():
       img.fillPath(path, ctx.fill, ctx.transform, ctx.fillRule)
     if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
-      img.strokePath(path, ctx.stroke, ctx.strokeWidth, ctx.transform)
+      img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)
 
   of "line":
     let
@@ -192,7 +192,7 @@ proc draw(
     if ctx.fill != ColorRGBA():
       img.fillPath(path, ctx.fill, ctx.transform)
     if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
-      img.strokePath(path, ctx.stroke, ctx.strokeWidth, ctx.transform)
+      img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)
 
   of "polyline", "polygon":
     let
@@ -221,7 +221,7 @@ proc draw(
     if ctx.fill != ColorRGBA():
       img.fillPath(path, ctx.fill, ctx.transform)
     if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
-      img.strokePath(path, ctx.stroke, ctx.strokeWidth, ctx.transform)
+      img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)
 
   of "rect":
     let
@@ -259,7 +259,7 @@ proc draw(
     if ctx.fill != ColorRGBA():
       img.fillPath(path, ctx.fill, ctx.transform)
     if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
-      img.strokePath(path, ctx.stroke, ctx.strokeWidth, ctx.transform)
+      img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)
 
   of "circle", "ellipse":
     let
@@ -281,7 +281,7 @@ proc draw(
     if ctx.fill != ColorRGBA():
       img.fillPath(path, ctx.fill, ctx.transform)
     if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
-      img.strokePath(path, ctx.stroke, ctx.strokeWidth, ctx.transform)
+      img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)
 
   else:
     raise newException(PixieError, "Unsupported SVG tag: " & node.tag & ".")
