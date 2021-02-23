@@ -1,4 +1,4 @@
-## Load and Save SVG files.
+## Load SVG files.
 
 import chroma, pixie/common, pixie/images, pixie/paths, strutils, vmath,
     xmlparser, xmltree
