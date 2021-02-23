@@ -247,12 +247,7 @@ proc fillPolygon*(
   path.polygon(pos, size, sides)
   image.fillPath(path, color)
 
-proc fillPolygon*(
-  mask: Mask,
-  pos: Vec2,
-  size: float32,
-  sides: int
-) =
+proc fillPolygon*(mask: Mask, pos: Vec2, size: float32, sides: int) =
   var path: Path
   path.polygon(pos, size, sides)
   mask.fillPath(path)
