@@ -3,6 +3,10 @@
 import chroma, pixie/common, pixie/images, pixie/paths, strutils, vmath,
     xmlparser, xmltree
 
+const
+  xmlSignature* = "<?xml"
+  svgSignature* = "<svg"
+
 type Ctx = object
   fillRule: WindingRule
   fill, stroke: ColorRGBA

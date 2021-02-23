@@ -3,7 +3,7 @@ import bumpy, chroma, flatty/binny, os, pixie/blends, pixie/common,
     pixie/fileformats/svg, pixie/gradients, pixie/images, pixie/masks,
     pixie/paths, vmath
 
-export blends, bumpy, chroma, common, gradients, images, masks, paths, svg, vmath
+export blends, bumpy, chroma, common, gradients, images, masks, paths, vmath
 
 type
   FileFormat* = enum
@@ -17,6 +17,9 @@ proc decodeImage*(data: string | seq[uint8]): Image =
     decodeJpg(data)
   elif data.len > 2 and data.readStr(0, 2) == bmpSignature:
     decodeBmp(data)
+  elif data.len > 5 and
+    (data.readStr(0, 5) == xmlSignature or data.readStr(0, 4) == svgSignature):
+    decodeSvg(data)
   else:
     raise newException(PixieError, "Unsupported image file format")
 
