@@ -43,7 +43,7 @@ proc renderIconSet(index: int) =
     images.add((name, image))
 
   let
-    columns = 50
+    columns = 40
     rows = (images.len + columns - 1) div columns
     rendered = newImage((width + 4) * columns, (height + 4) * rows)
 
