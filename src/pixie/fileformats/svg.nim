@@ -240,8 +240,6 @@ proc draw(
       img.strokePath(path, ctx.stroke, ctx.strokeWidth, ctx.transform)
 
   of "circle", "ellipse":
-    # Reference for magic constant:
-    # https://dl3.pushbulletusercontent.com/a3fLVC8boTzRoxevD1OgCzRzERB9z2EZ/unknown.png
     let ctx = decodeCtx(ctxStack[^1], node)
 
     var cx, cy: float32 # Default to 0.0 unless set by cx and cy on node
