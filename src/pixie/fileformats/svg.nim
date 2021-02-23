@@ -3,9 +3,8 @@
 import chroma, pixie/common, pixie/images, pixie/paths, strutils, vmath,
     xmlparser, xmltree
 
-const svgSignature* = "<?xml"
-
 type Ctx = object
+  fillRule: WindingRule
   fill, stroke: ColorRGBA
   strokeWidth: float32
   strokeLineCap: LineCap
@@ -14,6 +13,11 @@ type Ctx = object
 
 template failInvalid() =
   raise newException(PixieError, "Invalid SVG data")
+
+proc attrOrDefault(node: XmlNode, name, default: string): string =
+  result = node.attr(name)
+  if result.len == 0:
+    result = default
 
 proc initCtx(): Ctx =
   result.fill = parseHtmlColor("black").rgba.toPremultipliedAlpha()
@@ -24,6 +28,7 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
   result = inherited
 
   let
+    fillRule = node.attr("fill-rule")
     fill = node.attr("fill")
     stroke = node.attr("stroke")
     strokeWidth = node.attr("stroke-width")
@@ -31,14 +36,25 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
     strokeLineJoin = node.attr("stroke-linejoin")
     transform = node.attr("transform")
 
-  if fill == "":
+  if fillRule == "":
+    discard # Inherit
+  elif fillRule == "nonzero":
+    result.fillRule = wrNonZero
+  elif fillRule == "evenodd":
+    result.fillRule = wrEvenOdd
+  else:
+    raise newException(
+      PixieError, "Invalid fill-rule value " & fillRule
+    )
+
+  if fill == "" or fill == "currentColor":
     discard # Inherit
   elif fill == "none":
     result.fill = ColorRGBA()
   else:
     result.fill = parseHtmlColor(fill).rgba.toPremultipliedAlpha()
 
-  if stroke == "":
+  if stroke == "" or fill == "currentColor":
     discard # Inherit
   elif stroke == "none":
     result.stroke = ColorRGBA()
@@ -101,7 +117,11 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
       remaining = remaining[index + 1 .. ^1]
 
       if f.startsWith("matrix("):
-        let arr = f[7 .. ^2].split(",")
+        let arr =
+          if f.contains(","):
+            f[7 .. ^2].split(",")
+          else:
+            f[7 .. ^2].split(" ")
         if arr.len != 6:
           failInvalidTransform(transform)
         var m = mat3()
@@ -148,17 +168,17 @@ proc draw(
       ctx = decodeCtx(ctxStack[^1], node)
       path = parsePath(d)
     if ctx.fill != ColorRGBA():
-      img.fillPath(path, ctx.fill, ctx.transform)
+      img.fillPath(path, ctx.fill, ctx.transform, ctx.fillRule)
     if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
       img.strokePath(path, ctx.stroke, ctx.strokeWidth, ctx.transform)
 
   of "line":
     let
       ctx = decodeCtx(ctxStack[^1], node)
-      x1 = parseFloat(node.attr("x1"))
-      y1 = parseFloat(node.attr("y1"))
-      x2 = parseFloat(node.attr("x2"))
-      y2 = parseFloat(node.attr("y2"))
+      x1 = parseFloat(node.attrOrDefault("x1", "0"))
+      y1 = parseFloat(node.attrOrDefault("y1", "0"))
+      x2 = parseFloat(node.attrOrDefault("x2", "0"))
+      y2 = parseFloat(node.attrOrDefault("y2", "0"))
 
     var path: Path
     path.moveTo(x1, y1)
@@ -202,16 +222,14 @@ proc draw(
   of "rect":
     let
       ctx = decodeCtx(ctxStack[^1], node)
-      x = parseFloat(node.attr("x"))
-      y = parseFloat(node.attr("y"))
+      x = parseFloat(node.attrOrDefault("x", "0"))
+      y = parseFloat(node.attrOrDefault("y", "0"))
       width = parseFloat(node.attr("width"))
       height = parseFloat(node.attr("height"))
 
-    var rx, ry: float32
-    if node.attr("rx").len > 0:
-      rx = max(parseFloat(node.attr("rx")), 0)
-    if node.attr("ry").len > 0:
-      ry = max(parseFloat(node.attr("ry")), 0)
+    var
+      rx = max(parseFloat(node.attrOrDefault("rx", "0")), 0)
+      ry = max(parseFloat(node.attrOrDefault("ry", "0")), 0)
 
     var path: Path
     if rx > 0 or ry > 0:
@@ -240,21 +258,18 @@ proc draw(
       img.strokePath(path, ctx.stroke, ctx.strokeWidth, ctx.transform)
 
   of "circle", "ellipse":
-    let ctx = decodeCtx(ctxStack[^1], node)
-
-    var cx, cy: float32 # Default to 0.0 unless set by cx and cy on node
-    if node.attr("cx") != "":
-      cx = parseFloat(node.attr("cx"))
-    if node.attr("cy") != "":
-      cy = parseFloat(node.attr("cy"))
+    let
+      ctx = decodeCtx(ctxStack[^1], node)
+      cx = parseFloat(node.attrOrDefault("cx", "0"))
+      cy = parseFloat(node.attrOrDefault("cy", "0"))
 
     var rx, ry: float32
     if node.tag == "circle":
       rx = parseFloat(node.attr("r"))
       ry = rx
     else:
-      rx = parseFloat(node.attr("rx"))
-      ry = parseFloat(node.attr("ry"))
+      rx = parseFloat(node.attrOrDefault("rx", "0"))
+      ry = parseFloat(node.attrOrDefault("ry", "0"))
 
     var path: Path
     path.ellipse(cx, cy, rx, ry)
@@ -267,7 +282,7 @@ proc draw(
   else:
     raise newException(PixieError, "Unsupported SVG tag: " & node.tag & ".")
 
-proc decodeSvg*(data: string): Image =
+proc decodeSvg*(data: string, width = 0, height = 0): Image =
   ## Render SVG file and return the image.
   try:
     let root = parseXml(data)
@@ -277,14 +292,26 @@ proc decodeSvg*(data: string): Image =
     let
       viewBox = root.attr("viewBox")
       box = viewBox.split(" ")
+
     if parseInt(box[0]) != 0 or parseInt(box[1]) != 0:
       failInvalid()
 
     let
-      width = parseInt(box[2])
-      height = parseInt(box[3])
-    var ctxStack = @[initCtx()]
-    result = newImage(width, height)
+      viewBoxWidth = parseInt(box[2])
+      viewBoxHeight = parseInt(box[3])
+
+    var rootCtx = initCtx()
+    if width == 0 and height == 0: # Default to the view box size
+      result = newImage(viewBoxWidth, viewBoxHeight)
+    else:
+      result = newImage(width, height)
+
+      let
+        scaleX = width.float32 / viewBoxWidth.float32
+        scaleY = height.float32 / viewBoxHeight.float32
+      rootCtx.transform = scale(vec2(scaleX, scaleY))
+
+    var ctxStack = @[rootCtx]
     for node in root:
       result.draw(node, ctxStack)
     result.toStraightAlpha()

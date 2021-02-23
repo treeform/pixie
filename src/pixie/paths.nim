@@ -43,6 +43,36 @@ proc parameterCount(kind: PathCommandKind): int =
   of SCubic, RSCubic, Quad, RQuad: 4
   of Arc, RArc: 7
 
+proc `$`*(path: Path): string =
+  for i, command in path.commands:
+    case command.kind
+    of Move: result.add "M"
+    of Line: result.add "L"
+    of HLine: result.add "H"
+    of VLine: result.add "V"
+    of Cubic: result.add "C"
+    of SCubic: result.add "S"
+    of Quad: result.add "Q"
+    of TQuad: result.add "T"
+    of Arc: result.add "A"
+    of RMove: result.add "m"
+    of RLine: result.add "l"
+    of RHLine: result.add "h"
+    of RVLine: result.add "v"
+    of RCubic: result.add "c"
+    of RSCubic: result.add "s"
+    of RQuad: result.add "q"
+    of RTQuad: result.add "t"
+    of RArc: result.add "a"
+    of Close: result.add "Z"
+    for j, number in command.numbers:
+      if floor(number) == number:
+        result.add $number.int
+      else:
+        result.add $number
+      if i != path.commands.len - 1 or j != command.numbers.len - 1:
+        result.add " "
+
 proc parsePath*(path: string): Path =
   ## Converts a SVG style path into seq of commands.
 
@@ -51,7 +81,7 @@ proc parsePath*(path: string): Path =
 
   var
     p, numberStart: int
-    armed: bool
+    armed, hitDecimal: bool
     kind: PathCommandKind
     numbers: seq[float32]
 
@@ -62,6 +92,7 @@ proc parsePath*(path: string): Path =
       except ValueError:
         raise newException(PixieError, "Invalid path, parsing paramter failed")
     numberStart = 0
+    hitDecimal = false
 
   proc finishCommand(result: var Path) =
     finishNumber()
@@ -157,6 +188,12 @@ proc parsePath*(path: string): Path =
       else:
         finishNumber()
         numberStart = p
+    of '.':
+      if hitDecimal:
+        finishNumber()
+      hitDecimal = true
+      if numberStart == 0:
+        numberStart = p
     of ' ', ',', '\r', '\n', '\t':
       finishNumber()
     else:
@@ -166,36 +203,6 @@ proc parsePath*(path: string): Path =
     inc p
 
   finishCommand(result)
-
-proc `$`*(path: Path): string =
-  for i, command in path.commands:
-    case command.kind
-    of Move: result.add "M"
-    of Line: result.add "L"
-    of HLine: result.add "H"
-    of VLine: result.add "V"
-    of Cubic: result.add "C"
-    of SCubic: result.add "S"
-    of Quad: result.add "Q"
-    of TQuad: result.add "T"
-    of Arc: result.add "A"
-    of RMove: result.add "m"
-    of RLine: result.add "l"
-    of RHLine: result.add "h"
-    of RVLine: result.add "v"
-    of RCubic: result.add "c"
-    of RSCubic: result.add "s"
-    of RQuad: result.add "q"
-    of RTQuad: result.add "t"
-    of RArc: result.add "a"
-    of Close: result.add "Z"
-    for j, number in command.numbers:
-      if floor(number) == number:
-        result.add $number.int
-      else:
-        result.add $number
-      if i != path.commands.len - 1 or j != command.numbers.len - 1:
-        result.add " "
 
 proc transform*(path: var Path, mat: Mat3) =
   for command in path.commands.mitems:
