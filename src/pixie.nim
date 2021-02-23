@@ -17,7 +17,8 @@ proc decodeImage*(data: string | seq[uint8]): Image =
     decodeJpg(data)
   elif data.len > 2 and data.readStr(0, 2) == bmpSignature:
     decodeBmp(data)
-  elif data.len > 5 and data.readStr(0, 5) == svgSignature:
+  elif data.len > 5 and
+    (data.readStr(0, 5) == xmlSignature or data.readStr(0, 4) == svgSignature):
     decodeSvg(data)
   else:
     raise newException(PixieError, "Unsupported image file format")
@@ -247,12 +248,7 @@ proc fillPolygon*(
   path.polygon(pos, size, sides)
   image.fillPath(path, color)
 
-proc fillPolygon*(
-  mask: Mask,
-  pos: Vec2,
-  size: float32,
-  sides: int
-) =
+proc fillPolygon*(mask: Mask, pos: Vec2, size: float32, sides: int) =
   var path: Path
   path.polygon(pos, size, sides)
   mask.fillPath(path)
