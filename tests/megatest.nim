@@ -25,7 +25,7 @@ const
     IconSet(name: "flat-color-icons", path: "../flat-color-icons/svg/*"),
     IconSet(name: "ionicons", path: "../ionicons/src/svg/*"),
     # IconSet(name: "tabler-icons", path: "../tabler-icons/icons/*"),
-    # IconSet(name: "simple-icons", path: "../simple-icons/icons/*")
+    IconSet(name: "simple-icons", path: "../simple-icons/icons/*")
   ]
   width = 32
   height = 32

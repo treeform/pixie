@@ -124,6 +124,9 @@ proc parsePath*(path: string): Path =
 
     armed = true
 
+  template expectsArcFlag(): bool =
+    kind in {Arc, RArc} and numbers.len mod 7 in {3, 4}
+
   while p < path.len:
     case path[p]:
     # Relative
@@ -195,7 +198,7 @@ proc parsePath*(path: string): Path =
         finishNumber()
         numberStart = p
     of '.':
-      if hitDecimal:
+      if hitDecimal or expectsArcFlag():
         finishNumber()
       hitDecimal = true
       if numberStart == 0:
@@ -203,6 +206,8 @@ proc parsePath*(path: string): Path =
     of ' ', ',', '\r', '\n', '\t':
       finishNumber()
     else:
+      if numberStart > 0 and expectsArcFlag():
+        finishNumber()
       if p - 1 == numberStart and path[p - 1] == '0':
         # If the number starts with 0 and we've hit another digit, finish the 0
         # .. 01.3.. -> [..0, 1.3..]
