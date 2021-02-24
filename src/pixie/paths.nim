@@ -1278,7 +1278,7 @@ proc parseSomePath(
     parsePath(path).commandsToShapes(pixelScale)
   elif type(path) is Path:
     path.commandsToShapes(pixelScale)
-  elif type(path) is seq[seq[Segment]]:
+  elif type(path) is seq[seq[Vec2]]:
     path
 
 proc fillPath*(

@@ -14,6 +14,7 @@ type Ctx = object
   strokeLineCap: LineCap
   strokeLineJoin: LineJoin
   transform: Mat3
+  shouldStroke: bool
 
 template failInvalid() =
   raise newException(PixieError, "Invalid SVG data")
@@ -24,7 +25,8 @@ proc attrOrDefault(node: XmlNode, name, default: string): string =
     result = default
 
 proc initCtx(): Ctx =
-  result.fill = parseHtmlColor("black").rgba.toPremultipliedAlpha()
+  result.fill = parseHtmlColor("black").rgba
+  result.stroke = parseHtmlColor("black").rgba
   result.strokeWidth = 1
   result.transform = mat3()
 
@@ -81,12 +83,15 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
   else:
     result.fill = parseHtmlColor(fill).rgba.toPremultipliedAlpha()
 
-  if stroke == "" or fill == "currentColor":
+  if stroke == "":
     discard # Inherit
+  elif stroke == "currentColor":
+    result.shouldStroke = true
   elif stroke == "none":
     result.stroke = ColorRGBA()
   else:
     result.stroke = parseHtmlColor(stroke).rgba.toPremultipliedAlpha()
+    result.shouldStroke = true
 
   if strokeWidth == "":
     discard # Inherit
@@ -94,6 +99,10 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
     if strokeWidth.endsWith("px"):
       strokeWidth = strokeWidth[0 .. ^3]
     result.strokeWidth = parseFloat(strokeWidth)
+    result.shouldStroke = true
+
+  if result.stroke == ColorRGBA() or result.strokeWidth <= 0:
+    result.shouldStroke = false
 
   if strokeLineCap == "":
     discard # Inherit
@@ -154,25 +163,35 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
         if arr.len != 6:
           failInvalidTransform(transform)
         var m = mat3()
-        m[0] = parseFloat(arr[0])
-        m[1] = parseFloat(arr[1])
-        m[3] = parseFloat(arr[2])
-        m[4] = parseFloat(arr[3])
-        m[6] = parseFloat(arr[4])
-        m[7] = parseFloat(arr[5])
+        m[0] = parseFloat(arr[0].strip())
+        m[1] = parseFloat(arr[1].strip())
+        m[3] = parseFloat(arr[2].strip())
+        m[4] = parseFloat(arr[3].strip())
+        m[6] = parseFloat(arr[4].strip())
+        m[7] = parseFloat(arr[5].strip())
         result.transform = result.transform * m
       elif f.startsWith("translate("):
         let
           components = f[10 .. ^2].split(" ")
-          tx = parseFloat(components[0])
-          ty = parseFloat(components[1])
+          tx = parseFloat(components[0].strip())
+          ty =
+            if components[1].len == 0:
+              0.0
+            else:
+              parseFloat(components[1].strip())
         result.transform = result.transform * translate(vec2(tx, ty))
       elif f.startsWith("rotate("):
-        # let
-        #   values = f[7 .. ^2].split(" ")
-        #   angle = parseFloat(values[0]) * -PI / 180
-        let angle = parseFloat(f[7 .. ^2]) * -PI / 180
-        result.transform = result.transform * rotationMat3(angle)
+        let
+          values = f[7 .. ^2].split(" ")
+          angle = parseFloat(values[0].strip()) * -PI / 180
+        var cx, cy: float32
+        if values.len > 1:
+          cx = parseFloat(values[1].strip())
+        if values.len > 2:
+          cy = parseFloat(values[2].strip())
+        let center = vec2(cx, cy)
+        result.transform = result.transform *
+          translate(center) * rotationMat3(angle) * translate(-center)
       else:
         failInvalidTransform(transform)
 
@@ -182,7 +201,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     return
 
   case node.tag:
-  of "title", "desc":
+  of "title", "desc", "defs":
     discard
 
   of "g":
@@ -199,7 +218,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
       path = parsePath(d)
     if ctx.fill != ColorRGBA():
       img.fillPath(path, ctx.fill, ctx.transform, ctx.fillRule)
-    if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
+    if ctx.shouldStroke:
       img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)
 
   of "line":
@@ -217,7 +236,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
 
     if ctx.fill != ColorRGBA():
       img.fillPath(path, ctx.fill, ctx.transform)
-    if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
+    if ctx.shouldStroke:
       img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)
 
   of "polyline", "polygon":
@@ -253,7 +272,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
 
     if ctx.fill != ColorRGBA():
       img.fillPath(path, ctx.fill, ctx.transform)
-    if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
+    if ctx.shouldStroke:
       img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)
 
   of "rect":
@@ -291,7 +310,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
 
     if ctx.fill != ColorRGBA():
       img.fillPath(path, ctx.fill, ctx.transform)
-    if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
+    if ctx.shouldStroke:
       img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)
 
   of "circle", "ellipse":
@@ -313,7 +332,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
 
     if ctx.fill != ColorRGBA():
       img.fillPath(path, ctx.fill, ctx.transform)
-    if ctx.stroke != ColorRGBA() and ctx.strokeWidth > 0:
+    if ctx.shouldStroke:
       img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)
 
   else:
@@ -329,15 +348,11 @@ proc decodeSvg*(data: string, width = 0, height = 0): Image =
     let
       viewBox = root.attr("viewBox")
       box = viewBox.split(" ")
-
-    # if parseInt(box[0]) != 0 or parseInt(box[1]) != 0:
-    #   failInvalid()
-
-    let
       viewBoxWidth = parseInt(box[2])
       viewBoxHeight = parseInt(box[3])
 
     var rootCtx = initCtx()
+    rootCtx = decodeCtx(rootCtx, root)
     if width == 0 and height == 0: # Default to the view box size
       result = newImage(viewBoxWidth, viewBoxHeight)
     else:
