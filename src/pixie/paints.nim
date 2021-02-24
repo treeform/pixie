@@ -1,9 +1,30 @@
-import chroma, common, images, vmath
+import chroma, common, images, vmath, blends, paths, masks
 
-type ColorStop* = object
-  ## Represents color on a gradient curve.
-  color*: Color
-  position*: float32
+type
+  PaintKind* = enum
+    pkSolid
+    pkImageFill
+    pkImageFit
+    pkImageStretch
+    pkImageTile
+    pkGradientLinear
+    pkGradientRadial
+    pkGradientAngular
+    pkGradientDiamond
+
+  Paint* = ref object
+    blendMode*: BlendMode
+    kind*: PaintKind
+    color*: ColorRGBA
+    image*: Image
+    mat*: Mat3
+    gradientHandlePositions*: seq[Vec2]
+    gradientStops*: seq[ColorStop]
+
+  ColorStop* = object
+    ## Represents color on a gradient curve.
+    color*: Color
+    position*: float32
 
 proc toLineSpace(at, to, point: Vec2): float32 =
   ## Convert position on to where it would fall on a line between at and to.
@@ -102,3 +123,41 @@ proc fillDiamondGradient*(
       let xy = vec2(x.float32, y.float32)
       let a = (center - xy).length() / distance
       image.gradientPut(x, y, a, stops)
+
+proc fillPath*(
+  image: Image,
+  path: SomePath,
+  paint: Paint,
+  windingRule = wrNonZero,
+) {.inline.} =
+  var mask = newMask(image.width, image.height)
+  var fill = newImage(image.width, image.height)
+  mask.fillPath(parseSomePath(path), windingRule)
+
+  case paint.kind:
+    of pkSolid:
+      fill.fill(paint.color.toPremultipliedAlpha())
+    of pkImageFill:
+      discard
+    of pkImageFit:
+      discard
+    of pkImageStretch:
+      discard
+    of pkImageTile:
+      discard
+    of pkGradientLinear:
+      discard
+    of pkGradientRadial:
+      fill.fillRadialGradient(
+        paint.gradientHandlePositions[0],
+        paint.gradientHandlePositions[1],
+        paint.gradientHandlePositions[2],
+        paint.gradientStops
+      )
+    of pkGradientAngular:
+      discard
+    of pkGradientDiamond:
+      discard
+
+  fill.draw(mask, blendMode = bmMask)
+  image.draw(fill, blendMode = paint.blendMode)

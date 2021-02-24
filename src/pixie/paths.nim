@@ -1271,7 +1271,7 @@ proc strokeShapes(
     if strokeShape.len > 0:
       result.add(strokeShape)
 
-proc parseSomePath(
+proc parseSomePath*(
   path: SomePath, pixelScale: float32 = 1.0
 ): seq[seq[Vec2]] {.inline.} =
   when type(path) is string:
