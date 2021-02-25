@@ -1,0 +1,2 @@
+packAlphaValues	pixie/internal.html#packAlphaValues,M128i	internal: packAlphaValues(v: M128i): M128i	
+unpackAlphaValues	pixie/internal.html#unpackAlphaValues,M128i	internal: unpackAlphaValues(v: M128i): M128i	

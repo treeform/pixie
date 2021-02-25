@@ -157,16 +157,6 @@ function main() {
     title="maskerSimd(blendMode: BlendMode): MaskerSimd">maskerSimd,<wbr>BlendMode</a></li>
 
   </ul>
-  <ul class="simple nested-toc-section">unpackAlphaValues
-      <li><a class="reference" href="#unpackAlphaValues%2CM128i"
-    title="unpackAlphaValues(v: M128i): M128i">unpackAlphaValues,<wbr>M128i</a></li>
-
-  </ul>
-  <ul class="simple nested-toc-section">packAlphaValues
-      <li><a class="reference" href="#packAlphaValues%2CM128i"
-    title="packAlphaValues(v: M128i): M128i">packAlphaValues,<wbr>M128i</a></li>
-
-  </ul>
 
   </ul>
 </li>
@@ -253,20 +243,6 @@ Blends alphas of backdrop, source.
 
 
 </dd>
-<a id="packAlphaValues,M128i"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#packAlphaValues%2CM128i"><span class="Identifier">packAlphaValues</span></a><span class="Other">(</span><span class="Identifier">v</span><span class="Other">:</span> <span class="Identifier">M128i</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">M128i</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-Shuffle the alpha values for these 4 colors to the first 4 bytes
-
-</dd>
-<a id="unpackAlphaValues,M128i"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#unpackAlphaValues%2CM128i"><span class="Identifier">unpackAlphaValues</span></a><span class="Other">(</span><span class="Identifier">v</span><span class="Other">:</span> <span class="Identifier">M128i</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">M128i</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-Unpack the first 32 bits into 4 rgba(0, 0, 0, value)
-
-</dd>
 <a id="blenderSimd,BlendMode"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#blenderSimd%2CBlendMode"><span class="Identifier">blenderSimd</span></a><span class="Other">(</span><span class="Identifier">blendMode</span><span class="Other">:</span> <a href="blends.html#BlendMode"><span class="Identifier">BlendMode</span></a><span class="Other">)</span><span class="Other">:</span> <a href="blends.html#BlenderSimd"><span class="Identifier">BlenderSimd</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">PixieError</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
@@ -307,7 +283,7 @@ Is there a blend masking function with SIMD support?
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-25 17:48:08 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-25 18:15:59 UTC</small>
       </div>
     </div>
   </div>
