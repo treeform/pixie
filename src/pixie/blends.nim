@@ -35,7 +35,6 @@ type
     bmIntersectMask
     bmExcludeMask
 
-
   Blender* = proc(backdrop, source: ColorRGBA): ColorRGBA ## Function signature
   ## returned by blender.
   Masker* = proc(backdrop, source: uint8): uint8 ## Function signature returned
@@ -210,15 +209,15 @@ proc blendMultiply(backdrop, source: ColorRGBA): ColorRGBA =
   result.b = blend(backdrop.b, backdrop.a, source.b, source.a)
   result.a = blendAlpha(backdrop.a, source.a)
 
-proc blendLinearBurn(backdrop, source: ColorRGBA): ColorRGBA =
-  let
-    backdrop = backdrop.toStraightAlpha()
-    source = source.toStraightAlpha()
-  result.r = min(0, backdrop.r.int32 + source.r.int32 - 255).uint8
-  result.g = min(0, backdrop.g.int32 + source.g.int32 - 255).uint8
-  result.b = min(0, backdrop.b.int32 + source.b.int32 - 255).uint8
-  result = alphaFix(backdrop, source, result)
-  result = result.toPremultipliedAlpha()
+# proc blendLinearBurn(backdrop, source: ColorRGBA): ColorRGBA =
+#   let
+#     backdrop = backdrop.toStraightAlpha()
+#     source = source.toStraightAlpha()
+#   result.r = min(0, backdrop.r.int32 + source.r.int32 - 255).uint8
+#   result.g = min(0, backdrop.g.int32 + source.g.int32 - 255).uint8
+#   result.b = min(0, backdrop.b.int32 + source.b.int32 - 255).uint8
+#   result = alphaFix(backdrop, source, result)
+#   result = result.toPremultipliedAlpha()
 
 proc blendColorBurn(backdrop, source: ColorRGBA): ColorRGBA =
   let
@@ -257,15 +256,15 @@ proc blendScreen(backdrop, source: ColorRGBA): ColorRGBA =
   result.b = screen(backdrop.b, source.b)
   result.a = blendAlpha(backdrop.a, source.a)
 
-proc blendLinearDodge(backdrop, source: ColorRGBA): ColorRGBA =
-  let
-    backdrop = backdrop.toStraightAlpha()
-    source = source.toStraightAlpha()
-  result.r = min(backdrop.r.uint32 + source.r, 255).uint8
-  result.g = min(backdrop.g.uint32 + source.g, 255).uint8
-  result.b = min(backdrop.b.uint32 + source.b, 255).uint8
-  result = alphaFix(backdrop, source, result)
-  result = result.toPremultipliedAlpha()
+# proc blendLinearDodge(backdrop, source: ColorRGBA): ColorRGBA =
+#   let
+#     backdrop = backdrop.toStraightAlpha()
+#     source = source.toStraightAlpha()
+#   result.r = min(backdrop.r.uint32 + source.r, 255).uint8
+#   result.g = min(backdrop.g.uint32 + source.g, 255).uint8
+#   result.b = min(backdrop.b.uint32 + source.b, 255).uint8
+#   result = alphaFix(backdrop, source, result)
+#   result = result.toPremultipliedAlpha()
 
 proc blendColorDodge(backdrop, source: ColorRGBA): ColorRGBA =
   let
@@ -449,9 +448,9 @@ proc blendExcludeMask(backdrop, source: ColorRGBA): ColorRGBA =
 proc blendOverwrite(backdrop, source: ColorRGBA): ColorRGBA =
   source
 
-proc blendWhite(backdrop, source: ColorRGBA): ColorRGBA =
-  ## For testing
-  rgba(255, 255, 255, 255)
+# proc blendWhite(backdrop, source: ColorRGBA): ColorRGBA =
+#   ## For testing
+#   rgba(255, 255, 255, 255)
 
 proc blender*(blendMode: BlendMode): Blender =
   ## Returns a blend function for a given blend mode.

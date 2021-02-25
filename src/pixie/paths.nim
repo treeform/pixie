@@ -1,4 +1,4 @@
-import blends, bumpy, chroma, common, images, masks, strutils, vmath, paints
+import blends, bumpy, chroma, common, images, masks, paints, strutils, vmath
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -35,13 +35,13 @@ type
 
   SomePath* = Path | string | seq[seq[Vec2]]
 
-const epsilon = 0.0001 * PI  ## Tiny value used for some computations.
+const epsilon = 0.0001 * PI ## Tiny value used for some computations.
 
 when defined(release):
   {.push checks: off.}
 
 proc maxScale(m: Mat3): float32 =
-  ## What is the largest scale of this matrix.
+  ## What is the largest scale factor of this matrix?
   max(
     vec2(m[0, 0], m[0, 1]).length,
     vec2(m[1, 0], m[1, 1]).length
@@ -89,7 +89,7 @@ proc `$`*(path: Path): string =
         result.add " "
 
 proc parsePath*(path: string): Path =
-  ## Converts a SVG style path into seq of commands.
+  ## Converts a SVG style path string into seq of commands.
 
   if path.len == 0:
     return
@@ -398,7 +398,9 @@ proc arcTo*(path: var Path, ctrl1, ctrl2: Vec2, radius: float32) {.inline.} =
     ))
     path.at = to
 
-proc arcTo*(path: var Path, x1, y1, x2, y2, radius: float32) =
+proc arcTo*(path: var Path, x1, y1, x2, y2, radius: float32) {.inline.} =
+  ## Adds a circular arc to the current sub-path, using the given control
+  ## points and radius.
   path.arcTo(vec2(x1, y1), vec2(x2, y2), radius)
 
 proc ellipticalArcTo*(
@@ -419,6 +421,9 @@ proc ellipticalArcTo*(
   path.at = vec2(x, y)
 
 proc rect*(path: var Path, x, y, w, h: float32, clockwise = true) =
+  ## Adds a rectangle.
+  ## Clockwise param can be used to subtract a rect from a path when using
+  ## even-odd winding rule.
   if clockwise:
     path.moveTo(x, y)
     path.lineTo(x + w, y)
@@ -434,12 +439,14 @@ proc rect*(path: var Path, x, y, w, h: float32, clockwise = true) =
 
 proc rect*(path: var Path, pos: Vec2, wh: Vec2, clockwise = true) {.inline.} =
   ## Adds a rectangle.
-  ## Clockwise param can be used to subtract a rect from a path using even-odd.
+  ## Clockwise param can be used to subtract a rect from a path when using
+  ## even-odd winding rule.
   path.rect(pos.x, pos.y, wh.x, wh.y, clockwise)
 
 proc rect*(path: var Path, rect: Rect, clockwise = true) {.inline.} =
   ## Adds a rectangle.
-  ## Clockwise param can be used to subtract a rect from a path using even-odd.
+  ## Clockwise param can be used to subtract a rect from a path when using
+  ## even-odd winding rule.
   path.rect(rect.x, rect.y, rect.w, rect.h, clockwise)
 
 const splineCircleK = 4.0 * (-1.0 + sqrt(2.0)) / 3
@@ -450,7 +457,8 @@ proc roundedRect*(
   path: var Path, x, y, w, h, nw, ne, se, sw: float32, clockwise = true
 ) =
   ## Adds a rounded rectangle.
-  ## Clockwise param can be used to subtract a rect from a path using even-odd.
+  ## Clockwise param can be used to subtract a rect from a path when using
+  ## even-odd winding rule.
   let
     s = splineCircleK
 
@@ -505,14 +513,16 @@ proc roundedRect*(
   path: var Path, pos, wh: Vec2, nw, ne, se, sw: float32, clockwise = true
 ) {.inline.} =
   ## Adds a rounded rectangle.
-  ## Clockwise param can be used to subtract a rect from a path using even-odd.
+  ## Clockwise param can be used to subtract a rect from a path when using
+  ## even-odd winding rule.
   path.roundedRect(pos.x, pos.y, wh.x, wh.y, nw, ne, se, sw, clockwise)
 
 proc roundedRect*(
   path: var Path, rect: Rect, nw, ne, se, sw: float32, clockwise = true
 ) {.inline.} =
   ## Adds a rounded rectangle.
-  ## Clockwise param can be used to subtract a rect from a path using even-odd.
+  ## Clockwise param can be used to subtract a rect from a path when using
+  ## even-odd winding rule.
   path.roundedRect(rect.x, rect.y, rect.w, rect.h, nw, ne, se, sw, clockwise)
 
 proc ellipse*(path: var Path, cx, cy, rx, ry: float32) =
@@ -533,7 +543,7 @@ proc ellipse*(path: var Path, center: Vec2, rx, ry: float32) {.inline.} =
   path.ellipse(center.x, center.y, rx, ry)
 
 proc polygon*(path: var Path, x, y, size: float32, sides: int) =
-  ## Draws a n-sided regular polygon at (x, y) with a size.
+  ## Draws an n-sided regular polygon at (x, y) with the parameter size.
   path.moveTo(x + size * cos(0.0), y + size * sin(0.0))
   for side in 0 .. sides:
     path.lineTo(
@@ -542,12 +552,11 @@ proc polygon*(path: var Path, x, y, size: float32, sides: int) =
     )
 
 proc polygon*(path: var Path, pos: Vec2, size: float32, sides: int) {.inline.} =
-  ## Draws a n-sided regular polygon at (x, y) with a size.
+  ## Draws a n-sided regular polygon at (x, y) with the parameter size.
   path.polygon(pos.x, pos.y, size, sides)
 
 proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
   ## Converts SVG-like commands to line segments.
-
   var
     start, at: Vec2
     shape: seq[Vec2]
@@ -910,7 +919,7 @@ iterator segments*(s: seq[Vec2]): Segment =
     yield(segment(s[i], s[i + 1]))
 
 proc quickSort(a: var seq[(float32, int16)], inl, inr: int) =
-  ## Quick sorts inline faster then standard lib.
+  ## Sorts in place + faster than standard lib sort.
   var
     r = inr
     l = inl
@@ -966,7 +975,6 @@ proc partitionSegments(
   shapes: seq[seq[Vec2]], height: int
 ): seq[seq[(Segment, int16)]] =
   ## Puts segments into the height partitions they intersect with.
-
   var segmentCount: int
   for shape in shapes:
     segmentCount += shape.len - 1

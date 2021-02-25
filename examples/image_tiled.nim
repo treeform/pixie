@@ -1,8 +1,6 @@
 import pixie
 
-let
-  image = newImage(200, 200)
-
+let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
 
 var path: Path
@@ -14,9 +12,9 @@ path.polygon(
 image.fillPath(
   path,
   Paint(
-    kind:pkImageTiled,
+    kind: pkImageTiled,
     image: readImage("tests/images/png/baboon.png"),
-    imageMat:scale(vec2(0.08, 0.08))
+    imageMat: scale(vec2(0.08, 0.08))
   )
 )
 

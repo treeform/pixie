@@ -200,7 +200,7 @@ proc minifyBy2*(image: Image, power = 1): Image =
     src = result
 
 proc magnifyBy2*(image: Image, power = 1): Image =
-  ## Scales image image up by 2 ^ power.
+  ## Scales image up by 2 ^ power.
   if power < 0:
     raise newException(PixieError, "Cannot magnifyBy2 with negative power")
 
@@ -543,7 +543,9 @@ proc getRgbaSmooth*(image: Image, x, y: float32, wrapped = false): ColorRGBA =
 
   lerp(bottomMix, topMix, diffY)
 
-proc drawCorrect(a, b: Image | Mask, mat = mat3(), tiled = false, blendMode = bmNormal) =
+proc drawCorrect(
+  a, b: Image | Mask, mat = mat3(), tiled = false, blendMode = bmNormal
+) =
   ## Draws one image onto another using matrix with color blending.
 
   when type(a) is Image:
