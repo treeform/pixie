@@ -529,6 +529,25 @@ proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA =
 
   lerp(bottomMix, topMix, diffY)
 
+proc getRgbaSmoothWrapped*(image: Image, x, y: float32): ColorRGBA =
+  let
+    minX = floor(x)
+    minY = floor(y)
+    diffX = x - minX
+    diffY = y - minY
+    x = minX.int
+    y = minY.int
+
+    x0y0 = image[(x + 0) mod image.width, (y + 0) mod image.height]
+    x1y0 = image[(x + 1) mod image.width, (y + 0) mod image.height]
+    x0y1 = image[(x + 0) mod image.width, (y + 1) mod image.height]
+    x1y1 = image[(x + 1) mod image.width, (y + 1) mod image.height]
+
+    bottomMix = lerp(x0y0, x1y0, diffX)
+    topMix = lerp(x0y1, x1y1, diffX)
+
+  lerp(bottomMix, topMix, diffY)
+
 proc drawCorrect(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
   ## Draws one image onto another using matrix with color blending.
 
