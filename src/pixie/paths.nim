@@ -1404,7 +1404,11 @@ proc fillPath*(
   transform: Vec2 | Mat3,
   windingRule = wrNonZero
 ) =
-  var shapes = parseSomePath(path)
+  when type(transform) is Mat3:
+    let pixelScale = transform.maxScale()
+  else:
+    let pixelScale = 1.0
+  var shapes = parseSomePath(path, pixelScale)
   for shape in shapes.mitems:
     for segment in shape.mitems:
       when type(transform) is Vec2:
@@ -1472,8 +1476,12 @@ proc strokePath*(
   lineCap = lcButt,
   lineJoin = ljMiter
 ) =
+  when type(transform) is Mat3:
+    let pixelScale = transform.maxScale()
+  else:
+    let pixelScale = 1.0
   var strokeShapes = strokeShapes(
-    parseSomePath(path), strokeWidth, lineCap, lineJoin
+    parseSomePath(path, pixelScale), strokeWidth, lineCap, lineJoin
   )
   for shape in strokeShapes.mitems:
     for segment in shape.mitems:
