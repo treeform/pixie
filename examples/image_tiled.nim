@@ -14,9 +14,9 @@ path.polygon(
 image.fillPath(
   path,
   Paint(
-    kind:pkImageTiled,
+    kind: pkImageTiled,
     image: readImage("tests/images/png/baboon.png"),
-    imageMat:scale(vec2(0.08, 0.08))
+    imageMat: scale(vec2(0.08, 0.08))
   )
 )
 

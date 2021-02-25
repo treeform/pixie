@@ -14,8 +14,8 @@ block:
   image.fillPath(
     heartShape,
     Paint(
-      kind:pkSolid,
-      color:rgba(255, 0, 0, 255)
+      kind: pkSolid,
+      color: rgba(255, 0, 0, 255)
     )
   )
   image.writeFile("tests/images/paths/paintSolid.png")
@@ -26,9 +26,9 @@ block:
   image.fillPath(
     heartShape,
     Paint(
-      kind:pkImage,
-      image:decodePng(readFile("tests/images/png/baboon.png")),
-      imageMat:scale(vec2(0.2, 0.2))
+      kind: pkImage,
+      image: decodePng(readFile("tests/images/png/baboon.png")),
+      imageMat: scale(vec2(0.2, 0.2))
     )
   )
   image.writeFile("tests/images/paths/paintImage.png")
@@ -39,13 +39,12 @@ block:
   image.fillPath(
     heartShape,
     Paint(
-      kind:pkImageTiled,
-      image:decodePng(readFile("tests/images/png/baboon.png")),
-      imageMat:scale(vec2(0.02, 0.02))
+      kind: pkImageTiled,
+      image: decodePng(readFile("tests/images/png/baboon.png")),
+      imageMat: scale(vec2(0.02, 0.02))
     )
   )
   image.writeFile("tests/images/paths/paintImageTiled.png")
-
 
 block:
   let
@@ -53,16 +52,16 @@ block:
   image.fillPath(
     heartShape,
     Paint(
-      kind:pkGradientLinear,
+      kind: pkGradientLinear,
       gradientHandlePositions: @[
         vec2(0, 50),
         vec2(100, 50),
-      ],
-      gradientStops: @[
-        ColorStop(color:rgba(255, 0, 0, 255).color, position: 0),
-        ColorStop(color:rgba(255, 0, 0, 40).color, position: 1.0),
-      ]
-    )
+    ],
+    gradientStops: @[
+      ColorStop(color: rgba(255, 0, 0, 255).color, position: 0),
+      ColorStop(color: rgba(255, 0, 0, 40).color, position: 1.0),
+    ]
+  )
   )
   image.writeFile("tests/images/paths/gradientLinear.png")
 
@@ -72,17 +71,17 @@ block:
   image.fillPath(
     heartShape,
     Paint(
-      kind:pkGradientRadial,
+      kind: pkGradientRadial,
       gradientHandlePositions: @[
         vec2(50, 50),
         vec2(100, 50),
         vec2(50, 100)
-      ],
-      gradientStops: @[
-        ColorStop(color:rgba(255, 0, 0, 255).color, position: 0),
-        ColorStop(color:rgba(255, 0, 0, 40).color, position: 1.0),
-      ]
-    )
+    ],
+    gradientStops: @[
+      ColorStop(color: rgba(255, 0, 0, 255).color, position: 0),
+      ColorStop(color: rgba(255, 0, 0, 40).color, position: 1.0),
+    ]
+  )
   )
 
   image.writeFile("tests/images/paths/gradientRadial.png")
@@ -93,17 +92,17 @@ block:
   image.fillPath(
     heartShape,
     Paint(
-      kind:pkGradientAngular,
+      kind: pkGradientAngular,
       gradientHandlePositions: @[
         vec2(50, 50),
         vec2(100, 50),
         vec2(50, 100)
-      ],
-      gradientStops: @[
-        ColorStop(color:rgba(255, 0, 0, 255).color, position: 0),
-        ColorStop(color:rgba(255, 0, 0, 40).color, position: 1.0),
-      ]
-    )
+    ],
+    gradientStops: @[
+      ColorStop(color: rgba(255, 0, 0, 255).color, position: 0),
+      ColorStop(color: rgba(255, 0, 0, 40).color, position: 1.0),
+    ]
+  )
   )
 
   image.writeFile("tests/images/paths/gradientAngular.png")

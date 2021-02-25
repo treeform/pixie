@@ -1,4 +1,4 @@
-import chroma, common, images, vmath, blends
+import blends, chroma, common, images, vmath
 
 type
   PaintKind* = enum
@@ -13,19 +13,19 @@ type
     ## Paint used to fill paths.
     case kind*: PaintKind
     of pkSolid:
-      color*: ColorRGBA                    ## Color to fill with.
+      color*: ColorRGBA                   ## Color to fill with.
     of pkImage, pkImageTiled:
-      image*: Image                        ## Image to fill with.
-      imageMat*: Mat3                      ## Matrix of the filled image.
+      image*: Image                       ## Image to fill with.
+      imageMat*: Mat3                     ## Matrix of the filled image.
     of pkGradientLinear, pkGradientRadial, pkGradientAngular:
-      gradientHandlePositions*: seq[Vec2]  ## Gradient positions (image space).
-      gradientStops*: seq[ColorStop]       ## Color stops (gradient space).
-    blendMode*: BlendMode                  ## Blend mode.
+      gradientHandlePositions*: seq[Vec2] ## Gradient positions (image space).
+      gradientStops*: seq[ColorStop]      ## Color stops (gradient space).
+    blendMode*: BlendMode                 ## Blend mode.
 
   ColorStop* = object
     ## Color stop on a gradient curve.
-    color*: Color                         ## Color of the stop
-    position*: float32                    ## Gradient Stop position 0..1.
+    color*: Color      ## Color of the stop
+    position*: float32 ## Gradient Stop position 0..1.
 
 proc toLineSpace(at, to, point: Vec2): float32 =
   ## Convert position on to where it would fall on a line between at and to.

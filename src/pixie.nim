@@ -1,9 +1,8 @@
 import bumpy, chroma, flatty/binny, os, pixie/blends, pixie/common,
     pixie/fileformats/bmp, pixie/fileformats/jpg, pixie/fileformats/png,
-    pixie/fileformats/svg, pixie/paints, pixie/images, pixie/masks,
-    pixie/paths, vmath
+    pixie/fileformats/svg, pixie/images, pixie/masks, pixie/paints, pixie/paths, vmath
 
-export blends, bumpy, chroma, common, paints, images, masks, paths, vmath
+export blends, bumpy, chroma, common, images, masks, paints, paths, vmath
 
 type
   FileFormat* = enum

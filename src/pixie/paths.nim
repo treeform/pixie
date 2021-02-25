@@ -1,4 +1,4 @@
-import blends, bumpy, chroma, common, images, masks, strutils, vmath, paints
+import blends, bumpy, chroma, common, images, masks, paints, strutils, vmath
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -35,7 +35,7 @@ type
 
   SomePath* = Path | string | seq[seq[Vec2]]
 
-const epsilon = 0.0001 * PI  ## Tiny value used for some computations.
+const epsilon = 0.0001 * PI ## Tiny value used for some computations.
 
 when defined(release):
   {.push checks: off.}

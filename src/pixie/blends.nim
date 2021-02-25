@@ -35,7 +35,6 @@ type
     bmIntersectMask
     bmExcludeMask
 
-
   Blender* = proc(backdrop, source: ColorRGBA): ColorRGBA ## Function signature
   ## returned by blender.
   Masker* = proc(backdrop, source: uint8): uint8 ## Function signature returned

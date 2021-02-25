@@ -14,17 +14,17 @@ image.fillPath(
     z
   """,
   Paint(
-    kind:pkGradientRadial,
+    kind: pkGradientRadial,
     gradientHandlePositions: @[
       vec2(100, 100),
       vec2(200, 100),
       vec2(100, 200)
-    ],
-    gradientStops: @[
-      ColorStop(color:rgba(255, 0, 0, 255).color, position: 0),
-      ColorStop(color:rgba(255, 0, 0, 40).color, position: 1.0),
-    ]
-  )
+  ],
+  gradientStops: @[
+    ColorStop(color: rgba(255, 0, 0, 255).color, position: 0),
+    ColorStop(color: rgba(255, 0, 0, 40).color, position: 1.0),
+  ]
+)
 )
 
 image.writeFile("examples/paint.png")
