@@ -8,7 +8,6 @@ type
     pkGradientLinear
     pkGradientRadial
     pkGradientAngular
-    pkGradientDiamond
 
   Paint* = ref object
     kind*: PaintKind
@@ -146,18 +145,4 @@ proc fillAngularGradient*(
         xy = vec2(x.float32, y.float32)
         angle = normalize(xy - center).angle()
         a = (angle + gradientAngle + PI/2).fixAngle() / 2 / PI + 0.5
-      image.gradientPut(x, y, a, stops)
-
-proc fillDiamondGradient*(
-  image: Image,
-  center, edge, skew: Vec2,
-  stops: seq[ColorStop]
-) =
-  # TODO: implement GRADIENT_DIAMOND, now will just do GRADIENT_RADIAL
-  let
-    distance = dist(center, edge)
-  for y in 0 ..< image.height:
-    for x in 0 ..< image.width:
-      let xy = vec2(x.float32, y.float32)
-      let a = (center - xy).length() / distance
       image.gradientPut(x, y, a, stops)

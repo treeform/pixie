@@ -107,24 +107,3 @@ block:
   )
 
   image.writeFile("tests/images/paths/gradientAngular.png")
-
-# block:
-#   let
-#     image = newImage(100, 100)
-#   image.fillPath(
-#     heartShape,
-#     Paint(
-#       kind:pkGradientDiamond,
-#       gradientHandlePositions: @[
-#         vec2(50, 50),
-#         vec2(100, 50),
-#         vec2(50, 100)
-#       ],
-#       gradientStops: @[
-#         ColorStop(color:rgba(255, 0, 0, 255).color, position: 0),
-#         ColorStop(color:rgba(255, 0, 0, 40).color, position: 1.0),
-#       ]
-#     )
-#   )
-
-#   image.writeFile("tests/images/paths/gradientDiamond.png")
