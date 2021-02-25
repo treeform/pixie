@@ -52,13 +52,13 @@ proc writeFile*(image: Image, filePath: string) =
   image.writeFile(filePath, fileformat)
 
 proc fillRect*(image: Image, rect: Rect, color: ColorRGBA) =
-  ## Fill a rectangle.
+  ## Fills a rectangle.
   var path: Path
   path.rect(rect)
   image.fillPath(path, color)
 
 proc fillRect*(mask: Mask, rect: Rect) =
-  ## Fill a rectangle.
+  ## Fills a rectangle.
   var path: Path
   path.rect(rect)
   mask.fillPath(path)
@@ -66,13 +66,13 @@ proc fillRect*(mask: Mask, rect: Rect) =
 proc strokeRect*(
   image: Image, rect: Rect, color: ColorRGBA, strokeWidth = 1.0
 ) =
-  ## Stroke a rounded rectangle.
+  ## Strokes a rectangle.
   var path: Path
   path.rect(rect)
   image.strokePath(path, color, strokeWidth)
 
 proc strokeRect*(mask: Mask, rect: Rect, strokeWidth = 1.0) =
-  ## Stroke a rounded rectangle.
+  ## Strokes a rectangle.
   var path: Path
   path.rect(rect)
   mask.strokePath(path, strokeWidth)
@@ -83,7 +83,7 @@ proc fillRoundedRect*(
   nw, ne, se, sw: float32,
   color: ColorRGBA
 ) =
-  ## Fill a rounded rectangle.
+  ## Fills a rounded rectangle.
   var path: Path
   path.roundedRect(rect, nw, ne, se, sw)
   image.fillPath(path, color)
@@ -94,19 +94,19 @@ proc fillRoundedRect*(
   radius: float32,
   color: ColorRGBA
 ) =
-  ## Fill a rounded rectangle.
+  ## Fills a rounded rectangle.
   var path: Path
   path.roundedRect(rect, radius, radius, radius, radius)
   image.fillPath(path, color)
 
 proc fillRoundedRect*(mask: Mask, rect: Rect, nw, ne, se, sw: float32) =
-  ## Fill a rounded rectangle.
+  ## Fills a rounded rectangle.
   var path: Path
   path.roundedRect(rect, nw, ne, se, sw)
   mask.fillPath(path)
 
 proc fillRoundedRect*(mask: Mask, rect: Rect, radius: float32) =
-  ## Fill a rounded rectangle.
+  ## Fills a rounded rectangle.
   var path: Path
   path.roundedRect(rect, radius, radius, radius, radius)
   mask.fillPath(path)
@@ -118,7 +118,7 @@ proc strokeRoundedRect*(
   color: ColorRGBA,
   strokeWidth = 1.0
 ) =
-  ## Stroke a rounded rectangle.
+  ## Strokes a rounded rectangle.
   var path: Path
   path.roundedRect(rect, nw, ne, se, sw)
   image.strokePath(path, color, strokeWidth)
@@ -130,7 +130,7 @@ proc strokeRoundedRect*(
   color: ColorRGBA,
   strokeWidth = 1.0
 ) =
-  ## Stroke a rounded rectangle.
+  ## Strokes a rounded rectangle.
   var path: Path
   path.roundedRect(rect, radius, radius, radius, radius)
   image.strokePath(path, color, strokeWidth)
@@ -138,7 +138,7 @@ proc strokeRoundedRect*(
 proc strokeRoundedRect*(
   mask: Mask, rect: Rect, nw, ne, se, sw: float32, strokeWidth = 1.0
 ) =
-  ## Stroke a rounded rectangle.
+  ## Strokes a rounded rectangle.
   var path: Path
   path.roundedRect(rect, nw, ne, se, sw)
   mask.strokePath(path, strokeWidth)
@@ -146,7 +146,7 @@ proc strokeRoundedRect*(
 proc strokeRoundedRect*(
   mask: Mask, rect: Rect, radius: float32, strokeWidth = 1.0
 ) =
-  ## Stroke a rounded rectangle.
+  ## Strokes a rounded rectangle.
   var path: Path
   path.roundedRect(rect, radius, radius, radius, radius)
   mask.strokePath(path, strokeWidth)
@@ -157,14 +157,14 @@ proc strokeSegment*(
   color: ColorRGBA,
   strokeWidth = 1.0
 ) =
-  ## Stroke a segment (draws a line from segment.at to segment.to).
+  ## Strokes a segment (draws a line from segment.at to segment.to).
   var path: Path
   path.moveTo(segment.at)
   path.lineTo(segment.to)
   image.strokePath(path, color, strokeWidth)
 
 proc strokeSegment*(mask: Mask, segment: Segment, strokeWidth: float32) =
-  ## Stroke a segment (draws a line from segment.at to segment.to).
+  ## Strokes a segment (draws a line from segment.at to segment.to).
   var path: Path
   path.moveTo(segment.at)
   path.lineTo(segment.to)
@@ -177,7 +177,7 @@ proc fillEllipse*(
   color: ColorRGBA,
   blendMode = bmNormal
 ) =
-  ## Fill an ellipse.
+  ## Fills an ellipse.
   var path: Path
   path.ellipse(center, rx, ry)
   image.fillPath(path, color, wrNonZero, blendMode)
@@ -187,7 +187,7 @@ proc fillEllipse*(
   center: Vec2,
   rx, ry: float32
 ) =
-  ## Fill an ellipse.
+  ## Fills an ellipse.
   var path: Path
   path.ellipse(center, rx, ry)
   mask.fillPath(path)
@@ -199,7 +199,7 @@ proc strokeEllipse*(
   color: ColorRGBA,
   strokeWidth = 1.0
 ) =
-  ## Stroke an ellipse.
+  ## Strokes an ellipse.
   var path: Path
   path.ellipse(center, rx, ry)
   image.strokePath(path, color, strokeWidth)
@@ -210,7 +210,7 @@ proc strokeEllipse*(
   rx, ry: float32,
   strokeWidth = 1.0
 ) =
-  ## Stroke an ellipse.
+  ## Strokes an ellipse.
   var path: Path
   path.ellipse(center, rx, ry)
   mask.strokePath(path, strokeWidth)

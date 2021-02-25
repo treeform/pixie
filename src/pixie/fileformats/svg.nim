@@ -339,7 +339,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     raise newException(PixieError, "Unsupported SVG tag: " & node.tag & ".")
 
 proc decodeSvg*(data: string, width = 0, height = 0): Image =
-  ## Render SVG file and return the image.
+  ## Render SVG file and return the image. Defaults to the SVG's view box size.
   try:
     let root = parseXml(data)
     if root.tag != "svg":
