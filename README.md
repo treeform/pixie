@@ -142,6 +142,29 @@ image.fillPath(
 ```
 ![example output](examples/heart.png)
 
+### Masking
+[examples/masking.nim](examples/masking.nim)
+```nim
+lines.strokeSegment(
+  segment(vec2(25, 25), vec2(175, 175)), color, strokeWidth = 30)
+lines.strokeSegment(
+  segment(vec2(25, 175), vec2(175, 25)), color, strokeWidth = 30)
+
+mask.fillPath(
+  """
+    M 20 60
+    A 40 40 90 0 1 100 60
+    A 40 40 90 0 1 180 60
+    Q 180 120 100 180
+    Q 20 120 20 60
+    z
+  """
+)
+lines.draw(mask)
+image.draw(lines)
+```
+![example output](examples/masking.png)
+
 ### Shadow
 [examples/shadow.nim](examples/shadow.nim)
 ```nim

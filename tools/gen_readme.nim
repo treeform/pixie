@@ -15,6 +15,7 @@ var exampleFiles = [
   "examples/line.nim",
   "examples/rounded_rectangle.nim",
   "examples/heart.nim",
+  "examples/masking.nim",
   "examples/shadow.nim",
   "examples/blur.nim",
   "examples/tiger.nim"
