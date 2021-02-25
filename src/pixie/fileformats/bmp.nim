@@ -1,4 +1,4 @@
-import chroma, flatty/binny, pixie/common, pixie/images
+import chroma, flatty/binny, pixie/common, pixie/images, pixie/internal
 
 # See: https://en.wikipedia.org/wiki/BMP_file_format
 
@@ -48,6 +48,8 @@ proc decodeBmp*(data: string): Image =
         offset += 3
       result[x, result.height - y - 1] = rgba
 
+  result.data.toPremultipliedAlpha()
+
 proc decodeBmp*(data: seq[uint8]): Image {.inline.} =
   ## Decodes bitmap data into an Image.
   decodeBmp(cast[string](data))
@@ -84,7 +86,7 @@ proc encodeBmp*(image: Image): string =
 
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
-      let rgba = image[x, image.height - y - 1]
+      let rgba = image[x, image.height - y - 1].toStraightAlpha()
       result.addUint8(rgba.r)
       result.addUint8(rgba.g)
       result.addUint8(rgba.b)

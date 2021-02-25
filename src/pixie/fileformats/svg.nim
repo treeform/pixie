@@ -353,6 +353,7 @@ proc decodeSvg*(data: string, width = 0, height = 0): Image =
 
     var rootCtx = initCtx()
     rootCtx = decodeCtx(rootCtx, root)
+
     if width == 0 and height == 0: # Default to the view box size
       result = newImage(viewBoxWidth, viewBoxHeight)
     else:
@@ -366,7 +367,6 @@ proc decodeSvg*(data: string, width = 0, height = 0): Image =
     var ctxStack = @[rootCtx]
     for node in root:
       result.draw(node, ctxStack)
-    result.toStraightAlpha()
   except PixieError as e:
     raise e
   except:

@@ -211,64 +211,6 @@ proc magnifyBy2*(image: Image, power = 1): Image =
       var rgba = image.getRgbaUnsafe(x div scale, y div scale)
       result.setRgbaUnsafe(x, y, rgba)
 
-proc toPremultipliedAlpha*(image: Image) =
-  ## Converts an image to premultiplied alpha from straight alpha.
-  var i: int
-  when defined(amd64) and not defined(pixieNoSimd):
-    # When supported, SIMD convert as much as possible
-    let
-      alphaMask = mm_set1_epi32(cast[int32](0xff000000))
-      notAlphaMask = mm_set1_epi32(0x00ffffff)
-      oddMask = mm_set1_epi16(cast[int16](0xff00))
-      div255 = mm_set1_epi16(cast[int16](0x8081))
-
-    for j in countup(i, image.data.len - 4, 4):
-      var
-        color = mm_loadu_si128(image.data[j].addr)
-        alpha = mm_and_si128(color, alphaMask)
-
-      let eqOpaque = mm_cmpeq_epi16(alpha, alphaMask)
-      if mm_movemask_epi8(eqOpaque) != 0xffff:
-        # If not all of the alpha values are 255, premultiply
-        var
-          colorEven = mm_slli_epi16(color, 8)
-          colorOdd = mm_and_si128(color, oddMask)
-
-        alpha = mm_or_si128(alpha, mm_srli_epi32(alpha, 16))
-
-        colorEven = mm_mulhi_epu16(colorEven, alpha)
-        colorOdd = mm_mulhi_epu16(colorOdd, alpha)
-
-        colorEven = mm_srli_epi16(mm_mulhi_epu16(colorEven, div255), 7)
-        colorOdd = mm_srli_epi16(mm_mulhi_epu16(colorOdd, div255), 7)
-
-        color = mm_or_si128(colorEven, mm_slli_epi16(colorOdd, 8))
-        color = mm_or_si128(
-          mm_and_si128(alpha, alphaMask), mm_and_si128(color, notAlphaMask)
-        )
-
-        mm_storeu_si128(image.data[j].addr, color)
-      i += 4
-  # Convert whatever is left
-  for j in i ..< image.data.len:
-    var c = image.data[j]
-    if c.a != 255:
-      c.r = ((c.r.uint32 * c.a.uint32) div 255).uint8
-      c.g = ((c.g.uint32 * c.a.uint32) div 255).uint8
-      c.b = ((c.b.uint32 * c.a.uint32) div 255).uint8
-      image.data[j] = c
-
-proc toStraightAlpha*(image: Image) =
-  ## Converts an image from premultiplied alpha to straight alpha.
-  ## This is expensive for large images.
-  for c in image.data.mitems:
-    if c.a == 0 or c.a == 255:
-      continue
-    let multiplier = ((255 / c.a.float32) * 255).uint32
-    c.r = ((c.r.uint32 * multiplier) div 255).uint8
-    c.g = ((c.g.uint32 * multiplier) div 255).uint8
-    c.b = ((c.b.uint32 * multiplier) div 255).uint8
-
 proc applyOpacity*(target: Image | Mask, opacity: float32) =
   ## Multiplies alpha of the image by opacity.
   let opacity = round(255 * opacity).uint16
@@ -370,7 +312,7 @@ proc invert*(target: Image | Mask) =
     # Inverting rgba(50, 100, 150, 200) becomes rgba(205, 155, 105, 55). This
     # is not a valid premultiplied alpha color.
     # We need to convert back to premultiplied alpha after inverting.
-    target.toPremultipliedAlpha()
+    target.data.toPremultipliedAlpha()
   else:
     for j in i ..< target.data.len:
       target.data[j] = (255 - target.data[j]).uint8
