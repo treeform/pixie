@@ -16,6 +16,8 @@ var exampleFiles = [
   "examples/rounded_rectangle.nim",
   "examples/heart.nim",
   "examples/masking.nim",
+  "examples/gradient.nim",
+  "examples/image_tiled.nim",
   "examples/shadow.nim",
   "examples/blur.nim",
   "examples/tiger.nim"
