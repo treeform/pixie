@@ -1,3 +1,5 @@
+<img src="docs/banner.png">
+
 # Pixie - A full-featured 2D graphics library for Nim
 
 ⚠️ WARNING: This library is still in heavy development. ⚠️
@@ -10,12 +12,77 @@ This library is being actively developed and is not yet ready for use. Since you
 
 Features:
 * Drawing paths, shapes and curves, with even-odd and non-zero windings.
+* Pixel perfect AA quality.
+* Supported file formats: PNG, BMP, JPG, SVG + more in development.
 * Strokes with joins and caps.
 * Shadows, glows and blurs.
 * Complex masking: Subtract, Intersect, Exclude.
 * Complex blends: Darken, Multiply, Color Dodge, Hue, Luminosity... etc.
-* Pixel perfect AA quality.
-* Supported file formats: PNG, BMP, JPG, SVG + more in development.
+
+API reference: https://treeform.github.io/pixie/pixie.html
+
+### File formats
+
+Format        | Read          | Write         |
+------------- | ------------- | ------------- |
+PNG           | ✅           | ✅            |
+JPEG          | ✅           |               |
+BMP           | ✅           |               |
+SVG           | ✅           |               |
+
+
+### Joins and caps:
+
+Supported Saps:
+  * Butt
+  * Round
+  * Square
+
+Supported Joints:
+  * Miter (with miter limit angle)
+  * Bevel
+  * Round
+
+### Blending & Masking.
+
+Supported Blend Modes:
+  * Normal
+  * Darken
+  * Multiply
+  * ColorBurn
+  * Lighten
+  * Screen
+  * Color Dodge
+  * Overlay
+  * Soft Light
+  * Hard Light
+  * Difference
+  * Exclusion
+  * Hue
+  * Saturation
+  * Color
+  * Luminosity
+
+Supported Mask Modes:
+  * Mask
+  * Overwrite
+  * Subtract Mask
+  * Intersect Mask
+  * Exclude Mask
+
+### SVG style paths:
+
+Format        | Supported     | Description           |
+------------- | ------------- | --------------------- |
+M,m           | ✅            | move to               |
+L,l           | ✅            | line to               |
+h,h           | ✅            | horizontal line to    |
+V,v           | ✅            | vertical line to      |
+C,c,S,s       | ✅            | cublic to             |
+Q,q,T,t       | ✅            | quadratic to          |
+A,a           | ✅            | arc to                |
+z             | ✅            | close path            |
+
 
 ## Testing
 
