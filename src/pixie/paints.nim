@@ -1,30 +1,68 @@
-import chroma, common, images, vmath, blends, paths, masks
+import chroma, common, images, vmath, blends
 
 type
   PaintKind* = enum
     pkSolid
-    pkImageFill
-    pkImageFit
-    pkImageStretch
-    pkImageTile
+    pkImage
+    pkImageTiled
     pkGradientLinear
     pkGradientRadial
     pkGradientAngular
     pkGradientDiamond
 
   Paint* = ref object
-    blendMode*: BlendMode
     kind*: PaintKind
     color*: ColorRGBA
     image*: Image
-    mat*: Mat3
+    imageMat*: Mat3
     gradientHandlePositions*: seq[Vec2]
     gradientStops*: seq[ColorStop]
+    blendMode*: BlendMode
 
   ColorStop* = object
     ## Represents color on a gradient curve.
     color*: Color
     position*: float32
+
+proc fillImage*(
+  dest: Image,
+  src: Image,
+  mat: Mat3
+) =
+  dest.draw(
+    src,
+    mat
+  )
+
+proc fillImageTiled*(
+  dest: Image,
+  src: Image,
+  mat: Mat3
+) =
+  var
+    matInv = mat.inverse()
+    src = src
+
+  block: # Shrink by 2 as needed
+    const h = 0.5.float32
+    var
+      p = matInv * vec2(0 + h, 0 + h)
+      dx = matInv * vec2(1 + h, 0 + h) - p
+      dy = matInv * vec2(0 + h, 1 + h) - p
+      minFilterBy2 = max(dx.length, dy.length)
+
+    while minFilterBy2 > 2:
+      src = src.minifyBy2()
+      dx /= 2
+      dy /= 2
+      minFilterBy2 /= 2
+      matInv = matInv * scale(vec2(0.5, 0.5))
+
+  for y in 0 ..< dest.height:
+    for x in 0 ..< dest.width:
+      var srcPos = matInv * vec2(x.float32, y.float32)
+      let rgba = src.getRgbaSmoothWrapped(srcPos.x, srcPos.y)
+      dest.setRgbaUnsafe(x,y, rgba)
 
 proc toLineSpace(at, to, point: Vec2): float32 =
   ## Convert position on to where it would fall on a line between at and to.
@@ -123,41 +161,3 @@ proc fillDiamondGradient*(
       let xy = vec2(x.float32, y.float32)
       let a = (center - xy).length() / distance
       image.gradientPut(x, y, a, stops)
-
-proc fillPath*(
-  image: Image,
-  path: SomePath,
-  paint: Paint,
-  windingRule = wrNonZero,
-) {.inline.} =
-  var mask = newMask(image.width, image.height)
-  var fill = newImage(image.width, image.height)
-  mask.fillPath(parseSomePath(path), windingRule)
-
-  case paint.kind:
-    of pkSolid:
-      fill.fill(paint.color.toPremultipliedAlpha())
-    of pkImageFill:
-      discard
-    of pkImageFit:
-      discard
-    of pkImageStretch:
-      discard
-    of pkImageTile:
-      discard
-    of pkGradientLinear:
-      discard
-    of pkGradientRadial:
-      fill.fillRadialGradient(
-        paint.gradientHandlePositions[0],
-        paint.gradientHandlePositions[1],
-        paint.gradientHandlePositions[2],
-        paint.gradientStops
-      )
-    of pkGradientAngular:
-      discard
-    of pkGradientDiamond:
-      discard
-
-  fill.draw(mask, blendMode = bmMask)
-  image.draw(fill, blendMode = paint.blendMode)

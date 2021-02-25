@@ -1,4 +1,4 @@
-import blends, bumpy, chroma, common, images, masks, strutils, vmath
+import blends, bumpy, chroma, common, images, masks, strutils, vmath, paints
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -1271,7 +1271,7 @@ proc strokeShapes(
     if strokeShape.len > 0:
       result.add(strokeShape)
 
-proc parseSomePath*(
+proc parseSomePath(
   path: SomePath, pixelScale: float32 = 1.0
 ): seq[seq[Vec2]] {.inline.} =
   when type(path) is string:
@@ -1332,6 +1332,60 @@ proc fillPath*(
       else:
         segment = transform * segment
   mask.fillShapes(shapes, color, windingRule)
+
+proc fillPath*(
+  image: Image,
+  path: SomePath,
+  paint: Paint,
+  windingRule = wrNonZero,
+) =
+  var mask = newMask(image.width, image.height)
+  var fill = newImage(image.width, image.height)
+  mask.fillPath(parseSomePath(path), windingRule)
+
+  case paint.kind:
+    of pkSolid:
+      fill.fill(paint.color.toPremultipliedAlpha())
+    of pkImage:
+      fill.fillImage(
+        paint.image,
+        paint.imageMat
+      )
+    of pkImageTiled:
+      fill.fillImageTiled(
+        paint.image,
+        paint.imageMat
+      )
+    of pkGradientLinear:
+      fill.fillLinearGradient(
+        paint.gradientHandlePositions[0],
+        paint.gradientHandlePositions[1],
+        paint.gradientStops
+      )
+    of pkGradientRadial:
+      fill.fillRadialGradient(
+        paint.gradientHandlePositions[0],
+        paint.gradientHandlePositions[1],
+        paint.gradientHandlePositions[2],
+        paint.gradientStops
+      )
+    of pkGradientAngular:
+      fill.fillAngularGradient(
+        paint.gradientHandlePositions[0],
+        paint.gradientHandlePositions[1],
+        paint.gradientHandlePositions[2],
+        paint.gradientStops
+      )
+    of pkGradientDiamond:
+      fill.fillDiamondGradient(
+        paint.gradientHandlePositions[0],
+        paint.gradientHandlePositions[1],
+        paint.gradientHandlePositions[2],
+        paint.gradientStops
+      )
+
+  fill.draw(mask, blendMode = bmMask)
+  image.draw(fill, blendMode = paint.blendMode)
 
 proc strokePath*(
   image: Image,
