@@ -510,7 +510,7 @@ proc newMask*(image: Image): Mask =
   for j in i ..< image.data.len:
     result.data[j] = image.data[j].a
 
-proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA =
+proc getRgbaSmooth*(image: Image, x, y: float32, wrapped = false): ColorRGBA =
   ## Gets a interpolated color with float point coordinates.
   ## Pixes outside the image are transparent.
   let
@@ -520,39 +520,30 @@ proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA =
     diffY = y - minY
     x = minX.int
     y = minY.int
+    x0 = (x + 0)
+    y0 = (y + 0)
+    x1 = (x + 1)
+    y1 = (y + 1)
 
-    x0y0 = image[x + 0, y + 0]
-    x1y0 = image[x + 1, y + 0]
-    x0y1 = image[x + 0, y + 1]
-    x1y1 = image[x + 1, y + 1]
+  var x0y0, x1y0, x0y1, x1y1: ColorRGBA
+  if wrapped:
+    x0y0 = image.getRgbaUnsafe(x0 mod image.width, y0 mod image.height)
+    x1y0 = image.getRgbaUnsafe(x1 mod image.width, y0 mod image.height)
+    x0y1 = image.getRgbaUnsafe(x0 mod image.width, y1 mod image.height)
+    x1y1 = image.getRgbaUnsafe(x1 mod image.width, y1 mod image.height)
+  else:
+    x0y0 = image[x0, y0]
+    x1y0 = image[x1, y0]
+    x0y1 = image[x0, y1]
+    x1y1 = image[x1, y1]
 
-    bottomMix = lerp(x0y0, x1y0, diffX)
-    topMix = lerp(x0y1, x1y1, diffX)
-
-  lerp(bottomMix, topMix, diffY)
-
-proc getRgbaSmoothWrapped*(image: Image, x, y: float32): ColorRGBA =
-  ## Gets a interpolated color with float point coordinates.
-  ## Pixes outside the image are repeated.
   let
-    minX = floor(x)
-    minY = floor(y)
-    diffX = x - minX
-    diffY = y - minY
-    x = minX.int
-    y = minY.int
-
-    x0y0 = image[(x + 0) mod image.width, (y + 0) mod image.height]
-    x1y0 = image[(x + 1) mod image.width, (y + 0) mod image.height]
-    x0y1 = image[(x + 0) mod image.width, (y + 1) mod image.height]
-    x1y1 = image[(x + 1) mod image.width, (y + 1) mod image.height]
-
     bottomMix = lerp(x0y0, x1y0, diffX)
     topMix = lerp(x0y1, x1y1, diffX)
 
   lerp(bottomMix, topMix, diffY)
 
-proc drawCorrect(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
+proc drawCorrect(a, b: Image | Mask, mat = mat3(), tiled = false, blendMode = bmNormal) =
   ## Draws one image onto another using matrix with color blending.
 
   when type(a) is Image:
@@ -589,7 +580,7 @@ proc drawCorrect(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
         let backdrop = a.getRgbaUnsafe(x, y)
         when type(b) is Image:
           let
-            sample = b.getRgbaSmooth(xFloat, yFloat)
+            sample = b.getRgbaSmooth(xFloat, yFloat, tiled)
             blended = blender(backdrop, sample)
         else: # b is a Mask
           let
@@ -599,7 +590,7 @@ proc drawCorrect(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
       else: # a is a Mask
         let backdrop = a.getValueUnsafe(x, y)
         when type(b) is Image:
-          let sample = b.getRgbaSmooth(xFloat, yFloat).a
+          let sample = b.getRgbaSmooth(xFloat, yFloat, tiled).a
         else: # b is a Mask
           let sample = b.getValueSmooth(xFloat, yFloat)
         a.setValueUnsafe(x, y, masker(backdrop, sample))
@@ -838,6 +829,9 @@ proc draw*(
 ) {.inline.} =
   ## Draws a image onto a mask using a position offset with color blending.
   mask.draw(image, translate(pos), blendMode)
+
+proc drawTiled*(dest, src: Image, mat: Mat3, blendMode = bmNormal) =
+  dest.drawCorrect(src, mat, true, blendMode)
 
 proc resize*(srcImage: Image, width, height: int): Image =
   ## Resize an image to a given hight and width.
