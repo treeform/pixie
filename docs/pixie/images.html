@@ -56,12 +56,10 @@ function main() {
     }
   }
 }
-
-window.addEventListener('DOMContentLoaded', main);
 </script>
 
 </head>
-<body>
+<body onload="main()">
 <div class="document" id="documentId">
   <div class="container">
     <h1 class="title">pixie/images</h1>
@@ -156,11 +154,6 @@ window.addEventListener('DOMContentLoaded', main);
     title="shift(target: Image | Mask; offset: Vec2)">shift,<wbr>,<wbr>Vec2</a></li>
 
   </ul>
-  <ul class="simple nested-toc-section">getRgbaSmoothWrapped
-      <li><a class="reference" href="#getRgbaSmoothWrapped%2CImage%2Cfloat32%2Cfloat32"
-    title="getRgbaSmoothWrapped(image: Image; x, y: float32): ColorRGBA">getRgbaSmoothWrapped,<wbr>Image,<wbr>float32,<wbr>float32</a></li>
-
-  </ul>
   <ul class="simple nested-toc-section">[]=
       <li><a class="reference" href="#%5B%5D%3D%2CImage%2Cint%2Cint%2CColorRGBA"
     title="`[]=`(image: Image; x, y: int; rgba: ColorRGBA)">[]=,<wbr>Image,<wbr>int,<wbr>int,<wbr>ColorRGBA</a></li>
@@ -206,6 +199,11 @@ window.addEventListener('DOMContentLoaded', main);
     title="magnifyBy2(image: Image; power = 1): Image">magnifyBy2,<wbr>Image,<wbr>int</a></li>
 
   </ul>
+  <ul class="simple nested-toc-section">shadow
+      <li><a class="reference" href="#shadow%2CImage%2CVec2%2Cfloat32%2Cfloat32%2CColorRGBA"
+    title="shadow(image: Image; offset: Vec2; spread, blur: float32; color: ColorRGBA): Image">shadow,<wbr>Image,<wbr>Vec2,<wbr>float32,<wbr>float32,<wbr>ColorRGBA</a></li>
+
+  </ul>
   <ul class="simple nested-toc-section">newMask
       <li><a class="reference" href="#newMask%2CImage"
     title="newMask(image: Image): Mask">newMask,<wbr>Image</a></li>
@@ -226,6 +224,11 @@ window.addEventListener('DOMContentLoaded', main);
     title="minifyBy2(image: Image; power = 1): Image">minifyBy2,<wbr>Image,<wbr>int</a></li>
 
   </ul>
+  <ul class="simple nested-toc-section">drawTiled
+      <li><a class="reference" href="#drawTiled%2CImage%2CImage%2CMat3"
+    title="drawTiled(dest, src: Image; mat: Mat3; blendMode = bmNormal)">drawTiled,<wbr>Image,<wbr>Image,<wbr>Mat3</a></li>
+
+  </ul>
   <ul class="simple nested-toc-section">subImage
       <li><a class="reference" href="#subImage%2CImage%2Cint%2Cint%2Cint%2Cint"
     title="subImage(image: Image; x, y, w, h: int): Image">subImage,<wbr>Image,<wbr>int,<wbr>int,<wbr>int,<wbr>int</a></li>
@@ -236,6 +239,11 @@ window.addEventListener('DOMContentLoaded', main);
     title="blur(target: Image | Mask; radius: float32; offBounds: uint32 = 0)">blur,<wbr>,<wbr>float32,<wbr>uint32</a></li>
 
   </ul>
+  <ul class="simple nested-toc-section">toStraightAlpha
+      <li><a class="reference" href="#toStraightAlpha%2CImage"
+    title="toStraightAlpha(image: Image)">toStraightAlpha,<wbr>Image</a></li>
+
+  </ul>
   <ul class="simple nested-toc-section">dataIndex
       <li><a class="reference" href="#dataIndex%2CImage%2Cint%2Cint"
     title="dataIndex(image: Image; x, y: int): int">dataIndex,<wbr>Image,<wbr>int,<wbr>int</a></li>
@@ -243,7 +251,7 @@ window.addEventListener('DOMContentLoaded', main);
   </ul>
   <ul class="simple nested-toc-section">getRgbaSmooth
       <li><a class="reference" href="#getRgbaSmooth%2CImage%2Cfloat32%2Cfloat32"
-    title="getRgbaSmooth(image: Image; x, y: float32): ColorRGBA">getRgbaSmooth,<wbr>Image,<wbr>float32,<wbr>float32</a></li>
+    title="getRgbaSmooth(image: Image; x, y: float32; wrapped = false): ColorRGBA">getRgbaSmooth,<wbr>Image,<wbr>float32,<wbr>float32</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">inside
@@ -273,7 +281,6 @@ window.addEventListener('DOMContentLoaded', main);
 </ul>
 
   </div>
-  
   <div class="nine columns" id="content">
   <div id="tocRoot"></div>
   
@@ -436,7 +443,7 @@ Scales the image down by an integer scale.
 <dt><pre><span class="Keyword">proc</span> <a href="#magnifyBy2%2CImage%2Cint"><span class="Identifier">magnifyBy2</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">power</span> <span class="Other">=</span> <span class="DecNumber">1</span><span class="Other">)</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">PixieError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-Scales image image up by 2 ^ power.
+Scales image up by 2 ^ power.
 
 </dd>
 <a id="toPremultipliedAlpha,Image"></a>
@@ -444,6 +451,13 @@ Scales image image up by 2 ^ power.
 <dd>
 
 Converts an image to premultiplied alpha from straight alpha.
+
+</dd>
+<a id="toStraightAlpha,Image"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#toStraightAlpha%2CImage"><span class="Identifier">toStraightAlpha</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+Converts an image from premultiplied alpha to straight alpha. This is expensive for large images.
 
 </dd>
 <a id="applyOpacity,,float32"></a>
@@ -475,19 +489,11 @@ Returns a new mask using the alpha values of the parameter image.
 
 </dd>
 <a id="getRgbaSmooth,Image,float32,float32"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#getRgbaSmooth%2CImage%2Cfloat32%2Cfloat32"><span class="Identifier">getRgbaSmooth</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">x</span><span class="Other">,</span> <span class="Identifier">y</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">ColorRGBA</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#getRgbaSmooth%2CImage%2Cfloat32%2Cfloat32"><span class="Identifier">getRgbaSmooth</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">x</span><span class="Other">,</span> <span class="Identifier">y</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">;</span> <span class="Identifier">wrapped</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">ColorRGBA</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 Gets a interpolated color with float point coordinates. Pixes outside the image are transparent.
-
-</dd>
-<a id="getRgbaSmoothWrapped,Image,float32,float32"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#getRgbaSmoothWrapped%2CImage%2Cfloat32%2Cfloat32"><span class="Identifier">getRgbaSmoothWrapped</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">x</span><span class="Other">,</span> <span class="Identifier">y</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">ColorRGBA</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-Gets a interpolated color with float point coordinates. Pixes outside the image are repeated.
 
 </dd>
 <a id="draw,Image,Image,Mat3"></a>
@@ -554,6 +560,14 @@ Draws a image onto a mask using a matrix with color blending.
 Draws a image onto a mask using a position offset with color blending.
 
 </dd>
+<a id="drawTiled,Image,Image,Mat3"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#drawTiled%2CImage%2CImage%2CMat3"><span class="Identifier">drawTiled</span></a><span class="Other">(</span><span class="Identifier">dest</span><span class="Other">,</span> <span class="Identifier">src</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">mat</span><span class="Other">:</span> <span class="Identifier">Mat3</span><span class="Other">;</span> <span class="Identifier">blendMode</span> <span class="Other">=</span> <span class="Identifier">bmNormal</span><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">PixieError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+
+</dd>
 <a id="resize,Image,int,int"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#resize%2CImage%2Cint%2Cint"><span class="Identifier">resize</span></a><span class="Other">(</span><span class="Identifier">srcImage</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">width</span><span class="Other">,</span> <span class="Identifier">height</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">PixieError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
@@ -569,6 +583,14 @@ Resize an image to a given hight and width.
 Shifts the target by offset.
 
 </dd>
+<a id="shadow,Image,Vec2,float32,float32,ColorRGBA"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#shadow%2CImage%2CVec2%2Cfloat32%2Cfloat32%2CColorRGBA"><span class="Identifier">shadow</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">offset</span><span class="Other">:</span> <span class="Identifier">Vec2</span><span class="Other">;</span> <span class="Identifier">spread</span><span class="Other">,</span> <span class="Identifier">blur</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">;</span> <span class="Identifier">color</span><span class="Other">:</span> <span class="Identifier">ColorRGBA</span><span class="Other">)</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">PixieError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+Create a shadow of the image with the offset, spread and blur.
+
+</dd>
 
 </dl></div>
 
@@ -579,7 +601,7 @@ Shifts the target by offset.
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-25 15:26:21 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-25 17:48:08 UTC</small>
       </div>
     </div>
   </div>

@@ -56,12 +56,10 @@ function main() {
     }
   }
 }
-
-window.addEventListener('DOMContentLoaded', main);
 </script>
 
 </head>
-<body>
+<body onload="main()">
 <div class="document" id="documentId">
   <div class="container">
     <h1 class="title">pixie/fileformats/svg</h1>
@@ -124,7 +122,6 @@ window.addEventListener('DOMContentLoaded', main);
 </ul>
 
   </div>
-  
   <div class="nine columns" id="content">
   <div id="tocRoot"></div>
   
@@ -158,10 +155,10 @@ window.addEventListener('DOMContentLoaded', main);
 <dl class="item">
 <a id="decodeSvg,string,int,int"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#decodeSvg%2Cstring%2Cint%2Cint"><span class="Identifier">decodeSvg</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">width</span> <span class="Other">=</span> <span class="DecNumber">0</span><span class="Other">;</span> <span class="Identifier">height</span> <span class="Other">=</span> <span class="DecNumber">0</span><span class="Other">)</span><span class="Other">:</span> <a href="../images.html#Image"><span class="Identifier">Image</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">PixieError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">WriteIOEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">PixieError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-Render SVG file and return the image.
+Render SVG file and return the image. Defaults to the SVG's view box size.
 
 </dd>
 
@@ -174,7 +171,7 @@ Render SVG file and return the image.
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-25 15:26:22 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-25 17:48:09 UTC</small>
       </div>
     </div>
   </div>

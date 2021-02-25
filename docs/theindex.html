@@ -56,12 +56,10 @@ function main() {
     }
   }
 }
-
-window.addEventListener('DOMContentLoaded', main);
 </script>
 
 </head>
-<body>
+<body onload="main()">
 <div class="document" id="documentId">
   <div class="container">
     <h1 class="title">Index</h1>
@@ -71,6 +69,8 @@ window.addEventListener('DOMContentLoaded', main);
           data-doc-search-tag="images: `$`(image: Image): string" href="pixie/images.html#%24%2CImage">images: `$`(image: Image): string</a></li>
           <li><a class="reference external"
           data-doc-search-tag="masks: `$`(mask: Mask): string" href="pixie/masks.html#%24%2CMask">masks: `$`(mask: Mask): string</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="paths: `$`(path: Path): string" href="pixie/paths.html#%24%2CPath">paths: `$`(path: Path): string</a></li>
           </ul></dd>
 <dt><a name="%60%5B%5D%3D%60" href="#%60%5B%5D%3D%60"><span>`[]=`:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -240,6 +240,10 @@ window.addEventListener('DOMContentLoaded', main);
 <li><a class="reference external"
           data-doc-search-tag="paints: ColorStop" href="pixie/paints.html#ColorStop">paints: ColorStop</a></li>
           </ul></dd>
+<dt><a name="commandsToShapes" href="#commandsToShapes"><span>commandsToShapes:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="paths: commandsToShapes(path: Path; pixelScale: float32 = 1.0): seq[seq[Vec2]]" href="pixie/paths.html#commandsToShapes%2CPath%2Cfloat32">paths: commandsToShapes(path: Path; pixelScale: float32 = 1.0): seq[seq[Vec2]]</a></li>
+          </ul></dd>
 <dt><a name="copy" href="#copy"><span>copy:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="images: copy(image: Image): Image" href="pixie/images.html#copy%2CImage">images: copy(image: Image): Image</a></li>
@@ -299,6 +303,10 @@ window.addEventListener('DOMContentLoaded', main);
           data-doc-search-tag="images: draw(a, b: Mask; pos = vec2(0, 0); blendMode = bmMask)" href="pixie/images.html#draw%2CMask%2CMask">images: draw(a, b: Mask; pos = vec2(0, 0); blendMode = bmMask)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="images: draw(a, b: Mask; mat: Mat3; blendMode = bmMask)" href="pixie/images.html#draw%2CMask%2CMask%2CMat3">images: draw(a, b: Mask; mat: Mat3; blendMode = bmMask)</a></li>
+          </ul></dd>
+<dt><a name="drawTiled" href="#drawTiled"><span>drawTiled:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="images: drawTiled(dest, src: Image; mat: Mat3; blendMode = bmNormal)" href="pixie/images.html#drawTiled%2CImage%2CImage%2CMat3">images: drawTiled(dest, src: Image; mat: Mat3; blendMode = bmNormal)</a></li>
           </ul></dd>
 <dt><a name="ellipse" href="#ellipse"><span>ellipse:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -374,14 +382,6 @@ window.addEventListener('DOMContentLoaded', main);
           <li><a class="reference external"
           data-doc-search-tag="pixie: fillEllipse(mask: Mask; center: Vec2; rx, ry: float32)" href="pixie.html#fillEllipse%2CMask%2CVec2%2Cfloat32%2Cfloat32">pixie: fillEllipse(mask: Mask; center: Vec2; rx, ry: float32)</a></li>
           </ul></dd>
-<dt><a name="fillImage" href="#fillImage"><span>fillImage:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="paints: fillImage(dest: Image; src: Image; mat: Mat3)" href="pixie/paints.html#fillImage%2CImage%2CImage%2CMat3">paints: fillImage(dest: Image; src: Image; mat: Mat3)</a></li>
-          </ul></dd>
-<dt><a name="fillImageTiled" href="#fillImageTiled"><span>fillImageTiled:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="paints: fillImageTiled(dest: Image; src: Image; mat: Mat3)" href="pixie/paints.html#fillImageTiled%2CImage%2CImage%2CMat3">paints: fillImageTiled(dest: Image; src: Image; mat: Mat3)</a></li>
-          </ul></dd>
 <dt><a name="fillLinearGradient" href="#fillLinearGradient"><span>fillLinearGradient:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="paints: fillLinearGradient(image: Image; at, to: Vec2; stops: seq[ColorStop])" href="pixie/paints.html#fillLinearGradient%2CImage%2CVec2%2CVec2%2Cseq%5BColorStop%5D">paints: fillLinearGradient(image: Image; at, to: Vec2; stops: seq[ColorStop])</a></li>
@@ -452,11 +452,7 @@ window.addEventListener('DOMContentLoaded', main);
           </ul></dd>
 <dt><a name="getRgbaSmooth" href="#getRgbaSmooth"><span>getRgbaSmooth:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="images: getRgbaSmooth(image: Image; x, y: float32): ColorRGBA" href="pixie/images.html#getRgbaSmooth%2CImage%2Cfloat32%2Cfloat32">images: getRgbaSmooth(image: Image; x, y: float32): ColorRGBA</a></li>
-          </ul></dd>
-<dt><a name="getRgbaSmoothWrapped" href="#getRgbaSmoothWrapped"><span>getRgbaSmoothWrapped:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="images: getRgbaSmoothWrapped(image: Image; x, y: float32): ColorRGBA" href="pixie/images.html#getRgbaSmoothWrapped%2CImage%2Cfloat32%2Cfloat32">images: getRgbaSmoothWrapped(image: Image; x, y: float32): ColorRGBA</a></li>
+          data-doc-search-tag="images: getRgbaSmooth(image: Image; x, y: float32; wrapped = false): ColorRGBA" href="pixie/images.html#getRgbaSmooth%2CImage%2Cfloat32%2Cfloat32">images: getRgbaSmooth(image: Image; x, y: float32; wrapped = false): ColorRGBA</a></li>
           </ul></dd>
 <dt><a name="getRgbaUnsafe" href="#getRgbaUnsafe"><span>getRgbaUnsafe:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -758,6 +754,10 @@ window.addEventListener('DOMContentLoaded', main);
 <li><a class="reference external"
           data-doc-search-tag="masks: setValueUnsafe(mask: Mask; x, y: int; value: uint8)" href="pixie/masks.html#setValueUnsafe%2CMask%2Cint%2Cint%2Cuint8">masks: setValueUnsafe(mask: Mask; x, y: int; value: uint8)</a></li>
           </ul></dd>
+<dt><a name="shadow" href="#shadow"><span>shadow:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="images: shadow(image: Image; offset: Vec2; spread, blur: float32; color: ColorRGBA): Image" href="pixie/images.html#shadow%2CImage%2CVec2%2Cfloat32%2Cfloat32%2CColorRGBA">images: shadow(image: Image; offset: Vec2; spread, blur: float32; color: ColorRGBA): Image</a></li>
+          </ul></dd>
 <dt><a name="shift" href="#shift"><span>shift:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="images: shift(target: Image | Mask; offset: Vec2)" href="pixie/images.html#shift%2C%2CVec2">images: shift(target: Image | Mask; offset: Vec2)</a></li>
@@ -871,10 +871,16 @@ window.addEventListener('DOMContentLoaded', main);
           data-doc-search-tag="common: toStraightAlpha(c: Color): Color" href="pixie/common.html#toStraightAlpha%2CColor">common: toStraightAlpha(c: Color): Color</a></li>
           <li><a class="reference external"
           data-doc-search-tag="common: toStraightAlpha(c: ColorRGBA): ColorRGBA" href="pixie/common.html#toStraightAlpha%2CColorRGBA">common: toStraightAlpha(c: ColorRGBA): ColorRGBA</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="images: toStraightAlpha(image: Image)" href="pixie/images.html#toStraightAlpha%2CImage">images: toStraightAlpha(image: Image)</a></li>
           </ul></dd>
 <dt><a name="TQuad" href="#TQuad"><span>TQuad:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="PathCommandKind.TQuad" href="pixie/paths.html#TQuad">PathCommandKind.TQuad</a></li>
+          </ul></dd>
+<dt><a name="transform" href="#transform"><span>transform:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="paths: transform(path: var Path; mat: Mat3)" href="pixie/paths.html#transform%2CPath%2CMat3">paths: transform(path: var Path; mat: Mat3)</a></li>
           </ul></dd>
 <dt><a name="unpackAlphaValues" href="#unpackAlphaValues"><span>unpackAlphaValues:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -917,7 +923,7 @@ window.addEventListener('DOMContentLoaded', main);
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-25 15:26:22 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-25 17:48:09 UTC</small>
       </div>
     </div>
   </div>
