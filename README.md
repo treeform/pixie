@@ -168,6 +168,19 @@ image.draw(lines)
 ### Gradient
 [examples/gradient.nim](examples/gradient.nim)
 ```nim
+let paint = Paint(
+  kind: pkGradientRadial,
+  gradientHandlePositions: @[
+    vec2(100, 100),
+    vec2(200, 100),
+    vec2(100, 200)
+  ],
+  gradientStops: @[
+    ColorStop(color: rgba(255, 0, 0, 255).color, position: 0),
+    ColorStop(color: rgba(255, 0, 0, 40).color, position: 1.0),
+  ]
+)
+
 image.fillPath(
   """
     M 20 60
@@ -177,18 +190,7 @@ image.fillPath(
     Q 20 120 20 60
     z
   """,
-  Paint(
-    kind:pkGradientRadial,
-    gradientHandlePositions: @[
-      vec2(100, 100),
-      vec2(200, 100),
-      vec2(100, 200)
-    ],
-    gradientStops: @[
-      ColorStop(color:rgba(255, 0, 0, 255).color, position: 0),
-      ColorStop(color:rgba(255, 0, 0, 40).color, position: 1.0),
-    ]
-  )
+  paint
 )
 ```
 ![example output](examples/gradient.png)
@@ -205,9 +207,9 @@ path.polygon(
 image.fillPath(
   path,
   Paint(
-    kind:pkImageTiled,
+    kind: pkImageTiled,
     image: readImage("tests/images/png/baboon.png"),
-    imageMat:scale(vec2(0.08, 0.08))
+    imageMat: scale(vec2(0.08, 0.08))
   )
 )
 ```

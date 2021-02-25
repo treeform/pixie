@@ -1,8 +1,6 @@
 import pixie
 
-let
-  image = newImage(200, 200)
-
+let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
 
 var path: Path
