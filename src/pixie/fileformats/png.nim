@@ -303,7 +303,7 @@ proc decodeImageData(
     discard # Not possible, parseHeader validates
 
 proc decodePng*(data: seq[uint8]): Image =
-  ## Decodes the PNG into an Image.
+  ## Decodes the PNG data into an Image.
 
   if data.len < (8 + (8 + 13 + 4) + 4): # Magic bytes + IHDR + IEND
     failInvalid()
@@ -413,6 +413,7 @@ proc decodePng*(data: seq[uint8]): Image =
   result.data = decodeImageData(header, palette, transparency, imageData)
 
 proc decodePng*(data: string): Image {.inline.} =
+  ## Decodes the PNG data into an Image.
   decodePng(cast[seq[uint8]](data))
 
 proc encodePng*(

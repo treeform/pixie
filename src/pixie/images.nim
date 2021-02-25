@@ -804,35 +804,35 @@ proc draw*(a, b: Image, mat: Mat3, blendMode = bmNormal) {.inline.} =
   a.drawUber(b, mat, blendMode)
 
 proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.} =
-  # Draws one image onto another using a position offset with color blending.
+  ## Draws one image onto another using a position offset with color blending.
   a.draw(b, translate(pos), blendMode)
 
 proc draw*(image: Image, mask: Mask, mat: Mat3, blendMode = bmMask) {.inline.} =
-  # Draws a mask onto an image using a matrix with color blending.
+  ## Draws a mask onto an image using a matrix with color blending.
   image.drawUber(mask, mat, blendMode)
 
 proc draw*(
   image: Image, mask: Mask, pos = vec2(0, 0), blendMode = bmMask
 ) {.inline.} =
-  # Draws a mask onto an image using a position offset with color blending.
+  ## Draws a mask onto an image using a position offset with color blending.
   image.drawUber(mask, translate(pos), blendMode)
 
 proc draw*(a, b: Mask, mat: Mat3, blendMode = bmMask) {.inline.} =
-  # Draws a mask onto a mask using a matrix with color blending.
+  ## Draws a mask onto a mask using a matrix with color blending.
   a.drawUber(b, mat, blendMode)
 
 proc draw*(a, b: Mask, pos = vec2(0, 0), blendMode = bmMask) {.inline.} =
-  # Draws a mask onto a mask using a position offset with color blending.
+  ## Draws a mask onto a mask using a position offset with color blending.
   a.draw(b, translate(pos), blendMode)
 
 proc draw*(mask: Mask, image: Image, mat: Mat3, blendMode = bmMask) {.inline.} =
-  # Draws a image onto a mask using a matrix with color blending.
+  ## Draws a image onto a mask using a matrix with color blending.
   mask.drawUber(image, mat, blendMode)
 
 proc draw*(
   mask: Mask, image: Image, pos = vec2(0, 0), blendMode = bmMask
 ) {.inline.} =
-  # Draws a image onto a mask using a position offset with color blending.
+  ## Draws a image onto a mask using a position offset with color blending.
   mask.draw(image, translate(pos), blendMode)
 
 proc resize*(srcImage: Image, width, height: int): Image =

@@ -20,7 +20,9 @@ proc decodeJpg*(data: seq[uint8]): Image =
     copyMem(result.data[0].addr, pixels[0].unsafeAddr, pixels.len)
 
 proc decodeJpg*(data: string): Image {.inline.} =
+  ## Decodes the JPEG data into an Image.
   decodeJpg(cast[seq[uint8]](data))
 
 proc encodeJpg*(image: Image): string =
+  ## Encodes Image into a JPEG data string.
   raise newException(PixieError, "Encoding JPG not supported yet")

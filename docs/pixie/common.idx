@@ -2,8 +2,8 @@ PixieError	pixie/common.html#PixieError	common: PixieError
 fractional	pixie/common.html#fractional,float32	common: fractional(v: float32): float32	
 lerp	pixie/common.html#lerp,uint8,uint8,float32	common: lerp(a, b: uint8; t: float32): uint8	
 lerp	pixie/common.html#lerp,ColorRGBA,ColorRGBA,float32	common: lerp(a, b: ColorRGBA; t: float32): ColorRGBA	
+lerp	pixie/common.html#lerp,Color,Color,float32	common: lerp(a, b: Color; v: float32): Color	
 toPremultipliedAlpha	pixie/common.html#toPremultipliedAlpha,ColorRGBA	common: toPremultipliedAlpha(c: ColorRGBA): ColorRGBA	
 toStraightAlpha	pixie/common.html#toStraightAlpha,ColorRGBA	common: toStraightAlpha(c: ColorRGBA): ColorRGBA	
-lerp	pixie/common.html#lerp,Color,Color,float32	common: lerp(a, b: Color; v: float32): Color	
 toPremultipliedAlpha	pixie/common.html#toPremultipliedAlpha,Color	common: toPremultipliedAlpha(c: Color): Color	
 toStraightAlpha	pixie/common.html#toStraightAlpha,Color	common: toStraightAlpha(c: Color): Color	
