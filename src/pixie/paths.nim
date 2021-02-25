@@ -1376,13 +1376,6 @@ proc fillPath*(
         paint.gradientHandlePositions[2],
         paint.gradientStops
       )
-    of pkGradientDiamond:
-      fill.fillDiamondGradient(
-        paint.gradientHandlePositions[0],
-        paint.gradientHandlePositions[1],
-        paint.gradientHandlePositions[2],
-        paint.gradientStops
-      )
 
   fill.draw(mask, blendMode = bmMask)
   image.draw(fill, blendMode = paint.blendMode)
