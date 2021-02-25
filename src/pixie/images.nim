@@ -218,7 +218,7 @@ proc toPremultipliedAlpha*(image: Image) =
     # When supported, SIMD convert as much as possible
     let
       alphaMask = mm_set1_epi32(cast[int32](0xff000000))
-      alphaMaskComp = mm_set1_epi32(0x00ffffff)
+      notAlphaMask = mm_set1_epi32(0x00ffffff)
       oddMask = mm_set1_epi16(cast[int16](0xff00))
       div255 = mm_set1_epi16(cast[int16](0x8081))
 
@@ -226,31 +226,37 @@ proc toPremultipliedAlpha*(image: Image) =
       var
         color = mm_loadu_si128(image.data[j].addr)
         alpha = mm_and_si128(color, alphaMask)
-        colorEven = mm_slli_epi16(color, 8)
-        colorOdd = mm_and_si128(color, oddMask)
 
-      alpha = mm_or_si128(alpha, mm_srli_epi32(alpha, 16))
+      let eqOpaque = mm_cmpeq_epi16(alpha, alphaMask)
+      if mm_movemask_epi8(eqOpaque) != 0xffff:
+        # If not all of the alpha values are 255, premultiply
+        var
+          colorEven = mm_slli_epi16(color, 8)
+          colorOdd = mm_and_si128(color, oddMask)
 
-      colorEven = mm_mulhi_epu16(colorEven, alpha)
-      colorOdd = mm_mulhi_epu16(colorOdd, alpha)
+        alpha = mm_or_si128(alpha, mm_srli_epi32(alpha, 16))
 
-      colorEven = mm_srli_epi16(mm_mulhi_epu16(colorEven, div255), 7)
-      colorOdd = mm_srli_epi16(mm_mulhi_epu16(colorOdd, div255), 7)
+        colorEven = mm_mulhi_epu16(colorEven, alpha)
+        colorOdd = mm_mulhi_epu16(colorOdd, alpha)
 
-      color = mm_or_si128(colorEven, mm_slli_epi16(colorOdd, 8))
-      color = mm_or_si128(
-        mm_and_si128(alpha, alphaMask), mm_and_si128(color, alphaMaskComp)
-      )
+        colorEven = mm_srli_epi16(mm_mulhi_epu16(colorEven, div255), 7)
+        colorOdd = mm_srli_epi16(mm_mulhi_epu16(colorOdd, div255), 7)
 
-      mm_storeu_si128(image.data[j].addr, color)
+        color = mm_or_si128(colorEven, mm_slli_epi16(colorOdd, 8))
+        color = mm_or_si128(
+          mm_and_si128(alpha, alphaMask), mm_and_si128(color, notAlphaMask)
+        )
+
+        mm_storeu_si128(image.data[j].addr, color)
       i += 4
   # Convert whatever is left
   for j in i ..< image.data.len:
     var c = image.data[j]
-    c.r = ((c.r.uint32 * c.a.uint32) div 255).uint8
-    c.g = ((c.g.uint32 * c.a.uint32) div 255).uint8
-    c.b = ((c.b.uint32 * c.a.uint32) div 255).uint8
-    image.data[j] = c
+    if c.a != 255:
+      c.r = ((c.r.uint32 * c.a.uint32) div 255).uint8
+      c.g = ((c.g.uint32 * c.a.uint32) div 255).uint8
+      c.b = ((c.b.uint32 * c.a.uint32) div 255).uint8
+      image.data[j] = c
 
 proc toStraightAlpha*(image: Image) =
   ## Converts an image from premultiplied alpha to straight alpha.
