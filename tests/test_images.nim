@@ -1,4 +1,4 @@
-import chroma, pixie, vmath
+import chroma, pixie, vmath, pixie/internal
 
 block:
   let image = newImage(10, 10)
@@ -19,13 +19,13 @@ block:
 block:
   let image = newImage(10, 10)
   image.fill(rgba(255, 0, 0, 128))
-  image.toPremultipliedAlpha()
+  image.data.toPremultipliedAlpha()
   doAssert image[9, 9] == rgba(128, 0, 0, 128)
 
 block:
   let image = newImage(10, 10)
   image.fill(rgba(128, 0, 0, 128))
-  image.toStraightAlpha()
+  image.data.toStraightAlpha()
   doAssert image[9, 9] == rgba(254, 0, 0, 128)
 
 block:

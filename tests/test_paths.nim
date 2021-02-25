@@ -48,7 +48,6 @@ block:
     pathStr = "M 10 10 L 90 90"
     color = rgba(255, 0, 0, 255)
   image.strokePath(pathStr, color, 10)
-  image.toStraightAlpha()
   image.writeFile("tests/images/paths/pathStroke1.png")
 
 block:
@@ -57,7 +56,6 @@ block:
     pathStr = "M 10 10 L 50 60 90 90"
     color = rgba(255, 0, 0, 255)
   image.strokePath(pathStr, color, 10)
-  image.toStraightAlpha()
   image.writeFile("tests/images/paths/pathStroke2.png")
 
 block:
@@ -67,7 +65,6 @@ block:
     rgba(255, 255, 0, 255),
     strokeWidth = 10
   )
-  image.toStraightAlpha()
   image.writeFile("tests/images/paths/pathStroke3.png")
 
 block:
@@ -76,7 +73,6 @@ block:
     pathStr = "M 10 10 H 90 V 90 H 10 L 10 10"
     color = rgba(0, 0, 0, 255)
   image.fillPath(pathStr, color)
-  image.toStraightAlpha()
   image.writeFile("tests/images/paths/pathBlackRectangle.png")
 
 block:
@@ -85,7 +81,6 @@ block:
     pathStr = "M 10 10 H 90 V 90 H 10 Z"
     color = rgba(0, 0, 0, 255)
   image.fillPath(parsePath(pathStr), color)
-  image.toStraightAlpha()
   image.writeFile("tests/images/paths/pathBlackRectangleZ.png")
 
 block:
@@ -94,7 +89,6 @@ block:
     "M 10 10 H 90 V 90 H 10 L 10 10",
     rgba(255, 255, 0, 255)
   )
-  image.toStraightAlpha()
   image.writeFile("tests/images/paths/pathYellowRectangle.png")
 
 block:
@@ -107,7 +101,6 @@ block:
 
   let image = newImage(100, 100)
   image.fillPath(path, rgba(255, 0, 0, 255))
-  image.toStraightAlpha()
   image.writeFile("tests/images/paths/pathRedRectangle.png")
 
 block:
@@ -116,7 +109,6 @@ block:
     "M30 60 A 20 20 0 0 0 90 60 L 30 60",
     parseHtmlColor("#FC427B").rgba
   )
-  image.toStraightAlpha()
   image.writeFile("tests/images/paths/pathBottomArc.png")
 
 block:
@@ -131,7 +123,6 @@ block:
     """,
     parseHtmlColor("#FC427B").rgba
   )
-  image.toStraightAlpha()
   image.writeFile("tests/images/paths/pathHeart.png")
 
 block:
@@ -140,7 +131,6 @@ block:
     "M 20 50 A 20 10 45 1 1 80 50 L 20 50",
     parseHtmlColor("#FC427B").rgba
   )
-  image.toStraightAlpha()
   image.writeFile("tests/images/paths/pathRotatedArc.png")
 
 block:
@@ -149,7 +139,6 @@ block:
     "M 0 50 A 50 50 0 0 0 50 0 L 50 50 L 0 50",
     parseHtmlColor("#FC427B").rgba
   )
-  image.toStraightAlpha()
   image.writeFile("tests/images/paths/pathInvertedCornerArc.png")
 
 block:
@@ -158,7 +147,6 @@ block:
     "M 0 50 A 50 50 0 0 1 50 0 L 50 50 L 0 50",
     parseHtmlColor("#FC427B").rgba
   )
-  image.toStraightAlpha()
   image.writeFile("tests/images/paths/pathCornerArc.png")
 
 block:
@@ -176,7 +164,6 @@ block:
   path.arcTo(x, y + h, x, y, r)
   path.arcTo(x, y, x + w, y, r)
   image.fillPath(path, rgba(255, 0, 0, 255))
-  image.toStraightAlpha()
   image.writeFile("tests/images/paths/pathRoundRect.png")
 
 block:

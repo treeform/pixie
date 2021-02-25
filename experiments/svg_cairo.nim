@@ -73,7 +73,8 @@ proc prepare(
   c: ptr Context,
   path: Path,
   color: ColorRGBA,
-  mat: Mat3
+  mat: Mat3,
+  windingRule = wrNonZero
 ) =
   let
     color = color.color()
@@ -87,29 +88,33 @@ proc prepare(
     )
   c.setSourceRgba(color.r, color.g, color.b, color.a)
   c.setMatrix(matrix.unsafeAddr)
+  case windingRule:
+  of wrNonZero:
+    c.setFillRule(FillRuleWinding)
+  else:
+    c.setFillRule(FillRuleEvenOdd)
   c.processCommands(path)
 
 proc fillPath(
   c: ptr Context,
   path: Path,
   color: ColorRGBA,
-  mat: Mat3
+  mat: Mat3,
+  windingRule = wrNonZero
 ) =
-  prepare(c, path, color, mat)
+  prepare(c, path, color, mat, windingRule)
   c.fill()
 
 proc strokePath(
   c: ptr Context,
   path: Path,
   color: ColorRGBA,
-  strokeWidth: float32,
-  mat: Mat3
+  mat: Mat3,
+  strokeWidth: float32
 ) =
   prepare(c, path, color, mat)
   c.setLineWidth(strokeWidth)
   c.stroke()
-
-const svgSignature* = "<?xml"
 
 type Ctx = object
   fillRule: WindingRule
@@ -119,11 +124,6 @@ type Ctx = object
   strokeLineJoin: paths.LineJoin
   transform: Mat3
   shouldStroke: bool
-
-when defined(pixieTestCairo):
-  type RenderTarget = ptr Context
-else:
-  type RenderTarget = Image
 
 template failInvalid() =
   raise newException(PixieError, "Invalid SVG data")
@@ -304,7 +304,7 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
       else:
         failInvalidTransform(transform)
 
-proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
+proc draw(img: ptr Context, node: XmlNode, ctxStack: var seq[Ctx]) =
   if node.kind != xnElement:
     # Skip <!-- comments -->
     return
@@ -448,7 +448,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     raise newException(PixieError, "Unsupported SVG tag: " & node.tag & ".")
 
 proc decodeSvg*(data: string, width = 0, height = 0): Image =
-  ## Render SVG file and return the image.
+  ## Render SVG file and return the image. Defaults to the SVG's view box size.
   try:
     let root = parseXml(data)
     if root.tag != "svg":
@@ -462,20 +462,37 @@ proc decodeSvg*(data: string, width = 0, height = 0): Image =
 
     var rootCtx = initCtx()
     rootCtx = decodeCtx(rootCtx, root)
+
+    var surface: ptr Surface
     if width == 0 and height == 0: # Default to the view box size
       result = newImage(viewBoxWidth, viewBoxHeight)
+      surface = imageSurfaceCreate(
+        FORMAT_ARGB32, viewBoxWidth.int32, viewBoxHeight.int32
+      )
     else:
       result = newImage(width, height)
+      surface = imageSurfaceCreate(FORMAT_ARGB32, width.int32, height.int32)
 
       let
         scaleX = width.float32 / viewBoxWidth.float32
         scaleY = height.float32 / viewBoxHeight.float32
       rootCtx.transform = scale(vec2(scaleX, scaleY))
 
+    let c = surface.create()
+
     var ctxStack = @[rootCtx]
     for node in root:
-      result.draw(node, ctxStack)
-    result.toStraightAlpha()
+      c.draw(node, ctxStack)
+
+    surface.flush()
+
+    let pixels = cast[ptr UncheckedArray[array[4, uint8]]](surface.getData())
+    for y in 0 ..< result.height:
+      for x in 0 ..< result.width:
+        let
+          bgra = pixels[result.dataIndex(x, y)]
+          rgba = rgba(bgra[2], bgra[1], bgra[0], bgra[3])
+        result.setRgbaUnsafe(x, y, rgba)
   except PixieError as e:
     raise e
   except:

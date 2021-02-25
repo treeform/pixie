@@ -1,5 +1,5 @@
 import chroma, flatty/binny, math, pixie/common, pixie/images, pixie/masks,
-    zippy, zippy/crc
+    zippy, zippy/crc, pixie/internal
 
 # See http://www.libpng.org/pub/png/spec/1.2/PNG-Contents.html
 
@@ -411,6 +411,7 @@ proc decodePng*(data: seq[uint8]): Image =
   result.width = header.width
   result.height = header.height
   result.data = decodeImageData(header, palette, transparency, imageData)
+  result.data.toPremultipliedAlpha()
 
 proc decodePng*(data: string): Image {.inline.} =
   ## Decodes the PNG data into an Image.
@@ -420,6 +421,7 @@ proc encodePng*(
   width, height, channels: int, data: pointer, len: int
 ): seq[uint8] =
   ## Encodes the image data into the PNG file format.
+  ## If data points to RGBA data, it is assumed to be straight alpha.
 
   if width <= 0 or width > int32.high.int:
     raise newException(PixieError, "Invalid PNG width")
@@ -499,8 +501,10 @@ proc encodePng*(image: Image): string =
       PixieError,
       "Image has no data (are height and width 0?)"
     )
+  var copy = image.data
+  copy.toStraightAlpha()
   cast[string](encodePng(
-    image.width, image.height, 4, image.data[0].addr, image.data.len * 4
+    image.width, image.height, 4, copy[0].addr, copy.len * 4
   ))
 
 proc encodePng*(mask: Mask): string =

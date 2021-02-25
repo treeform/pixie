@@ -46,7 +46,6 @@ block:
   mask.fillPath(path)
 
   image.draw(mask)
-  image.toStraightAlpha()
   image.writeFile("tests/images/masks/circleMask.png")
 
 block:
