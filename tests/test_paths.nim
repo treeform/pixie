@@ -214,3 +214,87 @@ block:
       strokeWidth = 0.01)
 
   image.writeFile("tests/images/paths/pixelScale.png")
+
+block:
+  let
+    image = newImage(60, 60)
+    path = parsePath("M 3 3 L 20 3 L 20 20 L 3 20 Z")
+  image.fill(rgba(255, 255, 255, 255))
+  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcRound, ljRound)
+
+  image.writeFile("tests/images/paths/boxRound.png")
+
+block:
+  let
+    image = newImage(60, 60)
+    path = parsePath("M 3 3 L 20 3 L 20 20 L 3 20 Z")
+  image.fill(rgba(255, 255, 255, 255))
+  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcRound, ljBevel)
+
+  image.writeFile("tests/images/paths/boxBevel.png")
+
+block:
+  let
+    image = newImage(60, 60)
+    path = parsePath("M 3 3 L 20 3 L 20 20 L 3 20 Z")
+  image.fill(rgba(255, 255, 255, 255))
+  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcRound, ljMiter)
+
+  image.writeFile("tests/images/paths/boxMiter.png")
+
+block:
+  let
+    image = newImage(60, 60)
+    path = parsePath("M 3 3 L 20 3 L 20 20 L 3 20")
+  image.fill(rgba(255, 255, 255, 255))
+  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcButt, ljBevel)
+
+  image.writeFile("tests/images/paths/lcButt.png")
+
+block:
+  let
+    image = newImage(60, 60)
+    path = parsePath("M 3 3 L 20 3 L 20 20 L 3 20")
+  image.fill(rgba(255, 255, 255, 255))
+  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcRound, ljBevel)
+
+  image.writeFile("tests/images/paths/lcRound.png")
+
+block:
+  let
+    image = newImage(60, 60)
+    path = parsePath("M 3 3 L 20 3 L 20 20 L 3 20")
+  image.fill(rgba(255, 255, 255, 255))
+  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcSquare, ljBevel)
+
+  image.writeFile("tests/images/paths/lcSquare.png")
+
+# Potential error cases, ensure they do not crash
+
+block:
+  let
+    image = newImage(60, 60)
+    path = parsePath("M 3 3 L 3 3 L 3 3")
+  image.fill(rgba(255, 255, 255, 255))
+  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcSquare, ljMiter)
+
+block:
+  let
+    image = newImage(60, 60)
+    path = parsePath("L 0 0 L 0 0")
+  image.fill(rgba(255, 255, 255, 255))
+  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcSquare, ljMiter)
+
+block:
+  let
+    image = newImage(60, 60)
+    path = parsePath("L 1 1")
+  image.fill(rgba(255, 255, 255, 255))
+  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcSquare, ljMiter)
+
+block:
+  let
+    image = newImage(60, 60)
+    path = parsePath("L 0 0")
+  image.fill(rgba(255, 255, 255, 255))
+  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcSquare, ljMiter)

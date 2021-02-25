@@ -31,6 +31,8 @@ type
 
   SomePath* = Path | string | seq[seq[Vec2]]
 
+const epsilon = 0.0001 * PI
+
 when defined(release):
   {.push checks: off.}
 
@@ -972,11 +974,10 @@ template computeCoverages(
   windingRule: WindingRule
 ) =
   const
-    ep = 0.0001 * PI
     quality = 5 # Must divide 255 cleanly (1, 3, 5, 15, 17, 51, 85)
     sampleCoverage = (255 div quality).uint8
     offset = 1 / quality.float32
-    initialOffset = offset / 2 + ep
+    initialOffset = offset / 2 + epsilon
 
   let
     partition =
@@ -1233,43 +1234,122 @@ proc fillShapes(
 
 proc strokeShapes(
   shapes: seq[seq[Vec2]],
-  strokeWidth: float32
+  strokeWidth: float32,
+  lineCap: LineCap,
+  lineJoin: LineJoin,
+  miterAngleLimit = degToRad(28.96)
 ): seq[seq[Vec2]] =
   if strokeWidth == 0:
     return
 
-  let
-    widthLeft = strokeWidth / 2
-    widthRight = strokeWidth / 2
+  let halfStroke = strokeWidth / 2
+
+  proc makeCircle(at: Vec2): seq[Vec2] =
+    var path: Path
+    path.ellipse(at, halfStroke, halfStroke)
+    path.commandsToShapes()[0]
+
+  proc makeRect(at, to: Vec2): seq[Vec2] =
+    # Rectangle corners
+    let
+      tangent = (to - at).normalize()
+      normal = vec2(tangent.y, tangent.x)
+      a = vec2(
+        at.x + normal.x * halfStroke,
+        at.y - normal.y * halfStroke
+      )
+      b = vec2(
+        to.x + normal.x * halfStroke,
+        to.y - normal.y * halfStroke
+      )
+      c = vec2(
+        to.x - normal.x * halfStroke,
+        to.y + normal.y * halfStroke
+      )
+      d = vec2(
+        at.x - normal.x * halfStroke,
+        at.y + normal.y * halfStroke
+      )
+
+    @[a, b, c, d, a]
+
+  proc makeJoin(prevPos, pos, nextPos: Vec2): seq[Vec2] =
+    let angle = fixAngle(angle(nextPos - pos) - angle(prevPos - pos))
+    if abs(abs(angle) - PI) > epsilon:
+      var
+        a = (pos - prevPos).normalize() * halfStroke
+        b = (pos - nextPos).normalize() * halfStroke
+      if angle >= 0:
+        a = vec2(-a.y, a.x)
+        b = vec2(b.y, -b.x)
+      else:
+        a = vec2(a.y, -a.x)
+        b = vec2(-b.y, b.x)
+
+      var lineJoin = lineJoin
+      if lineJoin == ljMiter and abs(angle) < miterAngleLimit:
+        lineJoin = ljBevel
+
+      case lineJoin:
+      of ljMiter:
+        let
+          la = line(prevPos + a, pos + a)
+          lb = line(nextPos + b, pos + b)
+        var at: Vec2
+        if la.intersects(lb, at):
+          return @[pos + a, at, pos + b, pos, pos + a]
+
+      of ljBevel:
+        return @[a + pos, b + pos, pos, a + pos]
+
+      of ljRound:
+        return makeCircle(prevPos)
 
   for shape in shapes:
-    var
-      strokeShape: seq[Vec2]
-      back: seq[Vec2]
-    for segment in shape.segments:
+    var shapeStroke: seq[seq[Vec2]]
+
+    if shape[0] != shape[^1]:
+      # This shape does not end at the same point it starts so draw the
+      # first line cap.
+      case lineCap:
+      of lcButt:
+        discard
+      of lcRound:
+        shapeStroke.add(makeCircle(shape[0]))
+      of lcSquare:
+        let tangent = (shape[1] - shape[0]).normalize()
+        shapeStroke.add(makeRect(
+          shape[0] - tangent * halfStroke,
+          shape[0]
+        ))
+
+    for i in 1 ..< shape.len:
       let
-        tangent = (segment.at - segment.to).normalize()
-        normal = vec2(-tangent.y, tangent.x)
-        left = segment(
-          segment.at - normal * widthLeft,
-          segment.to - normal * widthLeft
-        )
-        right = segment(
-          segment.at + normal * widthRight,
-          segment.to + normal * widthRight
-        )
+        pos = shape[i]
+        prevPos = shape[i - 1]
 
-      strokeShape.add([right.at, right.to])
-      back.add([left.at, left.to])
+      shapeStroke.add(makeRect(prevPos, pos))
 
-    # Add the back side reversed
-    for i in 1 .. back.len:
-      strokeShape.add(back[^i])
+      # If we need a line join
+      if i < shape.len - 1:
+        shapeStroke.add(makeJoin(prevPos, pos, shape[i + 1]))
 
-    strokeShape.add(strokeShape[0])
+    if shape[0] == shape[^1]:
+      shapeStroke.add(makeJoin(shape[^2], shape[^1], shape[1]))
+    else:
+      case lineCap:
+      of lcButt:
+        discard
+      of lcRound:
+        shapeStroke.add(makeCircle(shape[^1]))
+      of lcSquare:
+        let tangent = (shape[^1] - shape[^2]).normalize()
+        shapeStroke.add(makeRect(
+          shape[^1] + tangent * halfStroke,
+          shape[^1]
+        ))
 
-    if strokeShape.len > 0:
-      result.add(strokeShape)
+    result.add(shapeStroke)
 
 proc parseSomePath(
   path: SomePath, pixelScale: float32 = 1.0
@@ -1338,9 +1418,13 @@ proc strokePath*(
   path: SomePath,
   color: ColorRGBA,
   strokeWidth = 1.0,
+  lineCap = lcButt,
+  lineJoin = ljMiter,
   blendMode = bmNormal
 ) =
-  let strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
+  let strokeShapes = strokeShapes(
+    parseSomePath(path), strokeWidth, lineCap, lineJoin
+  )
   image.fillShapes(strokeShapes, color, wrNonZero, blendMode)
 
 proc strokePath*(
@@ -1349,13 +1433,17 @@ proc strokePath*(
   color: ColorRGBA,
   transform: Vec2 | Mat3,
   strokeWidth = 1.0,
+  lineCap = lcButt,
+  lineJoin = ljMiter,
   blendMode = bmNormal
 ) =
   when type(transform) is Mat3:
     let pixelScale = transform.maxScale()
   else:
     let pixelScale = 1.0
-  var strokeShapes = strokeShapes(parseSomePath(path, pixelScale), strokeWidth)
+  var strokeShapes = strokeShapes(
+    parseSomePath(path, pixelScale), strokeWidth, lineCap, lineJoin
+  )
   for shape in strokeShapes.mitems:
     for segment in shape.mitems:
       when type(transform) is Vec2:
@@ -1367,18 +1455,26 @@ proc strokePath*(
 proc strokePath*(
   mask: Mask,
   path: SomePath,
-  strokeWidth = 1.0
+  strokeWidth = 1.0,
+  lineCap = lcButt,
+  lineJoin = ljMiter
 ) =
-  let strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
+  let strokeShapes = strokeShapes(
+    parseSomePath(path), strokeWidth, lineCap, lineJoin
+  )
   mask.fillShapes(strokeShapes, wrNonZero)
 
 proc strokePath*(
   mask: Mask,
   path: SomePath,
+  transform: Vec2 | Mat3,
   strokeWidth = 1.0,
-  transform: Vec2 | Mat3
+  lineCap = lcButt,
+  lineJoin = ljMiter
 ) =
-  var strokeShapes = strokeShapes(parseSomePath(path), strokeWidth)
+  var strokeShapes = strokeShapes(
+    parseSomePath(path), strokeWidth, lineCap, lineJoin
+  )
   for shape in strokeShapes.mitems:
     for segment in shape.mitems:
       when type(transform) is Vec2:
