@@ -1481,15 +1481,9 @@ proc fillPath*(
     of pkSolid:
       fill.fill(paint.color.toPremultipliedAlpha())
     of pkImage:
-      fill.fillImage(
-        paint.image,
-        paint.imageMat
-      )
+      fill.draw(paint.image, paint.imageMat)
     of pkImageTiled:
-      fill.fillImageTiled(
-        paint.image,
-        paint.imageMat
-      )
+      fill.drawTiled(paint.image, paint.imageMat)
     of pkGradientLinear:
       fill.fillLinearGradient(
         paint.gradientHandlePositions[0],

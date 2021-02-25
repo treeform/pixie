@@ -27,48 +27,6 @@ type
     color*: Color                         ## Color of the stop
     position*: float32                    ## Gradient Stop position 0..1.
 
-proc fillImage*(
-  dest: Image,
-  src: Image,
-  mat: Mat3
-) =
-  ## Draws and basic image fill.
-  dest.draw(
-    src,
-    mat
-  )
-
-proc fillImageTiled*(
-  dest: Image,
-  src: Image,
-  mat: Mat3
-) =
-  ## Draws a tiled image fill.
-  var
-    matInv = mat.inverse()
-    src = src
-
-  block: # Shrink by 2 as needed
-    const h = 0.5.float32
-    var
-      p = matInv * vec2(0 + h, 0 + h)
-      dx = matInv * vec2(1 + h, 0 + h) - p
-      dy = matInv * vec2(0 + h, 1 + h) - p
-      minFilterBy2 = max(dx.length, dy.length)
-
-    while minFilterBy2 > 2:
-      src = src.minifyBy2()
-      dx /= 2
-      dy /= 2
-      minFilterBy2 /= 2
-      matInv = matInv * scale(vec2(0.5, 0.5))
-
-  for y in 0 ..< dest.height:
-    for x in 0 ..< dest.width:
-      var srcPos = matInv * vec2(x.float32, y.float32)
-      let rgba = src.getRgbaSmoothWrapped(srcPos.x, srcPos.y)
-      dest.setRgbaUnsafe(x,y, rgba)
-
 proc toLineSpace(at, to, point: Vec2): float32 =
   ## Convert position on to where it would fall on a line between at and to.
   let
