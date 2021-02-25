@@ -268,3 +268,33 @@ block:
   image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcSquare, ljBevel)
 
   image.writeFile("tests/images/paths/lcSquare.png")
+
+# Potential error cases, ensure they do not crash
+
+block:
+  let
+    image = newImage(60, 60)
+    path = parsePath("M 3 3 L 3 3 L 3 3")
+  image.fill(rgba(255, 255, 255, 255))
+  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcSquare, ljMiter)
+
+block:
+  let
+    image = newImage(60, 60)
+    path = parsePath("L 0 0 L 0 0")
+  image.fill(rgba(255, 255, 255, 255))
+  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcSquare, ljMiter)
+
+block:
+  let
+    image = newImage(60, 60)
+    path = parsePath("L 1 1")
+  image.fill(rgba(255, 255, 255, 255))
+  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcSquare, ljMiter)
+
+block:
+  let
+    image = newImage(60, 60)
+    path = parsePath("L 0 0")
+  image.fill(rgba(255, 255, 255, 255))
+  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcSquare, ljMiter)

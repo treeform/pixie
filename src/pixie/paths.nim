@@ -1273,40 +1273,40 @@ proc strokeShapes(
 
     @[a, b, c, d, a]
 
+  proc makeJoin(prevPos, pos, nextPos: Vec2): seq[Vec2] =
+    let angle = fixAngle(angle(nextPos - pos) - angle(prevPos - pos))
+    if abs(abs(angle) - PI) > epsilon:
+      var
+        a = (pos - prevPos).normalize() * halfStroke
+        b = (pos - nextPos).normalize() * halfStroke
+      if angle >= 0:
+        a = vec2(-a.y, a.x)
+        b = vec2(b.y, -b.x)
+      else:
+        a = vec2(a.y, -a.x)
+        b = vec2(-b.y, b.x)
+
+      var lineJoin = lineJoin
+      if lineJoin == ljMiter and abs(angle) < miterAngleLimit:
+        lineJoin = ljBevel
+
+      case lineJoin:
+      of ljMiter:
+        let
+          la = line(prevPos + a, pos + a)
+          lb = line(nextPos + b, pos + b)
+        var at: Vec2
+        if la.intersects(lb, at):
+          return @[pos + a, at, pos + b, pos, pos + a]
+
+      of ljBevel:
+        return @[a + pos, b + pos, pos, a + pos]
+
+      of ljRound:
+        return makeCircle(prevPos)
+
   for shape in shapes:
     var shapeStroke: seq[seq[Vec2]]
-
-    proc makeJoin(prevPos, pos, nextPos: Vec2): seq[Vec2] =
-      let angle = fixAngle(-angle(prevPos - pos) - -angle(nextPos - pos))
-      if abs(abs(angle) - PI) > epsilon:
-        var
-          a = (pos - prevPos).normalize() * halfStroke
-          b = (pos - nextPos).normalize() * halfStroke
-        if angle >= 0:
-          a = vec2(-a.y, a.x)
-          b = vec2(b.y, -b.x)
-        else:
-          a = vec2(a.y, -a.x)
-          b = vec2(-b.y, b.x)
-
-        var lineJoin = lineJoin
-        if lineJoin == ljMiter and abs(angle) < miterAngleLimit:
-          lineJoin = ljBevel
-
-        case lineJoin:
-        of ljMiter:
-          let
-            la = line(prevPos + a, pos + a)
-            lb = line(nextPos + b, pos + b)
-          var at: Vec2
-          if la.intersects(lb, at):
-            return @[pos + a, at, pos + b, pos, pos + a]
-
-        of ljBevel:
-          return @[a + pos, b + pos, pos, a + pos]
-
-        of ljRound:
-          return makeCircle(prevPos)
 
     if shape[0] != shape[^1]:
       # This shape does not end at the same point it starts so draw the
