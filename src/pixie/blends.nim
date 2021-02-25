@@ -45,6 +45,7 @@ proc min(a, b: uint32): uint32 {.inline.} =
   if a < b: a else: b
 
 proc alphaFix(backdrop, source, mixed: ColorRGBA): ColorRGBA =
+  ## After mixing an image, adjust its alpha value to be correct.
   let
     sa = source.a.uint32
     ba = backdrop.a.uint32
@@ -67,6 +68,7 @@ proc alphaFix(backdrop, source, mixed: ColorRGBA): ColorRGBA =
   result.a = a.uint8
 
 proc alphaFix(backdrop, source, mixed: Color): Color =
+  ## After mixing an image, adjust its alpha value to be correct.
   result.a = (source.a + backdrop.a * (1.0 - source.a))
   if result.a == 0:
     return
@@ -85,6 +87,7 @@ proc alphaFix(backdrop, source, mixed: Color): Color =
   result.b /= result.a
 
 proc blendAlpha*(backdrop, source: uint8): uint8 {.inline.} =
+  ## Blends alphas of backdrop, source.
   source + ((backdrop.uint32 * (255 - source)) div 255).uint8
 
 proc screen(backdrop, source: uint32): uint8 {.inline.} =
@@ -448,6 +451,7 @@ proc blendWhite(backdrop, source: ColorRGBA): ColorRGBA =
   rgba(255, 255, 255, 255)
 
 proc blender*(blendMode: BlendMode): Blender =
+  ## Returns a blend function for a given blend mode.
   case blendMode:
   of bmNormal: blendNormal
   of bmDarken: blendDarken
@@ -494,6 +498,7 @@ proc maskOverwrite(backdrop, source: uint8): uint8 =
   source
 
 proc masker*(blendMode: BlendMode): Masker =
+  ## Returns a blend masking function for a given blend masking mode.
   case blendMode:
   of bmNormal: maskNormal
   of bmMask: maskMask
@@ -601,6 +606,7 @@ when defined(amd64) and not defined(pixieNoSimd):
     source
 
   proc blenderSimd*(blendMode: BlendMode): BlenderSimd =
+    ## Returns a blend function for a given blend mode with SIMD support.
     case blendMode:
     of bmNormal: blendNormalSimd
     of bmMask: blendMaskSimd
@@ -609,6 +615,7 @@ when defined(amd64) and not defined(pixieNoSimd):
       raise newException(PixieError, "No SIMD blender for " & $blendMode)
 
   proc hasSimdBlender*(blendMode: BlendMode): bool =
+    ## Is there a blend function for a given blend mode with SIMD support?
     blendMode in {bmNormal, bmMask, bmOverwrite}
 
   proc maskNormalSimd(backdrop, source: M128i): M128i =
@@ -670,6 +677,7 @@ when defined(amd64) and not defined(pixieNoSimd):
     mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
 
   proc maskerSimd*(blendMode: BlendMode): MaskerSimd =
+    ## Returns a blend masking function with SIMD support.
     case blendMode:
     of bmNormal: maskNormalSimd
     of bmMask: maskMaskSimd
@@ -678,6 +686,7 @@ when defined(amd64) and not defined(pixieNoSimd):
       raise newException(PixieError, "No SIMD masker for " & $blendMode)
 
   proc hasSimdMasker*(blendMode: BlendMode): bool =
+    ## Is there a blend masking function with SIMD support?
     blendMode in {bmNormal, bmMask, bmOverwrite}
 
 when defined(release):

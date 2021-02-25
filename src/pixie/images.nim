@@ -511,6 +511,8 @@ proc newMask*(image: Image): Mask =
     result.data[j] = image.data[j].a
 
 proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA =
+  ## Gets a interpolated color with float point coordinates.
+  ## Pixes outside the image are transparent.
   let
     minX = floor(x)
     minY = floor(y)
@@ -530,6 +532,8 @@ proc getRgbaSmooth*(image: Image, x, y: float32): ColorRGBA =
   lerp(bottomMix, topMix, diffY)
 
 proc getRgbaSmoothWrapped*(image: Image, x, y: float32): ColorRGBA =
+  ## Gets a interpolated color with float point coordinates.
+  ## Pixes outside the image are repeated.
   let
     minX = floor(x)
     minY = floor(y)
