@@ -35,8 +35,11 @@ type
     bmIntersectMask
     bmExcludeMask
 
-  Blender* = proc(backdrop, source: ColorRGBA): ColorRGBA
-  Masker* = proc(backdrop, source: uint8): uint8
+
+  Blender* = proc(backdrop, source: ColorRGBA): ColorRGBA ## Function signature
+  ## returned by blender.
+  Masker* = proc(backdrop, source: uint8): uint8 ## Function signature returned
+  ## by masker.
 
 when defined(release):
   {.push checks: off.}
@@ -513,8 +516,10 @@ when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
 
   type
-    BlenderSimd* = proc(blackdrop, source: M128i): M128i
-    MaskerSimd* = proc(blackdrop, source: M128i): M128i
+    BlenderSimd* = proc(blackdrop, source: M128i): M128i ## Function signature
+    ## returned by blenderSimd.
+    MaskerSimd* = proc(blackdrop, source: M128i): M128i ## Function signature
+    ## returned by maskerSimd.
 
   proc packAlphaValues*(v: M128i): M128i {.inline.} =
     ## Shuffle the alpha values for these 4 colors to the first 4 bytes
