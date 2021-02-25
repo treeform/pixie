@@ -94,6 +94,7 @@ proc fill*(mask: Mask, value: uint8) {.inline.} =
   fillUnsafe(mask.data, value, 0, mask.data.len)
 
 proc getValueSmooth*(mask: Mask, x, y: float32): uint8 =
+  ## Gets a interpolated value with float point coordinates.
   let
     minX = floor(x)
     minY = floor(y)

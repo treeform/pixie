@@ -5,13 +5,16 @@ when defined(amd64) and not defined(pixieNoSimd):
 
 type
   WindingRule* = enum
+    ## Winding rules.
     wrNonZero
     wrEvenOdd
 
   LineCap* = enum
+    ## Line cap type for strokes.
     lcButt, lcRound, lcSquare
 
   LineJoin* = enum
+    ## Line join type for strokes.
     ljMiter, ljRound, ljBevel
 
   PathCommandKind* = enum
@@ -26,23 +29,26 @@ type
     numbers*: seq[float32]
 
   Path* = object
+    ## Used to hold paths and create paths.
     commands*: seq[PathCommand]
     start, at: Vec2 # Maintained by moveTo, lineTo, etc. Used by arcTo.
 
   SomePath* = Path | string | seq[seq[Vec2]]
 
-const epsilon = 0.0001 * PI
+const epsilon = 0.0001 * PI  ## Tiny value used for some computations.
 
 when defined(release):
   {.push checks: off.}
 
 proc maxScale(m: Mat3): float32 =
+  ## What is the largest scale of this matrix.
   max(
     vec2(m[0, 0], m[0, 1]).length,
     vec2(m[1, 0], m[1, 1]).length
   )
 
 proc parameterCount(kind: PathCommandKind): int =
+  ## Returns number of parameters a path command has.
   case kind:
   of Close: 0
   of Move, Line, RMove, RLine, TQuad, RTQuad: 2
@@ -52,6 +58,7 @@ proc parameterCount(kind: PathCommandKind): int =
   of Arc, RArc: 7
 
 proc `$`*(path: Path): string =
+  ## Turn path int into a string.
   for i, command in path.commands:
     case command.kind
     of Move: result.add "M"
@@ -222,6 +229,7 @@ proc parsePath*(path: string): Path =
   finishCommand(result)
 
 proc transform*(path: var Path, mat: Mat3) =
+  ## Apply a matrix transform to a path.
   for command in path.commands.mitems:
     case command.kind:
     of Close:
@@ -280,22 +288,27 @@ proc addPath*(path: var Path, other: Path) =
   path.commands.add(other.commands)
 
 proc closePath*(path: var Path) =
+  ## Closes a path (draws a line to the start).
   path.commands.add(PathCommand(kind: Close))
   path.at = path.start
 
 proc moveTo*(path: var Path, x, y: float32) =
+  ## Moves the current drawing pen to a new position and starts a new shape.
   path.commands.add(PathCommand(kind: Move, numbers: @[x, y]))
   path.start = vec2(x, y)
   path.at = path.start
 
 proc moveTo*(path: var Path, v: Vec2) {.inline.} =
+  ## Moves the current drawing pen to a new position and starts a new shape.
   path.moveTo(v.x, v.y)
 
 proc lineTo*(path: var Path, x, y: float32) =
+  ## Adds a line.
   path.commands.add(PathCommand(kind: Line, numbers: @[x, y]))
   path.at = vec2(x, y)
 
 proc lineTo*(path: var Path, v: Vec2) {.inline.} =
+  ## Adds a line.
   path.lineTo(v.x, v.y)
 
 proc bezierCurveTo*(path: var Path, x1, y1, x2, y2, x3, y3: float32) =
@@ -324,6 +337,11 @@ proc quadraticCurveTo*(path: var Path, x1, y1, x2, y2: float32) =
   path.at = vec2(x2, y2)
 
 proc quadraticCurveTo*(path: var Path, ctrl, to: Vec2) {.inline.} =
+  ## Adds a quadratic Bézier curve to the path. This requires 2 points.
+  ## The first point is the control point and the second is the end point.
+  ## The starting point is the last point in the current path, which can be
+  ## changed using moveTo() before creating the curve.
+  ##
   path.quadraticCurveTo(ctrl.x, ctrl.y, to.x, to.y)
 
 proc arcTo*(path: var Path, ctrl1, ctrl2: Vec2, radius: float32) {.inline.} =
@@ -390,6 +408,8 @@ proc ellipticalArcTo*(
   largeArcFlag, sweepFlag: bool,
   x, y: float32
 ) =
+  ## Adds an elliptical arc to the current sub-path, using the given radius
+  ## ratios, sweep flags, and end position.
   path.commands.add(PathCommand(
     kind: Arc,
     numbers: @[
@@ -413,9 +433,13 @@ proc rect*(path: var Path, x, y, w, h: float32, clockwise = true) =
     path.closePath()
 
 proc rect*(path: var Path, pos: Vec2, wh: Vec2, clockwise = true) {.inline.} =
+  ## Adds a rectangle.
+  ## Clockwise param can be used to subtract a rect from a path using even-odd.
   path.rect(pos.x, pos.y, wh.x, wh.y, clockwise)
 
 proc rect*(path: var Path, rect: Rect, clockwise = true) {.inline.} =
+  ## Adds a rectangle.
+  ## Clockwise param can be used to subtract a rect from a path using even-odd.
   path.rect(rect.x, rect.y, rect.w, rect.h, clockwise)
 
 const splineCircleK = 4.0 * (-1.0 + sqrt(2.0)) / 3
@@ -425,6 +449,8 @@ const splineCircleK = 4.0 * (-1.0 + sqrt(2.0)) / 3
 proc roundedRect*(
   path: var Path, x, y, w, h, nw, ne, se, sw: float32, clockwise = true
 ) =
+  ## Adds a rounded rectangle.
+  ## Clockwise param can be used to subtract a rect from a path using even-odd.
   let
     s = splineCircleK
 
@@ -478,14 +504,19 @@ proc roundedRect*(
 proc roundedRect*(
   path: var Path, pos, wh: Vec2, nw, ne, se, sw: float32, clockwise = true
 ) {.inline.} =
+  ## Adds a rounded rectangle.
+  ## Clockwise param can be used to subtract a rect from a path using even-odd.
   path.roundedRect(pos.x, pos.y, wh.x, wh.y, nw, ne, se, sw, clockwise)
 
 proc roundedRect*(
   path: var Path, rect: Rect, nw, ne, se, sw: float32, clockwise = true
 ) {.inline.} =
+  ## Adds a rounded rectangle.
+  ## Clockwise param can be used to subtract a rect from a path using even-odd.
   path.roundedRect(rect.x, rect.y, rect.w, rect.h, nw, ne, se, sw, clockwise)
 
 proc ellipse*(path: var Path, cx, cy, rx, ry: float32) =
+  ## Adds a ellipse.
   let
     magicX = splineCircleK * rx
     magicY = splineCircleK * ry
@@ -498,10 +529,11 @@ proc ellipse*(path: var Path, cx, cy, rx, ry: float32) =
   path.closePath()
 
 proc ellipse*(path: var Path, center: Vec2, rx, ry: float32) {.inline.} =
+  ## Adds a ellipse.
   path.ellipse(center.x, center.y, rx, ry)
 
 proc polygon*(path: var Path, x, y, size: float32, sides: int) =
-  ## Draws a n sided regular polygon at (x, y) with size.
+  ## Draws a n-sided regular polygon at (x, y) with a size.
   path.moveTo(x + size * cos(0.0), y + size * sin(0.0))
   for side in 0 .. sides:
     path.lineTo(
@@ -510,6 +542,7 @@ proc polygon*(path: var Path, x, y, size: float32, sides: int) =
     )
 
 proc polygon*(path: var Path, pos: Vec2, size: float32, sides: int) {.inline.} =
+  ## Draws a n-sided regular polygon at (x, y) with a size.
   path.polygon(pos.x, pos.y, size, sides)
 
 proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
@@ -535,7 +568,7 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
       shape.add(to)
 
   proc addCubic(shape: var seq[Vec2], at, ctrl1, ctrl2, to: Vec2) =
-
+    ## Adds cubic segments to shape.
     proc compute(at, ctrl1, ctrl2, to: Vec2, t: float32): Vec2 {.inline.} =
       pow(1 - t, 3) * at +
       pow(1 - t, 2) * 3 * t * ctrl1 +
@@ -565,7 +598,7 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
     shape.discretize(1, 1)
 
   proc addQuadratic(shape: var seq[Vec2], at, ctrl, to: Vec2) =
-
+    ## Adds quadratic segments to shape.
     proc compute(at, ctrl, to: Vec2, t: float32): Vec2 {.inline.} =
       pow(1 - t, 2) * at +
       2 * (1 - t) * t * ctrl +
@@ -600,6 +633,7 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
     large, sweep: bool,
     to: Vec2
   ) =
+    ## Adds arc segments to shape.
     type ArcParams = object
       radii: Vec2
       rotMat: Mat3
@@ -876,6 +910,7 @@ iterator segments*(s: seq[Vec2]): Segment =
     yield(segment(s[i], s[i + 1]))
 
 proc quickSort(a: var seq[(float32, int16)], inl, inr: int) =
+  ## Quick sorts inline faster then standard lib.
   var
     r = inr
     l = inl
@@ -896,6 +931,7 @@ proc quickSort(a: var seq[(float32, int16)], inl, inr: int) =
   quickSort(a, l, inr)
 
 proc computeBounds(partitions: seq[seq[(Segment, int16)]]): Rect =
+  ## Compute bounds of a shape segments with windings.
   var
     xMin = float32.high
     xMax = float32.low
@@ -919,6 +955,7 @@ proc computeBounds(partitions: seq[seq[(Segment, int16)]]): Rect =
   result.h = yMax - yMin
 
 proc shouldFill(windingRule: WindingRule, count: int): bool {.inline.} =
+  ## Should we fill based on the current winding rule and count?
   case windingRule:
   of wrNonZero:
     count != 0
@@ -1361,6 +1398,7 @@ proc strokeShapes(
 proc parseSomePath(
   path: SomePath, pixelScale: float32 = 1.0
 ): seq[seq[Vec2]] {.inline.} =
+  ## Given SomePath, parse it in different ways.
   when type(path) is string:
     parsePath(path).commandsToShapes(pixelScale)
   elif type(path) is Path:
@@ -1375,6 +1413,7 @@ proc fillPath*(
   windingRule = wrNonZero,
   blendMode = bmNormal
 ) {.inline.} =
+  ## Fills a path.
   image.fillShapes(parseSomePath(path), color, windingRule, blendMode)
 
 proc fillPath*(
@@ -1385,6 +1424,7 @@ proc fillPath*(
   windingRule = wrNonZero,
   blendMode = bmNormal
 ) =
+  ## Fills a path.
   when type(transform) is Mat3:
     let pixelScale = transform.maxScale()
   else:
@@ -1403,6 +1443,7 @@ proc fillPath*(
   path: SomePath,
   windingRule = wrNonZero
 ) {.inline.} =
+  ## Fills a path.
   mask.fillShapes(parseSomePath(path), windingRule)
 
 proc fillPath*(
@@ -1411,6 +1452,7 @@ proc fillPath*(
   transform: Vec2 | Mat3,
   windingRule = wrNonZero
 ) =
+  ## Fills a path.
   when type(transform) is Mat3:
     let pixelScale = transform.maxScale()
   else:
@@ -1430,6 +1472,7 @@ proc fillPath*(
   paint: Paint,
   windingRule = wrNonZero,
 ) =
+  ## Fills a path.
   var mask = newMask(image.width, image.height)
   var fill = newImage(image.width, image.height)
   mask.fillPath(parseSomePath(path), windingRule)
@@ -1480,6 +1523,7 @@ proc strokePath*(
   lineJoin = ljMiter,
   blendMode = bmNormal
 ) =
+  ## Strokes a path.
   let strokeShapes = strokeShapes(
     parseSomePath(path), strokeWidth, lineCap, lineJoin
   )
@@ -1495,6 +1539,7 @@ proc strokePath*(
   lineJoin = ljMiter,
   blendMode = bmNormal
 ) =
+  ## Strokes a path.
   when type(transform) is Mat3:
     let pixelScale = transform.maxScale()
   else:
@@ -1517,6 +1562,7 @@ proc strokePath*(
   lineCap = lcButt,
   lineJoin = ljMiter
 ) =
+  ## Strokes a path.
   let strokeShapes = strokeShapes(
     parseSomePath(path), strokeWidth, lineCap, lineJoin
   )
@@ -1530,6 +1576,7 @@ proc strokePath*(
   lineCap = lcButt,
   lineJoin = ljMiter
 ) =
+  ## Strokes a path.
   when type(transform) is Mat3:
     let pixelScale = transform.maxScale()
   else:

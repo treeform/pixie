@@ -108,17 +108,23 @@ window.addEventListener('DOMContentLoaded', main);
   pkGradientAngular">PaintKind</a></li>
   <li><a class="reference" href="#Paint"
     title="Paint = ref object
-  kind*: PaintKind
-  color*: ColorRGBA
-  image*: Image
-  imageMat*: Mat3
-  gradientHandlePositions*: seq[Vec2]
-  gradientStops*: seq[ColorStop]
-  blendMode*: BlendMode">Paint</a></li>
+  case kind*: PaintKind
+  of pkSolid:
+      color*: ColorRGBA      ## Color to fill with.
+    
+  of pkImage, pkImageTiled:
+      image*: Image          ## Image to fill with.
+      imageMat*: Mat3        ## Matrix of the filled image.
+    
+  of pkGradientLinear, pkGradientRadial, pkGradientAngular:
+      gradientHandlePositions*: seq[Vec2] ## Gradient positions (image space).
+      gradientStops*: seq[ColorStop] ## Color stops (gradient space).
+    
+  blendMode*: BlendMode      ## Blend mode.">Paint</a></li>
   <li><a class="reference" href="#ColorStop"
     title="ColorStop = object
-  color*: Color
-  position*: float32">ColorStop</a></li>
+  color*: Color              ## Color of the stop
+  position*: float32         ## Gradient Stop position 0..1.">ColorStop</a></li>
 
   </ul>
 </li>
@@ -182,27 +188,33 @@ window.addEventListener('DOMContentLoaded', main);
 </dd>
 <a id="Paint"></a>
 <dt><pre><a href="paints.html#Paint"><span class="Identifier">Paint</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
-  <span class="Identifier">kind</span><span class="Operator">*</span><span class="Other">:</span> <a href="paints.html#PaintKind"><span class="Identifier">PaintKind</span></a>
-  <span class="Identifier">color</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">ColorRGBA</span>
-  <span class="Identifier">image</span><span class="Operator">*</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a>
-  <span class="Identifier">imageMat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Mat3</span>
-  <span class="Identifier">gradientHandlePositions</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec2</span><span class="Other">]</span>
-  <span class="Identifier">gradientStops</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="paints.html#ColorStop"><span class="Identifier">ColorStop</span></a><span class="Other">]</span>
-  <span class="Identifier">blendMode</span><span class="Operator">*</span><span class="Other">:</span> <a href="blends.html#BlendMode"><span class="Identifier">BlendMode</span></a>
-</pre></dt>
+  <span class="Keyword">case</span> <span class="Identifier">kind</span><span class="Operator">*</span><span class="Other">:</span> <a href="paints.html#PaintKind"><span class="Identifier">PaintKind</span></a>
+  <span class="Keyword">of</span> <span class="Identifier">pkSolid</span><span class="Other">:</span>
+      <span class="Identifier">color</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">ColorRGBA</span>      <span class="Comment">## Color to fill with.</span>
+    
+  <span class="Keyword">of</span> <span class="Identifier">pkImage</span><span class="Other">,</span> <span class="Identifier">pkImageTiled</span><span class="Other">:</span>
+      <span class="Identifier">image</span><span class="Operator">*</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a>          <span class="Comment">## Image to fill with.</span>
+      <span class="Identifier">imageMat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Mat3</span>        <span class="Comment">## Matrix of the filled image.</span>
+    
+  <span class="Keyword">of</span> <span class="Identifier">pkGradientLinear</span><span class="Other">,</span> <span class="Identifier">pkGradientRadial</span><span class="Other">,</span> <span class="Identifier">pkGradientAngular</span><span class="Other">:</span>
+      <span class="Identifier">gradientHandlePositions</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec2</span><span class="Other">]</span> <span class="Comment">## Gradient positions (image space).</span>
+      <span class="Identifier">gradientStops</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="paints.html#ColorStop"><span class="Identifier">ColorStop</span></a><span class="Other">]</span> <span class="Comment">## Color stops (gradient space).</span>
+    
+  <span class="Identifier">blendMode</span><span class="Operator">*</span><span class="Other">:</span> <a href="blends.html#BlendMode"><span class="Identifier">BlendMode</span></a>      <span class="Comment">## Blend mode.</span>
+  </pre></dt>
 <dd>
 
-
+Paint used to fill paths.
 
 </dd>
 <a id="ColorStop"></a>
 <dt><pre><a href="paints.html#ColorStop"><span class="Identifier">ColorStop</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">color</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
-  <span class="Identifier">position</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
-</pre></dt>
+  <span class="Identifier">color</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>              <span class="Comment">## Color of the stop</span>
+  <span class="Identifier">position</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>         <span class="Comment">## Gradient Stop position 0..1.</span>
+  </pre></dt>
 <dd>
 
-Represents color on a gradient curve.
+Color stop on a gradient curve.
 
 </dd>
 
@@ -215,7 +227,7 @@ Represents color on a gradient curve.
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">PixieError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+Draws and basic image fill.
 
 </dd>
 <a id="fillImageTiled,Image,Image,Mat3"></a>
@@ -223,7 +235,7 @@ Represents color on a gradient curve.
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+Draws a tiled image fill.
 
 </dd>
 <a id="fillLinearGradient,Image,Vec2,Vec2,seq[ColorStop]"></a>
@@ -231,7 +243,7 @@ Represents color on a gradient curve.
     <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-Linear gradient.
+Fills a linear gradient.
 
 </dd>
 <a id="fillRadialGradient,Image,Vec2,Vec2,Vec2,seq[ColorStop]"></a>
@@ -239,7 +251,7 @@ Linear gradient.
                         <span class="Identifier">stops</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="paints.html#ColorStop"><span class="Identifier">ColorStop</span></a><span class="Other">]</span><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-Radial gradient. start, stop, and skew.
+Fills a radial gradient.
 
 </dd>
 <a id="fillAngularGradient,Image,Vec2,Vec2,Vec2,seq[ColorStop]"></a>
@@ -247,7 +259,7 @@ Radial gradient. start, stop, and skew.
                          <span class="Identifier">stops</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="paints.html#ColorStop"><span class="Identifier">ColorStop</span></a><span class="Other">]</span><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
-
+Angular gradient.
 
 </dd>
 
@@ -260,7 +272,7 @@ Radial gradient. start, stop, and skew.
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-25 14:22:57 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-25 14:52:05 UTC</small>
       </div>
     </div>
   </div>

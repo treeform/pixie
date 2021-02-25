@@ -10,24 +10,29 @@ type
     pkGradientAngular
 
   Paint* = ref object
-    kind*: PaintKind
-    color*: ColorRGBA
-    image*: Image
-    imageMat*: Mat3
-    gradientHandlePositions*: seq[Vec2]
-    gradientStops*: seq[ColorStop]
-    blendMode*: BlendMode
+    ## Paint used to fill paths.
+    case kind*: PaintKind
+    of pkSolid:
+      color*: ColorRGBA                    ## Color to fill with.
+    of pkImage, pkImageTiled:
+      image*: Image                        ## Image to fill with.
+      imageMat*: Mat3                      ## Matrix of the filled image.
+    of pkGradientLinear, pkGradientRadial, pkGradientAngular:
+      gradientHandlePositions*: seq[Vec2]  ## Gradient positions (image space).
+      gradientStops*: seq[ColorStop]       ## Color stops (gradient space).
+    blendMode*: BlendMode                  ## Blend mode.
 
   ColorStop* = object
-    ## Represents color on a gradient curve.
-    color*: Color
-    position*: float32
+    ## Color stop on a gradient curve.
+    color*: Color                         ## Color of the stop
+    position*: float32                    ## Gradient Stop position 0..1.
 
 proc fillImage*(
   dest: Image,
   src: Image,
   mat: Mat3
 ) =
+  ## Draws and basic image fill.
   dest.draw(
     src,
     mat
@@ -38,6 +43,7 @@ proc fillImageTiled*(
   src: Image,
   mat: Mat3
 ) =
+  ## Draws a tiled image fill.
   var
     matInv = mat.inverse()
     src = src
@@ -102,7 +108,7 @@ proc fillLinearGradient*(
   at, to: Vec2,
   stops: seq[ColorStop]
 ) =
-  ## Linear gradient.
+  ## Fills a linear gradient.
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       let xy = vec2(x.float32, y.float32)
@@ -114,8 +120,7 @@ proc fillRadialGradient*(
   center, edge, skew: Vec2,
   stops: seq[ColorStop]
 ) =
-  ## Radial gradient.
-  ## start, stop, and skew.
+  ## Fills a radial gradient.
   let
     distanceX = dist(center, edge)
     distanceY = dist(center, skew)
@@ -136,6 +141,7 @@ proc fillAngularGradient*(
   center, edge, skew: Vec2,
   stops: seq[ColorStop]
 ) =
+  ## Angular gradient.
   # TODO: make edge between start and end anti-aliased.
   let
     gradientAngle = normalize(edge - center).angle().fixAngle()
