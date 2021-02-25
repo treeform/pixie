@@ -1012,6 +1012,13 @@ template computeCoverages(
       count: int
     for i in 0 ..< numHits:
       let (at, winding) = hits[i]
+      if windingRule == wrNonZero and
+        (count != 0) == (count + winding != 0) and
+        i < numHits - 1:
+        # Shortcut: if nonzero rule, we only care about when the count changes
+        # between zero and nonzero (or the last hit)
+        count += winding
+        continue
       if at > 0:
         if shouldFill(windingRule, count):
           var fillStart = prevAt.int
