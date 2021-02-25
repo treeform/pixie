@@ -190,7 +190,7 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
   elif fill == "none":
     result.fill = ColorRGBA()
   else:
-    result.fill = parseHtmlColor(fill).rgba.toPremultipliedAlpha()
+    result.fill = parseHtmlColor(fill).rgba
 
   if stroke == "":
     discard # Inherit
@@ -199,7 +199,7 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
   elif stroke == "none":
     result.stroke = ColorRGBA()
   else:
-    result.stroke = parseHtmlColor(stroke).rgba.toPremultipliedAlpha()
+    result.stroke = parseHtmlColor(stroke).rgba
     result.shouldStroke = true
 
   if strokeWidth == "":

@@ -3,7 +3,7 @@ import chroma
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
 
-proc toStraightAlpha*(data: var seq[ColorRGBA]) =
+proc toStraightAlpha*(data: var seq[ColorRGBA | ColorRGBX]) =
   ## Converts an image from premultiplied alpha to straight alpha.
   ## This is expensive for large images.
   for c in data.mitems:
@@ -14,7 +14,7 @@ proc toStraightAlpha*(data: var seq[ColorRGBA]) =
     c.g = ((c.g.uint32 * multiplier) div 255).uint8
     c.b = ((c.b.uint32 * multiplier) div 255).uint8
 
-proc toPremultipliedAlpha*(data: var seq[ColorRGBA]) =
+proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) =
   ## Converts an image to premultiplied alpha from straight alpha.
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):

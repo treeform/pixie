@@ -30,10 +30,10 @@ block:
 
 block:
   let image = newImage(100, 100)
-  image.fill(rgba(200, 200, 200, 200))
+  image.fill(rgbx(200, 200, 200, 200))
   image.applyOpacity(0.5)
-  doAssert image[0, 0] == rgba(100, 100, 100, 100)
-  doAssert image[88, 88] == rgba(100, 100, 100, 100)
+  doAssert image[0, 0] == rgbx(100, 100, 100, 100)
+  doAssert image[88, 88] == rgbx(100, 100, 100, 100)
 
 block:
   let
@@ -101,6 +101,6 @@ block:
 
 block:
   let a = newImage(100, 100)
-  a.fill(rgba(50, 100, 150, 200))
+  a.fill(rgbx(50, 100, 150, 200))
   a.invert()
-  doAssert a[0, 0] == rgba(44, 33, 22, 55)
+  doAssert a[0, 0] == rgbx(44, 33, 22, 55)
