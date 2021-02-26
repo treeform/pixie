@@ -11,8 +11,8 @@ let paint = Paint(
     vec2(100, 200)
   ],
   gradientStops: @[
-    ColorStop(color: rgba(255, 0, 0, 255).color, position: 0),
-    ColorStop(color: rgba(255, 0, 0, 40).color, position: 1.0),
+    ColorStop(color: rgba(255, 0, 0, 255), position: 0),
+    ColorStop(color: rgba(255, 0, 0, 40), position: 1.0),
   ]
 )
 
@@ -28,4 +28,4 @@ image.fillPath(
   paint
 )
 
-image.writeFile("examples/paint.png")
+image.writeFile("examples/gradient.png")

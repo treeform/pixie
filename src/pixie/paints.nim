@@ -24,7 +24,7 @@ type
 
   ColorStop* = object
     ## Color stop on a gradient curve.
-    color*: Color      ## Color of the stop
+    color*: ColorRGBX  ## Color of the stop
     position*: float32 ## Gradient Stop position 0..1.
 
 proc toLineSpace(at, to, point: Vec2): float32 =
@@ -46,17 +46,17 @@ proc gradientPut(image: Image, x, y: int, a: float32, stops: seq[ColorStop]) =
   var color: Color
   if index == -1:
     # first stop solid
-    color = stops[0].color
+    color = stops[0].color.color
   elif index + 1 >= stops.len:
     # last stop solid
-    color = stops[index].color
+    color = stops[index].color.color
   else:
     let
       gs1 = stops[index]
       gs2 = stops[index+1]
     color = mix(
-      gs1.color,
-      gs2.color,
+      gs1.color.color,
+      gs2.color.color,
       (a - gs1.position) / (gs2.position - gs1.position)
     )
   image.setRgbaUnsafe(x, y, color.rgba.toPremultipliedAlpha())
