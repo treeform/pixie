@@ -2,22 +2,22 @@
 
 # Pixie - A full-featured 2D graphics library for Nim
 
-⚠️ WARNING: This library is still in heavy development. ⚠️
-
 Pixie is a 2D graphics library similar to [Cairo](https://www.cairographics.org/) and [Skia](https://skia.org) written (almost) entirely in Nim.
 
-This library is being actively developed and is not yet ready for use. Since you've managed to stumble onto it, give it a star and check back soon!
+This library is being actively developed and we'd be happy for you to use it.
 
 `nimble install pixie`
 
 Features:
-* Drawing paths, shapes and curves, with even-odd and non-zero windings.
-* Pixel perfect AA quality.
-* Supported file formats: PNG, BMP, JPG, SVG + more in development.
+* Drawing paths, shapes and curves with even-odd and non-zero windings.
+* Pixel-perfect AA quality.
+* Supported file formats are PNG, BMP, JPG, SVG + more in development.
 * Strokes with joins and caps.
 * Shadows, glows and blurs.
 * Complex masking: Subtract, Intersect, Exclude.
 * Complex blends: Darken, Multiply, Color Dodge, Hue, Luminosity... etc.
+
+### Documentation
 
 API reference: https://treeform.github.io/pixie/pixie.html
 
@@ -27,23 +27,22 @@ Format        | Read          | Write         |
 ------------- | ------------- | ------------- |
 PNG           | ✅           | ✅            |
 JPEG          | ✅           |               |
-BMP           | ✅           |               |
+BMP           | ✅           | ✅            |
 SVG           | ✅           |               |
 
+### Joins and caps
 
-### Joins and caps:
-
-Supported Saps:
+Supported Caps:
   * Butt
   * Round
   * Square
 
-Supported Joints:
-  * Miter (with miter limit angle)
+Supported Joins:
+  * Miter (with miter angle limit)
   * Bevel
   * Round
 
-### Blending & Masking.
+### Blending & masking
 
 Supported Blend Modes:
   * Normal
