@@ -1482,13 +1482,19 @@ proc fillPath*(
   windingRule = wrNonZero,
 ) =
   ## Fills a path.
-  var mask = newMask(image.width, image.height)
-  var fill = newImage(image.width, image.height)
+  if paint.kind == pkSolid:
+    image.fillPath(path, paint.color)
+    return
+
+  let
+    mask = newMask(image.width, image.height)
+    fill = newImage(image.width, image.height)
+
   mask.fillPath(parseSomePath(path), windingRule)
 
   case paint.kind:
     of pkSolid:
-      fill.fill(paint.color)
+      discard # Handled above
     of pkImage:
       fill.draw(paint.image, paint.imageMat)
     of pkImageTiled:
@@ -1514,7 +1520,7 @@ proc fillPath*(
         paint.gradientStops
       )
 
-  fill.draw(mask, blendMode = bmMask)
+  fill.draw(mask)
   image.draw(fill, blendMode = paint.blendMode)
 
 proc strokePath*(
