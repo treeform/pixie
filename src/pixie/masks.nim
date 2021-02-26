@@ -1,4 +1,4 @@
-import common, system/memory, vmath
+import common, internal, system/memory, vmath
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -153,6 +153,43 @@ proc ceil*(mask: Mask) =
   for j in i ..< mask.data.len:
     if mask.data[j] != 0:
       mask.data[j] = 255
+
+proc blur*(mask: Mask, radius: float32, offBounds: uint32 = 0) =
+  ## Applies Gaussian blur to the image given a radius.
+  let radius = round(radius).int
+  if radius == 0:
+    return
+
+  let lookup = gaussianLookup(radius)
+
+  # Blur in the X direction.
+  var blurX = newMask(mask.width, mask.height)
+  for y in 0 ..< mask.height:
+    for x in 0 ..< mask.width:
+      var value: uint32
+      for xb in -radius .. radius:
+        var sample: uint32
+        if mask.inside(x + xb, y):
+          sample = mask.getValueUnsafe(x + xb, y)
+        else:
+          sample = offBounds
+        let a = lookup[xb + radius].uint32
+        value += sample * a
+      blurX.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
+
+  # Blur in the Y direction and modify image.
+  for y in 0 ..< mask.height:
+    for x in 0 ..< mask.width:
+      var value: uint32
+      for yb in -radius .. radius:
+        var sample: uint32
+        if blurX.inside(x, y + yb):
+          sample = blurX.getValueUnsafe(x, y + yb)
+        else:
+          sample = offBounds
+        let a = lookup[yb + radius].uint32
+        value += sample * a
+      mask.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
 
 when defined(release):
   {.pop.}
