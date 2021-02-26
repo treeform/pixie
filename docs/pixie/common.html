@@ -105,22 +105,8 @@ function main() {
       <ul class="simple nested-toc-section">lerp
       <li><a class="reference" href="#lerp%2Cuint8%2Cuint8%2Cfloat32"
     title="lerp(a, b: uint8; t: float32): uint8">lerp,<wbr>uint8,<wbr>uint8,<wbr>float32</a></li>
-  <li><a class="reference" href="#lerp%2CColorRGBA%2CColorRGBA%2Cfloat32"
-    title="lerp(a, b: ColorRGBA; t: float32): ColorRGBA">lerp,<wbr>ColorRGBA,<wbr>ColorRGBA,<wbr>float32</a></li>
-
-  </ul>
-  <ul class="simple nested-toc-section">toPremultipliedAlpha
-      <li><a class="reference" href="#toPremultipliedAlpha%2CColorRGBA"
-    title="toPremultipliedAlpha(c: ColorRGBA): ColorRGBA">toPremultipliedAlpha,<wbr>ColorRGBA</a></li>
-  <li><a class="reference" href="#toPremultipliedAlpha%2CColor"
-    title="toPremultipliedAlpha(c: Color): Color">toPremultipliedAlpha,<wbr>Color</a></li>
-
-  </ul>
-  <ul class="simple nested-toc-section">toStraightAlpha
-      <li><a class="reference" href="#toStraightAlpha%2CColorRGBA"
-    title="toStraightAlpha(c: ColorRGBA): ColorRGBA">toStraightAlpha,<wbr>ColorRGBA</a></li>
-  <li><a class="reference" href="#toStraightAlpha%2CColor"
-    title="toStraightAlpha(c: Color): Color">toStraightAlpha,<wbr>Color</a></li>
+  <li><a class="reference" href="#lerp%2CColorRGBX%2CColorRGBX%2Cfloat32"
+    title="lerp(a, b: ColorRGBX; t: float32): ColorRGBX">lerp,<wbr>ColorRGBX,<wbr>ColorRGBX,<wbr>float32</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">fractional
@@ -181,40 +167,11 @@ Returns unsigned fraction part of the float.<table frame="void"><tr><th align="l
 Linearly interpolate between a and b using t.
 
 </dd>
-<a id="lerp,ColorRGBA,ColorRGBA,float32"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#lerp%2CColorRGBA%2CColorRGBA%2Cfloat32"><span class="Identifier">lerp</span></a><span class="Other">(</span><span class="Identifier">a</span><span class="Other">,</span> <span class="Identifier">b</span><span class="Other">:</span> <span class="Identifier">ColorRGBA</span><span class="Other">;</span> <span class="Identifier">t</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">ColorRGBA</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="lerp,ColorRGBX,ColorRGBX,float32"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#lerp%2CColorRGBX%2CColorRGBX%2Cfloat32"><span class="Identifier">lerp</span></a><span class="Other">(</span><span class="Identifier">a</span><span class="Other">,</span> <span class="Identifier">b</span><span class="Other">:</span> <span class="Identifier">ColorRGBX</span><span class="Other">;</span> <span class="Identifier">t</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">ColorRGBX</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 Linearly interpolate between a and b using t.
-
-</dd>
-<a id="toPremultipliedAlpha,ColorRGBA"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#toPremultipliedAlpha%2CColorRGBA"><span class="Identifier">toPremultipliedAlpha</span></a><span class="Other">(</span><span class="Identifier">c</span><span class="Other">:</span> <span class="Identifier">ColorRGBA</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">ColorRGBA</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-Converts a color to premultiplied alpha from straight alpha.
-
-</dd>
-<a id="toStraightAlpha,ColorRGBA"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#toStraightAlpha%2CColorRGBA"><span class="Identifier">toStraightAlpha</span></a><span class="Other">(</span><span class="Identifier">c</span><span class="Other">:</span> <span class="Identifier">ColorRGBA</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">ColorRGBA</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-Converts a color from premultiplied alpha to straight alpha.
-
-</dd>
-<a id="toPremultipliedAlpha,Color"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#toPremultipliedAlpha%2CColor"><span class="Identifier">toPremultipliedAlpha</span></a><span class="Other">(</span><span class="Identifier">c</span><span class="Other">:</span> <span class="Identifier">Color</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Color</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-Converts a color to premultiplied alpha from straight alpha.
-
-</dd>
-<a id="toStraightAlpha,Color"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#toStraightAlpha%2CColor"><span class="Identifier">toStraightAlpha</span></a><span class="Other">(</span><span class="Identifier">c</span><span class="Other">:</span> <span class="Identifier">Color</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Color</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-Converts a color from premultiplied alpha to straight alpha.
 
 </dd>
 
@@ -239,7 +196,7 @@ Linearly interpolate between a and b using t.
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-25 18:15:59 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-26 01:51:48 UTC</small>
       </div>
     </div>
   </div>
