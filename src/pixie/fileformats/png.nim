@@ -407,11 +407,13 @@ proc decodePng*(data: seq[uint8]): Image =
   if prevChunkType != "IEND":
     failInvalid()
 
+  var pixels = decodeImageData(header, palette, transparency, imageData)
+  pixels.toPremultipliedAlpha()
+
   result = Image()
   result.width = header.width
   result.height = header.height
-  result.data = decodeImageData(header, palette, transparency, imageData)
-  result.data.toPremultipliedAlpha()
+  result.data = cast[seq[ColorRGBX]](pixels)
 
 proc decodePng*(data: string): Image {.inline.} =
   ## Decodes the PNG data into an Image.

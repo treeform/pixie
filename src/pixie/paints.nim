@@ -1,4 +1,4 @@
-import blends, chroma, common, images, vmath
+import blends, chroma, images, vmath
 
 type
   PaintKind* = enum
@@ -13,7 +13,7 @@ type
     ## Paint used to fill paths.
     case kind*: PaintKind
     of pkSolid:
-      color*: ColorRGBA                   ## Color to fill with.
+      color*: ColorRGBX                   ## Color to fill with.
     of pkImage, pkImageTiled:
       image*: Image                       ## Image to fill with.
       imageMat*: Mat3                     ## Matrix of the filled image.

@@ -9,7 +9,7 @@ type
   Image* = ref object
     ## Image object that holds bitmap data in RGBA format.
     width*, height*: int
-    data*: seq[ColorRGBA]
+    data*: seq[ColorRGBX]
 
 when defined(release):
   {.push checks: off.}
@@ -22,7 +22,7 @@ proc newImage*(width, height: int): Image =
   result = Image()
   result.width = width
   result.height = height
-  result.data = newSeq[ColorRGBA](width * height)
+  result.data = newSeq[ColorRGBX](width * height)
 
 proc wh*(image: Image): Vec2 {.inline.} =
   ## Return with and height as a size vector.
@@ -44,31 +44,31 @@ proc inside*(image: Image, x, y: int): bool {.inline.} =
 proc dataIndex*(image: Image, x, y: int): int {.inline.} =
   image.width * y + x
 
-proc getRgbaUnsafe*(image: Image, x, y: int): ColorRGBA {.inline.} =
+proc getRgbaUnsafe*(image: Image, x, y: int): ColorRGBX {.inline.} =
   ## Gets a color from (x, y) coordinates.
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will case unsafe memory reads.
   result = image.data[image.width * y + x]
 
-proc `[]`*(image: Image, x, y: int): ColorRGBA {.inline.} =
+proc `[]`*(image: Image, x, y: int): ColorRGBX {.inline.} =
   ## Gets a pixel at (x, y) or returns transparent black if outside of bounds.
   if image.inside(x, y):
     return image.getRgbaUnsafe(x, y)
 
-proc setRgbaUnsafe*(image: Image, x, y: int, rgba: ColorRGBA) {.inline.} =
+proc setRgbaUnsafe*(image: Image, x, y: int, rgba: ColorRGBX) {.inline.} =
   ## Sets a color from (x, y) coordinates.
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will case unsafe memory writes.
   image.data[image.dataIndex(x, y)] = rgba
 
-proc `[]=`*(image: Image, x, y: int, rgba: ColorRGBA) {.inline.} =
+proc `[]=`*(image: Image, x, y: int, rgba: ColorRGBX) {.inline.} =
   ## Sets a pixel at (x, y) or does nothing if outside of bounds.
   if image.inside(x, y):
     image.setRgbaUnsafe(x, y, rgba)
 
-proc fillUnsafe*(data: var seq[ColorRGBA], rgba: ColorRGBA, start, len: int) =
+proc fillUnsafe*(data: var seq[ColorRGBX], rgba: ColorRGBX, start, len: int) =
   ## Fills the image data with the parameter color starting at index start and
   ## continuing for len indices.
 
@@ -97,7 +97,7 @@ proc fillUnsafe*(data: var seq[ColorRGBA], rgba: ColorRGBA, start, len: int) =
     for j in i ..< start + len:
       data[j] = rgba
 
-proc fill*(image: Image, rgba: ColorRgba) {.inline.} =
+proc fill*(image: Image, rgba: ColorRGBX) {.inline.} =
   ## Fills the image with the parameter color.
   fillUnsafe(image.data, rgba, 0, image.data.len)
 
@@ -187,7 +187,7 @@ proc minifyBy2*(image: Image, power = 1): Image =
           c = src.getRgbaUnsafe(x * 2 + 1, y * 2 + 1)
           d = src.getRgbaUnsafe(x * 2 + 0, y * 2 + 1)
 
-        let color = rgba(
+        let color = rgbx(
           ((a.r.uint32 + b.r + c.r + d.r) div 4).uint8,
           ((a.g.uint32 + b.g + c.g + d.g) div 4).uint8,
           ((a.b.uint32 + b.b + c.b + d.b) div 4).uint8,
@@ -217,7 +217,7 @@ proc applyOpacity*(target: Image | Mask, opacity: float32) =
 
   if opacity == 0:
     when type(target) is Image:
-      target.fill(rgba(0, 0, 0, 0))
+      target.fill(rgbx(0, 0, 0, 0))
     else:
       target.fill(0)
     return
@@ -458,7 +458,7 @@ proc newMask*(image: Image): Mask =
   for j in i ..< image.data.len:
     result.data[j] = image.data[j].a
 
-proc getRgbaSmooth*(image: Image, x, y: float32, wrapped = false): ColorRGBA =
+proc getRgbaSmooth*(image: Image, x, y: float32, wrapped = false): ColorRGBX =
   ## Gets a interpolated color with float point coordinates.
   ## Pixes outside the image are transparent.
   let
@@ -473,7 +473,7 @@ proc getRgbaSmooth*(image: Image, x, y: float32, wrapped = false): ColorRGBA =
     x1 = (x + 1)
     y1 = (y + 1)
 
-  var x0y0, x1y0, x0y1, x1y1: ColorRGBA
+  var x0y0, x1y0, x0y1, x1y1: ColorRGBX
   if wrapped:
     x0y0 = image.getRgbaUnsafe(x0 mod image.width, y0 mod image.height)
     x1y0 = image.getRgbaUnsafe(x1 mod image.width, y0 mod image.height)
@@ -642,7 +642,7 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
           else: # b is a Mask
             let
               sample = b.getValueSmooth(xFloat, yFloat)
-              blended = blender(backdrop, rgba(0, 0, 0, sample))
+              blended = blender(backdrop, rgbx(0, 0, 0, sample))
           a.setRgbaUnsafe(x, y, blended)
         else: # a is a Mask
           let backdrop = a.getValueUnsafe(x, y)
@@ -729,7 +729,7 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
           else: # b is a Mask
             let
               sample = b.getValueUnsafe(xFloat.int, yFloat.int)
-              blended = blender(backdrop, rgba(0, 0, 0, sample))
+              blended = blender(backdrop, rgbx(0, 0, 0, sample))
           a.setRgbaUnsafe(x, y, blended)
         else: # a is a Mask
           let backdrop = a.getValueUnsafe(x, y)
@@ -812,7 +812,7 @@ proc shift*(target: Image | Mask, offset: Vec2) =
     target.draw(copy, offset, bmOverwrite) # Draw copy at offset
 
 proc shadow*(
-  image: Image, offset: Vec2, spread, blur: float32, color: ColorRGBA
+  image: Image, offset: Vec2, spread, blur: float32, color: ColorRGBX
 ): Image =
   ## Create a shadow of the image with the offset, spread and blur.
   let mask = image.newMask()

@@ -1105,7 +1105,7 @@ template computeCoverages(
 proc fillShapes(
   image: Image,
   shapes: seq[seq[Vec2]],
-  color: ColorRGBA,
+  color: ColorRGBX,
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
@@ -1418,7 +1418,7 @@ proc parseSomePath(
 proc fillPath*(
   image: Image,
   path: SomePath,
-  color: ColorRGBA,
+  color: ColorRGBX,
   windingRule = wrNonZero,
   blendMode = bmNormal
 ) {.inline.} =
@@ -1428,7 +1428,7 @@ proc fillPath*(
 proc fillPath*(
   image: Image,
   path: SomePath,
-  color: ColorRGBA,
+  color: ColorRGBX,
   transform: Vec2 | Mat3,
   windingRule = wrNonZero,
   blendMode = bmNormal
@@ -1488,7 +1488,7 @@ proc fillPath*(
 
   case paint.kind:
     of pkSolid:
-      fill.fill(paint.color.toPremultipliedAlpha())
+      fill.fill(paint.color)
     of pkImage:
       fill.draw(paint.image, paint.imageMat)
     of pkImageTiled:
@@ -1520,7 +1520,7 @@ proc fillPath*(
 proc strokePath*(
   image: Image,
   path: SomePath,
-  color: ColorRGBA,
+  color: ColorRGBX,
   strokeWidth = 1.0,
   lineCap = lcButt,
   lineJoin = ljMiter,
@@ -1535,7 +1535,7 @@ proc strokePath*(
 proc strokePath*(
   image: Image,
   path: SomePath,
-  color: ColorRGBA,
+  color: ColorRGBX,
   transform: Vec2 | Mat3,
   strokeWidth = 1.0,
   lineCap = lcButt,
