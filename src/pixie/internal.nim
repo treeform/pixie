@@ -11,15 +11,14 @@ proc gaussianLookup*(radius: int): seq[uint32] =
   var
     floats = newSeq[float32](result.len)
     total = 0.0
-  for xb in -radius .. radius:
+  for step in -radius .. radius:
     let
       s = radius.float32 / 2.2 # 2.2 matches Figma.
-      x = xb.float32
-      a = 1 / sqrt(2 * PI * s^2) * exp(-1 * x^2 / (2 * s^2))
-    floats[xb + radius] = a
+      a = 1 / sqrt(2 * PI * s^2) * exp(-1 * step.float32^2 / (2 * s^2))
+    floats[step + radius] = a
     total += a
-  for xb in -radius .. radius:
-    floats[xb + radius] = floats[xb + radius] / total
+  for step in -radius .. radius:
+    floats[step + radius] = floats[step + radius] / total
 
   for i, f in floats:
     result[i] = round(f * 255 * 1024).uint32
