@@ -347,8 +347,8 @@ proc blur*(image: Image, radius: float32, outOfBounds = ColorRGBX()) =
       (values[3] div 1024 div 255).uint8
     )
 
-  # Blur in the X direction.
-  let blurX = newImage(image.width, image.height)
+  # Blur in the X direction. Store with dimensions swapped for reading later.
+  let blurX = newImage(image.height, image.width)
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       var values: array[4, uint32]
@@ -361,7 +361,7 @@ proc blur*(image: Image, radius: float32, outOfBounds = ColorRGBX()) =
       for xx in max(x - radius, image.width) ..< x + radius:
         values += outOfBounds * lookup[xx - x + radius]
 
-      blurX.setRgbaUnsafe(x, y, values.rgbx())
+      blurX.setRgbaUnsafe(y, x, values.rgbx())
 
   # Blur in the Y direction.
   for y in 0 ..< image.height:
@@ -371,7 +371,7 @@ proc blur*(image: Image, radius: float32, outOfBounds = ColorRGBX()) =
         values += outOfBounds * lookup[yy - y + radius]
 
       for yy in max(y - radius, 0) ..< min(y + radius, image.height):
-        values += blurX.getRgbaUnsafe(x, yy) * lookup[yy - y + radius]
+        values += blurX.getRgbaUnsafe(yy, x) * lookup[yy - y + radius]
 
       for yy in max(y - radius, image.height) ..< y + radius:
         values += outOfBounds * lookup[yy - y + radius]

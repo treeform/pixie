@@ -162,8 +162,8 @@ proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) =
 
   let lookup = gaussianLookup(radius)
 
-  # Blur in the X direction.
-  let blurX = newMask(mask.width, mask.height)
+  # Blur in the X direction. Store with dimensions swapped for reading later.
+  let blurX = newMask(mask.height, mask.width)
   for y in 0 ..< mask.height:
     for x in 0 ..< mask.width:
       var value: uint32
@@ -176,7 +176,7 @@ proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) =
       for xx in max(x - radius, mask.width) ..< x + radius:
         value += outOfBounds * lookup[xx - x + radius]
 
-      blurX.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
+      blurX.setValueUnsafe(y, x, (value div 1024 div 255).uint8)
 
   # Blur in the Y direction and modify image.
   for y in 0 ..< mask.height:
@@ -186,7 +186,7 @@ proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) =
         value += outOfBounds * lookup[yy - y + radius]
 
       for yy in max(y - radius, 0) ..< min(y + radius, mask.height):
-        value += blurX.getValueUnsafe(x, yy) * lookup[yy - y + radius]
+        value += blurX.getValueUnsafe(yy, x) * lookup[yy - y + radius]
 
       for yy in max(y - radius, mask.height) ..< y + radius:
         value += outOfBounds * lookup[yy - y + radius]
