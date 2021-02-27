@@ -167,18 +167,14 @@ proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) =
   for y in 0 ..< mask.height:
     for x in 0 ..< mask.width:
       var value: uint32
-      if mask.inside(x - radius, y) and mask.inside(x + radius, y):
-        for step in -radius .. radius:
-          let sample = mask.getValueUnsafe(x + step, y)
-          value += sample * lookup[step + radius].uint32
-      else:
-        for step in -radius .. radius:
-          var sample: uint32
-          if mask.inside(x + step, y):
-            sample = mask.getValueUnsafe(x + step, y)
-          else:
-            sample = outOfBounds
-          value += sample * lookup[step + radius].uint32
+      for xx in x - radius ..< min(x + radius, 0):
+        value += outOfBounds * lookup[xx - x + radius]
+
+      for xx in max(x - radius, 0) ..< min(x + radius, mask.width):
+        value += mask.getValueUnsafe(xx, y) * lookup[xx - x + radius]
+
+      for xx in max(x - radius, mask.width) ..< x + radius:
+        value += outOfBounds * lookup[xx - x + radius]
 
       blurX.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
 
@@ -186,19 +182,14 @@ proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) =
   for y in 0 ..< mask.height:
     for x in 0 ..< mask.width:
       var value: uint32
-      if mask.inside(x, y - radius) and mask.inside(x, y + radius):
-        for step in -radius .. radius:
-          let sample = blurX.getValueUnsafe(x, y + step)
-          value += sample * lookup[step + radius].uint32
-      else:
-        for step in -radius .. radius:
-          var sample: uint32
-          if blurX.inside(x, y + step):
-            sample = blurX.getValueUnsafe(x, y + step)
-          else:
-            sample = outOfBounds
-          let a = lookup[step + radius].uint32
-          value += sample * a
+      for yy in y - radius ..< min(y + radius, 0):
+        value += outOfBounds * lookup[yy - y + radius]
+
+      for yy in max(y - radius, 0) ..< min(y + radius, mask.height):
+        value += blurX.getValueUnsafe(x, yy) * lookup[yy - y + radius]
+
+      for yy in max(y - radius, mask.height) ..< y + radius:
+        value += outOfBounds * lookup[yy - y + radius]
 
       mask.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
 

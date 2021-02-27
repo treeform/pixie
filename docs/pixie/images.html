@@ -231,7 +231,7 @@ function main() {
   </ul>
   <ul class="simple nested-toc-section">blur
       <li><a class="reference" href="#blur%2CImage%2Cfloat32"
-    title="blur(image: Image; radius: float32)">blur,<wbr>Image,<wbr>float32</a></li>
+    title="blur(image: Image; radius: float32; outOfBounds = ColorRGBX())">blur,<wbr>Image,<wbr>float32</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">dataIndex
@@ -451,7 +451,8 @@ Inverts all of the colors and alpha.
 
 </dd>
 <a id="blur,Image,float32"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#blur%2CImage%2Cfloat32"><span class="Identifier">blur</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">radius</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">PixieError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dt><pre><span class="Keyword">proc</span> <a href="#blur%2CImage%2Cfloat32"><span class="Identifier">blur</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">radius</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">;</span> <span class="Identifier">outOfBounds</span> <span class="Other">=</span> <span class="Identifier">ColorRGBX</span><span class="Other">(</span><span class="Other">)</span><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">PixieError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 Applies Gaussian blur to the image given a radius.
@@ -577,7 +578,7 @@ Create a shadow of the image with the offset, spread and blur.
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-27 00:46:16 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-27 01:24:33 UTC</small>
       </div>
     </div>
   </div>

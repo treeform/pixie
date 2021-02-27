@@ -317,7 +317,7 @@ proc invert*(target: Image | Mask) =
     for j in i ..< target.data.len:
       target.data[j] = (255 - target.data[j]).uint8
 
-proc blur*(image: Image, radius: float32) =
+proc blur*(image: Image, radius: float32, outOfBounds = ColorRGBX()) =
   ## Applies Gaussian blur to the image given a radius.
   let radius = round(radius).int
   if radius == 0:
@@ -325,9 +325,7 @@ proc blur*(image: Image, radius: float32) =
 
   let lookup = gaussianLookup(radius)
 
-  # TODO support offBounds for images.
-
-  template `*`(sample: ColorRGBX, a: uint32): array[4, uint32] =
+  proc `*`(sample: ColorRGBX, a: uint32): array[4, uint32] {.inline.} =
     [
       sample.r * a,
       sample.g * a,
@@ -354,18 +352,14 @@ proc blur*(image: Image, radius: float32) =
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       var values: array[4, uint32]
-      if image.inside(x - radius, y) and image.inside(x + radius, y):
-        for step in -radius .. radius:
-          let
-            sample = image.getRgbaUnsafe(x + step, y)
-            a = lookup[step + radius].uint32
-          values += sample * a
-      else:
-        for step in -radius .. radius:
-          let
-            sample = image[x + step, y]
-            a = lookup[step + radius].uint32
-          values += sample * a
+      for xx in x - radius ..< min(x + radius, 0):
+        values += outOfBounds * lookup[xx - x + radius]
+
+      for xx in max(x - radius, 0) ..< min(x + radius, image.width):
+        values += image.getRgbaUnsafe(xx, y) * lookup[xx - x + radius]
+
+      for xx in max(x - radius, image.width) ..< x + radius:
+        values += outOfBounds * lookup[xx - x + radius]
 
       blurX.setRgbaUnsafe(x, y, values.rgbx())
 
@@ -373,18 +367,14 @@ proc blur*(image: Image, radius: float32) =
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       var values: array[4, uint32]
-      if image.inside(x, y - radius) and image.inside(x, y + radius):
-        for step in -radius .. radius:
-          let
-            sample = blurX.getRgbaUnsafe(x, y + step)
-            a = lookup[step + radius].uint32
-          values += sample * a
-      else:
-        for step in -radius .. radius:
-          let
-            sample = blurX[x, y + step]
-            a = lookup[step + radius].uint32
-          values += sample * a
+      for yy in y - radius ..< min(y + radius, 0):
+        values += outOfBounds * lookup[yy - y + radius]
+
+      for yy in max(y - radius, 0) ..< min(y + radius, image.height):
+        values += blurX.getRgbaUnsafe(x, yy) * lookup[yy - y + radius]
+
+      for yy in max(y - radius, image.height) ..< y + radius:
+        values += outOfBounds * lookup[yy - y + radius]
 
       image.setRgbaUnsafe(x, y, values.rgbx())
 
