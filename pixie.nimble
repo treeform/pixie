@@ -12,3 +12,6 @@ requires "zippy >= 0.3.5"
 requires "flatty >= 0.1.3"
 requires "nimsimd >= 1.0.0"
 requires "bumpy >= 1.0.2"
+
+task docs, "Generate API documents":
+  exec "nim doc --index:on --project --out:docs --hints:off src/pixie.nim"
