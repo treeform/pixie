@@ -325,8 +325,6 @@ proc blur*(image: Image, radius: float32, outOfBounds = ColorRGBX()) =
 
   let lookup = gaussianLookup(radius)
 
-  # TODO support offBounds for images.
-
   proc `*`(sample: ColorRGBX, a: uint32): array[4, uint32] {.inline.} =
     [
       sample.r * a,
