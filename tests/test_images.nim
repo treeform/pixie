@@ -104,3 +104,10 @@ block:
   a.fill(rgbx(50, 100, 150, 200))
   a.invert()
   doAssert a[0, 0] == rgbx(44, 33, 22, 55)
+
+block:
+  let image = newImage(100, 100)
+  image.fill(rgba(0, 0, 0, 255))
+  image.fillRect(rect(25, 25, 50, 50), rgba(255, 255, 255, 255))
+  image.blur(20)
+  image.writeFile("tests/images/imageblur20.png")
