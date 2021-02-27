@@ -355,10 +355,10 @@ proc blur*(image: Image, radius: float32, outOfBounds = ColorRGBX()) =
       for xx in x - radius ..< min(x + radius, 0):
         values += outOfBounds * lookup[xx - x + radius]
 
-      for xx in max(x - radius, 0) ..< min(x + radius, image.width):
+      for xx in max(x - radius, 0) .. min(x + radius, image.width - 1):
         values += image.getRgbaUnsafe(xx, y) * lookup[xx - x + radius]
 
-      for xx in max(x - radius, image.width) ..< x + radius:
+      for xx in max(x - radius, image.width) .. x + radius:
         values += outOfBounds * lookup[xx - x + radius]
 
       blurX.setRgbaUnsafe(y, x, values.rgbx())
@@ -370,10 +370,10 @@ proc blur*(image: Image, radius: float32, outOfBounds = ColorRGBX()) =
       for yy in y - radius ..< min(y + radius, 0):
         values += outOfBounds * lookup[yy - y + radius]
 
-      for yy in max(y - radius, 0) ..< min(y + radius, image.height):
+      for yy in max(y - radius, 0) .. min(y + radius, image.height - 1):
         values += blurX.getRgbaUnsafe(yy, x) * lookup[yy - y + radius]
 
-      for yy in max(y - radius, image.height) ..< y + radius:
+      for yy in max(y - radius, image.height) .. y + radius:
         values += outOfBounds * lookup[yy - y + radius]
 
       image.setRgbaUnsafe(x, y, values.rgbx())

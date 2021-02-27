@@ -127,9 +127,9 @@ proc spread*(mask: Mask, spread: float32) =
     for x in 0 ..< mask.width:
       var maxValue: uint8
       block blurBox:
-        for bx in -spread .. spread:
-          for by in -spread .. spread:
-            let value = copy[x + bx, y + by]
+        for by in max(y - spread, 0) .. min(y + spread, mask.height - 1):
+          for bx in max(x - spread, 0) .. min(x + spread, mask.width - 1):
+            let value = copy.getValueUnsafe(bx, by)
             if value > maxValue:
               maxValue = value
             if maxValue == 255:
@@ -159,6 +159,8 @@ proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) =
   let radius = round(radius).int
   if radius == 0:
     return
+  if radius < 0:
+    raise newException(PixieError, "Cannot apply negative blur")
 
   let lookup = gaussianLookup(radius)
 
@@ -170,10 +172,10 @@ proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) =
       for xx in x - radius ..< min(x + radius, 0):
         value += outOfBounds * lookup[xx - x + radius]
 
-      for xx in max(x - radius, 0) ..< min(x + radius, mask.width):
+      for xx in max(x - radius, 0) .. min(x + radius, mask.width - 1):
         value += mask.getValueUnsafe(xx, y) * lookup[xx - x + radius]
 
-      for xx in max(x - radius, mask.width) ..< x + radius:
+      for xx in max(x - radius, mask.width) .. x + radius:
         value += outOfBounds * lookup[xx - x + radius]
 
       blurX.setValueUnsafe(y, x, (value div 1024 div 255).uint8)
@@ -185,10 +187,10 @@ proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) =
       for yy in y - radius ..< min(y + radius, 0):
         value += outOfBounds * lookup[yy - y + radius]
 
-      for yy in max(y - radius, 0) ..< min(y + radius, mask.height):
+      for yy in max(y - radius, 0) .. min(y + radius, mask.height - 1):
         value += blurX.getValueUnsafe(yy, x) * lookup[yy - y + radius]
 
-      for yy in max(y - radius, mask.height) ..< y + radius:
+      for yy in max(y - radius, mask.height) .. y + radius:
         value += outOfBounds * lookup[yy - y + radius]
 
       mask.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
