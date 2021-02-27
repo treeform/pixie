@@ -327,7 +327,7 @@ proc blur*(image: Image, radius: float32, outOfBounds = ColorRGBX()) =
 
   # TODO support offBounds for images.
 
-  template `*`(sample: ColorRGBX, a: uint32): array[4, uint32] =
+  proc `*`(sample: ColorRGBX, a: uint32): array[4, uint32] {.inline.} =
     [
       sample.r * a,
       sample.g * a,
@@ -355,22 +355,13 @@ proc blur*(image: Image, radius: float32, outOfBounds = ColorRGBX()) =
     for x in 0 ..< image.width:
       var values: array[4, uint32]
       for xx in x - radius ..< min(x + radius, 0):
-        let
-          sample = outOfBounds
-          a = lookup[xx - x + radius].uint32
-        values += sample * a
+        values += outOfBounds * lookup[xx - x + radius]
 
       for xx in max(x - radius, 0) ..< min(x + radius, image.width):
-        let
-          sample = image.getRgbaUnsafe(xx, y)
-          a = lookup[xx - x + radius].uint32
-        values += sample * a
+        values += image.getRgbaUnsafe(xx, y) * lookup[xx - x + radius]
 
       for xx in max(x - radius, image.width) ..< x + radius:
-        let
-          sample = outOfBounds
-          a = lookup[xx - x + radius].uint32
-        values += sample * a
+        values += outOfBounds * lookup[xx - x + radius]
 
       blurX.setRgbaUnsafe(x, y, values.rgbx())
 
@@ -379,22 +370,13 @@ proc blur*(image: Image, radius: float32, outOfBounds = ColorRGBX()) =
     for x in 0 ..< image.width:
       var values: array[4, uint32]
       for yy in y - radius ..< min(y + radius, 0):
-        let
-          sample = outOfBounds
-          a = lookup[yy - y + radius].uint32
-        values += sample * a
+        values += outOfBounds * lookup[yy - y + radius]
 
       for yy in max(y - radius, 0) ..< min(y + radius, image.height):
-        let
-          sample = blurX.getRgbaUnsafe(x, yy)
-          a = lookup[yy - y + radius].uint32
-        values += sample * a
+        values += blurX.getRgbaUnsafe(x, yy) * lookup[yy - y + radius]
 
       for yy in max(y - radius, image.height) ..< y + radius:
-        let
-          sample = outOfBounds
-          a = lookup[yy - y + radius].uint32
-        values += sample * a
+        values += outOfBounds * lookup[yy - y + radius]
 
       image.setRgbaUnsafe(x, y, values.rgbx())
 

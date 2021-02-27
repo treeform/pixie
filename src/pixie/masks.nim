@@ -168,16 +168,13 @@ proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) =
     for x in 0 ..< mask.width:
       var value: uint32
       for xx in x - radius ..< min(x + radius, 0):
-        let sample = outOfBounds
-        value += sample * lookup[xx - x + radius].uint32
+        value += outOfBounds * lookup[xx - x + radius]
 
       for xx in max(x - radius, 0) ..< min(x + radius, mask.width):
-        let sample = mask.getValueUnsafe(xx, y)
-        value += sample * lookup[xx - x + radius].uint32
+        value += mask.getValueUnsafe(xx, y) * lookup[xx - x + radius]
 
       for xx in max(x - radius, mask.width) ..< x + radius:
-        let sample = outOfBounds
-        value += sample * lookup[xx - x + radius].uint32
+        value += outOfBounds * lookup[xx - x + radius]
 
       blurX.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
 
@@ -186,16 +183,13 @@ proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) =
     for x in 0 ..< mask.width:
       var value: uint32
       for yy in y - radius ..< min(y + radius, 0):
-        let sample = outOfBounds
-        value += sample * lookup[yy - y + radius].uint32
+        value += outOfBounds * lookup[yy - y + radius]
 
       for yy in max(y - radius, 0) ..< min(y + radius, mask.height):
-        let sample = blurX.getValueUnsafe(x, yy)
-        value += sample * lookup[yy - y + radius].uint32
+        value += blurX.getValueUnsafe(x, yy) * lookup[yy - y + radius]
 
       for yy in max(y - radius, mask.height) ..< y + radius:
-        let sample = outOfBounds
-        value += sample * lookup[yy - y + radius].uint32
+        value += outOfBounds * lookup[yy - y + radius]
 
       mask.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
 
