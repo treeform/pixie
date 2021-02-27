@@ -1473,7 +1473,7 @@ proc fillPath*(
         segment += transform
       else:
         segment = transform * segment
-  mask.fillShapes(shapes, color, windingRule)
+  mask.fillShapes(shapes, windingRule)
 
 proc fillPath*(
   image: Image,
