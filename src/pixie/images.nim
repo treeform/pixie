@@ -323,7 +323,7 @@ proc blur*(image: Image, radius: float32, outOfBounds = ColorRGBX()) =
   if radius == 0:
     return
 
-  let lookup = gaussianLookup(radius)
+  let kernel = gaussianKernel(radius)
 
   proc `*`(sample: ColorRGBX, a: uint32): array[4, uint32] {.inline.} =
     [
@@ -353,13 +353,13 @@ proc blur*(image: Image, radius: float32, outOfBounds = ColorRGBX()) =
     for x in 0 ..< image.width:
       var values: array[4, uint32]
       for xx in x - radius ..< min(x + radius, 0):
-        values += outOfBounds * lookup[xx - x + radius]
+        values += outOfBounds * kernel[xx - x + radius]
 
       for xx in max(x - radius, 0) .. min(x + radius, image.width - 1):
-        values += image.getRgbaUnsafe(xx, y) * lookup[xx - x + radius]
+        values += image.getRgbaUnsafe(xx, y) * kernel[xx - x + radius]
 
       for xx in max(x - radius, image.width) .. x + radius:
-        values += outOfBounds * lookup[xx - x + radius]
+        values += outOfBounds * kernel[xx - x + radius]
 
       blurX.setRgbaUnsafe(y, x, values.rgbx())
 
@@ -368,13 +368,13 @@ proc blur*(image: Image, radius: float32, outOfBounds = ColorRGBX()) =
     for x in 0 ..< image.width:
       var values: array[4, uint32]
       for yy in y - radius ..< min(y + radius, 0):
-        values += outOfBounds * lookup[yy - y + radius]
+        values += outOfBounds * kernel[yy - y + radius]
 
       for yy in max(y - radius, 0) .. min(y + radius, image.height - 1):
-        values += blurX.getRgbaUnsafe(yy, x) * lookup[yy - y + radius]
+        values += blurX.getRgbaUnsafe(yy, x) * kernel[yy - y + radius]
 
       for yy in max(y - radius, image.height) .. y + radius:
-        values += outOfBounds * lookup[yy - y + radius]
+        values += outOfBounds * kernel[yy - y + radius]
 
       image.setRgbaUnsafe(x, y, values.rgbx())
 

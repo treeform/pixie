@@ -162,7 +162,7 @@ proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) =
   if radius < 0:
     raise newException(PixieError, "Cannot apply negative blur")
 
-  let lookup = gaussianLookup(radius)
+  let kernel = gaussianKernel(radius)
 
   # Blur in the X direction. Store with dimensions swapped for reading later.
   let blurX = newMask(mask.height, mask.width)
@@ -170,13 +170,13 @@ proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) =
     for x in 0 ..< mask.width:
       var value: uint32
       for xx in x - radius ..< min(x + radius, 0):
-        value += outOfBounds * lookup[xx - x + radius]
+        value += outOfBounds * kernel[xx - x + radius]
 
       for xx in max(x - radius, 0) .. min(x + radius, mask.width - 1):
-        value += mask.getValueUnsafe(xx, y) * lookup[xx - x + radius]
+        value += mask.getValueUnsafe(xx, y) * kernel[xx - x + radius]
 
       for xx in max(x - radius, mask.width) .. x + radius:
-        value += outOfBounds * lookup[xx - x + radius]
+        value += outOfBounds * kernel[xx - x + radius]
 
       blurX.setValueUnsafe(y, x, (value div 1024 div 255).uint8)
 
@@ -185,13 +185,13 @@ proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) =
     for x in 0 ..< mask.width:
       var value: uint32
       for yy in y - radius ..< min(y + radius, 0):
-        value += outOfBounds * lookup[yy - y + radius]
+        value += outOfBounds * kernel[yy - y + radius]
 
       for yy in max(y - radius, 0) .. min(y + radius, mask.height - 1):
-        value += blurX.getValueUnsafe(yy, x) * lookup[yy - y + radius]
+        value += blurX.getValueUnsafe(yy, x) * kernel[yy - y + radius]
 
       for yy in max(y - radius, mask.height) .. y + radius:
-        value += outOfBounds * lookup[yy - y + radius]
+        value += outOfBounds * kernel[yy - y + radius]
 
       mask.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
 

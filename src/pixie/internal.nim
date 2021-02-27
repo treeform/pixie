@@ -3,7 +3,7 @@ import chroma, vmath
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
 
-proc gaussianLookup*(radius: int): seq[uint32] =
+proc gaussianKernel*(radius: int): seq[uint32] =
   ## Compute lookup table for 1d Gaussian kernel.
   ## Values are [0, 255] * 1024.
   result.setLen(radius * 2 + 1)
