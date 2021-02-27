@@ -451,7 +451,7 @@ proc blendOverwrite(backdrop, source: ColorRGBX): ColorRGBX =
 
 # proc blendWhite(backdrop, source: ColorRGBX): ColorRGBX =
 #   ## For testing
-#   rgba(255, 255, 255, 255)
+#   rgbx(255, 255, 255, 255)
 
 proc blender*(blendMode: BlendMode): Blender =
   ## Returns a blend function for a given blend mode.

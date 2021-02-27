@@ -149,3 +149,9 @@ block:
   let mask = newMask(100, 100)
   mask.strokePolygon(vec2(50, 50), 30, 6, 10)
   writeFile("tests/images/masks/strokePolygon.png", mask.encodePng())
+
+block:
+  let mask = newMask(100, 100)
+  mask.fillRect(rect(25, 25, 50, 50))
+  mask.blur(20)
+  writeFile("tests/images/maskblur20.png", mask.encodePng())

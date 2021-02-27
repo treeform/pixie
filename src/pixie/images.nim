@@ -309,7 +309,7 @@ proc invert*(target: Image | Mask) =
       rgba.a = 255 - rgba.a
       target.data[j] = rgba
 
-    # Inverting rgba(50, 100, 150, 200) becomes rgba(205, 155, 105, 55). This
+    # Inverting rgbx(50, 100, 150, 200) becomes rgbx(205, 155, 105, 55). This
     # is not a valid premultiplied alpha color.
     # We need to convert back to premultiplied alpha after inverting.
     target.data.toPremultipliedAlpha()
@@ -327,7 +327,7 @@ proc blur*(image: Image, radius: float32) =
 
   # TODO support offBounds for images.
 
-  template `*`(sample: ColorRGBA, a: uint32): array[4, uint32] =
+  template `*`(sample: ColorRGBX, a: uint32): array[4, uint32] =
     [
       sample.r * a,
       sample.g * a,
@@ -341,8 +341,8 @@ proc blur*(image: Image, radius: float32) =
     values[2] += sample[2]
     values[3] += sample[3]
 
-  template rgba(values: array[4, uint32]): ColorRGBA =
-    rgba(
+  template rgbx(values: array[4, uint32]): ColorRGBX =
+    rgbx(
       (values[0] div 1024 div 255).uint8,
       (values[1] div 1024 div 255).uint8,
       (values[2] div 1024 div 255).uint8,
@@ -367,7 +367,7 @@ proc blur*(image: Image, radius: float32) =
             a = lookup[step + radius].uint32
           values += sample * a
 
-      blurX.setRgbaUnsafe(x, y, values.rgba())
+      blurX.setRgbaUnsafe(x, y, values.rgbx())
 
   # Blur in the Y direction.
   for y in 0 ..< image.height:
@@ -386,7 +386,7 @@ proc blur*(image: Image, radius: float32) =
             a = lookup[step + radius].uint32
           values += sample * a
 
-      image.setRgbaUnsafe(x, y, values.rgba())
+      image.setRgbaUnsafe(x, y, values.rgbx())
 
 proc newMask*(image: Image): Mask =
   ## Returns a new mask using the alpha values of the parameter image.
@@ -497,7 +497,7 @@ proc drawCorrect(
         else: # b is a Mask
           let
             sample = b.getValueSmooth(xFloat, yFloat)
-            blended = blender(backdrop, rgba(0, 0, 0, sample))
+            blended = blender(backdrop, rgbx(0, 0, 0, sample))
         a.setRgbaUnsafe(x, y, blended)
       else: # a is a Mask
         let backdrop = a.getValueUnsafe(x, y)
@@ -767,7 +767,7 @@ proc shift*(target: Image | Mask, offset: Vec2) =
 
     # Reset target for being drawn to
     when type(target) is Image:
-      target.fill(rgba(0, 0, 0, 0))
+      target.fill(rgbx(0, 0, 0, 0))
     else:
       target.fill(0)
 

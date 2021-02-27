@@ -160,6 +160,11 @@ function main() {
     title="getValueUnsafe(mask: Mask; x, y: int): uint8">getValueUnsafe,<wbr>Mask,<wbr>int,<wbr>int</a></li>
 
   </ul>
+  <ul class="simple nested-toc-section">blur
+      <li><a class="reference" href="#blur%2CMask%2Cfloat32%2Cuint8"
+    title="blur(mask: Mask; radius: float32; outOfBounds: uint8 = 0)">blur,<wbr>Mask,<wbr>float32,<wbr>uint8</a></li>
+
+  </ul>
   <ul class="simple nested-toc-section">dataIndex
       <li><a class="reference" href="#dataIndex%2CMask%2Cint%2Cint"
     title="dataIndex(mask: Mask; x, y: int): int">dataIndex,<wbr>Mask,<wbr>int,<wbr>int</a></li>
@@ -204,7 +209,7 @@ function main() {
   <div class="section" id="6">
 <h1><a class="toc-backref" href="#6">Imports</a></h1>
 <dl class="item">
-<a class="reference external" href="common.html">common</a>
+<a class="reference external" href="common.html">common</a>, <a class="reference external" href="internal.html">internal</a>
 </dl></div>
 <div class="section" id="7">
 <h1><a class="toc-backref" href="#7">Types</a></h1>
@@ -344,6 +349,14 @@ Grows the mask by spread.
 A value of 0 stays 0. Anything else turns into 255.
 
 </dd>
+<a id="blur,Mask,float32,uint8"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#blur%2CMask%2Cfloat32%2Cuint8"><span class="Identifier">blur</span></a><span class="Other">(</span><span class="Identifier">mask</span><span class="Other">:</span> <a href="masks.html#Mask"><span class="Identifier">Mask</span></a><span class="Other">;</span> <span class="Identifier">radius</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">;</span> <span class="Identifier">outOfBounds</span><span class="Other">:</span> <span class="Identifier">uint8</span> <span class="Other">=</span> <span class="DecNumber">0</span><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
+    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">PixieError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+Applies Gaussian blur to the image given a radius.
+
+</dd>
 
 </dl></div>
 
@@ -354,7 +367,7 @@ A value of 0 stays 0. Anything else turns into 255.
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-26 01:51:48 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-27 00:46:16 UTC</small>
       </div>
     </div>
   </div>

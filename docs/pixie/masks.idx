@@ -15,3 +15,4 @@ fill	pixie/masks.html#fill,Mask,uint8	masks: fill(mask: Mask; value: uint8)
 getValueSmooth	pixie/masks.html#getValueSmooth,Mask,float32,float32	masks: getValueSmooth(mask: Mask; x, y: float32): uint8	
 spread	pixie/masks.html#spread,Mask,float32	masks: spread(mask: Mask; spread: float32)	
 ceil	pixie/masks.html#ceil,Mask	masks: ceil(mask: Mask)	
+blur	pixie/masks.html#blur,Mask,float32,uint8	masks: blur(mask: Mask; radius: float32; outOfBounds: uint8 = 0)	

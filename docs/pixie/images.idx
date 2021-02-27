@@ -19,7 +19,7 @@ minifyBy2	pixie/images.html#minifyBy2,Image,int	images: minifyBy2(image: Image; 
 magnifyBy2	pixie/images.html#magnifyBy2,Image,int	images: magnifyBy2(image: Image; power = 1): Image	
 applyOpacity	pixie/images.html#applyOpacity,,float32	images: applyOpacity(target: Image | Mask; opacity: float32)	
 invert	pixie/images.html#invert	images: invert(target: Image | Mask)	
-blur	pixie/images.html#blur,,float32,uint32	images: blur(target: Image | Mask; radius: float32; offBounds: uint32 = 0)	
+blur	pixie/images.html#blur,Image,float32	images: blur(image: Image; radius: float32)	
 newMask	pixie/images.html#newMask,Image	images: newMask(image: Image): Mask	
 getRgbaSmooth	pixie/images.html#getRgbaSmooth,Image,float32,float32	images: getRgbaSmooth(image: Image; x, y: float32; wrapped = false): ColorRGBX	
 draw	pixie/images.html#draw,Image,Image,Mat3	images: draw(a, b: Image; mat: Mat3; blendMode = bmNormal)	

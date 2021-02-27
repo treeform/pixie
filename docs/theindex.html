@@ -134,7 +134,9 @@ function main() {
           </ul></dd>
 <dt><a name="blur" href="#blur"><span>blur:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="images: blur(target: Image | Mask; radius: float32; offBounds: uint32 = 0)" href="pixie/images.html#blur%2C%2Cfloat32%2Cuint32">images: blur(target: Image | Mask; radius: float32; offBounds: uint32 = 0)</a></li>
+          data-doc-search-tag="images: blur(image: Image; radius: float32)" href="pixie/images.html#blur%2CImage%2Cfloat32">images: blur(image: Image; radius: float32)</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="masks: blur(mask: Mask; radius: float32; outOfBounds: uint8 = 0)" href="pixie/masks.html#blur%2CMask%2Cfloat32%2Cuint8">masks: blur(mask: Mask; radius: float32; outOfBounds: uint8 = 0)</a></li>
           </ul></dd>
 <dt><a name="bmColor" href="#bmColor"><span>bmColor:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -449,6 +451,10 @@ function main() {
 <dt><a name="fractional" href="#fractional"><span>fractional:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="common: fractional(v: float32): float32" href="pixie/common.html#fractional%2Cfloat32">common: fractional(v: float32): float32</a></li>
+          </ul></dd>
+<dt><a name="gaussianLookup" href="#gaussianLookup"><span>gaussianLookup:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="internal: gaussianLookup(radius: int): seq[uint32]" href="pixie/internal.html#gaussianLookup%2Cint">internal: gaussianLookup(radius: int): seq[uint32]</a></li>
           </ul></dd>
 <dt><a name="getRgbaSmooth" href="#getRgbaSmooth"><span>getRgbaSmooth:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -915,7 +921,7 @@ function main() {
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-26 01:51:49 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-27 00:46:16 UTC</small>
       </div>
     </div>
   </div>

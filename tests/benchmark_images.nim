@@ -1,4 +1,4 @@
-import benchy, chroma, pixie
+import benchy, chroma, pixie, pixie/internal
 
 let image = newImage(2560, 1440)
 
@@ -46,12 +46,12 @@ timeIt "applyOpacity":
 reset()
 
 timeIt "toPremultipliedAlpha":
-  image.toPremultipliedAlpha()
+  image.data.toPremultipliedAlpha()
 
 reset()
 
 timeIt "toStraightAlpha":
-  image.toStraightAlpha()
+  image.data.toStraightAlpha()
 
 reset()
 
