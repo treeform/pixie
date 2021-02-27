@@ -1,7 +1,28 @@
-import chroma
+import chroma, vmath
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
+
+proc gaussianLookup*(radius: int): seq[uint32] =
+  ## Compute lookup table for 1d Gaussian kernel.
+  ## Values are [0, 255] * 1024.
+  result.setLen(radius * 2 + 1)
+
+  var
+    floats = newSeq[float32](result.len)
+    total = 0.0
+  for xb in -radius .. radius:
+    let
+      s = radius.float32 / 2.2 # 2.2 matches Figma.
+      x = xb.float32
+      a = 1 / sqrt(2 * PI * s^2) * exp(-1 * x^2 / (2 * s^2))
+    floats[xb + radius] = a
+    total += a
+  for xb in -radius .. radius:
+    floats[xb + radius] = floats[xb + radius] / total
+
+  for i, f in floats:
+    result[i] = round(f * 255 * 1024).uint32
 
 proc toStraightAlpha*(data: var seq[ColorRGBA | ColorRGBX]) =
   ## Converts an image from premultiplied alpha to straight alpha.

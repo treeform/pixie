@@ -317,114 +317,76 @@ proc invert*(target: Image | Mask) =
     for j in i ..< target.data.len:
       target.data[j] = (255 - target.data[j]).uint8
 
-proc blur*(target: Image | Mask, radius: float32, offBounds: uint32 = 0) =
+proc blur*(image: Image, radius: float32) =
   ## Applies Gaussian blur to the image given a radius.
   let radius = round(radius).int
   if radius == 0:
     return
 
-  proc gaussianLookup(radius: int): seq[uint32] =
-    ## Compute lookup table for 1d Gaussian kernel.
-    ## Values are [0, 255] * 1024.
-    result.setLen(radius * 2 + 1)
-
-    var
-      floats = newSeq[float32](result.len)
-      total = 0.0
-    for xb in -radius .. radius:
-      let
-        s = radius.float32 / 2.2 # 2.2 matches Figma.
-        x = xb.float32
-        a = 1 / sqrt(2 * PI * s^2) * exp(-1 * x^2 / (2 * s^2))
-      floats[xb + radius] = a
-      total += a
-    for xb in -radius .. radius:
-      floats[xb + radius] = floats[xb + radius] / total
-
-    for i, f in floats:
-      result[i] = round(f * 255 * 1024).uint32
-
   let lookup = gaussianLookup(radius)
 
-  when type(target) is Image:
-    # TODO support offBounds for images.
-    doAssert offBounds == 0
+  # TODO support offBounds for images.
 
-    template `*`(sample: ColorRGBA, a: uint32): array[4, uint32] =
-      [
-        sample.r * a,
-        sample.g * a,
-        sample.b * a,
-        sample.a * a
-      ]
+  template `*`(sample: ColorRGBA, a: uint32): array[4, uint32] =
+    [
+      sample.r * a,
+      sample.g * a,
+      sample.b * a,
+      sample.a * a
+    ]
 
-    template `+=`(values: var array[4, uint32], sample: array[4, uint32]) =
-      values[0] += sample[0]
-      values[1] += sample[1]
-      values[2] += sample[2]
-      values[3] += sample[3]
+  template `+=`(values: var array[4, uint32], sample: array[4, uint32]) =
+    values[0] += sample[0]
+    values[1] += sample[1]
+    values[2] += sample[2]
+    values[3] += sample[3]
 
-    template rgba(values: array[4, uint32]): ColorRGBA =
-      rgba(
-        (values[0] div 1024 div 255).uint8,
-        (values[1] div 1024 div 255).uint8,
-        (values[2] div 1024 div 255).uint8,
-        (values[3] div 1024 div 255).uint8
-      )
+  template rgba(values: array[4, uint32]): ColorRGBA =
+    rgba(
+      (values[0] div 1024 div 255).uint8,
+      (values[1] div 1024 div 255).uint8,
+      (values[2] div 1024 div 255).uint8,
+      (values[3] div 1024 div 255).uint8
+    )
 
-    # Blur in the X direction.
-    var blurX = newImage(target.width, target.height)
-    for y in 0 ..< target.height:
-      for x in 0 ..< target.width:
-        var values: array[4, uint32]
-        for xb in -radius .. radius:
+  # Blur in the X direction.
+  var blurX = newImage(image.width, image.height)
+  for y in 0 ..< image.height:
+    for x in 0 ..< image.width:
+      var values: array[4, uint32]
+      if image.inside(x - radius, y) and image.inside(x + radius, y):
+        for step in -radius .. radius:
           let
-            sample = target[x + xb, y]
-            a = lookup[xb + radius].uint32
+            sample = image.getRgbaUnsafe(x + step, y)
+            a = lookup[step + radius].uint32
           values += sample * a
-        blurX.setRgbaUnsafe(x, y, values.rgba())
-
-    # Blur in the Y direction.
-    for y in 0 ..< target.height:
-      for x in 0 ..< target.width:
-        var values: array[4, uint32]
-        for yb in -radius .. radius:
+      else:
+        for step in -radius .. radius:
           let
-            sample = blurX[x, y + yb]
-            a = lookup[yb + radius].uint32
+            sample = image[x + step, y]
+            a = lookup[step + radius].uint32
           values += sample * a
-        target.setRgbaUnsafe(x, y, values.rgba())
 
-  else: # target is a Mask
+      blurX.setRgbaUnsafe(x, y, values.rgba())
 
-    # Blur in the X direction.
-    var blurX = newMask(target.width, target.height)
-    for y in 0 ..< target.height:
-      for x in 0 ..< target.width:
-        var value: uint32
-        for xb in -radius .. radius:
-          var sample: uint32
-          if target.inside(x + xb, y):
-            sample = target.getValueUnsafe(x + xb, y)
-          else:
-            sample = offBounds
-          let a = lookup[xb + radius].uint32
-          value += sample * a
-        blurX.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
+  # Blur in the Y direction.
+  for y in 0 ..< image.height:
+    for x in 0 ..< image.width:
+      var values: array[4, uint32]
+      if image.inside(x, y - radius) and image.inside(x, y + radius):
+        for step in -radius .. radius:
+          let
+            sample = blurX.getRgbaUnsafe(x, y + step)
+            a = lookup[step + radius].uint32
+          values += sample * a
+      else:
+        for step in -radius .. radius:
+          let
+            sample = blurX[x, y + step]
+            a = lookup[step + radius].uint32
+          values += sample * a
 
-    # Blur in the Y direction and modify image.
-    for y in 0 ..< target.height:
-      for x in 0 ..< target.width:
-        var value: uint32
-        for yb in -radius .. radius:
-          var sample: uint32
-          if blurX.inside(x, y + yb):
-            sample = blurX.getValueUnsafe(x, y + yb)
-          else:
-            sample = offBounds
-          let a = lookup[yb + radius].uint32
-          value += sample * a
-        target.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
+      image.setRgbaUnsafe(x, y, values.rgba())
 
 proc newMask*(image: Image): Mask =
   ## Returns a new mask using the alpha values of the parameter image.
