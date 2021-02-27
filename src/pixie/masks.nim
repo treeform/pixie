@@ -154,7 +154,7 @@ proc ceil*(mask: Mask) =
     if mask.data[j] != 0:
       mask.data[j] = 255
 
-proc blur*(mask: Mask, radius: float32, offBounds: uint32 = 0) =
+proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) =
   ## Applies Gaussian blur to the image given a radius.
   let radius = round(radius).int
   if radius == 0:
@@ -167,28 +167,39 @@ proc blur*(mask: Mask, radius: float32, offBounds: uint32 = 0) =
   for y in 0 ..< mask.height:
     for x in 0 ..< mask.width:
       var value: uint32
-      for xb in -radius .. radius:
-        var sample: uint32
-        if mask.inside(x + xb, y):
-          sample = mask.getValueUnsafe(x + xb, y)
-        else:
-          sample = offBounds
-        let a = lookup[xb + radius].uint32
-        value += sample * a
+      if mask.inside(x - radius, y) and mask.inside(x + radius, y):
+        for step in -radius .. radius:
+          let sample = mask.getValueUnsafe(x + step, y)
+          value += sample * lookup[step + radius].uint32
+      else:
+        for step in -radius .. radius:
+          var sample: uint32
+          if mask.inside(x + step, y):
+            sample = mask.getValueUnsafe(x + step, y)
+          else:
+            sample = outOfBounds
+          value += sample * lookup[step + radius].uint32
+
       blurX.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
 
   # Blur in the Y direction and modify image.
   for y in 0 ..< mask.height:
     for x in 0 ..< mask.width:
       var value: uint32
-      for yb in -radius .. radius:
-        var sample: uint32
-        if blurX.inside(x, y + yb):
-          sample = blurX.getValueUnsafe(x, y + yb)
-        else:
-          sample = offBounds
-        let a = lookup[yb + radius].uint32
-        value += sample * a
+      if mask.inside(x, y - radius) and mask.inside(x, y + radius):
+        for step in -radius .. radius:
+          let sample = blurX.getValueUnsafe(x, y + step)
+          value += sample * lookup[step + radius].uint32
+      else:
+        for step in -radius .. radius:
+          var sample: uint32
+          if blurX.inside(x, y + step):
+            sample = blurX.getValueUnsafe(x, y + step)
+          else:
+            sample = outOfBounds
+          let a = lookup[step + radius].uint32
+          value += sample * a
+
       mask.setValueUnsafe(x, y, (value div 1024 div 255).uint8)
 
 when defined(release):

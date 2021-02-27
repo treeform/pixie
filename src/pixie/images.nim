@@ -354,22 +354,38 @@ proc blur*(image: Image, radius: float32) =
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       var values: array[4, uint32]
-      for xb in -radius .. radius:
-        let
-          sample = image[x + xb, y]
-          a = lookup[xb + radius].uint32
-        values += sample * a
+      if image.inside(x - radius, y) and image.inside(x + radius, y):
+        for step in -radius .. radius:
+          let
+            sample = image.getRgbaUnsafe(x + step, y)
+            a = lookup[step + radius].uint32
+          values += sample * a
+      else:
+        for step in -radius .. radius:
+          let
+            sample = image[x + step, y]
+            a = lookup[step + radius].uint32
+          values += sample * a
+
       blurX.setRgbaUnsafe(x, y, values.rgba())
 
   # Blur in the Y direction.
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       var values: array[4, uint32]
-      for yb in -radius .. radius:
-        let
-          sample = blurX[x, y + yb]
-          a = lookup[yb + radius].uint32
-        values += sample * a
+      if image.inside(x, y - radius) and image.inside(x, y + radius):
+        for step in -radius .. radius:
+          let
+            sample = blurX.getRgbaUnsafe(x, y + step)
+            a = lookup[step + radius].uint32
+          values += sample * a
+      else:
+        for step in -radius .. radius:
+          let
+            sample = blurX[x, y + step]
+            a = lookup[step + radius].uint32
+          values += sample * a
+
       image.setRgbaUnsafe(x, y, values.rgba())
 
 proc newMask*(image: Image): Mask =
