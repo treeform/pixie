@@ -163,7 +163,7 @@ proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) =
   let lookup = gaussianLookup(radius)
 
   # Blur in the X direction.
-  var blurX = newMask(mask.width, mask.height)
+  let blurX = newMask(mask.width, mask.height)
   for y in 0 ..< mask.height:
     for x in 0 ..< mask.width:
       var value: uint32

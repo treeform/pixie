@@ -348,7 +348,7 @@ proc blur*(image: Image, radius: float32, outOfBounds = ColorRGBX()) =
     )
 
   # Blur in the X direction.
-  var blurX = newImage(image.width, image.height)
+  let blurX = newImage(image.width, image.height)
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       var values: array[4, uint32]
