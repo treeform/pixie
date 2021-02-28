@@ -15,6 +15,7 @@ flipHorizontal	pixie/images.html#flipHorizontal,Image	images: flipHorizontal(ima
 flipVertical	pixie/images.html#flipVertical,Image	images: flipVertical(image: Image)	
 subImage	pixie/images.html#subImage,Image,int,int,int,int	images: subImage(image: Image; x, y, w, h: int): Image	
 superImage	pixie/images.html#superImage,Image,int,int,int,int	images: superImage(image: Image; x, y, w, h: int): Image	
+diff	pixie/images.html#diff,Image,Image	images: diff(master, image: Image): (float32, Image)	
 minifyBy2	pixie/images.html#minifyBy2,Image,int	images: minifyBy2(image: Image; power = 1): Image	
 magnifyBy2	pixie/images.html#magnifyBy2,Image,int	images: magnifyBy2(image: Image; power = 1): Image	
 applyOpacity	pixie/images.html#applyOpacity,,float32	images: applyOpacity(target: Image | Mask; opacity: float32)	

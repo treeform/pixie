@@ -19,6 +19,6 @@ for file in files:
     image = decodeSvg(original)
     gold = readImage(&"tests/images/svg/{file}.png")
 
-  let (diffScore, _) = diff(image, gold)
-  doAssert diffScore < 1
+  let (score, _) = diff(image, gold)
+  doAssert score < 1
   # image.writeFile(&"tests/images/svg/{file}.png")
