@@ -164,6 +164,11 @@ function main() {
     title="invert(target: Image | Mask)">invert</a></li>
 
   </ul>
+  <ul class="simple nested-toc-section">diff
+      <li><a class="reference" href="#diff%2CImage%2CImage"
+    title="diff(master, image: Image): (float32, Image)">diff,<wbr>Image,<wbr>Image</a></li>
+
+  </ul>
   <ul class="simple nested-toc-section">getRgbaUnsafe
       <li><a class="reference" href="#getRgbaUnsafe%2CImage%2Cint%2Cint"
     title="getRgbaUnsafe(image: Image; x, y: int): ColorRGBX">getRgbaUnsafe,<wbr>Image,<wbr>int,<wbr>int</a></li>
@@ -422,6 +427,14 @@ Gets a sub image from this image.
 Either cuts a sub image or returns a super image with padded transparency.
 
 </dd>
+<a id="diff,Image,Image"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#diff%2CImage%2CImage"><span class="Identifier">diff</span></a><span class="Other">(</span><span class="Identifier">master</span><span class="Other">,</span> <span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Other">(</span><span class="Identifier">float32</span><span class="Other">,</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">PixieError</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+Compares the parameters and returns a score and image of the difference.
+
+</dd>
 <a id="minifyBy2,Image,int"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#minifyBy2%2CImage%2Cint"><span class="Identifier">minifyBy2</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">power</span> <span class="Other">=</span> <span class="DecNumber">1</span><span class="Other">)</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">PixieError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
@@ -578,7 +591,7 @@ Create a shadow of the image with the offset, spread and blur.
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-27 01:24:33 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-28 07:11:38 UTC</small>
       </div>
     </div>
   </div>
