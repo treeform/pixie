@@ -169,6 +169,36 @@ proc superImage*(image: Image, x, y, w, h: int): Image =
         copyWidth * 4
       )
 
+proc diff*(master, image: Image): (float32, Image) =
+  ## Compares the parameters and returns a score and image of the difference.
+  let
+    w = max(master.width, image.width)
+    h = max(master.height, image.height)
+    diffImage = newImage(w, h)
+
+  var
+    diffScore = 0
+    diffTotal = 0
+  for x in 0 ..< w:
+    for y in 0 ..< h:
+      let
+        m = master[x, y]
+        u = image[x, y]
+        diff = (m.r.int - u.r.int) + (m.g.int - u.g.int) + (m.b.int - u.b.int)
+      var c: ColorRGBX
+      c.r = abs(m.a.int - u.a.int).clamp(0, 255).uint8
+      c.g = diff.clamp(0, 255).uint8
+      c.b = (-diff).clamp(0, 255).uint8
+      c.a = 255
+      diffImage.setRgbaUnsafe(x, y, c)
+      diffScore += abs(m.r.int - u.r.int) +
+        abs(m.g.int - u.g.int) +
+        abs(m.b.int - u.b.int) +
+        abs(m.a.int - u.a.int)
+      diffTotal += 255 * 4
+
+  (100 * diffScore.float32 / diffTotal.float32, diffImage)
+
 proc minifyBy2*(image: Image, power = 1): Image =
   ## Scales the image down by an integer scale.
   if power < 0:
