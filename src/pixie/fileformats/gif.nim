@@ -22,6 +22,7 @@ proc readBit(bs: BitStream, pos: int): int =
 
 proc read*(bs: BitStream, bits: int): int =
   ## Reads number of bits
+  # TODO: This can be faster.
   for i in 0 ..< bits:
     result = result shl 1
     result += bs.readBit(bs.pos + bits - i - 1)
@@ -70,7 +71,7 @@ proc decodeGIF*(data: string): Image =
     let blockType = data.readUint8(i)
     i += 1
     case blockType:
-    of 0x2c: # IMAGE
+    of 0x2c: # Read IMAGE block.
       if i + 9 >= data.len: failInvalid()
       let
         left = data.readUint16(i + 0)
@@ -114,8 +115,8 @@ proc decodeGIF*(data: string): Image =
         i += lzwEncodedLen.int
 
       let
-        clearMark = 1 shl lzwMinBitSize
-        endMark = clearMark + 1
+        clearCode = 1 shl lzwMinBitSize
+        endCode = clearCode + 1
 
       # Turn full lzw data into bit stream.
       var
@@ -127,7 +128,8 @@ proc decodeGIF*(data: string): Image =
         colorIndexes: seq[int]
 
       # Main decode loop.
-      while codeLast != endMark:
+      while codeLast != endCode:
+
         if bs.pos + bitSize.int > bs.len: failInvalid()
         var
           # Read variable bits out of the table.
@@ -135,16 +137,16 @@ proc decodeGIF*(data: string): Image =
           # Some time we need to carry over table information.
           carryOver: seq[int]
 
-        if codeId == clearMark:
+        if codeId == clearCode:
           # Clear and re-init the tables.
           bitSize = lzwMinBitSize + 1
           currentCodeTableMax = (1 shl (bitSize)) - 1
           codeLast = -1
           codeTable.setLen(0)
-          for x in 0 ..< endMark + 1:
+          for x in 0 ..< endCode + 1:
             codeTable.add(@[x])
 
-        elif codeId == endMark:
+        elif codeId == endCode:
           # Exit we are done.
           break
 
@@ -154,7 +156,7 @@ proc decodeGIF*(data: string): Image =
           colorIndexes.add(current)
           carryOver = @[current[0]]
 
-        elif codeLast != -1 and codeLast != clearMark and codeLast != endMark:
+        elif codeLast notin [-1, clearCode, endCode]:
           # Its in the current table use it.
           if codeLast >= codeTable.len: failInvalid()
           var previous = codeTable[codeLast]
@@ -166,7 +168,7 @@ proc decodeGIF*(data: string): Image =
           inc bitSize
           currentCodeTableMax = (1 shl (bitSize)) - 1
 
-        if codeLast != -1 and codeLast != clearMark and codeLast != endMark:
+        if codeLast notin [-1, clearCode, endCode]:
           # We had some left over and need to expand table.
           if codeLast >= codeTable.len: failInvalid()
           codeTable.add(codeTable[codeLast] & carryOver)
@@ -178,8 +180,8 @@ proc decodeGIF*(data: string): Image =
         if idx >= colors.len or j >= result.data.len: failInvalid()
         result.data[j] = colors[idx]
 
-    of 0x21:
-      # Skip over all extensions (mostly animation information)
+    of 0x21: # Read EXTENSION block.
+      # Skip over all extensions (mostly animation information).
       let extentionType = data.readUint8(i)
       inc i
       let byteLen = data.readUint8(i)
@@ -187,7 +189,7 @@ proc decodeGIF*(data: string): Image =
       i += byteLen.int
       doAssert data.readUint8(i) == 0
       inc i
-    of 0x3b:
+    of 0x3b: # Read TERMINAL block.
       # Exit block byte - we are done.
       return
     else:
