@@ -1,8 +1,31 @@
-import chroma, flatty/binny, pixie/common, pixie/images, math, bitty
+import chroma, flatty/binny, pixie/common, pixie/images, math
 
 const gifSignatures* = @["GIF87a", "GIF89a"]
 
 # See: https://en.wikipedia.org/wiki/GIF
+
+type
+  BitStream* = ref object
+    data: seq[uint8] # data
+    pos: int         # position in bits
+    len: int         # len in bits
+
+proc newBitStream*(data: string): BitStream =
+  result = BitStream()
+  result.data = cast[seq[uint8]](data)
+  result.len = result.data.len * 8
+
+proc readBit(bs: BitStream, pos: int): int =
+  let byteIndex = pos div 8
+  let bitIndex = pos mod 8
+  result = bs.data[byteIndex].int shr (bitIndex) and 1
+
+proc read*(bs: BitStream, bits: int): int =
+  ## Reads number of bits
+  for i in 0 ..< bits:
+    result = result shl 1
+    result += bs.readBit(bs.pos + bits - i - 1)
+  bs.pos += bits
 
 proc decodeGIF*(data: string): Image =
   ## Decodes GIF data into an Image.
