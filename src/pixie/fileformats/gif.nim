@@ -27,9 +27,13 @@ proc read*(bs: BitStream, bits: int): int =
     result += bs.readBit(bs.pos + bits - i - 1)
   bs.pos += bits
 
+template failInvalid() =
+  raise newException(PixieError, "Invalid GIF buffer, unable to load.")
+
 proc decodeGIF*(data: string): Image =
   ## Decodes GIF data into an Image.
 
+  if data.len <= 0xD: failInvalid()
   let version = data[0 .. 5]
   if version notin gifSignatures:
     raise newException(PixieError, "Invalid GIF file signature.")
@@ -52,6 +56,7 @@ proc decodeGIF*(data: string): Image =
   var colors: seq[ColorRGBA]
   var i = 0xD
   if hasColorTable:
+    if i + colorTableSize * 3 >= data.len: failInvalid()
     for c in 0 ..< colorTableSize:
       let
         r = data.readUint8(i + 0)
@@ -66,6 +71,7 @@ proc decodeGIF*(data: string): Image =
     i += 1
     case blockType:
     of 0x2c: # IMAGE
+      if i + 9 >= data.len: failInvalid()
       let
         left = data.readUint16(i + 0)
         top = data.readUint16(i + 2)
@@ -92,15 +98,18 @@ proc decodeGIF*(data: string): Image =
         raise newException(PixieError, "Interlacing not supported.")
 
       # Read the lzw data chunks.
+      if i >= data.len: failInvalid()
       let lzwMinBitSize = data.readUint8(i)
       i += 1
       var lzwData = ""
       while true:
+        if i >= data.len: failInvalid()
         let lzwEncodedLen = data.readUint8(i)
         i += 1
         if lzwEncodedLen == 0:
           # Stop reading when chunk len is 0.
           break
+        if i + lzwEncodedLen.int > data.len: failInvalid()
         lzwData.add data[i ..< i + lzwEncodedLen.int]
         i += lzwEncodedLen.int
 
@@ -119,7 +128,7 @@ proc decodeGIF*(data: string): Image =
 
       # Main decode loop.
       while codeLast != endMark:
-
+        if bs.pos + bitSize.int > bs.len: failInvalid()
         var
           # Read variable bits out of the table.
           codeId = bs.read(bitSize.int)
@@ -147,6 +156,7 @@ proc decodeGIF*(data: string): Image =
 
         elif codeLast != -1 and codeLast != clearMark and codeLast != endMark:
           # Its in the current table use it.
+          if codeLast >= codeTable.len: failInvalid()
           var previous = codeTable[codeLast]
           carryOver = @[previous[0]]
           colorIndexes.add(previous & carryOver)
@@ -158,12 +168,14 @@ proc decodeGIF*(data: string): Image =
 
         if codeLast != -1 and codeLast != clearMark and codeLast != endMark:
           # We had some left over and need to expand table.
+          if codeLast >= codeTable.len: failInvalid()
           codeTable.add(codeTable[codeLast] & carryOver)
 
         codeLast = codeId
 
       # Convert color indexes into real colors.
       for j, idx in colorIndexes:
+        if idx >= colors.len or j >= result.data.len: failInvalid()
         result.data[j] = colors[idx]
 
     of 0x21:
