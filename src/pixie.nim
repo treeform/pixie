@@ -1,12 +1,12 @@
 import bumpy, chroma, flatty/binny, os, pixie/blends, pixie/common,
-    pixie/fileformats/bmp, pixie/fileformats/jpg, pixie/fileformats/png,
+    pixie/fileformats/bmp, pixie/fileformats/gif, pixie/fileformats/jpg, pixie/fileformats/png,
     pixie/fileformats/svg, pixie/images, pixie/masks, pixie/paints, pixie/paths, vmath
 
 export blends, bumpy, chroma, common, images, masks, paints, paths, vmath
 
 type
   FileFormat* = enum
-    ffPng, ffBmp, ffJpg
+    ffPng, ffBmp, ffJpg, ffGif
 
 proc decodeImage*(data: string | seq[uint8]): Image =
   ## Loads an image from a memory.
@@ -19,6 +19,8 @@ proc decodeImage*(data: string | seq[uint8]): Image =
   elif data.len > 5 and
     (data.readStr(0, 5) == xmlSignature or data.readStr(0, 4) == svgSignature):
     decodeSvg(data)
+  elif data.len > 6 and data.readStr(0, 6) in gifSignatures:
+    decodeGif(data)
   else:
     raise newException(PixieError, "Unsupported image file format")
 
@@ -35,6 +37,8 @@ proc encodeImage*(image: Image, fileFormat: FileFormat): string =
     image.encodeJpg()
   of ffBmp:
     image.encodeBmp()
+  of ffGif:
+    raise newException(PixieError, "Unsupported image format")
 
 proc writeFile*(image: Image, filePath: string, fileFormat: FileFormat) =
   ## Writes an image to a file.

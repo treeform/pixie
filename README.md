@@ -28,6 +28,7 @@ Format        | Read          | Write         |
 PNG           | ✅           | ✅            |
 JPEG          | ✅           |               |
 BMP           | ✅           | ✅            |
+GIF           | ✅           |               |
 SVG           | ✅           |               |
 
 ### Joins and caps
