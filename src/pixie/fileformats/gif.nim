@@ -1,43 +1,22 @@
-import chroma, flatty/binny, pixie/common, pixie/images, math
+import chroma, flatty/binny, pixie/common, pixie/images, math, zippy/bitstreams
 
 const gifSignatures* = @["GIF87a", "GIF89a"]
 
 # See: https://en.wikipedia.org/wiki/GIF
 
-type
-  BitStream* = ref object
-    data: seq[uint8] # data
-    pos: int         # position in bits
-    len: int         # len in bits
-
-proc newBitStream*(data: string): BitStream =
-  result = BitStream()
-  result.data = cast[seq[uint8]](data)
-  result.len = result.data.len * 8
-
-proc readBit(bs: BitStream, pos: int): int =
-  let byteIndex = pos div 8
-  let bitIndex = pos mod 8
-  result = bs.data[byteIndex].int shr (bitIndex) and 1
-
-proc read*(bs: BitStream, bits: int): int =
-  ## Reads number of bits
-  # TODO: This can be faster.
-  for i in 0 ..< bits:
-    result = result shl 1
-    result += bs.readBit(bs.pos + bits - i - 1)
-  bs.pos += bits
-
 template failInvalid() =
-  raise newException(PixieError, "Invalid GIF buffer, unable to load.")
+  raise newException(PixieError, "Invalid GIF buffer, unable to load")
 
-proc decodeGIF*(data: string): Image =
+when defined(release):
+  {.push checks: off.}
+
+proc decodeGif*(data: string): Image =
   ## Decodes GIF data into an Image.
 
-  if data.len <= 0xD: failInvalid()
+  if data.len <= 13: failInvalid()
   let version = data[0 .. 5]
   if version notin gifSignatures:
-    raise newException(PixieError, "Invalid GIF file signature.")
+    raise newException(PixieError, "Invalid GIF file signature")
 
   let
     # Read information about the image.
@@ -54,8 +33,9 @@ proc decodeGIF*(data: string): Image =
   result = newImage(width, height)
 
   # Read the main color table.
-  var colors: seq[ColorRGBA]
-  var i = 0xD
+  var
+    colors: seq[ColorRGBA]
+    i = 13
   if hasColorTable:
     if i + colorTableSize * 3 >= data.len: failInvalid()
     for c in 0 ..< colorTableSize:
@@ -76,8 +56,8 @@ proc decodeGIF*(data: string): Image =
       let
         left = data.readUint16(i + 0)
         top = data.readUint16(i + 2)
-        width = data.readUint16(i + 4)
-        height = data.readUint16(i + 6)
+        w = data.readUint16(i + 4).int
+        h = data.readUint16(i + 6).int
         flags = data.readUint8(i + 8)
 
         hasColorTable = (flags and 0x80) != 0
@@ -88,15 +68,16 @@ proc decodeGIF*(data: string): Image =
       i += 9
 
       # Make sure we support the GIF features.
-      if left != 0 and top != 0 and
-          width.int != result.width and height.int != result.height:
-        raise newException(PixieError, "Image block offsets not supported.")
+      if left != 0 or top != 0 or w != result.width or h != result.height:
+        raise newException(PixieError, "GIF block offsets not supported")
 
       if hasColorTable:
-        raise newException(PixieError, "Color table per block not supported.")
+        raise newException(
+          PixieError, "GIF color table per block not yet supported"
+        )
 
       if interlace:
-        raise newException(PixieError, "Interlacing not supported.")
+        raise newException(PixieError, "Interlaced GIF not yet supported")
 
       # Read the lzw data chunks.
       if i >= data.len: failInvalid()
@@ -120,7 +101,7 @@ proc decodeGIF*(data: string): Image =
 
       # Turn full lzw data into bit stream.
       var
-        bs = newBitStream(lzwData)
+        bs = initBitStream(cast[seq[uint8]](lzwData))
         bitSize = lzwMinBitSize + 1
         currentCodeTableMax = (1 shl (bitSize)) - 1
         codeLast: int = -1
@@ -129,11 +110,10 @@ proc decodeGIF*(data: string): Image =
 
       # Main decode loop.
       while codeLast != endCode:
-
-        if bs.pos + bitSize.int > bs.len: failInvalid()
+        if bs.pos + bitSize.int > bs.data.len * 8: failInvalid()
         var
           # Read variable bits out of the table.
-          codeId = bs.read(bitSize.int)
+          codeId = bs.readBits(bitSize.int).int
           # Some time we need to carry over table information.
           carryOver: seq[int]
 
@@ -193,4 +173,7 @@ proc decodeGIF*(data: string): Image =
       # Exit block byte - we are done.
       return
     else:
-      raise newException(PixieError, "Invalid GIF block type.")
+      raise newException(PixieError, "Invalid GIF block type")
+
+when defined(release):
+  {.pop.}
