@@ -24,8 +24,8 @@ timeIt "subImage":
 
 reset()
 
-# timeIt "superImage":
-#   discard
+timeIt "superImage":
+  keep image.superImage(-10, -10, 2580, 1460)
 
 reset()
 
