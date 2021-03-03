@@ -221,8 +221,8 @@ proc blendMultiply(backdrop, source: ColorRGBX): ColorRGBX =
 
 proc blendColorBurn(backdrop, source: ColorRGBX): ColorRGBX =
   let
-    backdrop = backdrop.toStraightAlpha()
-    source = source.toStraightAlpha()
+    backdrop = backdrop.rgba()
+    source = source.rgba()
   proc blend(backdrop, source: uint32): uint8 {.inline.} =
     if backdrop == 255:
       255.uint8
@@ -234,7 +234,7 @@ proc blendColorBurn(backdrop, source: ColorRGBX): ColorRGBX =
   blended.r = blend(backdrop.r, source.r)
   blended.g = blend(backdrop.g, source.g)
   blended.b = blend(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, blended).toPremultipliedAlpha()
+  result = alphaFix(backdrop, source, blended).rgbx()
 
 proc blendLighten(backdrop, source: ColorRGBX): ColorRGBX =
   proc blend(
@@ -268,8 +268,8 @@ proc blendScreen(backdrop, source: ColorRGBX): ColorRGBX =
 
 proc blendColorDodge(backdrop, source: ColorRGBX): ColorRGBX =
   let
-    backdrop = backdrop.toStraightAlpha()
-    source = source.toStraightAlpha()
+    backdrop = backdrop.rgba()
+    source = source.rgba()
   proc blend(backdrop, source: uint32): uint8 {.inline.} =
     if backdrop == 0:
       0.uint8
@@ -281,7 +281,7 @@ proc blendColorDodge(backdrop, source: ColorRGBX): ColorRGBX =
   blended.r = blend(backdrop.r, source.r)
   blended.g = blend(backdrop.g, source.g)
   blended.b = blend(backdrop.b, source.b)
-  result = alphaFix(backdrop, source, blended).toPremultipliedAlpha()
+  result = alphaFix(backdrop, source, blended).rgbx()
 
 proc blendOverlay(backdrop, source: ColorRGBX): ColorRGBX =
   result.r = hardLight(source.r, source.a, backdrop.r, backdrop.a)
@@ -298,8 +298,8 @@ proc blendSoftLight(backdrop, source: ColorRGBX): ColorRGBX =
   #   ).uint8
 
   let
-    backdrop = backdrop.toStraightAlpha()
-    source = source.toStraightAlpha()
+    backdrop = backdrop.rgba()
+    source = source.rgba()
 
   var rgba: ColorRGBA
   when defined(amd64) and not defined(pixieNoSimd):
@@ -361,7 +361,7 @@ proc blendSoftLight(backdrop, source: ColorRGBX): ColorRGBX =
     blended = alphaFix(b, s, blended)
     rgba = blended.rgba
 
-  result = rgba
+  result = rgba.rgbx()
 
 proc blendHardLight(backdrop, source: ColorRGBX): ColorRGBX =
   result.r = hardLight(backdrop.r, backdrop.a, source.r, source.a)
@@ -396,31 +396,31 @@ proc blendExclusion(backdrop, source: ColorRGBX): ColorRGBX =
 
 proc blendColor(backdrop, source: ColorRGBX): ColorRGBX =
   let
-    backdrop = backdrop.toStraightAlpha().color
-    source = source.toStraightAlpha().color
+    backdrop = backdrop.rgba().color
+    source = source.rgba().color
     blended = SetLum(source, Lum(backdrop))
-  result = alphaFix(backdrop, source, blended).rgba.toPremultipliedAlpha()
+  result = alphaFix(backdrop, source, blended).rgba.rgbx()
 
 proc blendLuminosity(backdrop, source: ColorRGBX): ColorRGBX =
   let
-    backdrop = backdrop.toStraightAlpha().color
-    source = source.toStraightAlpha().color
+    backdrop = backdrop.rgba().color
+    source = source.rgba().color
     blended = SetLum(backdrop, Lum(source))
-  result = alphaFix(backdrop, source, blended).rgba.toPremultipliedAlpha()
+  result = alphaFix(backdrop, source, blended).rgba.rgbx()
 
 proc blendHue(backdrop, source: ColorRGBX): ColorRGBX =
   let
-    backdrop = backdrop.toStraightAlpha().color
-    source = source.toStraightAlpha().color
+    backdrop = backdrop.rgba().color
+    source = source.rgba().color
     blended = SetLum(SetSat(source, Sat(backdrop)), Lum(backdrop))
-  result = alphaFix(backdrop, source, blended).rgba.toPremultipliedAlpha()
+  result = alphaFix(backdrop, source, blended).rgba.rgbx()
 
 proc blendSaturation(backdrop, source: ColorRGBX): ColorRGBX =
   let
-    backdrop = backdrop.toStraightAlpha().color
-    source = source.toStraightAlpha().color
+    backdrop = backdrop.rgba().color
+    source = source.rgba().color
     blended = SetLum(SetSat(backdrop, Sat(source)), Lum(backdrop))
-  result = alphaFix(backdrop, source, blended).rgba.toPremultipliedAlpha()
+  result = alphaFix(backdrop, source, blended).rgba.rgbx()
 
 proc blendMask(backdrop, source: ColorRGBX): ColorRGBX =
   let k = source.a.uint32

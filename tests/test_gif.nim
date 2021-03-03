@@ -1,4 +1,4 @@
-import pixie/fileformats/gif, pixie
+import pixie, pixie/fileformats/gif
 
 var img = decodeGIF(readFile("tests/images/gif/3x5.gif"))
 img.writeFile("tests/images/gif/3x5.png")

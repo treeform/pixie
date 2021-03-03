@@ -1,12 +1,21 @@
 import bumpy, chroma, flatty/binny, os, pixie/blends, pixie/common,
-    pixie/fileformats/bmp, pixie/fileformats/gif, pixie/fileformats/jpg, pixie/fileformats/png,
-    pixie/fileformats/svg, pixie/images, pixie/masks, pixie/paints, pixie/paths, vmath
+    pixie/fileformats/bmp, pixie/fileformats/gif, pixie/fileformats/jpg,
+    pixie/fileformats/png, pixie/fileformats/svg, pixie/images, pixie/masks,
+    pixie/paints, pixie/paths, vmath
 
 export blends, bumpy, chroma, common, images, masks, paints, paths, vmath
 
 type
   FileFormat* = enum
     ffPng, ffBmp, ffJpg, ffGif
+
+converter autoStraightAlpha*(c: ColorRGBX): ColorRGBA {.inline.} =
+  ## Convert a paremultiplied alpha RGBA to a straight alpha RGBA.
+  c.rgba()
+
+converter autoPremultipliedAlpha*(c: ColorRGBA): ColorRGBX {.inline.} =
+  ## Convert a straight alpha RGBA to a premultiplied alpha RGBA.
+  c.rgbx()
 
 proc decodeImage*(data: string | seq[uint8]): Image =
   ## Loads an image from a memory.

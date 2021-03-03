@@ -1,4 +1,4 @@
-import chroma, flatty/binny, pixie/common, pixie/images, math, zippy/bitstreams
+import chroma, flatty/binny, math, pixie/common, pixie/images, zippy/bitstreams
 
 const gifSignatures* = @["GIF87a", "GIF89a"]
 
@@ -158,7 +158,7 @@ proc decodeGif*(data: string): Image =
       # Convert color indexes into real colors.
       for j, idx in colorIndexes:
         if idx >= colors.len or j >= result.data.len: failInvalid()
-        result.data[j] = colors[idx]
+        result.data[j] = colors[idx].rgbx()
 
     of 0x21: # Read EXTENSION block.
       # Skip over all extensions (mostly animation information).

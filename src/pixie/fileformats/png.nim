@@ -1,5 +1,5 @@
-import chroma, flatty/binny, math, pixie/common, pixie/images, pixie/masks,
-    zippy, zippy/crc, pixie/internal
+import chroma, flatty/binny, math, pixie/common, pixie/images, pixie/internal,
+    pixie/masks, zippy, zippy/crc
 
 # See http://www.libpng.org/pub/png/spec/1.2/PNG-Contents.html
 
