@@ -24,7 +24,7 @@ var a = newImage(1000, 1000)
 a.fill(rgba(0, 0, 0, 255))
 
 timeIt "pixie":
-  var p: paths.Path
+  var p: pixie.Path
   p.moveTo(0, 0)
   p.lineTo(500, 0)
   p.lineTo(500, 500)
