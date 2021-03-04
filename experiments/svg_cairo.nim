@@ -492,7 +492,7 @@ proc decodeSvg*(data: string, width = 0, height = 0): Image =
         let
           bgra = pixels[result.dataIndex(x, y)]
           rgba = rgba(bgra[2], bgra[1], bgra[0], bgra[3])
-        result.setRgbaUnsafe(x, y, rgba)
+        result.setRgbaUnsafe(x, y, rgba.rgbx())
   except PixieError as e:
     raise e
   except:

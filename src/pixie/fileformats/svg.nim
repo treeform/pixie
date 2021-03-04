@@ -9,7 +9,7 @@ const
 
 type Ctx = object
   fillRule: WindingRule
-  fill, stroke: ColorRGBA
+  fill, stroke: ColorRGBX
   strokeWidth: float32
   strokeLineCap: LineCap
   strokeLineJoin: LineJoin
@@ -25,8 +25,8 @@ proc attrOrDefault(node: XmlNode, name, default: string): string =
     result = default
 
 proc initCtx(): Ctx =
-  result.fill = parseHtmlColor("black").rgba
-  result.stroke = parseHtmlColor("black").rgba
+  result.fill = parseHtmlColor("black").rgbx
+  result.stroke = parseHtmlColor("black").rgbx
   result.strokeWidth = 1
   result.transform = mat3()
 
@@ -79,18 +79,18 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
   if fill == "" or fill == "currentColor":
     discard # Inherit
   elif fill == "none":
-    result.fill = ColorRGBA()
+    result.fill = ColorRGBX()
   else:
-    result.fill = parseHtmlColor(fill).rgba
+    result.fill = parseHtmlColor(fill).rgbx
 
   if stroke == "":
     discard # Inherit
   elif stroke == "currentColor":
     result.shouldStroke = true
   elif stroke == "none":
-    result.stroke = ColorRGBA()
+    result.stroke = ColorRGBX()
   else:
-    result.stroke = parseHtmlColor(stroke).rgba
+    result.stroke = parseHtmlColor(stroke).rgbx
     result.shouldStroke = true
 
   if strokeWidth == "":
@@ -101,7 +101,7 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
     result.strokeWidth = parseFloat(strokeWidth)
     result.shouldStroke = true
 
-  if result.stroke == ColorRGBA() or result.strokeWidth <= 0:
+  if result.stroke == ColorRGBX() or result.strokeWidth <= 0:
     result.shouldStroke = false
 
   if strokeLineCap == "":
@@ -216,7 +216,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
       d = node.attr("d")
       ctx = decodeCtx(ctxStack[^1], node)
       path = parsePath(d)
-    if ctx.fill != ColorRGBA():
+    if ctx.fill != ColorRGBX():
       img.fillPath(path, ctx.fill, ctx.transform, ctx.fillRule)
     if ctx.shouldStroke:
       img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)
@@ -234,7 +234,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     path.lineTo(x2, y2)
     path.closePath()
 
-    if ctx.fill != ColorRGBA():
+    if ctx.fill != ColorRGBX():
       img.fillPath(path, ctx.fill, ctx.transform)
     if ctx.shouldStroke:
       img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)
@@ -270,7 +270,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     if node.tag == "polygon":
       path.closePath()
 
-    if ctx.fill != ColorRGBA():
+    if ctx.fill != ColorRGBX():
       img.fillPath(path, ctx.fill, ctx.transform)
     if ctx.shouldStroke:
       img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)
@@ -308,7 +308,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     else:
       path.rect(x, y, width, height)
 
-    if ctx.fill != ColorRGBA():
+    if ctx.fill != ColorRGBX():
       img.fillPath(path, ctx.fill, ctx.transform)
     if ctx.shouldStroke:
       img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)
@@ -330,7 +330,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     var path: Path
     path.ellipse(cx, cy, rx, ry)
 
-    if ctx.fill != ColorRGBA():
+    if ctx.fill != ColorRGBX():
       img.fillPath(path, ctx.fill, ctx.transform)
     if ctx.shouldStroke:
       img.strokePath(path, ctx.stroke, ctx.transform, ctx.strokeWidth)

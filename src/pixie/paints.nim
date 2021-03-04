@@ -31,13 +31,12 @@ proc toLineSpace(at, to, point: Vec2): float32 =
   ## Convert position on to where it would fall on a line between at and to.
   let
     d = to - at
-    det = d.x*d.x + d.y*d.y
-  return (d.y*(point.y-at.y)+d.x*(point.x-at.x))/det
+    det = d.x * d.x + d.y * d.y
+  return (d.y * (point.y - at.y) + d.x * (point.x - at.x)) / det
 
 proc gradientPut(image: Image, x, y: int, a: float32, stops: seq[ColorStop]) =
   ## Put an gradient color based on the "a" - were are we related to a line.
-  var
-    index = -1
+  var index = -1
   for i, stop in stops:
     if stop.position < a:
       index = i
@@ -59,7 +58,7 @@ proc gradientPut(image: Image, x, y: int, a: float32, stops: seq[ColorStop]) =
       gs2.color.color,
       (a - gs1.position) / (gs2.position - gs1.position)
     )
-  image.setRgbaUnsafe(x, y, color.rgba.toPremultipliedAlpha())
+  image.setRgbaUnsafe(x, y, color.rgba.rgbx())
 
 proc fillLinearGradient*(
   image: Image,

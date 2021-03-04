@@ -46,7 +46,7 @@ proc decodeBmp*(data: string): Image =
         rgba.b = data.readUint8(offset + 0)
         rgba.a = 255
         offset += 3
-      result[x, result.height - y - 1] = rgba
+      result[x, result.height - y - 1] = rgba.rgbx()
 
 proc decodeBmp*(data: seq[uint8]): Image {.inline.} =
   ## Decodes bitmap data into an Image.
@@ -84,7 +84,7 @@ proc encodeBmp*(image: Image): string =
 
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
-      let rgba = image[x, image.height - y - 1].toStraightAlpha()
+      let rgba = image[x, image.height - y - 1].rgba()
       result.addUint8(rgba.r)
       result.addUint8(rgba.g)
       result.addUint8(rgba.b)
