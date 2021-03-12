@@ -63,7 +63,7 @@ function main() {
 <div class="document" id="documentId">
   <div class="container">
     <h1 class="title">Index</h1>
-    Modules: <a href="pixie.html">pixie</a>, <a href="pixie/blends.html">pixie/blends</a>, <a href="pixie/common.html">pixie/common</a>, <a href="pixie/fileformats/bmp.html">pixie/fileformats/bmp</a>, <a href="pixie/fileformats/jpg.html">pixie/fileformats/jpg</a>, <a href="pixie/fileformats/png.html">pixie/fileformats/png</a>, <a href="pixie/fileformats/svg.html">pixie/fileformats/svg</a>, <a href="pixie/images.html">pixie/images</a>, <a href="pixie/internal.html">pixie/internal</a>, <a href="pixie/masks.html">pixie/masks</a>, <a href="pixie/paints.html">pixie/paints</a>, <a href="pixie/paths.html">pixie/paths</a>.<br/><p /><h2>API symbols</h2>
+    Modules: <a href="pixie.html">pixie</a>, <a href="pixie/blends.html">pixie/blends</a>, <a href="pixie/common.html">pixie/common</a>, <a href="pixie/fileformats/bmp.html">pixie/fileformats/bmp</a>, <a href="pixie/fileformats/gif.html">pixie/fileformats/gif</a>, <a href="pixie/fileformats/jpg.html">pixie/fileformats/jpg</a>, <a href="pixie/fileformats/png.html">pixie/fileformats/png</a>, <a href="pixie/fileformats/svg.html">pixie/fileformats/svg</a>, <a href="pixie/images.html">pixie/images</a>, <a href="pixie/internal.html">pixie/internal</a>, <a href="pixie/masks.html">pixie/masks</a>, <a href="pixie/paints.html">pixie/paints</a>, <a href="pixie/paths.html">pixie/paths</a>.<br/><p /><h2>API symbols</h2>
 <dl><dt><a name="%60%24%60" href="#%60%24%60"><span>`$`:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="images: `$`(image: Image): string" href="pixie/images.html#%24%2CImage">images: `$`(image: Image): string</a></li>
@@ -74,7 +74,7 @@ function main() {
           </ul></dd>
 <dt><a name="%60%5B%5D%3D%60" href="#%60%5B%5D%3D%60"><span>`[]=`:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="images: `[]=`(image: Image; x, y: int; rgba: ColorRGBX)" href="pixie/images.html#%5B%5D%3D%2CImage%2Cint%2Cint%2CColorRGBX">images: `[]=`(image: Image; x, y: int; rgba: ColorRGBX)</a></li>
+          data-doc-search-tag="images: `[]=`(image: Image; x, y: int; color: SomeColor)" href="pixie/images.html#%5B%5D%3D%2CImage%2Cint%2Cint%2CSomeColor">images: `[]=`(image: Image; x, y: int; color: SomeColor)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="masks: `[]=`(mask: Mask; x, y: int; value: uint8)" href="pixie/masks.html#%5B%5D%3D%2CMask%2Cint%2Cint%2Cuint8">masks: `[]=`(mask: Mask; x, y: int; value: uint8)</a></li>
           </ul></dd>
@@ -101,6 +101,14 @@ function main() {
           data-doc-search-tag="paths: arcTo(path: var Path; x1, y1, x2, y2, radius: float32)" href="pixie/paths.html#arcTo%2CPath%2Cfloat32%2Cfloat32%2Cfloat32%2Cfloat32%2Cfloat32">paths: arcTo(path: var Path; x1, y1, x2, y2, radius: float32)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="paths: arcTo(path: var Path; ctrl1, ctrl2: Vec2; radius: float32)" href="pixie/paths.html#arcTo%2CPath%2CVec2%2CVec2%2Cfloat32">paths: arcTo(path: var Path; ctrl1, ctrl2: Vec2; radius: float32)</a></li>
+          </ul></dd>
+<dt><a name="autoPremultipliedAlpha" href="#autoPremultipliedAlpha"><span>autoPremultipliedAlpha:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="pixie: autoPremultipliedAlpha(c: ColorRGBA): ColorRGBX" href="pixie.html#autoPremultipliedAlpha.c%2CColorRGBA">pixie: autoPremultipliedAlpha(c: ColorRGBA): ColorRGBX</a></li>
+          </ul></dd>
+<dt><a name="autoStraightAlpha" href="#autoStraightAlpha"><span>autoStraightAlpha:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="pixie: autoStraightAlpha(c: ColorRGBX): ColorRGBA" href="pixie.html#autoStraightAlpha.c%2CColorRGBX">pixie: autoStraightAlpha(c: ColorRGBX): ColorRGBA</a></li>
           </ul></dd>
 <dt><a name="bezierCurveTo" href="#bezierCurveTo"><span>bezierCurveTo:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -134,7 +142,7 @@ function main() {
           </ul></dd>
 <dt><a name="blur" href="#blur"><span>blur:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="images: blur(image: Image; radius: float32; outOfBounds = ColorRGBX())" href="pixie/images.html#blur%2CImage%2Cfloat32">images: blur(image: Image; radius: float32; outOfBounds = ColorRGBX())</a></li>
+          data-doc-search-tag="images: blur(image: Image; radius: float32; outOfBounds: SomeColor = ColorRGBX())" href="pixie/images.html#blur%2CImage%2Cfloat32%2CSomeColor">images: blur(image: Image; radius: float32; outOfBounds: SomeColor = ColorRGBX())</a></li>
           <li><a class="reference external"
           data-doc-search-tag="masks: blur(mask: Mask; radius: float32; outOfBounds: uint8 = 0)" href="pixie/masks.html#blur%2CMask%2Cfloat32%2Cuint8">masks: blur(mask: Mask; radius: float32; outOfBounds: uint8 = 0)</a></li>
           </ul></dd>
@@ -268,6 +276,10 @@ function main() {
           <li><a class="reference external"
           data-doc-search-tag="bmp: decodeBmp(data: string): Image" href="pixie/fileformats/bmp.html#decodeBmp%2Cstring">bmp: decodeBmp(data: string): Image</a></li>
           </ul></dd>
+<dt><a name="decodeGif" href="#decodeGif"><span>decodeGif:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="gif: decodeGif(data: string): Image" href="pixie/fileformats/gif.html#decodeGif%2Cstring">gif: decodeGif(data: string): Image</a></li>
+          </ul></dd>
 <dt><a name="decodeImage" href="#decodeImage"><span>decodeImage:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="pixie: decodeImage(data: string | seq[uint8]): Image" href="pixie.html#decodeImage">pixie: decodeImage(data: string | seq[uint8]): Image</a></li>
@@ -350,6 +362,10 @@ function main() {
 <li><a class="reference external"
           data-doc-search-tag="FileFormat.ffBmp" href="pixie.html#ffBmp">FileFormat.ffBmp</a></li>
           </ul></dd>
+<dt><a name="ffGif" href="#ffGif"><span>ffGif:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="FileFormat.ffGif" href="pixie.html#ffGif">FileFormat.ffGif</a></li>
+          </ul></dd>
 <dt><a name="ffJpg" href="#ffJpg"><span>ffJpg:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="FileFormat.ffJpg" href="pixie.html#ffJpg">FileFormat.ffJpg</a></li>
@@ -364,7 +380,7 @@ function main() {
           </ul></dd>
 <dt><a name="fill" href="#fill"><span>fill:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="images: fill(image: Image; rgba: ColorRGBX)" href="pixie/images.html#fill%2CImage%2CColorRGBX">images: fill(image: Image; rgba: ColorRGBX)</a></li>
+          data-doc-search-tag="images: fill(image: Image; color: SomeColor)" href="pixie/images.html#fill%2CImage%2CSomeColor">images: fill(image: Image; color: SomeColor)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="masks: fill(mask: Mask; value: uint8)" href="pixie/masks.html#fill%2CMask%2Cuint8">masks: fill(mask: Mask; value: uint8)</a></li>
           </ul></dd>
@@ -376,14 +392,14 @@ function main() {
           </ul></dd>
 <dt><a name="fillCircle" href="#fillCircle"><span>fillCircle:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="pixie: fillCircle(image: Image; center: Vec2; radius: float32; color: ColorRGBA)" href="pixie.html#fillCircle%2CImage%2CVec2%2Cfloat32%2CColorRGBA">pixie: fillCircle(image: Image; center: Vec2; radius: float32; color: ColorRGBA)</a></li>
+          data-doc-search-tag="pixie: fillCircle(image: Image; center: Vec2; radius: float32; color: SomeColor)" href="pixie.html#fillCircle%2CImage%2CVec2%2Cfloat32%2CSomeColor">pixie: fillCircle(image: Image; center: Vec2; radius: float32; color: SomeColor)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="pixie: fillCircle(mask: Mask; center: Vec2; radius: float32)" href="pixie.html#fillCircle%2CMask%2CVec2%2Cfloat32">pixie: fillCircle(mask: Mask; center: Vec2; radius: float32)</a></li>
           </ul></dd>
 <dt><a name="fillEllipse" href="#fillEllipse"><span>fillEllipse:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="pixie: fillEllipse(image: Image; center: Vec2; rx, ry: float32; color: ColorRGBA;
-            blendMode = bmNormal)" href="pixie.html#fillEllipse%2CImage%2CVec2%2Cfloat32%2Cfloat32%2CColorRGBA">pixie: fillEllipse(image: Image; center: Vec2; rx, ry: float32; color: ColorRGBA;
+          data-doc-search-tag="pixie: fillEllipse(image: Image; center: Vec2; rx, ry: float32; color: SomeColor;
+            blendMode = bmNormal)" href="pixie.html#fillEllipse%2CImage%2CVec2%2Cfloat32%2Cfloat32%2CSomeColor">pixie: fillEllipse(image: Image; center: Vec2; rx, ry: float32; color: SomeColor;
             blendMode = bmNormal)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="pixie: fillEllipse(mask: Mask; center: Vec2; rx, ry: float32)" href="pixie.html#fillEllipse%2CMask%2CVec2%2Cfloat32%2Cfloat32">pixie: fillEllipse(mask: Mask; center: Vec2; rx, ry: float32)</a></li>
@@ -394,15 +410,15 @@ function main() {
           </ul></dd>
 <dt><a name="fillPath" href="#fillPath"><span>fillPath:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="paths: fillPath(image: Image; path: SomePath; color: ColorRGBX;
-         windingRule = wrNonZero; blendMode = bmNormal)" href="pixie/paths.html#fillPath%2CImage%2CSomePath%2CColorRGBX">paths: fillPath(image: Image; path: SomePath; color: ColorRGBX;
-         windingRule = wrNonZero; blendMode = bmNormal)</a></li>
-          <li><a class="reference external"
-          data-doc-search-tag="paths: fillPath(image: Image; path: SomePath; color: ColorRGBX; transform: Vec2 | Mat3;
-         windingRule = wrNonZero; blendMode = bmNormal)" href="pixie/paths.html#fillPath%2CImage%2CSomePath%2CColorRGBX%2C">paths: fillPath(image: Image; path: SomePath; color: ColorRGBX; transform: Vec2 | Mat3;
-         windingRule = wrNonZero; blendMode = bmNormal)</a></li>
-          <li><a class="reference external"
           data-doc-search-tag="paths: fillPath(image: Image; path: SomePath; paint: Paint; windingRule = wrNonZero)" href="pixie/paths.html#fillPath%2CImage%2CSomePath%2CPaint">paths: fillPath(image: Image; path: SomePath; paint: Paint; windingRule = wrNonZero)</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="paths: fillPath(image: Image; path: SomePath; color: SomeColor;
+         windingRule = wrNonZero; blendMode = bmNormal)" href="pixie/paths.html#fillPath%2CImage%2CSomePath%2CSomeColor">paths: fillPath(image: Image; path: SomePath; color: SomeColor;
+         windingRule = wrNonZero; blendMode = bmNormal)</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="paths: fillPath(image: Image; path: SomePath; color: SomeColor; transform: Vec2 | Mat3;
+         windingRule = wrNonZero; blendMode = bmNormal)" href="pixie/paths.html#fillPath%2CImage%2CSomePath%2CSomeColor%2C">paths: fillPath(image: Image; path: SomePath; color: SomeColor; transform: Vec2 | Mat3;
+         windingRule = wrNonZero; blendMode = bmNormal)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="paths: fillPath(mask: Mask; path: SomePath; windingRule = wrNonZero)" href="pixie/paths.html#fillPath%2CMask%2CSomePath">paths: fillPath(mask: Mask; path: SomePath; windingRule = wrNonZero)</a></li>
           <li><a class="reference external"
@@ -412,7 +428,7 @@ function main() {
           </ul></dd>
 <dt><a name="fillPolygon" href="#fillPolygon"><span>fillPolygon:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="pixie: fillPolygon(image: Image; pos: Vec2; size: float32; sides: int; color: ColorRGBA)" href="pixie.html#fillPolygon%2CImage%2CVec2%2Cfloat32%2Cint%2CColorRGBA">pixie: fillPolygon(image: Image; pos: Vec2; size: float32; sides: int; color: ColorRGBA)</a></li>
+          data-doc-search-tag="pixie: fillPolygon(image: Image; pos: Vec2; size: float32; sides: int; color: SomeColor)" href="pixie.html#fillPolygon%2CImage%2CVec2%2Cfloat32%2Cint%2CSomeColor">pixie: fillPolygon(image: Image; pos: Vec2; size: float32; sides: int; color: SomeColor)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="pixie: fillPolygon(mask: Mask; pos: Vec2; size: float32; sides: int)" href="pixie.html#fillPolygon%2CMask%2CVec2%2Cfloat32%2Cint">pixie: fillPolygon(mask: Mask; pos: Vec2; size: float32; sides: int)</a></li>
           </ul></dd>
@@ -422,17 +438,17 @@ function main() {
           </ul></dd>
 <dt><a name="fillRect" href="#fillRect"><span>fillRect:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="pixie: fillRect(image: Image; rect: Rect; color: ColorRGBA)" href="pixie.html#fillRect%2CImage%2CRect%2CColorRGBA">pixie: fillRect(image: Image; rect: Rect; color: ColorRGBA)</a></li>
+          data-doc-search-tag="pixie: fillRect(image: Image; rect: Rect; color: SomeColor)" href="pixie.html#fillRect%2CImage%2CRect%2CSomeColor">pixie: fillRect(image: Image; rect: Rect; color: SomeColor)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="pixie: fillRect(mask: Mask; rect: Rect)" href="pixie.html#fillRect%2CMask%2CRect">pixie: fillRect(mask: Mask; rect: Rect)</a></li>
           </ul></dd>
 <dt><a name="fillRoundedRect" href="#fillRoundedRect"><span>fillRoundedRect:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="pixie: fillRoundedRect(image: Image; rect: Rect; radius: float32; color: ColorRGBA)" href="pixie.html#fillRoundedRect%2CImage%2CRect%2Cfloat32%2CColorRGBA">pixie: fillRoundedRect(image: Image; rect: Rect; radius: float32; color: ColorRGBA)</a></li>
-          <li><a class="reference external"
           data-doc-search-tag="pixie: fillRoundedRect(image: Image; rect: Rect; nw, ne, se, sw: float32;
-                color: ColorRGBA)" href="pixie.html#fillRoundedRect%2CImage%2CRect%2Cfloat32%2Cfloat32%2Cfloat32%2Cfloat32%2CColorRGBA">pixie: fillRoundedRect(image: Image; rect: Rect; nw, ne, se, sw: float32;
-                color: ColorRGBA)</a></li>
+                color: SomeColor)" href="pixie.html#fillRoundedRect%2CImage%2CRect%2Cfloat32%2Cfloat32%2Cfloat32%2Cfloat32%2CSomeColor">pixie: fillRoundedRect(image: Image; rect: Rect; nw, ne, se, sw: float32;
+                color: SomeColor)</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="pixie: fillRoundedRect(image: Image; rect: Rect; radius: float32; color: SomeColor)" href="pixie.html#fillRoundedRect%2CImage%2CRect%2Cfloat32%2CSomeColor">pixie: fillRoundedRect(image: Image; rect: Rect; radius: float32; color: SomeColor)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="pixie: fillRoundedRect(mask: Mask; rect: Rect; radius: float32)" href="pixie.html#fillRoundedRect%2CMask%2CRect%2Cfloat32">pixie: fillRoundedRect(mask: Mask; rect: Rect; radius: float32)</a></li>
           <li><a class="reference external"
@@ -440,7 +456,7 @@ function main() {
           </ul></dd>
 <dt><a name="fillUnsafe" href="#fillUnsafe"><span>fillUnsafe:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="images: fillUnsafe(data: var seq[ColorRGBX]; rgba: ColorRGBX; start, len: int)" href="pixie/images.html#fillUnsafe%2Cseq%5BColorRGBX%5D%2CColorRGBX%2Cint%2Cint">images: fillUnsafe(data: var seq[ColorRGBX]; rgba: ColorRGBX; start, len: int)</a></li>
+          data-doc-search-tag="images: fillUnsafe(data: var seq[ColorRGBX]; color: SomeColor; start, len: int)" href="pixie/images.html#fillUnsafe%2Cseq%5BColorRGBX%5D%2CSomeColor%2Cint%2Cint">images: fillUnsafe(data: var seq[ColorRGBX]; color: SomeColor; start, len: int)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="masks: fillUnsafe(data: var seq[uint8]; value: uint8; start, len: int)" href="pixie/masks.html#fillUnsafe%2Cseq%5Buint8%5D%2Cuint8%2Cint%2Cint">masks: fillUnsafe(data: var seq[uint8]; value: uint8; start, len: int)</a></li>
           </ul></dd>
@@ -475,6 +491,10 @@ function main() {
 <dt><a name="getValueUnsafe" href="#getValueUnsafe"><span>getValueUnsafe:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="masks: getValueUnsafe(mask: Mask; x, y: int): uint8" href="pixie/masks.html#getValueUnsafe%2CMask%2Cint%2Cint">masks: getValueUnsafe(mask: Mask; x, y: int): uint8</a></li>
+          </ul></dd>
+<dt><a name="gifSignatures" href="#gifSignatures"><span>gifSignatures:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="gif: gifSignatures" href="pixie/fileformats/gif.html#gifSignatures">gif: gifSignatures</a></li>
           </ul></dd>
 <dt><a name="hasSimdBlender" href="#hasSimdBlender"><span>hasSimdBlender:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -758,7 +778,7 @@ function main() {
           </ul></dd>
 <dt><a name="setRgbaUnsafe" href="#setRgbaUnsafe"><span>setRgbaUnsafe:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="images: setRgbaUnsafe(image: Image; x, y: int; rgba: ColorRGBX)" href="pixie/images.html#setRgbaUnsafe%2CImage%2Cint%2Cint%2CColorRGBX">images: setRgbaUnsafe(image: Image; x, y: int; rgba: ColorRGBX)</a></li>
+          data-doc-search-tag="images: setRgbaUnsafe(image: Image; x, y: int; color: SomeColor)" href="pixie/images.html#setRgbaUnsafe%2CImage%2Cint%2Cint%2CSomeColor">images: setRgbaUnsafe(image: Image; x, y: int; color: SomeColor)</a></li>
           </ul></dd>
 <dt><a name="setValueUnsafe" href="#setValueUnsafe"><span>setValueUnsafe:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -766,7 +786,7 @@ function main() {
           </ul></dd>
 <dt><a name="shadow" href="#shadow"><span>shadow:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="images: shadow(image: Image; offset: Vec2; spread, blur: float32; color: ColorRGBX): Image" href="pixie/images.html#shadow%2CImage%2CVec2%2Cfloat32%2Cfloat32%2CColorRGBX">images: shadow(image: Image; offset: Vec2; spread, blur: float32; color: ColorRGBX): Image</a></li>
+          data-doc-search-tag="images: shadow(image: Image; offset: Vec2; spread, blur: float32; color: SomeColor): Image" href="pixie/images.html#shadow%2CImage%2CVec2%2Cfloat32%2Cfloat32%2CSomeColor">images: shadow(image: Image; offset: Vec2; spread, blur: float32; color: SomeColor): Image</a></li>
           </ul></dd>
 <dt><a name="shift" href="#shift"><span>shift:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -782,30 +802,30 @@ function main() {
           </ul></dd>
 <dt><a name="strokeCircle" href="#strokeCircle"><span>strokeCircle:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="pixie: strokeCircle(image: Image; center: Vec2; radius: float32; color: ColorRGBA;
-             strokeWidth = 1.0)" href="pixie.html#strokeCircle%2CImage%2CVec2%2Cfloat32%2CColorRGBA%2Cfloat">pixie: strokeCircle(image: Image; center: Vec2; radius: float32; color: ColorRGBA;
+          data-doc-search-tag="pixie: strokeCircle(image: Image; center: Vec2; radius: float32; color: SomeColor;
+             strokeWidth = 1.0)" href="pixie.html#strokeCircle%2CImage%2CVec2%2Cfloat32%2CSomeColor%2Cfloat">pixie: strokeCircle(image: Image; center: Vec2; radius: float32; color: SomeColor;
              strokeWidth = 1.0)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="pixie: strokeCircle(mask: Mask; center: Vec2; radius: float32; strokeWidth = 1.0)" href="pixie.html#strokeCircle%2CMask%2CVec2%2Cfloat32%2Cfloat">pixie: strokeCircle(mask: Mask; center: Vec2; radius: float32; strokeWidth = 1.0)</a></li>
           </ul></dd>
 <dt><a name="strokeEllipse" href="#strokeEllipse"><span>strokeEllipse:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="pixie: strokeEllipse(image: Image; center: Vec2; rx, ry: float32; color: ColorRGBA;
-              strokeWidth = 1.0)" href="pixie.html#strokeEllipse%2CImage%2CVec2%2Cfloat32%2Cfloat32%2CColorRGBA%2Cfloat">pixie: strokeEllipse(image: Image; center: Vec2; rx, ry: float32; color: ColorRGBA;
+          data-doc-search-tag="pixie: strokeEllipse(image: Image; center: Vec2; rx, ry: float32; color: SomeColor;
+              strokeWidth = 1.0)" href="pixie.html#strokeEllipse%2CImage%2CVec2%2Cfloat32%2Cfloat32%2CSomeColor%2Cfloat">pixie: strokeEllipse(image: Image; center: Vec2; rx, ry: float32; color: SomeColor;
               strokeWidth = 1.0)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="pixie: strokeEllipse(mask: Mask; center: Vec2; rx, ry: float32; strokeWidth = 1.0)" href="pixie.html#strokeEllipse%2CMask%2CVec2%2Cfloat32%2Cfloat32%2Cfloat">pixie: strokeEllipse(mask: Mask; center: Vec2; rx, ry: float32; strokeWidth = 1.0)</a></li>
           </ul></dd>
 <dt><a name="strokePath" href="#strokePath"><span>strokePath:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="paths: strokePath(image: Image; path: SomePath; color: ColorRGBX;
+          data-doc-search-tag="paths: strokePath(image: Image; path: SomePath; color: SomeColor;
            transform: Vec2 | Mat3; strokeWidth = 1.0; lineCap = lcButt;
-           lineJoin = ljMiter; blendMode = bmNormal)" href="pixie/paths.html#strokePath%2CImage%2CSomePath%2CColorRGBX%2C%2Cfloat">paths: strokePath(image: Image; path: SomePath; color: ColorRGBX;
+           lineJoin = ljMiter; blendMode = bmNormal)" href="pixie/paths.html#strokePath%2CImage%2CSomePath%2CSomeColor%2C%2Cfloat">paths: strokePath(image: Image; path: SomePath; color: SomeColor;
            transform: Vec2 | Mat3; strokeWidth = 1.0; lineCap = lcButt;
            lineJoin = ljMiter; blendMode = bmNormal)</a></li>
           <li><a class="reference external"
-          data-doc-search-tag="paths: strokePath(image: Image; path: SomePath; color: ColorRGBX; strokeWidth = 1.0;
-           lineCap = lcButt; lineJoin = ljMiter; blendMode = bmNormal)" href="pixie/paths.html#strokePath%2CImage%2CSomePath%2CColorRGBX%2Cfloat">paths: strokePath(image: Image; path: SomePath; color: ColorRGBX; strokeWidth = 1.0;
+          data-doc-search-tag="paths: strokePath(image: Image; path: SomePath; color: SomeColor; strokeWidth = 1.0;
+           lineCap = lcButt; lineJoin = ljMiter; blendMode = bmNormal)" href="pixie/paths.html#strokePath%2CImage%2CSomePath%2CSomeColor%2Cfloat">paths: strokePath(image: Image; path: SomePath; color: SomeColor; strokeWidth = 1.0;
            lineCap = lcButt; lineJoin = ljMiter; blendMode = bmNormal)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="paths: strokePath(mask: Mask; path: SomePath; transform: Vec2 | Mat3;
@@ -819,8 +839,8 @@ function main() {
 <dt><a name="strokePolygon" href="#strokePolygon"><span>strokePolygon:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="pixie: strokePolygon(image: Image; pos: Vec2; size: float32; sides: int;
-              color: ColorRGBA; strokeWidth = 1.0)" href="pixie.html#strokePolygon%2CImage%2CVec2%2Cfloat32%2Cint%2CColorRGBA%2Cfloat">pixie: strokePolygon(image: Image; pos: Vec2; size: float32; sides: int;
-              color: ColorRGBA; strokeWidth = 1.0)</a></li>
+              color: SomeColor; strokeWidth = 1.0)" href="pixie.html#strokePolygon%2CImage%2CVec2%2Cfloat32%2Cint%2CSomeColor%2Cfloat">pixie: strokePolygon(image: Image; pos: Vec2; size: float32; sides: int;
+              color: SomeColor; strokeWidth = 1.0)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="pixie: strokePolygon(mask: Mask; pos: Vec2; size: float32; sides: int;
               strokeWidth = 1.0)" href="pixie.html#strokePolygon%2CMask%2CVec2%2Cfloat32%2Cint%2Cfloat">pixie: strokePolygon(mask: Mask; pos: Vec2; size: float32; sides: int;
@@ -828,19 +848,19 @@ function main() {
           </ul></dd>
 <dt><a name="strokeRect" href="#strokeRect"><span>strokeRect:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="pixie: strokeRect(image: Image; rect: Rect; color: ColorRGBA; strokeWidth = 1.0)" href="pixie.html#strokeRect%2CImage%2CRect%2CColorRGBA%2Cfloat">pixie: strokeRect(image: Image; rect: Rect; color: ColorRGBA; strokeWidth = 1.0)</a></li>
+          data-doc-search-tag="pixie: strokeRect(image: Image; rect: Rect; color: SomeColor; strokeWidth = 1.0)" href="pixie.html#strokeRect%2CImage%2CRect%2CSomeColor%2Cfloat">pixie: strokeRect(image: Image; rect: Rect; color: SomeColor; strokeWidth = 1.0)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="pixie: strokeRect(mask: Mask; rect: Rect; strokeWidth = 1.0)" href="pixie.html#strokeRect%2CMask%2CRect%2Cfloat">pixie: strokeRect(mask: Mask; rect: Rect; strokeWidth = 1.0)</a></li>
           </ul></dd>
 <dt><a name="strokeRoundedRect" href="#strokeRoundedRect"><span>strokeRoundedRect:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="pixie: strokeRoundedRect(image: Image; rect: Rect; radius: float32; color: ColorRGBA;
-                  strokeWidth = 1.0)" href="pixie.html#strokeRoundedRect%2CImage%2CRect%2Cfloat32%2CColorRGBA%2Cfloat">pixie: strokeRoundedRect(image: Image; rect: Rect; radius: float32; color: ColorRGBA;
-                  strokeWidth = 1.0)</a></li>
-          <li><a class="reference external"
           data-doc-search-tag="pixie: strokeRoundedRect(image: Image; rect: Rect; nw, ne, se, sw: float32;
-                  color: ColorRGBA; strokeWidth = 1.0)" href="pixie.html#strokeRoundedRect%2CImage%2CRect%2Cfloat32%2Cfloat32%2Cfloat32%2Cfloat32%2CColorRGBA%2Cfloat">pixie: strokeRoundedRect(image: Image; rect: Rect; nw, ne, se, sw: float32;
-                  color: ColorRGBA; strokeWidth = 1.0)</a></li>
+                  color: SomeColor; strokeWidth = 1.0)" href="pixie.html#strokeRoundedRect%2CImage%2CRect%2Cfloat32%2Cfloat32%2Cfloat32%2Cfloat32%2CSomeColor%2Cfloat">pixie: strokeRoundedRect(image: Image; rect: Rect; nw, ne, se, sw: float32;
+                  color: SomeColor; strokeWidth = 1.0)</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="pixie: strokeRoundedRect(image: Image; rect: Rect; radius: float32; color: SomeColor;
+                  strokeWidth = 1.0)" href="pixie.html#strokeRoundedRect%2CImage%2CRect%2Cfloat32%2CSomeColor%2Cfloat">pixie: strokeRoundedRect(image: Image; rect: Rect; radius: float32; color: SomeColor;
+                  strokeWidth = 1.0)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="pixie: strokeRoundedRect(mask: Mask; rect: Rect; radius: float32; strokeWidth = 1.0)" href="pixie.html#strokeRoundedRect%2CMask%2CRect%2Cfloat32%2Cfloat">pixie: strokeRoundedRect(mask: Mask; rect: Rect; radius: float32; strokeWidth = 1.0)</a></li>
           <li><a class="reference external"
@@ -850,8 +870,8 @@ function main() {
           </ul></dd>
 <dt><a name="strokeSegment" href="#strokeSegment"><span>strokeSegment:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="pixie: strokeSegment(image: Image; segment: Segment; color: ColorRGBA;
-              strokeWidth = 1.0)" href="pixie.html#strokeSegment%2CImage%2CSegment%2CColorRGBA%2Cfloat">pixie: strokeSegment(image: Image; segment: Segment; color: ColorRGBA;
+          data-doc-search-tag="pixie: strokeSegment(image: Image; segment: Segment; color: SomeColor;
+              strokeWidth = 1.0)" href="pixie.html#strokeSegment%2CImage%2CSegment%2CSomeColor%2Cfloat">pixie: strokeSegment(image: Image; segment: Segment; color: SomeColor;
               strokeWidth = 1.0)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="pixie: strokeSegment(mask: Mask; segment: Segment; strokeWidth: float32)" href="pixie.html#strokeSegment%2CMask%2CSegment%2Cfloat32">pixie: strokeSegment(mask: Mask; segment: Segment; strokeWidth: float32)</a></li>
@@ -925,7 +945,7 @@ function main() {
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-28 07:11:38 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2021-03-12 03:47:40 UTC</small>
       </div>
     </div>
   </div>
