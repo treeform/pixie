@@ -18,7 +18,7 @@ converter autoPremultipliedAlpha*(c: ColorRGBA): ColorRGBX {.inline.} =
   c.rgbx()
 
 converter autoRGBA*(c: Color): ColorRGBA {.inline.} =
-  ## Convert a straight alpha RGBA to a premultiplied alpha RGBA.
+  ## Convert a color to RGBA to make it easier to user colors.
   c.rgba()
 
 proc decodeImage*(data: string | seq[uint8]): Image =
