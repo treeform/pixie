@@ -51,10 +51,12 @@ proc tick*() =
 proc start*(title = "Demo") =
   ## Start the demo.
   if init() == 0:
-    quit("Failed to Initialize GLFW")
+    quit("Failed to Initialize GLFW.")
 
   windowHint(RESIZABLE, false.cint)
   window = createWindow(screen.width.cint, screen.height.cint, title, nil, nil)
+  if window == nil:
+    quit("Failed to create window.")
   makeContextCurrent(window)
   loadExtensions()
 
