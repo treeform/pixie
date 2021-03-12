@@ -22,7 +22,7 @@ proc isKeyDown*(keyCode: int): bool =
   getKey(window, keyCode.cint) == PRESS
 
 proc tick*() =
-  ## Called every frame by main while loop.
+  ## Called this every frame in a while loop.
 
   # Update texture with new pixels from surface.
   var dataPtr = screen.data[0].addr
