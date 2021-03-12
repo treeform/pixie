@@ -17,10 +17,6 @@ converter autoPremultipliedAlpha*(c: ColorRGBA): ColorRGBX {.inline.} =
   ## Convert a straight alpha RGBA to a premultiplied alpha RGBA.
   c.rgbx()
 
-converter autoRGBA*(c: Color): ColorRGBA {.inline.} =
-  ## Convert a color to RGBA to make it easier to user colors.
-  c.rgba()
-
 proc decodeImage*(data: string | seq[uint8]): Image =
   ## Loads an image from a memory.
   if data.len > 8 and data.readUint64(0) == cast[uint64](pngSignature):
