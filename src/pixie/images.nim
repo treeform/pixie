@@ -56,30 +56,32 @@ proc `[]`*(image: Image, x, y: int): ColorRGBX {.inline.} =
   if image.inside(x, y):
     return image.getRgbaUnsafe(x, y)
 
-proc setRgbaUnsafe*(image: Image, x, y: int, rgba: ColorRGBX) {.inline.} =
+proc setRgbaUnsafe*(image: Image, x, y: int, color: SomeColor) {.inline.} =
   ## Sets a color from (x, y) coordinates.
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will case unsafe memory writes.
-  image.data[image.dataIndex(x, y)] = rgba
+  image.data[image.dataIndex(x, y)] = color.asRgbx()
 
-proc `[]=`*(image: Image, x, y: int, rgba: ColorRGBX) {.inline.} =
+proc `[]=`*(image: Image, x, y: int, color: SomeColor) {.inline.} =
   ## Sets a pixel at (x, y) or does nothing if outside of bounds.
   if image.inside(x, y):
-    image.setRgbaUnsafe(x, y, rgba)
+    image.setRgbaUnsafe(x, y, color.asRgbx())
 
-proc fillUnsafe*(data: var seq[ColorRGBX], rgba: ColorRGBX, start, len: int) =
+proc fillUnsafe*(data: var seq[ColorRGBX], color: SomeColor, start, len: int) =
   ## Fills the image data with the parameter color starting at index start and
   ## continuing for len indices.
 
+  let rgbx = color.asRgbx()
+
   # Use memset when every byte has the same value
-  if rgba.r == rgba.g and rgba.r == rgba.b and rgba.r == rgba.a:
-    nimSetMem(data[start].addr, rgba.r.cint, len * 4)
+  if rgbx.r == rgbx.g and rgbx.r == rgbx.b and rgbx.r == rgbx.a:
+    nimSetMem(data[start].addr, rgbx.r.cint, len * 4)
   else:
     var i = start
     when defined(amd64) and not defined(pixieNoSimd):
       # When supported, SIMD fill until we run out of room
-      let m = mm_set1_epi32(cast[int32](rgba))
+      let m = mm_set1_epi32(cast[int32](rgbx))
       for j in countup(i, start + len - 8, 8):
         mm_storeu_si128(data[j].addr, m)
         mm_storeu_si128(data[j + 4].addr, m)
@@ -88,18 +90,18 @@ proc fillUnsafe*(data: var seq[ColorRGBX], rgba: ColorRGBX, start, len: int) =
       when sizeof(int) == 8:
         # Fill 8 bytes at a time when possible
         let
-          u32 = cast[uint32](rgba)
+          u32 = cast[uint32](rgbx)
           u64 = cast[uint64]([u32, u32])
         for j in countup(i, start + len - 2, 2):
           cast[ptr uint64](data[j].addr)[] = u64
           i += 2
     # Fill whatever is left the slow way
     for j in i ..< start + len:
-      data[j] = rgba
+      data[j] = rgbx
 
-proc fill*(image: Image, rgba: ColorRGBX) {.inline.} =
+proc fill*(image: Image, color: SomeColor) {.inline.} =
   ## Fills the image with the parameter color.
-  fillUnsafe(image.data, rgba, 0, image.data.len)
+  fillUnsafe(image.data, color, 0, image.data.len)
 
 proc flipHorizontal*(image: Image) =
   ## Flips the image around the Y axis.
@@ -347,13 +349,17 @@ proc invert*(target: Image | Mask) =
     for j in i ..< target.data.len:
       target.data[j] = (255 - target.data[j]).uint8
 
-proc blur*(image: Image, radius: float32, outOfBounds = ColorRGBX()) =
+proc blur*(
+  image: Image, radius: float32, outOfBounds: SomeColor = ColorRGBX()
+) =
   ## Applies Gaussian blur to the image given a radius.
   let radius = round(radius).int
   if radius == 0:
     return
 
-  let kernel = gaussianKernel(radius)
+  let
+    kernel = gaussianKernel(radius)
+    outOfBounds = outOfBounds.asRgbx()
 
   proc `*`(sample: ColorRGBX, a: uint32): array[4, uint32] {.inline.} =
     [
@@ -794,7 +800,7 @@ proc shift*(target: Image | Mask, offset: Vec2) =
     target.draw(copy, offset, bmOverwrite) # Draw copy at offset
 
 proc shadow*(
-  image: Image, offset: Vec2, spread, blur: float32, color: ColorRGBX
+  image: Image, offset: Vec2, spread, blur: float32, color: SomeColor
 ): Image =
   ## Create a shadow of the image with the offset, spread and blur.
   let mask = image.newMask()
