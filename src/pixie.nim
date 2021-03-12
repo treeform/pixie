@@ -63,7 +63,7 @@ proc writeFile*(image: Image, filePath: string) =
       raise newException(PixieError, "Unsupported image file extension")
   image.writeFile(filePath, fileformat)
 
-proc fillRect*(image: Image, rect: Rect, color: ColorRGBA) =
+proc fillRect*(image: Image, rect: Rect, color: SomeColor) =
   ## Fills a rectangle.
   var path: Path
   path.rect(rect)
@@ -76,7 +76,7 @@ proc fillRect*(mask: Mask, rect: Rect) =
   mask.fillPath(path)
 
 proc strokeRect*(
-  image: Image, rect: Rect, color: ColorRGBA, strokeWidth = 1.0
+  image: Image, rect: Rect, color: SomeColor, strokeWidth = 1.0
 ) =
   ## Strokes a rectangle.
   var path: Path
@@ -93,7 +93,7 @@ proc fillRoundedRect*(
   image: Image,
   rect: Rect,
   nw, ne, se, sw: float32,
-  color: ColorRGBA
+  color: SomeColor
 ) =
   ## Fills a rounded rectangle.
   var path: Path
@@ -104,7 +104,7 @@ proc fillRoundedRect*(
   image: Image,
   rect: Rect,
   radius: float32,
-  color: ColorRGBA
+  color: SomeColor
 ) =
   ## Fills a rounded rectangle.
   var path: Path
@@ -127,7 +127,7 @@ proc strokeRoundedRect*(
   image: Image,
   rect: Rect,
   nw, ne, se, sw: float32,
-  color: ColorRGBA,
+  color: SomeColor,
   strokeWidth = 1.0
 ) =
   ## Strokes a rounded rectangle.
@@ -139,7 +139,7 @@ proc strokeRoundedRect*(
   image: Image,
   rect: Rect,
   radius: float32,
-  color: ColorRGBA,
+  color: SomeColor,
   strokeWidth = 1.0
 ) =
   ## Strokes a rounded rectangle.
@@ -166,7 +166,7 @@ proc strokeRoundedRect*(
 proc strokeSegment*(
   image: Image,
   segment: Segment,
-  color: ColorRGBA,
+  color: SomeColor,
   strokeWidth = 1.0
 ) =
   ## Strokes a segment (draws a line from segment.at to segment.to).
@@ -186,7 +186,7 @@ proc fillEllipse*(
   image: Image,
   center: Vec2,
   rx, ry: float32,
-  color: ColorRGBA,
+  color: SomeColor,
   blendMode = bmNormal
 ) =
   ## Fills an ellipse.
@@ -208,7 +208,7 @@ proc strokeEllipse*(
   image: Image,
   center: Vec2,
   rx, ry: float32,
-  color: ColorRGBA,
+  color: SomeColor,
   strokeWidth = 1.0
 ) =
   ## Strokes an ellipse.
@@ -231,7 +231,7 @@ proc fillCircle*(
   image: Image,
   center: Vec2,
   radius: float32,
-  color: ColorRGBA
+  color: SomeColor
 ) =
   ## Fills a circle.
   var path: Path
@@ -252,7 +252,7 @@ proc strokeCircle*(
   image: Image,
   center: Vec2,
   radius: float32,
-  color: ColorRGBA,
+  color: SomeColor,
   strokeWidth = 1.0
 ) =
   ## Strokes a circle.
@@ -276,7 +276,7 @@ proc fillPolygon*(
   pos: Vec2,
   size: float32,
   sides: int,
-  color: ColorRGBA
+  color: SomeColor
 ) =
   ## Fills a polygon.
   var path: Path
@@ -294,7 +294,7 @@ proc strokePolygon*(
   pos: Vec2,
   size: float32,
   sides: int,
-  color: ColorRGBA,
+  color: SomeColor,
   strokeWidth = 1.0
 ) =
   ## Strokes a polygon.

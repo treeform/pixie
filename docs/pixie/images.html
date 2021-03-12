@@ -145,8 +145,8 @@ function main() {
 
   </ul>
   <ul class="simple nested-toc-section">setRgbaUnsafe
-      <li><a class="reference" href="#setRgbaUnsafe%2CImage%2Cint%2Cint%2CColorRGBX"
-    title="setRgbaUnsafe(image: Image; x, y: int; rgba: ColorRGBX)">setRgbaUnsafe,<wbr>Image,<wbr>int,<wbr>int,<wbr>ColorRGBX</a></li>
+      <li><a class="reference" href="#setRgbaUnsafe%2CImage%2Cint%2Cint%2CSomeColor"
+    title="setRgbaUnsafe(image: Image; x, y: int; color: SomeColor)">setRgbaUnsafe,<wbr>Image,<wbr>int,<wbr>int,<wbr>SomeColor</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">shift
@@ -155,8 +155,8 @@ function main() {
 
   </ul>
   <ul class="simple nested-toc-section">[]=
-      <li><a class="reference" href="#%5B%5D%3D%2CImage%2Cint%2Cint%2CColorRGBX"
-    title="`[]=`(image: Image; x, y: int; rgba: ColorRGBX)">[]=,<wbr>Image,<wbr>int,<wbr>int,<wbr>ColorRGBX</a></li>
+      <li><a class="reference" href="#%5B%5D%3D%2CImage%2Cint%2Cint%2CSomeColor"
+    title="`[]=`(image: Image; x, y: int; color: SomeColor)">[]=,<wbr>Image,<wbr>int,<wbr>int,<wbr>SomeColor</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">invert
@@ -175,8 +175,8 @@ function main() {
 
   </ul>
   <ul class="simple nested-toc-section">fill
-      <li><a class="reference" href="#fill%2CImage%2CColorRGBX"
-    title="fill(image: Image; rgba: ColorRGBX)">fill,<wbr>Image,<wbr>ColorRGBX</a></li>
+      <li><a class="reference" href="#fill%2CImage%2CSomeColor"
+    title="fill(image: Image; color: SomeColor)">fill,<wbr>Image,<wbr>SomeColor</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">wh
@@ -200,8 +200,8 @@ function main() {
 
   </ul>
   <ul class="simple nested-toc-section">shadow
-      <li><a class="reference" href="#shadow%2CImage%2CVec2%2Cfloat32%2Cfloat32%2CColorRGBX"
-    title="shadow(image: Image; offset: Vec2; spread, blur: float32; color: ColorRGBX): Image">shadow,<wbr>Image,<wbr>Vec2,<wbr>float32,<wbr>float32,<wbr>ColorRGBX</a></li>
+      <li><a class="reference" href="#shadow%2CImage%2CVec2%2Cfloat32%2Cfloat32%2CSomeColor"
+    title="shadow(image: Image; offset: Vec2; spread, blur: float32; color: SomeColor): Image">shadow,<wbr>Image,<wbr>Vec2,<wbr>float32,<wbr>float32,<wbr>SomeColor</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">newMask
@@ -235,8 +235,8 @@ function main() {
 
   </ul>
   <ul class="simple nested-toc-section">blur
-      <li><a class="reference" href="#blur%2CImage%2Cfloat32"
-    title="blur(image: Image; radius: float32; outOfBounds = ColorRGBX())">blur,<wbr>Image,<wbr>float32</a></li>
+      <li><a class="reference" href="#blur%2CImage%2Cfloat32%2CSomeColor"
+    title="blur(image: Image; radius: float32; outOfBounds: SomeColor = ColorRGBX())">blur,<wbr>Image,<wbr>float32,<wbr>SomeColor</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">dataIndex
@@ -265,8 +265,8 @@ function main() {
 
   </ul>
   <ul class="simple nested-toc-section">fillUnsafe
-      <li><a class="reference" href="#fillUnsafe%2Cseq%5BColorRGBX%5D%2CColorRGBX%2Cint%2Cint"
-    title="fillUnsafe(data: var seq[ColorRGBX]; rgba: ColorRGBX; start, len: int)">fillUnsafe,<wbr>seq[ColorRGBX],<wbr>ColorRGBX,<wbr>int,<wbr>int</a></li>
+      <li><a class="reference" href="#fillUnsafe%2Cseq%5BColorRGBX%5D%2CSomeColor%2Cint%2Cint"
+    title="fillUnsafe(data: var seq[ColorRGBX]; color: SomeColor; start, len: int)">fillUnsafe,<wbr>seq[ColorRGBX],<wbr>SomeColor,<wbr>int,<wbr>int</a></li>
 
   </ul>
 
@@ -363,9 +363,8 @@ Gets a color from (x, y) coordinates.<ul class="simple"><li>No bounds checking *
 Gets a pixel at (x, y) or returns transparent black if outside of bounds.
 
 </dd>
-<a id="setRgbaUnsafe,Image,int,int,ColorRGBX"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#setRgbaUnsafe%2CImage%2Cint%2Cint%2CColorRGBX"><span class="Identifier">setRgbaUnsafe</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">x</span><span class="Other">,</span> <span class="Identifier">y</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">;</span> <span class="Identifier">rgba</span><span class="Other">:</span> <span class="Identifier">ColorRGBX</span><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span>
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="setRgbaUnsafe,Image,int,int,SomeColor"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#setRgbaUnsafe%2CImage%2Cint%2Cint%2CSomeColor"><span class="Identifier">setRgbaUnsafe</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">x</span><span class="Other">,</span> <span class="Identifier">y</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">;</span> <span class="Identifier">color</span><span class="Other">:</span> <span class="Identifier">SomeColor</span><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 Sets a color from (x, y) coordinates.<ul class="simple"><li>No bounds checking *</li>
@@ -374,24 +373,22 @@ Sets a color from (x, y) coordinates.<ul class="simple"><li>No bounds checking *
 
 
 </dd>
-<a id="[]=,Image,int,int,ColorRGBX"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#%5B%5D%3D%2CImage%2Cint%2Cint%2CColorRGBX"><span class="Identifier">`[]=`</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">x</span><span class="Other">,</span> <span class="Identifier">y</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">;</span> <span class="Identifier">rgba</span><span class="Other">:</span> <span class="Identifier">ColorRGBX</span><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="[]=,Image,int,int,SomeColor"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#%5B%5D%3D%2CImage%2Cint%2Cint%2CSomeColor"><span class="Identifier">`[]=`</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">x</span><span class="Other">,</span> <span class="Identifier">y</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">;</span> <span class="Identifier">color</span><span class="Other">:</span> <span class="Identifier">SomeColor</span><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 Sets a pixel at (x, y) or does nothing if outside of bounds.
 
 </dd>
-<a id="fillUnsafe,seq[ColorRGBX],ColorRGBX,int,int"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#fillUnsafe%2Cseq%5BColorRGBX%5D%2CColorRGBX%2Cint%2Cint"><span class="Identifier">fillUnsafe</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">ColorRGBX</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">rgba</span><span class="Other">:</span> <span class="Identifier">ColorRGBX</span><span class="Other">;</span> <span class="Identifier">start</span><span class="Other">,</span> <span class="Identifier">len</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="fillUnsafe,seq[ColorRGBX],SomeColor,int,int"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#fillUnsafe%2Cseq%5BColorRGBX%5D%2CSomeColor%2Cint%2Cint"><span class="Identifier">fillUnsafe</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Keyword">var</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">ColorRGBX</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">color</span><span class="Other">:</span> <span class="Identifier">SomeColor</span><span class="Other">;</span> <span class="Identifier">start</span><span class="Other">,</span> <span class="Identifier">len</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span></pre></dt>
 <dd>
 
 Fills the image data with the parameter color starting at index start and continuing for len indices.
 
 </dd>
-<a id="fill,Image,ColorRGBX"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#fill%2CImage%2CColorRGBX"><span class="Identifier">fill</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">rgba</span><span class="Other">:</span> <span class="Identifier">ColorRGBX</span><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="fill,Image,SomeColor"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#fill%2CImage%2CSomeColor"><span class="Identifier">fill</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">color</span><span class="Other">:</span> <span class="Identifier">SomeColor</span><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 
 Fills the image with the parameter color.
@@ -463,9 +460,8 @@ Multiplies alpha of the image by opacity.
 Inverts all of the colors and alpha.
 
 </dd>
-<a id="blur,Image,float32"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#blur%2CImage%2Cfloat32"><span class="Identifier">blur</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">radius</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">;</span> <span class="Identifier">outOfBounds</span> <span class="Other">=</span> <span class="Identifier">ColorRGBX</span><span class="Other">(</span><span class="Other">)</span><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">PixieError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="blur,Image,float32,SomeColor"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#blur%2CImage%2Cfloat32%2CSomeColor"><span class="Identifier">blur</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">radius</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">;</span> <span class="Identifier">outOfBounds</span><span class="Other">:</span> <span class="Identifier">SomeColor</span> <span class="Other">=</span> <span class="Identifier">ColorRGBX</span><span class="Other">(</span><span class="Other">)</span><span class="Other">)</span></pre></dt>
 <dd>
 
 Applies Gaussian blur to the image given a radius.
@@ -573,9 +569,8 @@ Resize an image to a given hight and width.
 Shifts the target by offset.
 
 </dd>
-<a id="shadow,Image,Vec2,float32,float32,ColorRGBX"></a>
-<dt><pre><span class="Keyword">proc</span> <a href="#shadow%2CImage%2CVec2%2Cfloat32%2Cfloat32%2CColorRGBX"><span class="Identifier">shadow</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">offset</span><span class="Other">:</span> <span class="Identifier">Vec2</span><span class="Other">;</span> <span class="Identifier">spread</span><span class="Other">,</span> <span class="Identifier">blur</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">;</span> <span class="Identifier">color</span><span class="Other">:</span> <span class="Identifier">ColorRGBX</span><span class="Other">)</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma">
-    <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">PixieError</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<a id="shadow,Image,Vec2,float32,float32,SomeColor"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#shadow%2CImage%2CVec2%2Cfloat32%2Cfloat32%2CSomeColor"><span class="Identifier">shadow</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">offset</span><span class="Other">:</span> <span class="Identifier">Vec2</span><span class="Other">;</span> <span class="Identifier">spread</span><span class="Other">,</span> <span class="Identifier">blur</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">;</span> <span class="Identifier">color</span><span class="Other">:</span> <span class="Identifier">SomeColor</span><span class="Other">)</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a></pre></dt>
 <dd>
 
 Create a shadow of the image with the offset, spread and blur.
@@ -591,7 +586,7 @@ Create a shadow of the image with the offset, spread and blur.
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-02-28 07:11:38 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2021-03-12 03:47:39 UTC</small>
       </div>
     </div>
   </div>

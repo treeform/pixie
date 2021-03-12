@@ -1105,11 +1105,12 @@ template computeCoverages(
 proc fillShapes(
   image: Image,
   shapes: seq[seq[Vec2]],
-  color: ColorRGBX,
+  color: SomeColor,
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
   let
+    rgbx = color.asRgbx()
     partitions = partitionSegments(shapes, image.height)
     partitionHeight = image.height.uint32 div partitions.len.uint32
 
@@ -1128,7 +1129,7 @@ proc fillShapes(
       first32 = cast[M128i]([uint32.high, 0, 0, 0]) # First 32 bits
       oddMask = mm_set1_epi16(cast[int16](0xff00))
       div255 = mm_set1_epi16(cast[int16](0x8081))
-      vColor = mm_set1_epi32(cast[int32](color))
+      vColor = mm_set1_epi32(cast[int32](rgbx))
 
   var
     coverages = newSeq[uint8](image.width)
@@ -1160,7 +1161,7 @@ proc fillShapes(
           # If the coverages are not all zero
           if mm_movemask_epi8(mm_cmpeq_epi32(coverage, first32)) == 0xffff:
             # Coverages are all 255
-            if color.a == 255 and blendMode == bmNormal:
+            if rgbx.a == 255 and blendMode == bmNormal:
               mm_storeu_si128(image.data[index].addr, vColor)
             else:
               let backdrop = mm_loadu_si128(image.data[index].addr)
@@ -1203,12 +1204,12 @@ proc fillShapes(
 
       let coverage = coverages[x]
       if coverage != 0:
-        var source = color
+        var source = rgbx
         if coverage != 255:
-          source.r = ((color.r.uint32 * coverage) div 255).uint8
-          source.g = ((color.g.uint32 * coverage) div 255).uint8
-          source.b = ((color.b.uint32 * coverage) div 255).uint8
-          source.a = ((color.a.uint32 * coverage) div 255).uint8
+          source.r = ((source.r.uint32 * coverage) div 255).uint8
+          source.g = ((source.g.uint32 * coverage) div 255).uint8
+          source.b = ((source.b.uint32 * coverage) div 255).uint8
+          source.a = ((source.a.uint32 * coverage) div 255).uint8
 
         if source.a == 255 and blendMode == bmNormal:
           # Skip blending
@@ -1418,7 +1419,7 @@ proc parseSomePath(
 proc fillPath*(
   image: Image,
   path: SomePath,
-  color: ColorRGBX,
+  color: SomeColor,
   windingRule = wrNonZero,
   blendMode = bmNormal
 ) {.inline.} =
@@ -1428,7 +1429,7 @@ proc fillPath*(
 proc fillPath*(
   image: Image,
   path: SomePath,
-  color: ColorRGBX,
+  color: SomeColor,
   transform: Vec2 | Mat3,
   windingRule = wrNonZero,
   blendMode = bmNormal
@@ -1526,7 +1527,7 @@ proc fillPath*(
 proc strokePath*(
   image: Image,
   path: SomePath,
-  color: ColorRGBX,
+  color: SomeColor,
   strokeWidth = 1.0,
   lineCap = lcButt,
   lineJoin = ljMiter,
@@ -1541,7 +1542,7 @@ proc strokePath*(
 proc strokePath*(
   image: Image,
   path: SomePath,
-  color: ColorRGBX,
+  color: SomeColor,
   transform: Vec2 | Mat3,
   strokeWidth = 1.0,
   lineCap = lcButt,

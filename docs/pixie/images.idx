@@ -7,10 +7,10 @@ inside	pixie/images.html#inside,Image,int,int	images: inside(image: Image; x, y:
 dataIndex	pixie/images.html#dataIndex,Image,int,int	images: dataIndex(image: Image; x, y: int): int	
 getRgbaUnsafe	pixie/images.html#getRgbaUnsafe,Image,int,int	images: getRgbaUnsafe(image: Image; x, y: int): ColorRGBX	
 `[]`	pixie/images.html#[],Image,int,int	images: `[]`(image: Image; x, y: int): ColorRGBX	
-setRgbaUnsafe	pixie/images.html#setRgbaUnsafe,Image,int,int,ColorRGBX	images: setRgbaUnsafe(image: Image; x, y: int; rgba: ColorRGBX)	
-`[]=`	pixie/images.html#[]=,Image,int,int,ColorRGBX	images: `[]=`(image: Image; x, y: int; rgba: ColorRGBX)	
-fillUnsafe	pixie/images.html#fillUnsafe,seq[ColorRGBX],ColorRGBX,int,int	images: fillUnsafe(data: var seq[ColorRGBX]; rgba: ColorRGBX; start, len: int)	
-fill	pixie/images.html#fill,Image,ColorRGBX	images: fill(image: Image; rgba: ColorRGBX)	
+setRgbaUnsafe	pixie/images.html#setRgbaUnsafe,Image,int,int,SomeColor	images: setRgbaUnsafe(image: Image; x, y: int; color: SomeColor)	
+`[]=`	pixie/images.html#[]=,Image,int,int,SomeColor	images: `[]=`(image: Image; x, y: int; color: SomeColor)	
+fillUnsafe	pixie/images.html#fillUnsafe,seq[ColorRGBX],SomeColor,int,int	images: fillUnsafe(data: var seq[ColorRGBX]; color: SomeColor; start, len: int)	
+fill	pixie/images.html#fill,Image,SomeColor	images: fill(image: Image; color: SomeColor)	
 flipHorizontal	pixie/images.html#flipHorizontal,Image	images: flipHorizontal(image: Image)	
 flipVertical	pixie/images.html#flipVertical,Image	images: flipVertical(image: Image)	
 subImage	pixie/images.html#subImage,Image,int,int,int,int	images: subImage(image: Image; x, y, w, h: int): Image	
@@ -20,7 +20,7 @@ minifyBy2	pixie/images.html#minifyBy2,Image,int	images: minifyBy2(image: Image; 
 magnifyBy2	pixie/images.html#magnifyBy2,Image,int	images: magnifyBy2(image: Image; power = 1): Image	
 applyOpacity	pixie/images.html#applyOpacity,,float32	images: applyOpacity(target: Image | Mask; opacity: float32)	
 invert	pixie/images.html#invert	images: invert(target: Image | Mask)	
-blur	pixie/images.html#blur,Image,float32	images: blur(image: Image; radius: float32; outOfBounds = ColorRGBX())	
+blur	pixie/images.html#blur,Image,float32,SomeColor	images: blur(image: Image; radius: float32; outOfBounds: SomeColor = ColorRGBX())	
 newMask	pixie/images.html#newMask,Image	images: newMask(image: Image): Mask	
 getRgbaSmooth	pixie/images.html#getRgbaSmooth,Image,float32,float32	images: getRgbaSmooth(image: Image; x, y: float32; wrapped = false): ColorRGBX	
 draw	pixie/images.html#draw,Image,Image,Mat3	images: draw(a, b: Image; mat: Mat3; blendMode = bmNormal)	
@@ -34,4 +34,4 @@ draw	pixie/images.html#draw,Mask,Image	images: draw(mask: Mask; image: Image; po
 drawTiled	pixie/images.html#drawTiled,Image,Image,Mat3	images: drawTiled(dest, src: Image; mat: Mat3; blendMode = bmNormal)	
 resize	pixie/images.html#resize,Image,int,int	images: resize(srcImage: Image; width, height: int): Image	
 shift	pixie/images.html#shift,,Vec2	images: shift(target: Image | Mask; offset: Vec2)	
-shadow	pixie/images.html#shadow,Image,Vec2,float32,float32,ColorRGBX	images: shadow(image: Image; offset: Vec2; spread, blur: float32; color: ColorRGBX): Image	
+shadow	pixie/images.html#shadow,Image,Vec2,float32,float32,SomeColor	images: shadow(image: Image; offset: Vec2; spread, blur: float32; color: SomeColor): Image	
