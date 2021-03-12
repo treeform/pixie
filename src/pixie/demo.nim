@@ -1,5 +1,7 @@
-import staticglfw, opengl, pixie
-export pixie, staticglfw
+import staticglfw except Image
+import opengl, pixie
+export pixie
+export staticglfw except Image
 
 var
   screen* = newImage(800, 600)
