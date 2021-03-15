@@ -258,7 +258,7 @@ proc strokeCircle*(
   ## Strokes a circle.
   var path: Path
   path.ellipse(center, radius, radius)
-  image.fillPath(path, color)
+  image.strokePath(path, color, strokeWidth)
 
 proc strokeCircle*(
   mask: Mask,
