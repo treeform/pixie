@@ -163,12 +163,12 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
         if arr.len != 6:
           failInvalidTransform(transform)
         var m = mat3()
-        m[0] = parseFloat(arr[0].strip())
-        m[1] = parseFloat(arr[1].strip())
-        m[3] = parseFloat(arr[2].strip())
-        m[4] = parseFloat(arr[3].strip())
-        m[6] = parseFloat(arr[4].strip())
-        m[7] = parseFloat(arr[5].strip())
+        m[0, 0] = parseFloat(arr[0].strip())
+        m[0, 1] = parseFloat(arr[1].strip())
+        m[1, 0] = parseFloat(arr[2].strip())
+        m[1, 1] = parseFloat(arr[3].strip())
+        m[2, 0] = parseFloat(arr[4].strip())
+        m[2, 1] = parseFloat(arr[5].strip())
         result.transform = result.transform * m
       elif f.startsWith("translate("):
         let
@@ -183,7 +183,7 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
       elif f.startsWith("rotate("):
         let
           values = f[7 .. ^2].split(" ")
-          angle = parseFloat(values[0].strip()) * -PI / 180
+          angle: float32 = parseFloat(values[0].strip()) * -PI / 180
         var cx, cy: float32
         if values.len > 1:
           cx = parseFloat(values[1].strip())
@@ -191,7 +191,7 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
           cy = parseFloat(values[2].strip())
         let center = vec2(cx, cy)
         result.transform = result.transform *
-          translate(center) * rotationMat3(angle) * translate(-center)
+          translate(center) * rotate(angle) * translate(-center)
       else:
         failInvalidTransform(transform)
 

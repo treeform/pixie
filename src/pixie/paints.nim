@@ -84,7 +84,7 @@ proc fillRadialGradient*(
     gradientAngle = normalize(center - edge).angle().fixAngle()
     mat = (
       translate(center) *
-      rotationMat3(-gradientAngle) *
+      rotate(-gradientAngle) *
       scale(vec2(distanceX, distanceY))
     ).inverse()
   for y in 0 ..< image.height:

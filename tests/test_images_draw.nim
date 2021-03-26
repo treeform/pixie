@@ -17,7 +17,7 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   b.fill(rgba(0, 255, 0, 255))
 
-  a.draw(b, translate(vec2(250, 250)) * rotationMat3(90 * PI / 180))
+  a.draw(b, translate(vec2(250, 250)) * rotate(90 * PI.float32 / 180))
   a.writeFile("tests/images/rotate90.png")
 
 block:
@@ -27,7 +27,7 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   b.fill(rgba(0, 255, 0, 255))
 
-  a.draw(b, translate(vec2(250, 250)) * rotationMat3(180 * PI / 180))
+  a.draw(b, translate(vec2(250, 250)) * rotate(180 * PI.float32 / 180))
   a.writeFile("tests/images/rotate180.png")
 
 block:
@@ -37,7 +37,7 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   b.fill(rgba(0, 255, 0, 255))
 
-  a.draw(b, translate(vec2(250, 250)) * rotationMat3(270 * PI / 180))
+  a.draw(b, translate(vec2(250, 250)) * rotate(270 * PI.float32 / 180))
   a.writeFile("tests/images/rotate270.png")
 
 block:
@@ -47,7 +47,7 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   b.fill(rgba(0, 255, 0, 255))
 
-  a.draw(b, translate(vec2(250, 250)) * rotationMat3(360 * PI / 180))
+  a.draw(b, translate(vec2(250, 250)) * rotate(360 * PI.float32 / 180))
   a.writeFile("tests/images/rotate360.png")
 
 block:

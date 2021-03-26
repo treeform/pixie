@@ -151,6 +151,11 @@ function main() {
     title="`$`(path: Path): string">$,<wbr>Path</a></li>
 
   </ul>
+  <ul class="simple nested-toc-section">circle
+      <li><a class="reference" href="#circle%2CPath%2CVec2%2Cfloat32"
+    title="circle(path: var Path; center: Vec2; r: float32)">circle,<wbr>Path,<wbr>Vec2,<wbr>float32</a></li>
+
+  </ul>
   <ul class="simple nested-toc-section">strokePath
       <li><a class="reference" href="#strokePath%2CImage%2CSomePath%2CSomeColor%2Cfloat"
     title="strokePath(image: Image; path: SomePath; color: SomeColor; strokeWidth = 1.0;
@@ -267,14 +272,6 @@ function main() {
     title="fillPath(image: Image; path: SomePath; paint: Paint; windingRule = wrNonZero)">fillPath,<wbr>Image,<wbr>SomePath,<wbr>Paint</a></li>
 
   </ul>
-
-  </ul>
-</li>
-<li>
-  <a class="reference reference-toplevel" href="#15" id="65">Iterators</a>
-  <ul class="simple simple-toc-section">
-      <li><a class="reference" href="#segments.i%2Cseq%5BVec2%5D"
-    title="segments(s: seq[Vec2]): Segment">segments</a></li>
 
   </ul>
 </li>
@@ -542,6 +539,14 @@ Adds a ellipse.
 Adds a ellipse.
 
 </dd>
+<a id="circle,Path,Vec2,float32"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#circle%2CPath%2CVec2%2Cfloat32"><span class="Identifier">circle</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="paths.html#Path"><span class="Identifier">Path</span></a><span class="Other">;</span> <span class="Identifier">center</span><span class="Other">:</span> <span class="Identifier">Vec2</span><span class="Other">;</span> <span class="Identifier">r</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">inline</span><span class="Other">,</span> <span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+Adds a circle.
+
+</dd>
 <a id="polygon,Path,float32,float32,float32,int"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#polygon%2CPath%2Cfloat32%2Cfloat32%2Cfloat32%2Cint"><span class="Identifier">polygon</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="paths.html#Path"><span class="Identifier">Path</span></a><span class="Other">;</span> <span class="Identifier">x</span><span class="Other">,</span> <span class="Identifier">y</span><span class="Other">,</span> <span class="Identifier">size</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">;</span> <span class="Identifier">sides</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
@@ -642,18 +647,6 @@ Strokes a path.
 </dd>
 
 </dl></div>
-<div class="section" id="15">
-<h1><a class="toc-backref" href="#15">Iterators</a></h1>
-<dl class="item">
-<a id="segments.i,seq[Vec2]"></a>
-<dt><pre><span class="Keyword">iterator</span> <a href="#segments.i%2Cseq%5BVec2%5D"><span class="Identifier">segments</span></a><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec2</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Segment</span> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
-<dd>
-
-Return elements in pairs: (1st, 2nd), (2nd, 3rd) ... (n - 1, last).
-
-</dd>
-
-</dl></div>
 
   </div>
 </div>
@@ -662,7 +655,7 @@ Return elements in pairs: (1st, 2nd), (2nd, 3rd) ... (n - 1, last).
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-03-12 03:47:39 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2021-03-26 21:09:25 UTC</small>
       </div>
     </div>
   </div>

@@ -543,6 +543,10 @@ proc ellipse*(path: var Path, center: Vec2, rx, ry: float32) {.inline.} =
   ## Adds a ellipse.
   path.ellipse(center.x, center.y, rx, ry)
 
+proc circle*(path: var Path, center: Vec2, r: float32) {.inline.} =
+  ## Adds a circle.
+  path.ellipse(center.x, center.y, r, r)
+
 proc polygon*(path: var Path, x, y, size: float32, sides: int) =
   ## Draws an n-sided regular polygon at (x, y) with the parameter size.
   path.moveTo(x + size * cos(0.0), y + size * sin(0.0))
@@ -658,7 +662,7 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
         radiiSq = vec2(radii.x * radii.x, radii.y * radii.y)
 
       let
-        radians = rotation / 180 * PI
+        radians: float32 = rotation / 180 * PI
         d = vec2((at.x - to.x) / 2.0, (at.y - to.y) / 2.0)
         p = vec2(
           cos(radians) * d.x + sin(radians) * d.y,
@@ -714,7 +718,7 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
 
       ArcParams(
         radii: radii,
-        rotMat: rotationMat3(-radians),
+        rotMat: rotate(-radians),
         center: center,
         theta: theta,
         delta: delta
@@ -789,7 +793,7 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
         ctrl2 = vec2(command.numbers[0], command.numbers[1])
         to = vec2(command.numbers[2], command.numbers[3])
       if prevCommandKind in {Cubic, SCubic, RCubic, RSCubic}:
-        let ctrl1 = 2 * at - prevCtrl2
+        let ctrl1 = at * 2 - prevCtrl2
         shape.addCubic(at, ctrl1, ctrl2, to)
       else:
         shape.addCubic(at, at, ctrl2, to)
@@ -809,7 +813,7 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
         to = vec2(command.numbers[0], command.numbers[1])
         ctrl =
           if prevCommandKind in {Quad, TQuad, RQuad, RTQuad}:
-            2 * at - prevCtrl
+            at * 2 - prevCtrl
           else:
             at
       shape.addQuadratic(at, ctrl, to)
@@ -864,7 +868,7 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
         to = vec2(at.x + command.numbers[2], at.y + command.numbers[3])
         ctrl1 =
           if prevCommandKind in {Cubic, SCubic, RCubic, RSCubic}:
-            2 * at - prevCtrl2
+            at * 2 - prevCtrl2
           else:
             at
       shape.addCubic(at, ctrl1, ctrl2, to)
@@ -884,7 +888,7 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
         to = vec2(at.x + command.numbers[0], at.y + command.numbers[1])
         ctrl =
           if prevCommandKind in {Quad, TQuad, RQuad, RTQuad}:
-            2 * at - prevCtrl
+            at * 2 - prevCtrl
           else:
             at
       shape.addQuadratic(at, ctrl, to)
@@ -913,11 +917,6 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
 
   if shape.len > 0:
     result.add(shape)
-
-iterator segments*(s: seq[Vec2]): Segment =
-  ## Return elements in pairs: (1st, 2nd), (2nd, 3rd) ... (n - 1, last).
-  for i in 0 ..< s.len - 1:
-    yield(segment(s[i], s[i + 1]))
 
 proc quickSort(a: var seq[(float32, int16)], inl, inr: int) =
   ## Sorts in place + faster than standard lib sort.
