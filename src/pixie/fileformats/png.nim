@@ -102,33 +102,44 @@ proc unfilter(
   # Unfilter the image data
   for y in 0 ..< height:
     let filterType = uncompressed[uncompressedIdx(0, y)]
-    for x in 0 ..< rowBytes:
-      var value = uncompressed[uncompressedIdx(x + 1, y)]
-      case filterType:
-      of 0: # None
-        discard
-      of 1: # Sub
+    case filterType:
+    of 0: # None
+      discard
+    of 1: # Sub
+      for x in 0 ..< rowBytes:
+        var value = uncompressed[uncompressedIdx(x + 1, y)]
         if x - bpp >= 0:
           value += result[unfiteredIdx(x - bpp, y)]
-      of 2: # Up
+        result[unfiteredIdx(x, y)] = value
+    of 2: # Up
+      for x in 0 ..< rowBytes:
+        var value = uncompressed[uncompressedIdx(x + 1, y)]
         if y - 1 >= 0:
           value += result[unfiteredIdx(x, y - 1)]
-      of 3: # Average
-        var left, up: int
+        result[unfiteredIdx(x, y)] = value
+    of 3: # Average
+      for x in 0 ..< rowBytes:
+        var
+          value = uncompressed[uncompressedIdx(x + 1, y)]
+          left, up: int
         if x - bpp >= 0:
           left = result[unfiteredIdx(x - bpp, y)].int
         if y - 1 >= 0:
           up = result[unfiteredIdx(x, y - 1)].int
         value += ((left + up) div 2).uint8
-      of 4: # Paeth
-        var left, up, upLeft: int
+        result[unfiteredIdx(x, y)] = value
+    of 4: # Paeth
+      for x in 0 ..< rowBytes:
+        var
+          value = uncompressed[uncompressedIdx(x + 1, y)]
+          left, up, upLeft: int
         if x - bpp >= 0:
           left = result[unfiteredIdx(x - bpp, y)].int
         if y - 1 >= 0:
           up = result[unfiteredIdx(x, y - 1)].int
         if x - bpp >= 0 and y - 1 >= 0:
           upLeft = result[unfiteredIdx(x - bpp, y - 1)].int
-        proc paethPredictor(a, b, c: int): int {.inline.} =
+        template paethPredictor(a, b, c: int): int =
           let
             p = a + b - c
             pa = abs(p - a)
@@ -141,10 +152,9 @@ proc unfilter(
           else:
             c
         value += paethPredictor(up, left, upLeft).uint8
-      else:
-        discard # Not possible, parseHeader validates
-
-      result[unfiteredIdx(x, y)] = value
+        result[unfiteredIdx(x, y)] = value
+    else:
+      discard # Not possible, parseHeader validates
 
 proc decodeImageData(
   header: PngHeader,
