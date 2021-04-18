@@ -3,12 +3,6 @@ import chroma, vmath
 type
   PixieError* = object of ValueError ## Raised if an operation fails.
 
-proc fractional*(v: float32): float32 {.inline.} =
-  ## Returns unsigned fraction part of the float.
-  ## -13.7868723 -> 0.7868723
-  result = abs(v)
-  result = result - floor(result)
-
 proc lerp*(a, b: uint8, t: float32): uint8 {.inline.} =
   ## Linearly interpolate between a and b using t.
   let t = round(t * 255).uint32
