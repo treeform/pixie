@@ -104,7 +104,9 @@ proc unfilter(
     let filterType = uncompressed[uncompressedIdx(0, y)]
     case filterType:
     of 0: # None
-      discard
+      for x in 0 ..< rowBytes:
+        var value = uncompressed[uncompressedIdx(x + 1, y)]
+        result[unfiteredIdx(x, y)] = value
     of 1: # Sub
       for x in 0 ..< rowBytes:
         var value = uncompressed[uncompressedIdx(x + 1, y)]
