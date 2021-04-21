@@ -192,6 +192,21 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
         let center = vec2(cx, cy)
         result.transform = result.transform *
           translate(center) * rotate(angle) * translate(-center)
+      elif f.startsWith("scale("):
+        let
+          values =
+            if f.contains(","):
+              f[6 .. ^2].split(",")
+            else:
+              f[6 .. ^2].split(" ")
+        let
+          sx: float32 = parseFloat(values[0].strip())
+          sy: float32 =
+            if values.len > 1:
+              parseFloat(values[1].strip())
+            else:
+              sx
+        result.transform = result.transform * scale(vec2(sx, sy))
       else:
         failInvalidTransform(transform)
 
@@ -348,11 +363,17 @@ proc decodeSvg*(data: string, width = 0, height = 0): Image =
     let
       viewBox = root.attr("viewBox")
       box = viewBox.split(" ")
+      viewBoxMinX = parseInt(box[0])
+      viewBoxMinY= parseInt(box[1])
       viewBoxWidth = parseInt(box[2])
       viewBoxHeight = parseInt(box[3])
 
     var rootCtx = initCtx()
     rootCtx = decodeCtx(rootCtx, root)
+
+    if viewBoxMinX != 0 or viewBoxMinY != 0:
+      rootCtx.transform = rootCtx.transform * translate(
+        vec2(-viewBoxMinX.float32, -viewBoxMinY.float32))
 
     if width == 0 and height == 0: # Default to the view box size
       result = newImage(viewBoxWidth, viewBoxHeight)
@@ -362,7 +383,7 @@ proc decodeSvg*(data: string, width = 0, height = 0): Image =
       let
         scaleX = width.float32 / viewBoxWidth.float32
         scaleY = height.float32 / viewBoxHeight.float32
-      rootCtx.transform = scale(vec2(scaleX, scaleY))
+      rootCtx.transform = rootCtx.transform * scale(vec2(scaleX, scaleY))
 
     var ctxStack = @[rootCtx]
     for node in root:
