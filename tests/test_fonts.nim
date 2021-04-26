@@ -5,7 +5,7 @@ block:
   font.size = 64
   let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
-  image.filLText(font, "fill", rgba(0, 0, 0, 255))
+  image.fillText(font, "fill", rgba(0, 0, 0, 255))
   image.writeFile("tests/fonts/image_fill.png")
 
 block:
