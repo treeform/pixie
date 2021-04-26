@@ -34,7 +34,7 @@ type
     commands*: seq[PathCommand]
     start, at: Vec2 # Maintained by moveTo, lineTo, etc. Used by arcTo.
 
-  SomePath* = Path | string | seq[seq[Vec2]]
+  SomePath* = Path | seq[Path] | string | seq[seq[Vec2]]
 
 const epsilon = 0.0001 * PI ## Tiny value used for some computations.
 
@@ -1405,15 +1405,20 @@ proc strokeShapes(
     result.add(shapeStroke)
 
 proc parseSomePath(
-  path: SomePath, pixelScale: float32 = 1.0
+  somePath: SomePath, pixelScale: float32 = 1.0
 ): seq[seq[Vec2]] {.inline.} =
   ## Given SomePath, parse it in different ways.
-  when type(path) is string:
-    parsePath(path).commandsToShapes(pixelScale)
-  elif type(path) is Path:
-    path.commandsToShapes(pixelScale)
-  elif type(path) is seq[seq[Vec2]]:
-    path
+  when type(somePath) is string:
+    parsePath(somePath).commandsToShapes(pixelScale)
+  elif type(somePath) is Path:
+    somePath.commandsToShapes(pixelScale)
+  elif type(somePath) is seq[Path]:
+    var combined: Path
+    for path in somePath:
+      combined.addPath(path)
+    combined.commandsToShapes(pixelScale)
+  elif type(somePath) is seq[seq[Vec2]]:
+    somePath
 
 proc fillPath*(
   image: Image,

@@ -256,6 +256,22 @@ block:
 
   image.writeFile("tests/images/paths/lcSquare.png")
 
+block:
+  let image = newImage(60, 60)
+  image.fill(rgba(255, 255, 255, 255))
+
+  var
+    path1 = parsePath("M 10 10 L 10 50 L 50 50 L 50 10 Z")
+    path2 = parsePath("M 0 0 L 10 0 L 10 10 L 0 10 Z")
+
+  var paths: seq[Path]
+  paths.add(path1)
+  paths.add(path2)
+
+  image.fillPath(paths, rgba(0, 0, 0, 255))
+
+  image.writeFile("tests/images/paths/multiplepaths.png")
+
 # Potential error cases, ensure they do not crash
 
 block:
