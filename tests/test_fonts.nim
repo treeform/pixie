@@ -1,4 +1,34 @@
-import pixie, strformat
+import pixie, pixie/fileformats/png, strformat
+
+block:
+  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  font.size = 64
+  let image = newImage(200, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.filLText(font, "fill", rgba(0, 0, 0, 255))
+  image.writeFile("tests/fonts/image_fill.png")
+
+block:
+  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  font.size = 64
+  let image = newImage(200, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.strokeText(font, "stroke", rgba(0, 0, 0, 255))
+  image.writeFile("tests/fonts/image_stroke.png")
+
+block:
+  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  font.size = 64
+  let mask = newMask(200, 100)
+  mask.fillText(font, "fill")
+  writeFile("tests/fonts/mask_fill.png", mask.encodePng())
+
+block:
+  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  font.size = 64
+  let mask = newMask(200, 100)
+  mask.strokeText(font, "stroke")
+  writeFile("tests/fonts/mask_stroke.png", mask.encodePng())
 
 proc doDiff(rendered: Image, name: string) =
   let

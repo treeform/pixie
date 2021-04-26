@@ -332,7 +332,6 @@ proc fillText*(
   mask: Mask,
   font: Font,
   text: string,
-  color: SomeColor,
   transform: Vec2 | Mat3 = vec2(0, 0)
 ) =
   for path in font.typeset(text):
@@ -342,7 +341,6 @@ proc strokeText*(
   image: Image,
   font: Font,
   text: string,
-  pos = vec2(0, 0),
   color: SomeColor,
   transform: Vec2 | Mat3 = vec2(0, 0),
   strokeWidth = 1.0
@@ -354,7 +352,6 @@ proc strokeText*(
   mask: Mask,
   font: Font,
   text: string,
-  color: SomeColor,
   transform: Vec2 | Mat3 = vec2(0, 0),
   strokeWidth = 1.0
 ) =
