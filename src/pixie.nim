@@ -1,13 +1,17 @@
 import bumpy, chroma, flatty/binny, os, pixie/blends, pixie/common,
     pixie/fileformats/bmp, pixie/fileformats/gif, pixie/fileformats/jpg,
-    pixie/fileformats/png, pixie/fileformats/svg, pixie/images, pixie/masks,
-    pixie/paints, pixie/paths, vmath
+    pixie/fileformats/png, pixie/fileformats/svg, pixie/fonts, pixie/images,
+    pixie/masks, pixie/paints, pixie/paths, vmath
 
-export blends, bumpy, chroma, common, images, masks, paints, paths, vmath
+export blends, bumpy, chroma, common, fonts, images, masks, paints, paths, vmath
 
 type
   FileFormat* = enum
     ffPng, ffBmp, ffJpg, ffGif
+
+proc readFont*(filePath: string): Font =
+  ## Loads a font from a file.
+  parseOtf(readFile(filePath))
 
 converter autoStraightAlpha*(c: ColorRGBX): ColorRGBA {.inline.} =
   ## Convert a paremultiplied alpha RGBA to a straight alpha RGBA.
