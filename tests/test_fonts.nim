@@ -1,4 +1,34 @@
-import pixie, strformat
+import pixie, pixie/fileformats/png, strformat
+
+block:
+  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  font.size = 64
+  let image = newImage(200, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(font, "fill", rgba(0, 0, 0, 255))
+  image.writeFile("tests/fonts/image_fill.png")
+
+block:
+  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  font.size = 64
+  let image = newImage(200, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.strokeText(font, "stroke", rgba(0, 0, 0, 255))
+  image.writeFile("tests/fonts/image_stroke.png")
+
+block:
+  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  font.size = 64
+  let mask = newMask(200, 100)
+  mask.fillText(font, "fill")
+  writeFile("tests/fonts/mask_fill.png", mask.encodePng())
+
+block:
+  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  font.size = 64
+  let mask = newMask(200, 100)
+  mask.strokeText(font, "stroke")
+  writeFile("tests/fonts/mask_stroke.png", mask.encodePng())
 
 proc doDiff(rendered: Image, name: string) =
   let
@@ -11,14 +41,9 @@ block:
   let font = readFont("tests/fonts/Roboto-Regular.ttf")
   font.size = 72
 
-  let
-    image = newImage(200, 100)
-    layout = font.typeset("asdf")
-
+  let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
-
-  for path in layout:
-    image.fillPath(path, rgba(0, 0, 0, 255))
+  image.fillText(font, "asdf", rgba(0, 0, 0, 255))
 
   doDiff(image, "basic1")
 
@@ -26,14 +51,9 @@ block:
   let font = readFont("tests/fonts/Roboto-Regular.ttf")
   font.size = 72
 
-  let
-    image = newImage(200, 100)
-    layout = font.typeset("A cow")
-
+  let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
-
-  for path in layout:
-    image.fillPath(path, rgba(0, 0, 0, 255))
+  image.fillText(font, "A cow", rgba(0, 0, 0, 255))
 
   doDiff(image, "basic2")
 
@@ -41,14 +61,9 @@ block:
   let font = readFont("tests/fonts/Roboto-Regular.ttf")
   font.size = 24
 
-  let
-    image = newImage(200, 100)
-    layout = font.typeset("A bit of text HERE")
-
+  let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
-
-  for path in layout:
-    image.fillPath(path, rgba(0, 0, 0, 255))
+  image.fillText(font, "A bit of text HERE", rgba(0, 0, 0, 255))
 
   doDiff(image, "basic3")
 
@@ -57,14 +72,9 @@ block:
   font.size = 24
   font.lineHeight = 100
 
-  let
-    image = newImage(200, 100)
-    layout = font.typeset("Line height")
-
+  let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
-
-  for path in layout:
-    image.fillPath(path, rgba(0, 0, 0, 255))
+  image.fillText(font, "Line height", rgba(0, 0, 0, 255))
 
   doDiff(image, "basic4")
 
@@ -72,14 +82,9 @@ block:
   let font = readFont("tests/fonts/Ubuntu-Regular.ttf")
   font.size = 24
 
-  let
-    image = newImage(200, 100)
-    layout = font.typeset("Another font")
-
+  let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
-
-  for path in layout:
-    image.fillPath(path, rgba(0, 0, 0, 255))
+  image.fillText(font, "Another font", rgba(0, 0, 0, 255))
 
   doDiff(image, "basic5")
 
@@ -87,14 +92,9 @@ block:
   let font = readFont("tests/fonts/Aclonica-Regular.ttf")
   font.size = 24
 
-  let
-    image = newImage(200, 100)
-    layout = font.typeset("Different font")
-
+  let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
-
-  for path in layout:
-    image.fillPath(path, rgba(0, 0, 0, 255))
+  image.fillText(font, "Different font", rgba(0, 0, 0, 255))
 
   doDiff(image, "basic6")
 
@@ -102,18 +102,19 @@ block:
   let font = readFont("tests/fonts/Roboto-Regular.ttf")
   font.size = 24
 
-  let
-    image = newImage(200, 100)
-    layout1 = font.typeset("First line")
-    layout2 = font.typeset("Second line")
-
+  let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
-
-  for path in layout1:
-    image.fillPath(path, rgba(0, 0, 0, 255))
-
-  for path in layout2:
-    image.fillPath(path, rgba(0, 0, 0, 255), vec2(0, font.defaultLineHeight))
+  image.fillText(
+    font,
+    "First line",
+    rgba(0, 0, 0, 255)
+  )
+  image.fillText(
+    font,
+    "Second line",
+    rgba(0, 0, 0, 255),
+    vec2(0, font.defaultLineHeight)
+  )
 
   doDiff(image, "basic7")
 

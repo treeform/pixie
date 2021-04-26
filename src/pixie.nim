@@ -317,3 +317,43 @@ proc strokePolygon*(
   var path: Path
   path.polygon(pos, size, sides)
   mask.strokePath(path, strokeWidth)
+
+proc fillText*(
+  image: Image,
+  font: Font,
+  text: string,
+  color: SomeColor,
+  transform: Vec2 | Mat3 = vec2(0, 0)
+) =
+  for path in font.typeset(text):
+    image.fillPath(path, color, transform)
+
+proc fillText*(
+  mask: Mask,
+  font: Font,
+  text: string,
+  transform: Vec2 | Mat3 = vec2(0, 0)
+) =
+  for path in font.typeset(text):
+    mask.fillPath(path, transform)
+
+proc strokeText*(
+  image: Image,
+  font: Font,
+  text: string,
+  color: SomeColor,
+  transform: Vec2 | Mat3 = vec2(0, 0),
+  strokeWidth = 1.0
+) =
+  for path in font.typeset(text):
+    image.strokePath(path, color, transform, strokeWidth)
+
+proc strokeText*(
+  mask: Mask,
+  font: Font,
+  text: string,
+  transform: Vec2 | Mat3 = vec2(0, 0),
+  strokeWidth = 1.0
+) =
+  for path in font.typeset(text):
+    mask.strokePath(path, transform, strokeWidth)
