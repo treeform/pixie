@@ -15,6 +15,7 @@ type
     numTables*: uint16
     encodingRecords*: seq[EncodingRecord]
     runeToGlyphId*: Table[Rune, uint16]
+    glyphIdToRune*: Table[uint16, Rune]
 
   HeadTable* = ref object
     majorVersion*: uint16
@@ -295,6 +296,7 @@ proc parseCmapTable(buf: string, offset: int): CmapTable =
 
             if c != 65535:
               result.runeToGlyphId[Rune(c)] = glyphId.uint16
+              result.glyphIdToRune[glyphId.uint16] = Rune(c)
       else:
         # TODO implement other Windows encodingIDs
         discard
@@ -563,13 +565,13 @@ proc parseKernTable(buf: string, offset: int): KernTable =
   else:
     failUnsupported()
 
-proc getGlyphId*(opentype: OpenType, rune: Rune): int =
+proc getGlyphId*(opentype: OpenType, rune: Rune): uint16 =
   if rune in opentype.cmap.runeToGlyphId:
-    result = opentype.cmap.runeToGlyphId[rune].int
+    result = opentype.cmap.runeToGlyphId[rune]
   else:
     discard # Index 0 is the "missing character" glyph
 
-proc parseGlyph(opentype: OpenType, glyphId: int): Path
+proc parseGlyph(opentype: OpenType, glyphId: uint16): Path
 
 proc parseGlyphPath(buf: string, offset, numberOfContours: int): Path =
   if numberOfContours < 0:
@@ -781,7 +783,7 @@ proc parseCompositeGlyph(opentype: OpenType, offset: int): Path =
     # elif (flags and 0b1000000000000) != 0: # UNSCALED_COMPONENT_OFFSET
     #   discard
 
-    var subPath = opentype.parseGlyph(component.glyphId.int)
+    var subPath = opentype.parseGlyph(component.glyphId)
     subPath.transform(mat3(
       component.xScale, component.scale10, 0.0,
       component.scale01, component.yScale, 0.0,
@@ -792,8 +794,8 @@ proc parseCompositeGlyph(opentype: OpenType, offset: int): Path =
 
     moreComponents = (flags and 0b100000) != 0
 
-proc parseGlyph(opentype: OpenType, glyphId: int): Path =
-  if glyphId < 0 or glyphId >= opentype.glyf.offsets.len:
+proc parseGlyph(opentype: OpenType, glyphId: uint16): Path =
+  if glyphId.int >= opentype.glyf.offsets.len:
     raise newException(PixieError, "Invalid glyph ID " & $glyphId)
 
   let glyphOffset = opentype.glyf.offsets[glyphId]

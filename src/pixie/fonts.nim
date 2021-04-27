@@ -6,6 +6,7 @@ type
   Font* = ref object
     opentype: OpenType
     glyphPaths: Table[Rune, Path]
+    kerningPairs: Table[(Rune, Rune), float32]
     size*: float32 ## Font size in pixels.
     lineHeight*: float32 ## The line height in pixels or AutoLineHeight for the font's default line height.
 
@@ -46,11 +47,16 @@ proc getGlyphPath*(font: Font, rune: Rune): Path =
   font.glyphPaths[rune]
 
 proc getGlyphAdvance*(font: Font, rune: Rune): float32 =
-  let glyphId = font.opentype.getGlyphId(rune)
+  let glyphId = font.opentype.getGlyphId(rune).int
   if glyphId < font.opentype.hmtx.hMetrics.len:
     font.opentype.hmtx.hMetrics[glyphId].advanceWidth.float32
   else:
     font.opentype.hmtx.hMetrics[^1].advanceWidth.float32
+
+proc getKerningAdjustment*(font: Font, left, right: Rune): float32 =
+  let pair = (left, right)
+  if pair in font.kerningPairs:
+    result = font.kerningPairs[pair]
 
 proc scale*(font: Font): float32 =
   ## The scale factor to transform font units into pixels.
@@ -104,6 +110,9 @@ proc typeset*(
     if rune.canWrap():
       prevCanWrap = i
 
+    if i > 0:
+      at.x += font.getKerningAdjustment(runes[i - 1], rune) * font.scale
+
     let advance = font.getGlyphAdvance(rune) * font.scale
     if bounds.x > 0 and at.x + advance > bounds.x: # Wrap to new line
       at.x = 0
@@ -112,6 +121,8 @@ proc typeset*(
       # Go back and wrap glyphs after the wrap index down to the next line
       if prevCanWrap > 0 and prevCanWrap != i:
         for j in prevCanWrap + 1 ..< i:
+          if j > 0:
+            at.x += font.getKerningAdjustment(runes[j - 1], runes[j]) * font.scale
           positions[j] = at
           at.x += font.getGlyphAdvance(runes[j]) * font.scale
 
@@ -128,6 +139,17 @@ proc parseOtf*(buf: string): Font =
   result.opentype = parseOpenType(buf)
   result.size = 12
   result.lineHeight = AutoLineHeight
+
+  if result.opentype.kern != nil:
+    for table in result.opentype.kern.subTables:
+      for pair in table.kernPairs:
+        if pair.value != 0 and
+          pair.left in result.opentype.cmap.glyphIdToRune and
+          pair.right in result.opentype.cmap.glyphIdToRune:
+          result.kerningPairs[(
+            result.opentype.cmap.glyphIdToRune[pair.left],
+            result.opentype.cmap.glyphIdToRune[pair.right]
+          )] = pair.value.float32
 
 proc parseTtf*(buf: string): Font =
   parseOtf(buf)
