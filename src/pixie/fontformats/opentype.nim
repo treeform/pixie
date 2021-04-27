@@ -15,6 +15,7 @@ type
     numTables*: uint16
     encodingRecords*: seq[EncodingRecord]
     runeToGlyphId*: Table[Rune, uint16]
+    glyphIdToRune*: Table[uint16, Rune]
 
   HeadTable* = ref object
     majorVersion*: uint16
@@ -138,6 +139,26 @@ type
   GlyfTable* = ref object
     offsets*: seq[uint32]
 
+  KernPair* = object
+    left*: uint16
+    right*: uint16
+    value*: int16
+
+  KernSubTable* = object
+    version*: uint16
+    length*: uint16
+    coverage*: uint16
+    nPairs*: uint16
+    searchRange*: uint16
+    entrySelector*: uint16
+    rangeShift*: uint16
+    kernPairs*: seq[KernPair]
+
+  KernTable* = ref object
+    version*: uint16
+    nTables*: uint16
+    subTables*: seq[KernSubTable]
+
   TableRecord* = object
     tag*: string
     checksum*: uint32
@@ -161,6 +182,7 @@ type
     os2*: OS2Table
     loca*: LocaTable
     glyf*: GlyfTable
+    kern*: KernTable
 
 proc eofCheck(buf: string, readTo: int) {.inline.} =
   if readTo > buf.len:
@@ -274,6 +296,7 @@ proc parseCmapTable(buf: string, offset: int): CmapTable =
 
             if c != 65535:
               result.runeToGlyphId[Rune(c)] = glyphId.uint16
+              result.glyphIdToRune[glyphId.uint16] = Rune(c)
       else:
         # TODO implement other Windows encodingIDs
         discard
@@ -497,13 +520,62 @@ proc parseGlyfTable(buf: string, offset: int, loca: LocaTable): GlyfTable =
   for glyphId in 0 ..< loca.offsets.len:
     result.offsets[glyphId] = offset.uint32 + loca.offsets[glyphId]
 
-proc getGlyphId*(opentype: OpenType, rune: Rune): int =
+proc parseKernTable(buf: string, offset: int): KernTable =
+  var i = offset
+
+  buf.eofCheck(i + 2)
+
+  let version = buf.readUint16(i + 0).swap()
+  i += 2
+
+  if version == 0:
+    buf.eofCheck(i + 2)
+
+    result = KernTable()
+    result.version = version
+    result.nTables = buf.readUint16(i + 0).swap()
+    i += 2
+
+    for _ in 0 ..< result.nTables.int:
+      buf.eofCheck(i + 14)
+
+      var subTable: KernSubTable
+      subtable.version = buf.readUint16(i + 0).swap()
+      if subTable.version != 0:
+        failUnsupported()
+      subTable.length = buf.readUint16(i + 2).swap()
+      subTable.coverage = buf.readUint16(i + 4).swap()
+      if subTable.coverage shr 8 != 0:
+        failUnsupported()
+      subTable.nPairs = buf.readUint16(i + 6).swap()
+      subTable.searchRange = buf.readUint16(i + 8).swap()
+      subTable.entrySelector = buf.readUint16(i + 10).swap()
+      subTable.rangeShift = buf.readUint16(i + 12).swap()
+      i += 14
+
+      for _ in 0 ..< subTable.nPairs.int:
+        buf.eofCheck(i + 6)
+
+        var pair: KernPair
+        pair.left = buf.readUint16(i + 0).swap()
+        pair.right = buf.readUint16(i + 2).swap()
+        pair.value = buf.readInt16(i + 4).swap()
+        subTable.kernPairs.add(pair)
+        i += 6
+
+      result.subTables.add(subTable)
+  elif version == 1:
+    discard # Mac format
+  else:
+    failUnsupported()
+
+proc getGlyphId*(opentype: OpenType, rune: Rune): uint16 =
   if rune in opentype.cmap.runeToGlyphId:
-    result = opentype.cmap.runeToGlyphId[rune].int
+    result = opentype.cmap.runeToGlyphId[rune]
   else:
     discard # Index 0 is the "missing character" glyph
 
-proc parseGlyph(opentype: OpenType, glyphId: int): Path
+proc parseGlyph(opentype: OpenType, glyphId: uint16): Path
 
 proc parseGlyphPath(buf: string, offset, numberOfContours: int): Path =
   if numberOfContours < 0:
@@ -715,7 +787,7 @@ proc parseCompositeGlyph(opentype: OpenType, offset: int): Path =
     # elif (flags and 0b1000000000000) != 0: # UNSCALED_COMPONENT_OFFSET
     #   discard
 
-    var subPath = opentype.parseGlyph(component.glyphId.int)
+    var subPath = opentype.parseGlyph(component.glyphId)
     subPath.transform(mat3(
       component.xScale, component.scale10, 0.0,
       component.scale01, component.yScale, 0.0,
@@ -726,8 +798,8 @@ proc parseCompositeGlyph(opentype: OpenType, offset: int): Path =
 
     moreComponents = (flags and 0b100000) != 0
 
-proc parseGlyph(opentype: OpenType, glyphId: int): Path =
-  if glyphId < 0 or glyphId >= opentype.glyf.offsets.len:
+proc parseGlyph(opentype: OpenType, glyphId: uint16): Path =
+  if glyphId.int >= opentype.glyf.offsets.len:
     raise newException(PixieError, "Invalid glyph ID " & $glyphId)
 
   let glyphOffset = opentype.glyf.offsets[glyphId]
@@ -806,3 +878,6 @@ proc parseOpenType*(buf: string): OpenType =
   result.glyf = parseGlyfTable(
     buf, result.tableRecords["glyf"].offset.int, result.loca
   )
+
+  if "kern" in result.tableRecords:
+    result.kern = parseKernTable(buf, result.tableRecords["kern"].offset.int)
