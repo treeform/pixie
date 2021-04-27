@@ -564,7 +564,7 @@ proc parseKernTable(buf: string, offset: int): KernTable =
         i += 6
 
       result.subTables.add(subTable)
-  elif result.version == 1:
+  elif version == 1:
     discard # Mac format
   else:
     failUnsupported()
