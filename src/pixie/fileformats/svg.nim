@@ -373,7 +373,8 @@ proc decodeSvg*(data: string, width = 0, height = 0): Image =
 
     if viewBoxMinX != 0 or viewBoxMinY != 0:
       rootCtx.transform = rootCtx.transform * translate(
-        vec2(-viewBoxMinX.float32, -viewBoxMinY.float32))
+        vec2(-viewBoxMinX.float32, -viewBoxMinY.float32)
+      )
 
     if width == 0 and height == 0: # Default to the view box size
       result = newImage(viewBoxWidth, viewBoxHeight)
