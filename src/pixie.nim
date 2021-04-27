@@ -1,7 +1,7 @@
 import bumpy, chroma, flatty/binny, os, pixie/blends, pixie/common,
     pixie/fileformats/bmp, pixie/fileformats/gif, pixie/fileformats/jpg,
     pixie/fileformats/png, pixie/fileformats/svg, pixie/fonts, pixie/images,
-    pixie/masks, pixie/paints, pixie/paths, vmath
+    pixie/masks, pixie/paints, pixie/paths, strutils, vmath
 
 export blends, bumpy, chroma, common, fonts, images, masks, paints, paths, vmath
 
@@ -11,7 +11,13 @@ type
 
 proc readFont*(filePath: string): Font =
   ## Loads a font from a file.
-  parseOtf(readFile(filePath))
+  case splitFile(filePath).ext.toLowerAscii():
+    of ".ttf":
+      parseTtf(readFile(filePath))
+    of ".otf":
+      parseOtf(readFile(filePath))
+    else:
+      raise newException(PixieError, "Unsupported font format")
 
 converter autoStraightAlpha*(c: ColorRGBX): ColorRGBA {.inline.} =
   ## Convert a paremultiplied alpha RGBA to a straight alpha RGBA.
@@ -59,7 +65,7 @@ proc writeFile*(image: Image, filePath: string, fileFormat: FileFormat) =
 
 proc writeFile*(image: Image, filePath: string) =
   ## Writes an image to a file.
-  let fileFormat = case splitFile(filePath).ext:
+  let fileFormat = case splitFile(filePath).ext.toLowerAscii():
     of ".png": ffPng
     of ".bmp": ffBmp
     of ".jpg", ".jpeg": ffJpg
