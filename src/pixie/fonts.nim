@@ -49,14 +49,14 @@ proc defaultLineHeight*(font: Font): float32 =
   round((font.ascent + abs(font.descent) + font.lineGap) * font.scale)
 
 proc getGlyphPath*(font: Font, rune: Rune): Path =
-  ## The glyph path for the parameter rune.
+  ## The glyph path for the rune.
   if rune notin font.glyphPaths:
     font.glyphPaths[rune] = font.opentype.parseGlyph(rune)
     font.glyphPaths[rune].transform(scale(vec2(1, -1)))
   font.glyphPaths[rune]
 
 proc getGlyphAdvance*(font: Font, rune: Rune): float32 =
-  ## The advance for the parameter rune in pixels.
+  ## The advance for the rune in pixels.
   let glyphId = font.opentype.getGlyphId(rune).int
   if glyphId < font.opentype.hmtx.hMetrics.len:
     result = font.opentype.hmtx.hMetrics[glyphId].advanceWidth.float32
@@ -65,7 +65,7 @@ proc getGlyphAdvance*(font: Font, rune: Rune): float32 =
   result *= font.scale
 
 proc getKerningAdjustment*(font: Font, left, right: Rune): float32 =
-  ## The kerning adjustment for the parameter rune pair, in pixels.
+  ## The kerning adjustment for the rune pair, in pixels.
   let pair = (left, right)
   if pair in font.kerningPairs:
     result = font.kerningPairs[pair]
