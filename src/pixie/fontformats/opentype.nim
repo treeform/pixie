@@ -138,6 +138,26 @@ type
   GlyfTable* = ref object
     offsets*: seq[uint32]
 
+  KernPair* = object
+    left*: uint16
+    right*: uint16
+    value*: int16
+
+  KernSubTable* = object
+    version*: uint16
+    length*: uint16
+    coverage*: uint16
+    nPairs*: uint16
+    searchRange*: uint16
+    entrySelector*: uint16
+    rangeShift*: uint16
+    kernPairs*: seq[KernPair]
+
+  KernTable* = ref object
+    version*: uint16
+    nTables*: uint16
+    subTables*: seq[KernSubTable]
+
   TableRecord* = object
     tag*: string
     checksum*: uint32
@@ -161,6 +181,7 @@ type
     os2*: OS2Table
     loca*: LocaTable
     glyf*: GlyfTable
+    kern*: KernTable
 
 proc eofCheck(buf: string, readTo: int) {.inline.} =
   if readTo > buf.len:
@@ -497,6 +518,51 @@ proc parseGlyfTable(buf: string, offset: int, loca: LocaTable): GlyfTable =
   for glyphId in 0 ..< loca.offsets.len:
     result.offsets[glyphId] = offset.uint32 + loca.offsets[glyphId]
 
+proc parseKernTable(buf: string, offset: int): KernTable =
+  var i = offset
+
+  buf.eofCheck(i + 2)
+
+  result = KernTable()
+  result.version = buf.readUint16(i + 0).swap()
+  i += 2
+
+  if result.version == 0:
+    buf.eofCheck(i + 2)
+    result.nTables = buf.readUint16(i + 0).swap()
+    i += 2
+
+    for _ in 0 ..< result.nTables.int:
+      buf.eofCheck(i + 14)
+
+      var subTable: KernSubTable
+      subtable.version = buf.readUint16(i + 0).swap()
+      if subTable.version != 0:
+        failUnsupported()
+      subTable.length = buf.readUint16(i + 2).swap()
+      subTable.coverage = buf.readUint16(i + 4).swap()
+      subTable.nPairs = buf.readUint16(i + 6).swap()
+      subTable.searchRange = buf.readUint16(i + 8).swap()
+      subTable.entrySelector = buf.readUint16(i + 10).swap()
+      subTable.rangeShift = buf.readUint16(i + 12).swap()
+      i += 14
+
+      for _ in 0 ..< subTable.nPairs.int:
+        buf.eofCheck(i + 6)
+
+        var pair: KernPair
+        pair.left = buf.readUint16(i + 0).swap()
+        pair.right = buf.readUint16(i + 2).swap()
+        pair.value = buf.readInt16(i + 4).swap()
+        subTable.kernPairs.add(pair)
+        i += 6
+
+      result.subTables.add(subTable)
+  elif result.version == 1:
+    discard # Mac format
+  else:
+    failUnsupported()
+
 proc getGlyphId*(opentype: OpenType, rune: Rune): int =
   if rune in opentype.cmap.runeToGlyphId:
     result = opentype.cmap.runeToGlyphId[rune].int
@@ -806,3 +872,6 @@ proc parseOpenType*(buf: string): OpenType =
   result.glyf = parseGlyfTable(
     buf, result.tableRecords["glyf"].offset.int, result.loca
   )
+
+  if "kern" in result.tableRecords:
+    result.kern = parseKernTable(buf, result.tableRecords["kern"].offset.int)
