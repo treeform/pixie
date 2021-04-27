@@ -525,12 +525,14 @@ proc parseKernTable(buf: string, offset: int): KernTable =
 
   buf.eofCheck(i + 2)
 
-  result = KernTable()
-  result.version = buf.readUint16(i + 0).swap()
+  let version = buf.readUint16(i + 0).swap()
   i += 2
 
-  if result.version == 0:
+  if version == 0:
     buf.eofCheck(i + 2)
+
+    result = KernTable()
+    result.version = version
     result.nTables = buf.readUint16(i + 0).swap()
     i += 2
 
