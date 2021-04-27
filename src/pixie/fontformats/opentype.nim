@@ -543,6 +543,8 @@ proc parseKernTable(buf: string, offset: int): KernTable =
         failUnsupported()
       subTable.length = buf.readUint16(i + 2).swap()
       subTable.coverage = buf.readUint16(i + 4).swap()
+      if subTable.coverage shr 8 != 0:
+        failUnsupported()
       subTable.nPairs = buf.readUint16(i + 6).swap()
       subTable.searchRange = buf.readUint16(i + 8).swap()
       subTable.entrySelector = buf.readUint16(i + 10).swap()
