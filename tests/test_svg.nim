@@ -21,4 +21,4 @@ for file in files:
 
   let (score, _) = diff(image, gold)
   doAssert score < 1
-  # image.writeFile(&"tests/images/svg/{file}.png")
+  image.writeFile(&"tests/images/svg/{file}.png")
