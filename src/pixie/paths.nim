@@ -48,6 +48,11 @@ proc maxScale(m: Mat3): float32 =
     vec2(m[1, 0], m[1, 1]).length
   )
 
+proc isRelative(kind: PathCommandKind): bool =
+  kind in {
+    RMove, RLine, TQuad, RTQuad, RHLine, RVLine, RCubic, RSCubic, RQuad, RArc
+  }
+
 proc parameterCount(kind: PathCommandKind): int =
   ## Returns number of parameters a path command has.
   case kind:
@@ -232,6 +237,10 @@ proc parsePath*(path: string): Path =
 proc transform*(path: var Path, mat: Mat3) =
   ## Apply a matrix transform to a path.
   for command in path.commands.mitems:
+    var mat = mat
+    if command.kind.isRelative():
+      mat.pos = vec2(0)
+
     case command.kind:
     of Close:
       discard
