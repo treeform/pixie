@@ -2,11 +2,28 @@ import pixie/common, pixie/paths, strutils, tables, unicode, vmath, xmlparser, x
 
 type SvgFont* = ref object
   unitsPerEm*, ascent*, descent*: float32
-  glyphAdvances*: Table[Rune, float32]
-  glyphPaths*: Table[Rune, Path]
-  kerningPairs*: Table[(Rune, Rune), float32]
-  missingGlyphAdvance*: float32
-  missingGlyphPath*: Path
+  glyphAdvances: Table[Rune, float32]
+  glyphPaths: Table[Rune, Path]
+  kerningPairs: Table[(Rune, Rune), float32]
+  missingGlyphAdvance: float32
+  missingGlyphPath: Path
+
+proc getGlyphPath*(svgFont: SvgFont, rune: Rune): Path =
+  if rune in svgFont.glyphPaths:
+    svgFont.glyphPaths[rune]
+  else:
+    svgFont.missingGlyphPath
+
+proc getGlyphAdvance*(svgFont: SvgFont, rune: Rune): float32 =
+  if rune in svgFont.glyphAdvances:
+    svgFont.glyphAdvances[rune]
+  else:
+    svgFont.missingGlyphAdvance
+
+proc getKerningAdjustment*(svgFont: SvgFont, left, right: Rune): float32 =
+  let pair = (left, right)
+  if pair in svgFont.kerningPairs:
+    result = svgFont.kerningPairs[pair]
 
 proc failInvalid() =
   raise newException(PixieError, "Invalid SVG font data")

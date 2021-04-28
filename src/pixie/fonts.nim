@@ -52,29 +52,21 @@ proc getGlyphPath*(font: Font, rune: Rune): Path =
   if font.opentype != nil:
     font.opentype.getGlyphPath(rune)
   else:
-    if rune in font.svgFont.glyphPaths:
-      font.svgFont.glyphPaths[rune]
-    else:
-      font.svgFont.missingGlyphPath
+    font.svgFont.getGlyphPath(rune)
 
 proc getGlyphAdvance(font: Font, rune: Rune): float32 =
   ## The advance for the rune in pixels.
   if font.opentype != nil:
     font.opentype.getGlyphAdvance(rune)
   else:
-    if rune in font.svgFont.glyphAdvances:
-      font.svgFont.glyphAdvances[rune]
-    else:
-      font.svgFont.missingGlyphAdvance
+    font.svgFont.getGlyphAdvance(rune)
 
 proc getKerningAdjustment(font: Font, left, right: Rune): float32 =
   ## The kerning adjustment for the rune pair, in pixels.
-  let pair = (left, right)
   if font.opentype != nil:
-    result = font.opentype.getKerningAdjustment(left, right)
+    font.opentype.getKerningAdjustment(left, right)
   else:
-    if pair in font.svgFont.kerningPairs:
-      result = font.svgFont.kerningPairs[pair]
+    font.svgfont.getKerningAdjustment(left, right)
 
 proc scale*(font: Font): float32 =
   ## The scale factor to transform font units into pixels.
