@@ -16,6 +16,8 @@ proc readFont*(filePath: string): Font =
       parseTtf(readFile(filePath))
     of ".otf":
       parseOtf(readFile(filePath))
+    of ".svg":
+      parseSvgFont(readFile(filePath))
     else:
       raise newException(PixieError, "Unsupported font format")
 
