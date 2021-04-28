@@ -649,6 +649,8 @@ proc parseGlyphPath(buf: string, offset, numberOfContours: int): Path =
         x = buf.readInt16(i).swap().int
         i += 2
     prevX += x
+    if point >= points.len:
+      failUnsupported()
     points[point].x = prevX.float32
     points[point].isOnCurve = (flag and 1) != 0
 
