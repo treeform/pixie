@@ -183,6 +183,11 @@ type
     loca*: LocaTable
     glyf*: GlyfTable
     kern*: KernTable
+    glyphPaths: Table[Rune, Path]
+    kerningPairs: Table[(Rune, Rune), float32]
+
+when defined(release):
+  {.push checks: off.}
 
 proc eofCheck(buf: string, readTo: int) {.inline.} =
   if readTo > buf.len:
@@ -569,7 +574,7 @@ proc parseKernTable(buf: string, offset: int): KernTable =
   else:
     failUnsupported()
 
-proc getGlyphId*(opentype: OpenType, rune: Rune): uint16 =
+proc getGlyphId(opentype: OpenType, rune: Rune): uint16 =
   if rune in opentype.cmap.runeToGlyphId:
     result = opentype.cmap.runeToGlyphId[rune]
   else:
@@ -826,8 +831,26 @@ proc parseGlyph(opentype: OpenType, glyphId: uint16): Path =
   else:
     parseGlyphPath(opentype.buf, i, numberOfContours)
 
-proc parseGlyph*(opentype: OpenType, rune: Rune): Path =
+proc parseGlyph(opentype: OpenType, rune: Rune): Path =
   opentype.parseGlyph(opentype.getGlyphId(rune))
+
+proc getGlyphPath*(opentype: OpenType, rune: Rune): Path =
+  if rune notin opentype.glyphPaths:
+    opentype.glyphPaths[rune] = opentype.parseGlyph(rune)
+    opentype.glyphPaths[rune].transform(scale(vec2(1, -1)))
+  opentype.glyphPaths[rune]
+
+proc getGlyphAdvance*(opentype: OpenType, rune: Rune): float32 =
+  let glyphId = opentype.getGlyphId(rune).int
+  if glyphId < opentype.hmtx.hMetrics.len:
+    opentype.hmtx.hMetrics[glyphId].advanceWidth.float32
+  else:
+    opentype.hmtx.hMetrics[^1].advanceWidth.float32
+
+proc getKerningAdjustment*(opentype: OpenType, left, right: Rune): float32 =
+  let pair = (left, right)
+  if pair in opentype.kerningPairs:
+    result = opentype.kerningPairs[pair]
 
 proc parseOpenType*(buf: string): OpenType =
   result = OpenType()
@@ -881,3 +904,24 @@ proc parseOpenType*(buf: string): OpenType =
 
   if "kern" in result.tableRecords:
     result.kern = parseKernTable(buf, result.tableRecords["kern"].offset.int)
+
+    for table in result.kern.subTables:
+      if (table.coverage and 1) != 0: # Horizontal data
+        for pair in table.kernPairs:
+          if pair.value != 0 and
+            pair.left in result.cmap.glyphIdToRune and
+            pair.right in result.cmap.glyphIdToRune:
+            let key = (
+              result.cmap.glyphIdToRune[pair.left],
+              result.cmap.glyphIdToRune[pair.right]
+            )
+            var value = pair.value.float32
+            if key in result.kerningPairs:
+              if (table.coverage and 0b1000) != 0: # Override
+                discard
+              else: # Accumulate
+                value += result.kerningPairs[key]
+            result.kerningPairs[key] = value
+
+when defined(release):
+  {.pop.}

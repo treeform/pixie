@@ -30,6 +30,41 @@ block:
   mask.strokeText(font, "stroke")
   writeFile("tests/fonts/mask_stroke.png", mask.encodePng())
 
+block:
+  let font = readFont("tests/fonts/Changa-Bold.svg")
+  font.size = 48
+  let mask = newMask(200, 100)
+  mask.fillText(font, "Changa")
+  writeFile("tests/fonts/svg_changa.png", mask.encodePng())
+
+block:
+  let font = readFont("tests/fonts/DejaVuSans.svg")
+  font.size = 48
+  let mask = newMask(200, 100)
+  mask.fillText(font, "Deja vu ")
+  writeFile("tests/fonts/svg_dejavu.png", mask.encodePng())
+
+block:
+  let font = readFont("tests/fonts/IBMPlexSans-Regular.svg")
+  font.size = 48
+  let mask = newMask(200, 100)
+  mask.fillText(font, "IBM ")
+  writeFile("tests/fonts/svg_ibm.png", mask.encodePng())
+
+block:
+  let font = readFont("tests/fonts/Moon-Bold.svg")
+  font.size = 48
+  let mask = newMask(200, 100)
+  mask.fillText(font, "Moon ")
+  writeFile("tests/fonts/svg_moon.png", mask.encodePng())
+
+block:
+  let font = readFont("tests/fonts/Ubuntu.svg")
+  font.size = 48
+  let mask = newMask(200, 100)
+  mask.fillText(font, "Ubuntu ")
+  writeFile("tests/fonts/svg_ubuntu.png", mask.encodePng())
+
 proc doDiff(rendered: Image, name: string) =
   let
     master = readImage(&"tests/fonts/masters/{name}.png")
