@@ -239,6 +239,9 @@ proc transform*(path: var Path, mat: Mat3) =
   if mat == mat3():
     return
 
+  if path.commands.len > 0 and path.commands[0].kind == RMove:
+    path.commands[0].kind = Move
+
   for command in path.commands.mitems:
     var mat = mat
     if command.kind.isRelative():
