@@ -80,6 +80,7 @@ proc parseSvgFont*(buf: string): SvgFont =
           else:
             discard # Multi-rune unicode?
       of "hkern":
+        # TODO "g" kerning
         let
           u1 = node.attr("u1")
           u2 = node.attr("u2")
