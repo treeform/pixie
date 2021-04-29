@@ -10,6 +10,10 @@ type
     size*: float32 ## Font size in pixels.
     lineHeight*: float32 ## The line height in pixels or AutoLineHeight for the font's default line height.
 
+  TypesetText* = ref object
+    runes*: seq[Rune]
+    positions*: seq[Vec2]
+
   HAlignMode* = enum
     haLeft
     haCenter
@@ -104,9 +108,12 @@ proc typeset*(
   hAlign = haLeft,
   vAlign = vaTop,
   textCase = tcNormal
-): seq[Path] =
-  var runes = toRunes(text)
-  runes.convertTextCase(textCase)
+): TypesetText =
+  result = TypesetText()
+  result.runes = toRunes(text)
+  result.runes.convertTextCase(textCase)
+
+  result.positions.setLen(result.runes.len)
 
   let lineHeight =
     if font.lineheight >= 0:
@@ -114,23 +121,22 @@ proc typeset*(
     else:
       font.defaultLineHeight
 
-  proc glyphAdvance(runes: seq[Rune], font: Font, i: int): float32 =
+  proc glyphAdvance(runes: seq[Rune], font: Font, i: int): float32 {.inline.} =
     if i + 1 < runes.len:
       result += font.getKerningAdjustment(runes[i], runes[i + 1])
     result += font.getGlyphAdvance(runes[i])
     result *= font.scale
 
   var
-    positions = newSeq[Vec2](runes.len)
     at: Vec2
     prevCanWrap: int
   at.y = round(font.ascent * font.scale)
   at.y += (lineheight - font.defaultLineHeight) / 2
-  for i, rune in runes:
+  for i, rune in result.runes:
     if rune.canWrap():
       prevCanWrap = i
 
-    let advance = glyphAdvance(runes, font, i)
+    let advance = glyphAdvance(result.runes, font, i)
     if bounds.x > 0 and at.x + advance > bounds.x: # Wrap to new line
       at.x = 0
       at.y += lineHeight
@@ -138,16 +144,11 @@ proc typeset*(
       # Go back and wrap glyphs after the wrap index down to the next line
       if prevCanWrap > 0 and prevCanWrap != i:
         for j in prevCanWrap + 1 ..< i:
-          positions[j] = at
-          at.x += glyphAdvance(runes, font, j)
+          result.positions[j] = at
+          at.x += glyphAdvance(result.runes, font, j)
 
-    positions[i] = at
+    result.positions[i] = at
     at.x += advance
-
-  for i, rune in runes:
-    var path = font.getGlyphPath(rune)
-    path.transform(translate(positions[i]) * scale(vec2(font.scale)))
-    result.add(path)
 
 proc parseOtf*(buf: string): Font =
   result = Font()
