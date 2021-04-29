@@ -236,6 +236,12 @@ proc parsePath*(path: string): Path =
 
 proc transform*(path: var Path, mat: Mat3) =
   ## Apply a matrix transform to a path.
+  if mat == mat3():
+    return
+
+  if path.commands.len > 0 and path.commands[0].kind == RMove:
+    path.commands[0].kind = Move
+
   for command in path.commands.mitems:
     var mat = mat
     if command.kind.isRelative():
@@ -1424,6 +1430,18 @@ proc parseSomePath(
   elif type(path) is seq[seq[Vec2]]:
     path
 
+proc transform(shapes: var seq[seq[Vec2]], transform: Vec2 | Mat3) =
+  when type(transform) is Vec2:
+    if transform != vec2(0, 0):
+      for shape in shapes.mitems:
+        for segment in shape.mitems:
+          segment += transform
+  else:
+    if transform != mat3():
+      for shape in shapes.mitems:
+        for segment in shape.mitems:
+          segment = transform * segment
+
 proc fillPath*(
   image: Image,
   path: SomePath,
@@ -1448,12 +1466,7 @@ proc fillPath*(
   else:
     let pixelScale = 1.0
   var shapes = parseSomePath(path, pixelScale)
-  for shape in shapes.mitems:
-    for segment in shape.mitems:
-      when type(transform) is Vec2:
-        segment += transform
-      else:
-        segment = transform * segment
+  shapes.transform(transform)
   image.fillShapes(shapes, color, windingRule, blendMode)
 
 proc fillPath*(
@@ -1476,12 +1489,7 @@ proc fillPath*(
   else:
     let pixelScale = 1.0
   var shapes = parseSomePath(path, pixelScale)
-  for shape in shapes.mitems:
-    for segment in shape.mitems:
-      when type(transform) is Vec2:
-        segment += transform
-      else:
-        segment = transform * segment
+  shapes.transform(transform)
   mask.fillShapes(shapes, windingRule)
 
 proc fillPath*(
@@ -1565,12 +1573,7 @@ proc strokePath*(
   var strokeShapes = strokeShapes(
     parseSomePath(path, pixelScale), strokeWidth, lineCap, lineJoin
   )
-  for shape in strokeShapes.mitems:
-    for segment in shape.mitems:
-      when type(transform) is Vec2:
-        segment += transform
-      else:
-        segment = transform * segment
+  strokeShapes.transform(transform)
   image.fillShapes(strokeShapes, color, wrNonZero, blendMode)
 
 proc strokePath*(
@@ -1602,12 +1605,7 @@ proc strokePath*(
   var strokeShapes = strokeShapes(
     parseSomePath(path, pixelScale), strokeWidth, lineCap, lineJoin
   )
-  for shape in strokeShapes.mitems:
-    for segment in shape.mitems:
-      when type(transform) is Vec2:
-        segment += transform
-      else:
-        segment = transform * segment
+  strokeShapes.transform(transform)
   mask.fillShapes(strokeShapes, wrNonZero)
 
 when defined(release):
