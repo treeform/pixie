@@ -236,6 +236,9 @@ proc parsePath*(path: string): Path =
 
 proc transform*(path: var Path, mat: Mat3) =
   ## Apply a matrix transform to a path.
+  if mat == mat3():
+    return
+
   for command in path.commands.mitems:
     var mat = mat
     if command.kind.isRelative():
