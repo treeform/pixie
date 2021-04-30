@@ -331,18 +331,26 @@ proc fillText*(
   font: Font,
   text: string,
   color: SomeColor,
-  transform: Vec2 | Mat3 = vec2(0, 0)
+  transform: Vec2 | Mat3 = vec2(0, 0),
+  bounds = vec2(0, 0)
 ) =
-  for path in font.typeset(text):
+  let typeset = font.typeset(text, bounds)
+  for i in 0 ..< typeset.runes.len:
+    var path = font.getGlyphPath(typeset.runes[i])
+    path.transform(translate(typeset.positions[i]) * scale(vec2(font.scale)))
     image.fillPath(path, color, transform)
 
 proc fillText*(
   mask: Mask,
   font: Font,
   text: string,
-  transform: Vec2 | Mat3 = vec2(0, 0)
+  transform: Vec2 | Mat3 = vec2(0, 0),
+  bounds = vec2(0, 0)
 ) =
-  for path in font.typeset(text):
+  let typeset = font.typeset(text, bounds)
+  for i in 0 ..< typeset.runes.len:
+    var path = font.getGlyphPath(typeset.runes[i])
+    path.transform(translate(typeset.positions[i]) * scale(vec2(font.scale)))
     mask.fillPath(path, transform)
 
 proc strokeText*(
@@ -351,9 +359,13 @@ proc strokeText*(
   text: string,
   color: SomeColor,
   transform: Vec2 | Mat3 = vec2(0, 0),
-  strokeWidth = 1.0
+  strokeWidth = 1.0,
+  bounds = vec2(0, 0)
 ) =
-  for path in font.typeset(text):
+  let typeset = font.typeset(text, bounds)
+  for i in 0 ..< typeset.runes.len:
+    var path = font.getGlyphPath(typeset.runes[i])
+    path.transform(translate(typeset.positions[i]) * scale(vec2(font.scale)))
     image.strokePath(path, color, transform, strokeWidth)
 
 proc strokeText*(
@@ -361,7 +373,11 @@ proc strokeText*(
   font: Font,
   text: string,
   transform: Vec2 | Mat3 = vec2(0, 0),
-  strokeWidth = 1.0
+  strokeWidth = 1.0,
+  bounds = vec2(0, 0)
 ) =
-  for path in font.typeset(text):
+  let typeset = font.typeset(text, bounds)
+  for i in 0 ..< typeset.runes.len:
+    var path = font.getGlyphPath(typeset.runes[i])
+    path.transform(translate(typeset.positions[i]) * scale(vec2(font.scale)))
     mask.strokePath(path, transform, strokeWidth)
