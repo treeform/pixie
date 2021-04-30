@@ -51,35 +51,35 @@ proc lineGap(font: Font): float32 {.inline.} =
   if font.opentype != nil:
     result = font.opentype.hhea.lineGap.float32
 
-proc getGlyphPath*(font: Font, rune: Rune): Path =
+proc getGlyphPath*(font: Font, rune: Rune): Path {.inline.} =
   ## The glyph path for the rune.
   if font.opentype != nil:
     font.opentype.getGlyphPath(rune)
   else:
     font.svgFont.getGlyphPath(rune)
 
-proc getGlyphAdvance(font: Font, rune: Rune): float32 =
+proc getGlyphAdvance(font: Font, rune: Rune): float32 {.inline.} =
   ## The advance for the rune in pixels.
   if font.opentype != nil:
     font.opentype.getGlyphAdvance(rune)
   else:
     font.svgFont.getGlyphAdvance(rune)
 
-proc getKerningAdjustment(font: Font, left, right: Rune): float32 =
+proc getKerningAdjustment(font: Font, left, right: Rune): float32 {.inline.} =
   ## The kerning adjustment for the rune pair, in pixels.
   if font.opentype != nil:
     font.opentype.getKerningAdjustment(left, right)
   else:
     font.svgfont.getKerningAdjustment(left, right)
 
-proc scale*(font: Font): float32 =
+proc scale*(font: Font): float32 {.inline.} =
   ## The scale factor to transform font units into pixels.
   if font.opentype != nil:
     font.size / font.opentype.head.unitsPerEm.float32
   else:
     font.size / font.svgFont.unitsPerEm
 
-proc defaultLineHeight*(font: Font): float32 =
+proc defaultLineHeight*(font: Font): float32 {.inline.} =
   ## The default line height in pixels for the current font size.
   let fontUnits = (font.ascent + abs(font.descent) + font.lineGap)
   round(fontUnits * font.scale)
