@@ -137,7 +137,8 @@ proc typeset*(
       prevCanWrap = i
 
     let advance = glyphAdvance(result.runes, font, i)
-    if bounds.x > 0 and at.x + advance > bounds.x: # Wrap to new line
+    if rune != Rune(32) and bounds.x > 0 and at.x + advance > bounds.x:
+      # Wrap to new line
       at.x = 0
       at.y += lineHeight
 
