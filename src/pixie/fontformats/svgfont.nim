@@ -2,7 +2,7 @@ import pixie/common, pixie/paths, strutils, tables, unicode, vmath, xmlparser, x
 
 type SvgFont* = ref object
   unitsPerEm*, ascent*, descent*: float32
-  glyphAdvances: Table[Rune, float32]
+  advances: Table[Rune, float32]
   glyphPaths: Table[Rune, Path]
   kerningPairs: Table[(Rune, Rune), float32]
   missingGlyphAdvance: float32
@@ -14,9 +14,9 @@ proc getGlyphPath*(svgFont: SvgFont, rune: Rune): Path =
   else:
     svgFont.missingGlyphPath
 
-proc getGlyphAdvance*(svgFont: SvgFont, rune: Rune): float32 =
-  if rune in svgFont.glyphAdvances:
-    svgFont.glyphAdvances[rune]
+proc getAdvance*(svgFont: SvgFont, rune: Rune): float32 =
+  if rune in svgFont.advances:
+    svgFont.advances[rune]
   else:
     svgFont.missingGlyphAdvance
 
@@ -74,7 +74,7 @@ proc parseSvgFont*(buf: string): SvgFont =
             var advance = defaultAdvance
             if node.attr("horiz-adv-x").len > 0:
               advance = node.parseFloat("horiz-adv-x")
-            result.glyphAdvances[rune] = advance
+            result.advances[rune] = advance
             result.glyphPaths[rune] = parsePath(node.attr("d"))
             result.glyphPaths[rune].transform(scale(vec2(1, -1)))
           else:
