@@ -139,7 +139,7 @@ proc typeset*(
   var
     at: Vec2
     prevCanWrap: int
-  at.y = round(font.typeface.ascent * font.scale)
+  at.y = round((font.typeface.ascent + font.typeface.lineGap / 2) * font.scale)
   at.y += (lineheight - font.defaultLineHeight) / 2
   for i, rune in result.runes:
     if rune.canWrap():
