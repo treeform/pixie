@@ -332,12 +332,22 @@ proc fillText*(
   text: string,
   color: SomeColor,
   transform: Vec2 | Mat3 = vec2(0, 0),
-  bounds = vec2(0, 0)
+  bounds = vec2(0, 0),
+  hAlign = haLeft,
+  vAlign = vaTop,
+  textCase = tcNormal,
+  wrap = true,
+  kerning = true
 ) =
-  let typeset = font.typeset(text, bounds)
-  for i in 0 ..< typeset.runes.len:
-    var path = font.getGlyphPath(typeset.runes[i])
-    path.transform(translate(typeset.positions[i]) * scale(vec2(font.scale)))
+  for path in font.typesetPaths(
+    text,
+    bounds,
+    hAlign,
+    vAlign,
+    textCase,
+    wrap,
+    kerning
+  ):
     image.fillPath(path, color, transform)
 
 proc fillText*(
@@ -345,12 +355,22 @@ proc fillText*(
   font: Font,
   text: string,
   transform: Vec2 | Mat3 = vec2(0, 0),
-  bounds = vec2(0, 0)
+  bounds = vec2(0, 0),
+  hAlign = haLeft,
+  vAlign = vaTop,
+  textCase = tcNormal,
+  wrap = true,
+  kerning = true
 ) =
-  let typeset = font.typeset(text, bounds)
-  for i in 0 ..< typeset.runes.len:
-    var path = font.getGlyphPath(typeset.runes[i])
-    path.transform(translate(typeset.positions[i]) * scale(vec2(font.scale)))
+  for path in font.typesetPaths(
+    text,
+    bounds,
+    hAlign,
+    vAlign,
+    textCase,
+    wrap,
+    kerning
+  ):
     mask.fillPath(path, transform)
 
 proc strokeText*(
@@ -360,12 +380,22 @@ proc strokeText*(
   color: SomeColor,
   transform: Vec2 | Mat3 = vec2(0, 0),
   strokeWidth = 1.0,
-  bounds = vec2(0, 0)
+  bounds = vec2(0, 0),
+  hAlign = haLeft,
+  vAlign = vaTop,
+  textCase = tcNormal,
+  wrap = true,
+  kerning = true
 ) =
-  let typeset = font.typeset(text, bounds)
-  for i in 0 ..< typeset.runes.len:
-    var path = font.getGlyphPath(typeset.runes[i])
-    path.transform(translate(typeset.positions[i]) * scale(vec2(font.scale)))
+  for path in font.typesetPaths(
+    text,
+    bounds,
+    hAlign,
+    vAlign,
+    textCase,
+    wrap,
+    kerning
+  ):
     image.strokePath(path, color, transform, strokeWidth)
 
 proc strokeText*(
@@ -374,10 +404,20 @@ proc strokeText*(
   text: string,
   transform: Vec2 | Mat3 = vec2(0, 0),
   strokeWidth = 1.0,
-  bounds = vec2(0, 0)
+  bounds = vec2(0, 0),
+  hAlign = haLeft,
+  vAlign = vaTop,
+  textCase = tcNormal,
+  wrap = true,
+  kerning = true
 ) =
-  let typeset = font.typeset(text, bounds)
-  for i in 0 ..< typeset.runes.len:
-    var path = font.getGlyphPath(typeset.runes[i])
-    path.transform(translate(typeset.positions[i]) * scale(vec2(font.scale)))
+  for path in font.typesetPaths(
+    text,
+    bounds,
+    hAlign,
+    vAlign,
+    textCase,
+    wrap,
+    kerning
+  ):
     mask.strokePath(path, transform, strokeWidth)

@@ -1,7 +1,7 @@
 import pixie, pixie/fileformats/png, strformat
 
 block:
-  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular.ttf")
   font.size = 64
   let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
@@ -9,7 +9,7 @@ block:
   image.writeFile("tests/fonts/image_fill.png")
 
 block:
-  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular.ttf")
   font.size = 64
   let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
@@ -17,63 +17,64 @@ block:
   image.writeFile("tests/fonts/image_stroke.png")
 
 block:
-  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular.ttf")
   font.size = 64
   let mask = newMask(200, 100)
   mask.fillText(font, "fill")
   writeFile("tests/fonts/mask_fill.png", mask.encodePng())
 
 block:
-  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular.ttf")
   font.size = 64
   let mask = newMask(200, 100)
   mask.strokeText(font, "stroke")
   writeFile("tests/fonts/mask_stroke.png", mask.encodePng())
 
 block:
-  let font = readFont("tests/fonts/Changa-Bold.svg")
+  var font = readFont("tests/fonts/Changa-Bold.svg")
   font.size = 48
   let mask = newMask(200, 100)
   mask.fillText(font, "Changa")
   writeFile("tests/fonts/svg_changa.png", mask.encodePng())
 
 block:
-  let font = readFont("tests/fonts/DejaVuSans.svg")
+  var font = readFont("tests/fonts/DejaVuSans.svg")
   font.size = 48
   let mask = newMask(200, 100)
   mask.fillText(font, "Deja vu ")
   writeFile("tests/fonts/svg_dejavu.png", mask.encodePng())
 
 block:
-  let font = readFont("tests/fonts/IBMPlexSans-Regular.svg")
+  var font = readFont("tests/fonts/IBMPlexSans-Regular.svg")
   font.size = 48
   let mask = newMask(200, 100)
   mask.fillText(font, "IBM ")
   writeFile("tests/fonts/svg_ibm.png", mask.encodePng())
 
 block:
-  let font = readFont("tests/fonts/Moon-Bold.svg")
+  var font = readFont("tests/fonts/Moon-Bold.svg")
   font.size = 48
   let mask = newMask(200, 100)
   mask.fillText(font, "Moon ")
   writeFile("tests/fonts/svg_moon.png", mask.encodePng())
 
 block:
-  let font = readFont("tests/fonts/Ubuntu.svg")
+  var font = readFont("tests/fonts/Ubuntu.svg")
   font.size = 48
   let mask = newMask(200, 100)
   mask.fillText(font, "Ubuntu ")
   writeFile("tests/fonts/svg_ubuntu.png", mask.encodePng())
 
 proc doDiff(rendered: Image, name: string) =
+  rendered.writeFile(&"tests/fonts/rendered/{name}.png")
   let
     master = readImage(&"tests/fonts/masters/{name}.png")
-    (_, diffImage) = diff(master, rendered)
-  rendered.writeFile(&"tests/fonts/rendered/{name}.png")
+    (diffScore, diffImage) = diff(master, rendered)
+  echo &"{name} score: {diffScore}"
   diffImage.writeFile(&"tests/fonts/diffs/{name}.png")
 
 block:
-  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular.ttf")
   font.size = 72
 
   let image = newImage(200, 100)
@@ -83,7 +84,7 @@ block:
   doDiff(image, "basic1")
 
 block:
-  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular.ttf")
   font.size = 72
 
   let image = newImage(200, 100)
@@ -93,7 +94,7 @@ block:
   doDiff(image, "basic2")
 
 block:
-  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular.ttf")
   font.size = 24
 
   let image = newImage(200, 100)
@@ -103,7 +104,7 @@ block:
   doDiff(image, "basic3")
 
 block:
-  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular.ttf")
   font.size = 24
   font.lineHeight = 100
 
@@ -114,7 +115,7 @@ block:
   doDiff(image, "basic4")
 
 block:
-  let font = readFont("tests/fonts/Ubuntu-Regular.ttf")
+  var font = readFont("tests/fonts/Ubuntu-Regular.ttf")
   font.size = 24
 
   let image = newImage(200, 100)
@@ -124,7 +125,7 @@ block:
   doDiff(image, "basic5")
 
 block:
-  let font = readFont("tests/fonts/Aclonica-Regular.ttf")
+  var font = readFont("tests/fonts/Aclonica-Regular.ttf")
   font.size = 24
 
   let image = newImage(200, 100)
@@ -134,7 +135,7 @@ block:
   doDiff(image, "basic6")
 
 block:
-  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular.ttf")
   font.size = 24
 
   let image = newImage(200, 100)
@@ -154,7 +155,7 @@ block:
   doDiff(image, "basic7")
 
 block:
-  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular.ttf")
   font.size = 24
 
   let image = newImage(200, 100)
@@ -169,7 +170,7 @@ block:
   doDiff(image, "basic8")
 
 block:
-  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular.ttf")
   font.size = 24
 
   let image = newImage(200, 100)
@@ -183,17 +184,193 @@ block:
 
   doDiff(image, "basic9")
 
+const
+  paragraph = "ShehadcometotheconclusionthatyoucouldtellalotaboutapersonbytheirearsThewaytheystuckoutandthesizeoftheearlobescouldgiveyou"
+  paragraph_2 = "She had come to the conclusion that you could tell a lot about a person by their ears The way they stuck out and the size of the earlobes could give you wonderful insights into the person Of course she couldnt scientifically prove any of this but that didnt matter to her Before anything else she would size up the ears of the person she was talking to Shes asked the question so many times that she barely listened to the answers anymore The answers were always the same Well not exactly the same but the same in a general sense A more accurate description was the answers never surprised her"
+  paragraph_3 = "She had come to the conclusion that you could tell a lot about a person by their ears The way they stuck out and the size of the earlobes could give you wonderful insights into the person. Of course, she couldn't scientifically prove any of this, but that didn't matter to her. Before anything else, she would size up the ears of the person she was talking to. She's asked the question so many times that she barely listened to the answers anymore. The answers were always the same. Well, not exactly the same, but the same in a general sense. A more accurate description was the answers never surprised her."
+  paragraphs = [paragraph, paragraph_2, paragraph_3]
+
 block:
-  let font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular.ttf")
   font.size = 16
 
-  let image = newImage(500, 300)
-  image.fill(rgba(255, 255, 255, 255))
-  image.fillText(
-    font,
-    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis in quam in nulla bibendum luctus. Integer dui lectus, ultricies commodo enim quis, laoreet lacinia erat. Vivamus ultrices maximus risus, non aliquam quam sagittis quis. Ut nec diam vitae tortor interdum ullamcorper in aliquet velit. Ut sed lobortis mi. Nulla venenatis lectus varius justo lacinia, quis sollicitudin nunc ultrices. Donec a suscipit arcu, id egestas neque. Nullam commodo pharetra est. Nullam gravida nibh eget quam venenatis lacinia. Vestibulum et libero arcu. Sed dignissim enim eros. Nullam eleifend luctus erat sed luctus. Nunc tincidunt, mi nec tincidunt tristique, ex nulla lobortis sem, sit amet finibus purus justo non massa.",
-    rgba(0, 0, 0, 255),
-    bounds = image.wh
-  )
+  let image = newImage(1000, 150)
 
-  doDiff(image, "paragraph")
+  for i, text in paragraphs:
+    image.fill(rgba(255, 255, 255, 255))
+    image.fillText(
+      font,
+      text,
+      rgba(0, 0, 0, 255),
+      bounds = image.wh
+    )
+
+    let name = if i > 0: &"paragraph1_{i + 1}" else: "paragraph1"
+    doDiff(image, name)
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular.ttf")
+  font.size = 16
+
+  let image = newImage(1000, 150)
+
+  for i, text in paragraphs:
+    image.fill(rgba(255, 255, 255, 255))
+    image.fillText(
+      font,
+      text,
+      rgba(0, 0, 0, 255),
+      bounds = image.wh,
+      kerning = false
+    )
+
+    let name = if i > 0: &"paragraph1_nokern_{i + 1}" else: "paragraph1_nokern"
+    doDiff(image, name)
+
+block:
+  var font = readFont("tests/fonts/Ubuntu-Regular.ttf")
+  font.size = 16
+
+  let image = newImage(1000, 150)
+
+  for i, text in paragraphs:
+    image.fill(rgba(255, 255, 255, 255))
+    image.fillText(
+      font,
+      text,
+      rgba(0, 0, 0, 255),
+      bounds = image.wh
+    )
+
+    let name = if i > 0: &"paragraph2_{i + 1}" else: "paragraph2"
+    doDiff(image, name)
+
+block:
+  var font = readFont("tests/fonts/Ubuntu-Regular.ttf")
+  font.size = 16
+
+  let image = newImage(1000, 150)
+
+  for i, text in paragraphs:
+    image.fill(rgba(255, 255, 255, 255))
+    image.fillText(
+      font,
+      text,
+      rgba(0, 0, 0, 255),
+      bounds = image.wh,
+      kerning = false
+    )
+
+    let name = if i > 0: &"paragraph2_nokern_{i + 1}" else: "paragraph2_nokern"
+    doDiff(image, name)
+
+block:
+  var font = readFont("tests/fonts/IBMPlexSans-Regular.ttf")
+  font.size = 16
+
+  let image = newImage(1000, 150)
+
+  for i, text in paragraphs:
+    image.fill(rgba(255, 255, 255, 255))
+    image.fillText(
+      font,
+      text,
+      rgba(0, 0, 0, 255),
+      bounds = image.wh
+    )
+
+    let name = if i > 0: &"paragraph3_{i + 1}" else: "paragraph3"
+    doDiff(image, name)
+
+block:
+  var font = readFont("tests/fonts/IBMPlexSans-Regular.ttf")
+  font.size = 16
+
+  let image = newImage(1000, 150)
+
+  for i, text in paragraphs:
+    image.fill(rgba(255, 255, 255, 255))
+    image.fillText(
+      font,
+      text,
+      rgba(0, 0, 0, 255),
+      bounds = image.wh,
+      kerning = false
+    )
+
+    let name = if i > 0: &"paragraph3_nokern_{i + 1}" else: "paragraph3_nokern"
+    doDiff(image, name)
+
+block:
+  var font = readFont("tests/fonts/NotoSans-Regular.ttf")
+  font.size = 16
+
+  let image = newImage(1000, 150)
+
+  for i, text in paragraphs:
+    image.fill(rgba(255, 255, 255, 255))
+    image.fillText(
+      font,
+      text,
+      rgba(0, 0, 0, 255),
+      bounds = image.wh
+    )
+
+    let name = if i > 0: &"paragraph4_{i + 1}" else: "paragraph4"
+    doDiff(image, name)
+
+block:
+  var font = readFont("tests/fonts/NotoSans-Regular.ttf")
+  font.size = 16
+
+  let image = newImage(1000, 150)
+
+  for i, text in paragraphs:
+    image.fill(rgba(255, 255, 255, 255))
+    image.fillText(
+      font,
+      text,
+      rgba(0, 0, 0, 255),
+      bounds = image.wh,
+      kerning = false
+    )
+
+    let name = if i > 0: &"paragraph4_nokern_{i + 1}" else: "paragraph4_nokern"
+    doDiff(image, name)
+
+block:
+  var font = readFont("tests/fonts/Pacifico-Regular.ttf")
+  font.size = 16
+
+  let image = newImage(1000, 150)
+
+  for i, text in paragraphs:
+    image.fill(rgba(255, 255, 255, 255))
+    image.fillText(
+      font,
+      text,
+      rgba(0, 0, 0, 255),
+      bounds = image.wh
+    )
+
+    let name = if i > 0: &"paragraph5_{i + 1}" else: "paragraph5"
+    doDiff(image, name)
+
+block:
+  var font = readFont("tests/fonts/Pacifico-Regular.ttf")
+  font.size = 16
+
+  let image = newImage(1000, 150)
+
+  for i, text in paragraphs:
+    image.fill(rgba(255, 255, 255, 255))
+    image.fillText(
+      font,
+      text,
+      rgba(0, 0, 0, 255),
+      bounds = image.wh,
+      kerning = false
+    )
+
+    let name = if i > 0: &"paragraph5_nokern_{i + 1}" else: "paragraph5_nokern"
+    doDiff(image, name)
