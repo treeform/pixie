@@ -35,21 +35,21 @@ type
     # tcSmallCaps
     # tcSmallCapsForced
 
-proc ascent(typeface: Typeface): float32 {.inline.} =
+proc ascent*(typeface: Typeface): float32 {.inline.} =
   ## The font ascender value in font units.
   if typeface.opentype != nil:
     typeface.opentype.hhea.ascender.float32
   else:
     typeface.svgFont.ascent
 
-proc descent(typeface: Typeface): float32 {.inline.} =
+proc descent*(typeface: Typeface): float32 {.inline.} =
   ## The font descender value in font units.
   if typeface.opentype != nil:
     typeface.opentype.hhea.descender.float32
   else:
     typeface.svgFont.descent
 
-proc lineGap(typeface: Typeface): float32 {.inline.} =
+proc lineGap*(typeface: Typeface): float32 {.inline.} =
   ## The font line gap value in font units.
   if typeface.opentype != nil:
     result = typeface.opentype.hhea.lineGap.float32
@@ -61,14 +61,14 @@ proc getGlyphPath*(typeface: Typeface, rune: Rune): Path {.inline.} =
   else:
     typeface.svgFont.getGlyphPath(rune)
 
-proc getAdvance(typeface: Typeface, rune: Rune): float32 {.inline.} =
+proc getAdvance*(typeface: Typeface, rune: Rune): float32 {.inline.} =
   ## The advance for the rune in pixels.
   if typeface.opentype != nil:
     typeface.opentype.getAdvance(rune)
   else:
     typeface.svgFont.getAdvance(rune)
 
-proc getKerningAdjustment(
+proc getKerningAdjustment*(
   typeface: Typeface, left, right: Rune
 ): float32 {.inline.} =
   ## The kerning adjustment for the rune pair, in pixels.
