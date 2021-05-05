@@ -339,7 +339,7 @@ proc fillText*(
   wrap = true,
   kerning = true
 ) =
-  for path in font.typesetPaths(
+  for path in font.typeset(
     text,
     bounds,
     hAlign,
@@ -347,7 +347,7 @@ proc fillText*(
     textCase,
     wrap,
     kerning
-  ):
+  ).paths:
     image.fillPath(path, color, transform)
 
 proc fillText*(
@@ -362,7 +362,7 @@ proc fillText*(
   wrap = true,
   kerning = true
 ) =
-  for path in font.typesetPaths(
+  for path in font.typeset(
     text,
     bounds,
     hAlign,
@@ -370,7 +370,7 @@ proc fillText*(
     textCase,
     wrap,
     kerning
-  ):
+  ).paths:
     mask.fillPath(path, transform)
 
 proc strokeText*(
@@ -387,7 +387,7 @@ proc strokeText*(
   wrap = true,
   kerning = true
 ) =
-  for path in font.typesetPaths(
+  for path in font.typeset(
     text,
     bounds,
     hAlign,
@@ -395,7 +395,7 @@ proc strokeText*(
     textCase,
     wrap,
     kerning
-  ):
+  ).paths:
     image.strokePath(path, color, transform, strokeWidth)
 
 proc strokeText*(
@@ -411,7 +411,7 @@ proc strokeText*(
   wrap = true,
   kerning = true
 ) =
-  for path in font.typesetPaths(
+  for path in font.typeset(
     text,
     bounds,
     hAlign,
@@ -419,5 +419,5 @@ proc strokeText*(
     textCase,
     wrap,
     kerning
-  ):
+  ).paths:
     mask.strokePath(path, transform, strokeWidth)
