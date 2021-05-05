@@ -495,10 +495,10 @@ proc parseHheaTable(buf: string, offset: int): HheaTable =
   result.caretSlopeRise = buf.readInt16(offset + 18).swap()
   result.caretSlopeRun = buf.readInt16(offset + 20).swap()
   result.caretOffset = buf.readInt16(offset + 22).swap()
-  discard buf.readUint16(offset + 24).swap() # Reserved, discard
-  discard buf.readUint16(offset + 26).swap() # Reserved, discard
-  discard buf.readUint16(offset + 28).swap() # Reserved, discard
-  discard buf.readUint16(offset + 30).swap() # Reserved, discard
+  # discard buf.readUint16(offset + 24).swap() # Reserved
+  # discard buf.readUint16(offset + 26).swap() # Reserved
+  # discard buf.readUint16(offset + 28).swap() # Reserved
+  # discard buf.readUint16(offset + 30).swap() # Reserved
   result.metricDataFormat = buf.readInt16(offset + 32).swap()
   if result.metricDataFormat != 0:
     failUnsupported()
@@ -848,8 +848,8 @@ proc parseCoverage(buf: string, offset: int): Coverage =
 
       result.rangeRecords.setLen(result.rangeCount.int)
       for j in 0 ..< result.rangeCount.int:
-        result.rangeRecords[j] =
-          parseRangeRecord(buf, i + j * sizeof(RangeRecord))
+        result.rangeRecords[j] = parseRangeRecord(buf, i)
+        i += 6
 
       for rangeRecord in result.rangeRecords:
         var ci = rangeRecord.startCoverageIndex.int
@@ -860,10 +860,13 @@ proc parseCoverage(buf: string, offset: int): Coverage =
     else:
       failUnsupported()
 
+proc valueFormatSize(valueFormat: uint16): int {.inline.} =
+  countSetBits(valueFormat) * 2
+
 proc parseValueRecord(
   buf: string, offset: int, valueFormat: uint16
 ): ValueRecord =
-  buf.eofCheck(offset + countSetBits(valueFormat) * 2)
+  buf.eofCheck(offset + valueFormatSize(valueFormat))
 
   var i = offset
   if (valueFormat and 0b1) != 0:
@@ -902,8 +905,8 @@ proc parsePairValueRecord(
   i += 2
 
   result.valueRecord1 = parseValueRecord(buf, i, valueFormat1)
-  result.valueRecord2 =
-    parseValueRecord(buf, i + countSetBits(valueFormat1) * 2, valueFormat2)
+  i += valueFormatSize(valueFormat1)
+  result.valueRecord2 = parseValueRecord(buf, i, valueFormat2)
 
 proc parsePairSet(
   buf: string, offset: int, valueFormat1, valueFormat2: uint16
@@ -916,41 +919,37 @@ proc parsePairSet(
   i += 2
 
   let pairValueRecordSize =
-      2 + (countSetBits(valueFormat1) + countSetBits(valueFormat2)) * 2
+    2 + valueFormatSize(valueFormat1) + valueFormatSize(valueFormat2)
 
   result.pairValueRecords.setLen(result.pairValueCount.int)
   for j in 0 ..< result.pairValueCount.int:
-    result.pairValueRecords[j] = parsePairValueRecord(
-      buf, i, valueFormat1, valueFormat2
-    )
+    result.pairValueRecords[j] =
+      parsePairValueRecord(buf, i, valueFormat1, valueFormat2)
     i += pairValueRecordSize
 
 proc parseClass2Record(
   buf: string, offset: int, valueFormat1, valueFormat2: uint16
 ): Class2Record =
-  let class2RecordSize = (
-    countSetBits(valueFormat1) + countSetBits(valueFormat2)
-  ) * 2
-  buf.eofCheck(offset + class2RecordSize)
-  result.valueRecord1 = parseValueRecord(buf, offset, valueFormat1)
-  result.valueRecord2 = parseValueRecord(
-    buf, offset + countSetBits(valueFormat1) * 2, valueFormat2
+  var i = offset
+
+  buf.eofCheck(
+    i + valueFormatSize(valueFormat1) + valueFormatSize(valueFormat2)
   )
+
+  result.valueRecord1 = parseValueRecord(buf, i, valueFormat1)
+  i += valueFormatSize(valueFormat1)
+  result.valueRecord2 = parseValueRecord(buf, i, valueFormat2)
 
 proc parseClass1Record(
   buf: string, offset: int, valueFormat1, valueFormat2, class2Count: uint16
 ): Class1Record =
   var i = offset
 
-  let class2RecordSize = (
-    countSetBits(valueFormat1) + countSetBits(valueFormat2)
-  ) * 2
-
   result.class2Records.setLen(class2Count.int)
   for j in 0 ..< class2Count.int:
     result.class2Records[j] =
       parseClass2Record(buf, i, valueFormat1, valueFormat2)
-    i += class2RecordSize
+    i += valueFormatSize(valueFormat1) + valueFormatSize(valueFormat2)
 
 proc parseClassRangeRecord(buf: string, offset: int): ClassRangeRecord =
   buf.eofCheck(offset + 6)
@@ -987,7 +986,7 @@ proc parseClassDef(buf: string, offset: int): ClassDef =
       result.classRangeRecords.setLen(result.classRangeCount.int)
       for j in 0 ..< result.classRangeCount.int:
         result.classRangeRecords[j] = parseClassRangeRecord(buf, i)
-        i += sizeof(ClassRangeRecord)
+        i += 6
     else:
       failUnsupported()
 
@@ -1066,9 +1065,9 @@ proc parsePairPos(buf: string, offset: int): PairPos =
 
       i += 14
 
-      let class2RecordSize = (
-        countSetBits(result.valueFormat1) + countSetBits(result.valueFormat2)
-      ) * 2
+      let class2RecordSize =
+        valueFormatSize(result.valueFormat1) +
+        valueFormatSize(result.valueFormat2)
 
       result.class1Records.setLen(result.class1Count.int)
       for j in 0 ..< result.class1Count.int:
@@ -1196,7 +1195,7 @@ proc parseGposTable(buf: string, offset: int): GPOSTable =
   result.lookupList =
     parseLookupList(buf, offset + result.lookupListOffset.int, result)
 
-proc getGlyphId(opentype: OpenType, rune: Rune): uint16 =
+proc getGlyphId(opentype: OpenType, rune: Rune): uint16 {.inline.} =
   if rune in opentype.cmap.runeToGlyphId:
     result = opentype.cmap.runeToGlyphId[rune]
   else:
@@ -1455,7 +1454,7 @@ proc parseGlyph(opentype: OpenType, glyphId: uint16): Path =
   else:
     parseGlyphPath(opentype.buf, i, numberOfContours)
 
-proc parseGlyph(opentype: OpenType, rune: Rune): Path =
+proc parseGlyph(opentype: OpenType, rune: Rune): Path {.inline.} =
   opentype.parseGlyph(opentype.getGlyphId(rune))
 
 proc getGlyphPath*(opentype: OpenType, rune: Rune): Path =
