@@ -1,16 +1,19 @@
 import pixie/fontformats/opentype, pixie/fontformats/svgfont, pixie/paths,
     unicode, vmath
 
-const AutoLineHeight* = -1.float32
+const AutoLineHeight* = -1.float32 ## Use default line height for the font size
 
 type
-  Font* = ref object
+  Typeface = ref object
     opentype: OpenType
     svgFont: SvgFont
+
+  Font* = object
+    typeface*: Typeface
     size*: float32 ## Font size in pixels.
     lineHeight*: float32 ## The line height in pixels or AutoLineHeight for the font's default line height.
 
-  TypesetText* = ref object
+  Typesetting* = ref object
     runes*: seq[Rune]
     positions*: seq[Vec2]
 
@@ -32,56 +35,59 @@ type
     # tcSmallCaps
     # tcSmallCapsForced
 
-proc ascent(font: Font): float32 {.inline.} =
+proc ascent*(typeface: Typeface): float32 {.inline.} =
   ## The font ascender value in font units.
-  if font.opentype != nil:
-    font.opentype.hhea.ascender.float32
+  if typeface.opentype != nil:
+    typeface.opentype.hhea.ascender.float32
   else:
-    font.svgFont.ascent
+    typeface.svgFont.ascent
 
-proc descent(font: Font): float32 {.inline.} =
+proc descent*(typeface: Typeface): float32 {.inline.} =
   ## The font descender value in font units.
-  if font.opentype != nil:
-    font.opentype.hhea.descender.float32
+  if typeface.opentype != nil:
+    typeface.opentype.hhea.descender.float32
   else:
-    font.svgFont.descent
+    typeface.svgFont.descent
 
-proc lineGap(font: Font): float32 {.inline.} =
+proc lineGap*(typeface: Typeface): float32 {.inline.} =
   ## The font line gap value in font units.
-  if font.opentype != nil:
-    result = font.opentype.hhea.lineGap.float32
+  if typeface.opentype != nil:
+    result = typeface.opentype.hhea.lineGap.float32
 
-proc getGlyphPath*(font: Font, rune: Rune): Path {.inline.} =
+proc getGlyphPath*(typeface: Typeface, rune: Rune): Path {.inline.} =
   ## The glyph path for the rune.
-  if font.opentype != nil:
-    font.opentype.getGlyphPath(rune)
+  if typeface.opentype != nil:
+    typeface.opentype.getGlyphPath(rune)
   else:
-    font.svgFont.getGlyphPath(rune)
+    typeface.svgFont.getGlyphPath(rune)
 
-proc getGlyphAdvance(font: Font, rune: Rune): float32 {.inline.} =
+proc getAdvance*(typeface: Typeface, rune: Rune): float32 {.inline.} =
   ## The advance for the rune in pixels.
-  if font.opentype != nil:
-    font.opentype.getGlyphAdvance(rune)
+  if typeface.opentype != nil:
+    typeface.opentype.getAdvance(rune)
   else:
-    font.svgFont.getGlyphAdvance(rune)
+    typeface.svgFont.getAdvance(rune)
 
-proc getKerningAdjustment(font: Font, left, right: Rune): float32 {.inline.} =
+proc getKerningAdjustment*(
+  typeface: Typeface, left, right: Rune
+): float32 {.inline.} =
   ## The kerning adjustment for the rune pair, in pixels.
-  if font.opentype != nil:
-    font.opentype.getKerningAdjustment(left, right)
+  if typeface.opentype != nil:
+    typeface.opentype.getKerningAdjustment(left, right)
   else:
-    font.svgfont.getKerningAdjustment(left, right)
+    typeface.svgfont.getKerningAdjustment(left, right)
 
 proc scale*(font: Font): float32 {.inline.} =
   ## The scale factor to transform font units into pixels.
-  if font.opentype != nil:
-    font.size / font.opentype.head.unitsPerEm.float32
+  if font.typeface.opentype != nil:
+    font.size / font.typeface.opentype.head.unitsPerEm.float32
   else:
-    font.size / font.svgFont.unitsPerEm
+    font.size / font.typeface.svgFont.unitsPerEm
 
 proc defaultLineHeight*(font: Font): float32 {.inline.} =
   ## The default line height in pixels for the current font size.
-  let fontUnits = (font.ascent + abs(font.descent) + font.lineGap)
+  let fontUnits =
+    font.typeface.ascent - font.typeface.descent + font.typeface.lineGap
   round(fontUnits * font.scale)
 
 proc convertTextCase(runes: var seq[Rune], textCase: TextCase) =
@@ -107,12 +113,13 @@ proc typeset*(
   bounds = vec2(0, 0),
   hAlign = haLeft,
   vAlign = vaTop,
-  textCase = tcNormal
-): TypesetText =
-  result = TypesetText()
+  textCase = tcNormal,
+  wrap = true,
+  kerning = true
+): Typesetting =
+  result = Typesetting()
   result.runes = toRunes(text)
   result.runes.convertTextCase(textCase)
-
   result.positions.setLen(result.runes.len)
 
   let lineHeight =
@@ -121,23 +128,26 @@ proc typeset*(
     else:
       font.defaultLineHeight
 
-  proc glyphAdvance(runes: seq[Rune], font: Font, i: int): float32 {.inline.} =
-    if i + 1 < runes.len:
-      result += font.getKerningAdjustment(runes[i], runes[i + 1])
-    result += font.getGlyphAdvance(runes[i])
+  proc glyphAdvance(
+    font: Font, runes: seq[Rune], i: int, kerning: bool
+  ): float32 {.inline.} =
+    if kerning and i + 1 < runes.len:
+      result += font.typeface.getKerningAdjustment(runes[i], runes[i + 1])
+    result += font.typeface.getAdvance(runes[i])
     result *= font.scale
 
   var
     at: Vec2
     prevCanWrap: int
-  at.y = round(font.ascent * font.scale)
+  at.y = round((font.typeface.ascent + font.typeface.lineGap / 2) * font.scale)
   at.y += (lineheight - font.defaultLineHeight) / 2
   for i, rune in result.runes:
     if rune.canWrap():
       prevCanWrap = i
 
-    let advance = glyphAdvance(result.runes, font, i)
-    if bounds.x > 0 and at.x + advance > bounds.x: # Wrap to new line
+    let advance = glyphAdvance(font, result.runes, i, kerning)
+    if rune != Rune(32) and bounds.x > 0 and at.x + advance > bounds.x:
+      # Wrap to new line
       at.x = 0
       at.y += lineHeight
 
@@ -145,14 +155,40 @@ proc typeset*(
       if prevCanWrap > 0 and prevCanWrap != i:
         for j in prevCanWrap + 1 ..< i:
           result.positions[j] = at
-          at.x += glyphAdvance(result.runes, font, j)
+          at.x += glyphAdvance(font, result.runes, j, kerning)
 
     result.positions[i] = at
     at.x += advance
 
+iterator typesetPaths*(
+  font: Font,
+  text: string,
+  bounds = vec2(0, 0),
+  hAlign = haLeft,
+  vAlign = vaTop,
+  textCase = tcNormal,
+  wrap = true,
+  kerning = true
+): Path =
+  let typesetText = font.typeset(
+    text,
+    bounds,
+    hAlign,
+    vAlign,
+    textCase,
+    wrap,
+    kerning
+  )
+  for i in 0 ..< typesetText.runes.len:
+    var path = font.typeface.getGlyphPath(typesetText.runes[i])
+    path.transform(
+      translate(typesetText.positions[i]) * scale(vec2(font.scale))
+    )
+    yield path
+
 proc parseOtf*(buf: string): Font =
-  result = Font()
-  result.opentype = parseOpenType(buf)
+  result.typeface = Typeface()
+  result.typeface.opentype = parseOpenType(buf)
   result.size = 12
   result.lineHeight = AutoLineHeight
 
@@ -160,7 +196,7 @@ proc parseTtf*(buf: string): Font =
   parseOtf(buf)
 
 proc parseSvgFont*(buf: string): Font =
-  result = Font()
-  result.svgFont = svgfont.parseSvgFont(buf)
+  result.typeface = Typeface()
+  result.typeface.svgFont = svgfont.parseSvgFont(buf)
   result.size = 12
   result.lineHeight = AutoLineHeight

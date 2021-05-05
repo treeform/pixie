@@ -1,4 +1,5 @@
-import flatty/binny, math, pixie/common, pixie/paths, tables, unicode, vmath
+import bitops, flatty/binny, math, pixie/common, pixie/paths, sets, tables,
+    unicode, vmath
 
 ## See https://docs.microsoft.com/en-us/typography/opentype/spec/
 
@@ -158,12 +159,149 @@ type
     version*: uint16
     nTables*: uint16
     subTables*: seq[KernSubTable]
+    kerningPairs: Table[(uint16, uint16), float32]
 
   TableRecord* = object
     tag*: string
     checksum*: uint32
     offset*: uint32
     length*: uint32
+
+  # LangSys = object
+  #   lookupOrderOffset: uint16
+  #   requiredFeatureIndex: uint16
+  #   featureIndexCount: uint16
+  #   featureIndices: seq[uint16]
+
+  # LangSysRecord = object
+  #   langSysTag: string
+  #   langSysOffset: uint16
+  #   langSys: LangSys
+
+  # Script = object
+  #   defaultLangSysOffset: uint16
+  #   langSysCount: uint16
+  #   langSysRecords: seq[LangSysRecord]
+
+  # ScriptRecord = object
+  #   scriptTag: string
+  #   scriptOffset: uint16
+  #   script: Script
+
+  # ScriptList = object
+  #   scriptCount: uint16
+  #   scriptRecords: seq[ScriptRecord]
+
+  # Feature = object
+  #   featureParamsOffset: uint16
+  #   lookupIndexCount: uint16
+  #   lookupListIndices: seq[uint16]
+
+  # FeatureRecord = object
+  #   featureTag: string
+  #   featureOffset: uint16
+  #   feature: Feature
+
+  # FeatureList = object
+  #   featureCount: uint16
+  #   featureRecords: seq[FeatureRecord]
+
+  RangeRecord = object
+    startGlyphID: uint16
+    endGlyphID: uint16
+    startCoverageIndex: uint16
+
+  Coverage = object
+    coverageFormat: uint16
+    glyphCount: uint16
+    glyphArray: seq[uint16]
+    rangeCount: uint16
+    rangeRecords: seq[RangeRecord]
+    coveredGlyphs: HashSet[uint16]
+
+  ValueRecord = object
+    xPlacement: int16
+    yPlacement: int16
+    xAdvance: int16
+    yAdvance: int16
+    xPlaDeviceOffset: uint16
+    yPlaDeviceOffset: uint16
+    xAdvDeviceOffset: uint16
+    yAdvDeviceOffset: uint16
+
+  PairValueRecord = object
+    secondGlyph: uint16
+    valueRecord1: ValueRecord
+    valueRecord2: ValueRecord
+
+  PairSet = object
+    pairValueCount: uint16
+    pairValueRecords: seq[PairValueRecord]
+
+  Class2Record = object
+    valueRecord1: ValueRecord
+    valueRecord2: ValueRecord
+
+  Class1Record = object
+    class2Records: seq[Class2Record]
+
+  ClassRangeRecord = object
+    startGlyphID: uint16
+    endGlyphID: uint16
+    class: uint16
+
+  ClassDef = object
+    classFormat: uint16
+    startGlyphID: uint16
+    glyphCount: uint16
+    classValueArray: seq[uint16]
+    classRangeCount: uint16
+    classRangeRecords: seq[ClassRangeRecord]
+
+  PairPos = ref object
+    posFormat: uint16
+    coverageOffset: uint16
+    valueFormat1: uint16
+    valueFormat2: uint16
+    pairSetCount: uint16
+    pairSetOffsets: seq[uint16]
+    pairSets: seq[PairSet]
+    classDef1Offset: uint16
+    classDef2Offset: uint16
+    class1Count: uint16
+    class2Count: uint16
+    class1Records: seq[Class1Record]
+    classDef1: ClassDef
+    classDef2: ClassDef
+    coverage: Coverage
+    glyphIdToClass1: Table[uint16, uint16]
+    glyphIdToClass2: Table[uint16, uint16]
+    classPairAdjustments: Table[(uint16, uint16), int16]
+    glyphPairAdjustments: Table[(uint16, uint16), int16]
+
+  Lookup = object
+    lookupType: uint16
+    lookupFlag: uint16
+    subTableCount: uint16
+    subTableOffsets: seq[uint16]
+    markFilteringSet: uint16
+
+  LookupList = object
+    lookupCount: uint16
+    lookupOffsets: seq[uint16]
+    lookups: seq[Lookup]
+    pairPosTables: seq[PairPos]
+
+  GposTable = ref object
+    majorVersion: uint16
+    minorVersion: uint16
+    scriptListOffset: uint16
+    featureListOffset: uint16
+    lookupListOffset: uint16
+    featureVariationsOffset: uint32
+    # scriptList: ScriptList
+    # featureList: FeatureList
+    lookupList: LookupList
 
   OpenType* = ref object
     buf*: string
@@ -183,8 +321,8 @@ type
     loca*: LocaTable
     glyf*: GlyfTable
     kern*: KernTable
+    gpos*: GposTable
     glyphPaths: Table[Rune, Path]
-    kerningPairs: Table[(Rune, Rune), float32]
 
 when defined(release):
   {.push checks: off.}
@@ -358,10 +496,10 @@ proc parseHheaTable(buf: string, offset: int): HheaTable =
   result.caretSlopeRise = buf.readInt16(offset + 18).swap()
   result.caretSlopeRun = buf.readInt16(offset + 20).swap()
   result.caretOffset = buf.readInt16(offset + 22).swap()
-  discard buf.readUint16(offset + 24).swap() # Reserved, discard
-  discard buf.readUint16(offset + 26).swap() # Reserved, discard
-  discard buf.readUint16(offset + 28).swap() # Reserved, discard
-  discard buf.readUint16(offset + 30).swap() # Reserved, discard
+  # discard buf.readUint16(offset + 24).swap() # Reserved
+  # discard buf.readUint16(offset + 26).swap() # Reserved
+  # discard buf.readUint16(offset + 28).swap() # Reserved
+  # discard buf.readUint16(offset + 30).swap() # Reserved
   result.metricDataFormat = buf.readInt16(offset + 32).swap()
   if result.metricDataFormat != 0:
     failUnsupported()
@@ -569,12 +707,494 @@ proc parseKernTable(buf: string, offset: int): KernTable =
         i += 6
 
       result.subTables.add(subTable)
+
+      for table in result.subTables:
+        if (table.coverage and 1) != 0: # Horizontal data
+          for pair in table.kernPairs:
+            if pair.value != 0:
+              let key = (pair.left, pair.right)
+              var value = pair.value.float32
+              if key in result.kerningPairs:
+                if (table.coverage and 0b1000) != 0: # Override
+                  discard
+                else: # Accumulate
+                  value += result.kerningPairs[key]
+              result.kerningPairs[key] = value
+
   elif version == 1:
     discard # Mac format
   else:
     failUnsupported()
 
-proc getGlyphId(opentype: OpenType, rune: Rune): uint16 =
+# proc parseLangSys(buf: string, offset: int): LangSys =
+#   var i = offset
+
+#   buf.eofCheck(i + 6)
+
+#   result.lookupOrderOffset = buf.readUint16(i + 0).swap()
+#   result.requiredFeatureIndex = buf.readUint16(i + 2).swap()
+#   result.featureIndexCount = buf.readUint16(i + 4).swap()
+#   i += 6
+
+#   buf.eofCheck(i + 2 * result.featureIndexCount.int)
+
+#   result.featureIndices = buf.readUint16Seq(i, result.featureIndexCount.int)
+
+# proc parseScript(buf: string, offset: int): Script =
+#   var i = offset
+
+#   buf.eofCheck(i + 4)
+
+#   result.defaultLangSysOffset = buf.readUint16(i + 0).swap()
+#   result.langSysCount = buf.readUint16(i + 2).swap()
+#   i += 4
+
+#   buf.eofCheck(i + result.langSysCount.int * 6)
+
+#   for _ in 0 ..< result.langSysCount.int:
+#     var langSysRecord: LangSysRecord
+#     langSysRecord.langSysTag = buf.readStr(i + 0, 4)
+#     langSysRecord.langSysOffset = buf.readUint16(i + 4).swap()
+#     langSysRecord.langSys = parseLangSys(
+#       buf, offset + langSysRecord.langSysOffset.int
+#     )
+#     result.langSysRecords.add(langSysRecord)
+#     i += 6
+
+# proc parseScriptList(buf: string, offset: int): ScriptList =
+#   var i = offset
+
+#   buf.eofCheck(i + 2)
+
+#   result.scriptCount = buf.readUint16(i + 0).swap()
+#   i += 2
+
+#   buf.eofCheck(i + 6 * result.scriptCount.int)
+
+#   for _ in 0 ..< result.scriptCount.int:
+#     var scriptRecord: ScriptRecord
+#     scriptRecord.scriptTag = buf.readStr(i + 0, 4)
+#     scriptRecord.scriptOffset = buf.readUint16(i + 4).swap()
+#     scriptRecord.script = parseScript(
+#       buf, offset + scriptRecord.scriptOffset.int
+#     )
+#     result.scriptRecords.add(scriptRecord)
+#     i += 6
+
+# proc parseFeature(buf: string, offset: int): Feature =
+#   var i = offset
+
+#   buf.eofCheck(i + 4)
+
+#   result.featureParamsOffset = buf.readUint16(i + 0).swap()
+#   result.lookupIndexCount = buf.readUint16(i + 2).swap()
+#   i += 4
+
+#   buf.eofCheck(i + 2 * result.lookupIndexCount.int)
+
+#   result.lookupListIndices = buf.readUint16Seq(i, result.lookupIndexCount.int)
+
+# proc parseFeatureList(buf: string, offset: int): FeatureList =
+#   var i = offset
+
+#   buf.eofCheck(i + 2)
+
+#   result.featureCount = buf.readUint16(i + 0).swap()
+#   i += 2
+
+#   buf.eofCheck(i + 6 * result.featureCount.int)
+
+#   for _ in 0 ..< result.featureCount.int:
+#     var featureRecord: FeatureRecord
+#     featureRecord.featureTag = buf.readStr(i + 0, 4)
+#     featureRecord.featureOffset = buf.readUint16(i + 4).swap()
+#     featureRecord.feature = parseFeature(
+#       buf, offset + featureRecord.featureOffset.int
+#     )
+#     result.featureRecords.add(featureRecord)
+#     i += 6
+
+proc parseRangeRecord(buf: string, offset: int): RangeRecord =
+  buf.eofCheck(offset + 6)
+
+  result.startGlyphID = buf.readUint16(offset + 0).swap()
+  result.endGlyphID = buf.readUint16(offset + 2).swap()
+  result.startCoverageIndex = buf.readUint16(offset + 4).swap()
+
+proc parseCoverage(buf: string, offset: int): Coverage =
+  var i = offset
+
+  buf.eofCheck(i + 4)
+
+  result.coverageFormat = buf.readUint16(i + 0).swap()
+  i += 2
+
+  case result.coverageFormat:
+    of 1:
+      result.glyphCount = buf.readUint16(i + 0).swap()
+      i += 2
+
+      buf.eofCheck(i + result.glyphCount.int * 2)
+
+      result.glyphArray = buf.readUint16Seq(i, result.glyphCount.int)
+
+      for ci, glyphId in result.glyphArray:
+        result.coveredGlyphs.incl(glyphId)
+
+    of 2:
+      result.rangeCount = buf.readUint16(i + 0).swap()
+      i += 2
+
+      result.rangeRecords.setLen(result.rangeCount.int)
+      for j in 0 ..< result.rangeCount.int:
+        result.rangeRecords[j] = parseRangeRecord(buf, i)
+        i += 6
+
+      for rangeRecord in result.rangeRecords:
+        var ci = rangeRecord.startCoverageIndex.int
+        for glyphId in rangeRecord.startGlyphID .. rangeRecord.endGlyphID:
+          result.coveredGlyphs.incl(glyphId)
+          inc ci
+
+    else:
+      failUnsupported()
+
+proc valueFormatSize(valueFormat: uint16): int {.inline.} =
+  countSetBits(valueFormat) * 2
+
+proc parseValueRecord(
+  buf: string, offset: int, valueFormat: uint16
+): ValueRecord =
+  buf.eofCheck(offset + valueFormatSize(valueFormat))
+
+  var i = offset
+  if (valueFormat and 0b1) != 0:
+    result.xPlacement = buf.readInt16(i).swap()
+    i += 2
+  if (valueFormat and 0b10) != 0:
+    result.yPlacement = buf.readInt16(i).swap()
+    i += 2
+  if (valueFormat and 0b100) != 0:
+    result.xAdvance = buf.readInt16(i).swap()
+    i += 2
+  if (valueFormat and 0b1000) != 0:
+    result.yAdvance = buf.readInt16(i).swap()
+    i += 2
+  if (valueFormat and 0b10000) != 0:
+    result.xPlaDeviceOffset = buf.readUint16(i).swap()
+    i += 2
+  if (valueFormat and 0b100000) != 0:
+    result.yPlaDeviceOffset = buf.readUint16(i).swap()
+    i += 2
+  if (valueFormat and 0b1000000) != 0:
+    result.xAdvDeviceOffset = buf.readUint16(i).swap()
+    i += 2
+  if (valueFormat and 0b10000000) != 0:
+    result.yAdvDeviceOffset = buf.readUint16(i).swap()
+    i += 2
+
+proc parsePairValueRecord(
+  buf: string, offset: int, valueFormat1, valueFormat2: uint16
+): PairValueRecord =
+  var i = offset
+
+  buf.eofCheck(i + 2)
+
+  result.secondGlyph = buf.readUint16(i + 0).swap()
+  i += 2
+
+  result.valueRecord1 = parseValueRecord(buf, i, valueFormat1)
+  i += valueFormatSize(valueFormat1)
+  result.valueRecord2 = parseValueRecord(buf, i, valueFormat2)
+
+proc parsePairSet(
+  buf: string, offset: int, valueFormat1, valueFormat2: uint16
+): PairSet =
+  var i = offset
+
+  buf.eofCheck(i + 2)
+
+  result.pairValueCount = buf.readUint16(i + 0).swap()
+  i += 2
+
+  let pairValueRecordSize =
+    2 + valueFormatSize(valueFormat1) + valueFormatSize(valueFormat2)
+
+  result.pairValueRecords.setLen(result.pairValueCount.int)
+  for j in 0 ..< result.pairValueCount.int:
+    result.pairValueRecords[j] =
+      parsePairValueRecord(buf, i, valueFormat1, valueFormat2)
+    i += pairValueRecordSize
+
+proc parseClass2Record(
+  buf: string, offset: int, valueFormat1, valueFormat2: uint16
+): Class2Record =
+  var i = offset
+
+  buf.eofCheck(
+    i + valueFormatSize(valueFormat1) + valueFormatSize(valueFormat2)
+  )
+
+  result.valueRecord1 = parseValueRecord(buf, i, valueFormat1)
+  i += valueFormatSize(valueFormat1)
+  result.valueRecord2 = parseValueRecord(buf, i, valueFormat2)
+
+proc parseClass1Record(
+  buf: string, offset: int, valueFormat1, valueFormat2, class2Count: uint16
+): Class1Record =
+  var i = offset
+
+  result.class2Records.setLen(class2Count.int)
+  for j in 0 ..< class2Count.int:
+    result.class2Records[j] =
+      parseClass2Record(buf, i, valueFormat1, valueFormat2)
+    i += valueFormatSize(valueFormat1) + valueFormatSize(valueFormat2)
+
+proc parseClassRangeRecord(buf: string, offset: int): ClassRangeRecord =
+  buf.eofCheck(offset + 6)
+
+  result.startGlyphID = buf.readUint16(offset + 0).swap()
+  result.endGlyphID = buf.readUint16(offset + 2).swap()
+  result.class = buf.readUint16(offset + 4).swap()
+
+proc parseClassDef(buf: string, offset: int): ClassDef =
+  var i = offset
+
+  buf.eofCheck(i + 2)
+
+  result.classFormat = buf.readUint16(i + 0).swap()
+  i += 2
+
+  case result.classFormat:
+    of 1:
+      buf.eofCheck(i + 4)
+
+      result.startGlyphID = buf.readUint16(i + 0).swap()
+      result.glyphCount = buf.readUint16(i + 2).swap()
+      i += 4
+
+      buf.eofCheck(i + result.glyphCount.int * 2)
+
+      result.classValueArray = buf.readUint16Seq(i + 0, result.glyphCount.int)
+    of 2:
+      buf.eofCheck(i + 2)
+
+      result.classRangeCount = buf.readUint16(i + 0).swap()
+      i += 2
+
+      result.classRangeRecords.setLen(result.classRangeCount.int)
+      for j in 0 ..< result.classRangeCount.int:
+        result.classRangeRecords[j] = parseClassRangeRecord(buf, i)
+        i += 6
+    else:
+      failUnsupported()
+
+proc parsePairPos(buf: string, offset: int): PairPos =
+  var i = offset
+
+  buf.eofCheck(i + 4)
+
+  result = PairPos()
+  result.posFormat = buf.readUint16(i + 0).swap()
+  i += 2
+
+  case result.posFormat:
+    of 1: # Glyph ID pairs
+      buf.eofCheck(i + 8)
+
+      result.coverageOffset = buf.readUint16(i + 0).swap()
+      result.valueFormat1 = buf.readUint16(i + 2).swap()
+      result.valueFormat2 = buf.readUint16(i + 4).swap()
+      result.pairSetCount = buf.readUint16(i + 6).swap()
+      i += 8
+
+      buf.eofCheck(i + 2 * result.pairSetCount.int)
+
+      let pairSetOffsets = buf.readUint16Seq(i + 0, result.pairSetCount.int)
+      i += 2 * result.pairSetCount.int
+
+      result.pairSets.setLen(result.pairSetCount.int)
+      for j in 0 ..< result.pairSetCount.int:
+        result.pairSets[j] = parsePairSet(
+          buf,
+          offset + pairSetOffsets[j].int,
+          result.valueFormat1,
+          result.valueFormat2
+        )
+
+      result.coverage = parseCoverage(buf, offset + result.coverageOffset.int)
+
+      if (result.valueFormat1 and 0b100) != 0:
+        case result.coverage.coverageFormat:
+          of 1:
+            if result.coverage.glyphCount != result.pairSetCount:
+              failUnsupported()
+            for ci, glyphId in result.coverage.glyphArray:
+              if ci < 0 or ci >= result.pairSets.len:
+                failUnsupported()
+              for pairValueRecord in result.pairSets[ci].pairValueRecords:
+                if pairValueRecord.valueRecord1.xAdvance != 0:
+                  let glyphPair = (glyphId, pairValueRecord.secondGlyph)
+                  result.glyphPairAdjustments[glyphPair] =
+                    pairValueRecord.valueRecord1.xAdvance
+          of 2:
+            for rangeRecord in result.coverage.rangeRecords:
+              var ci = rangeRecord.startCoverageIndex.int
+              for glyphId in rangeRecord.startGlyphID .. rangeRecord.endGlyphID:
+                if ci < 0 or ci >= result.pairSets.len:
+                  failUnsupported()
+                for pairValueRecord in result.pairSets[ci].pairValueRecords:
+                  if pairValueRecord.valueRecord1.xAdvance != 0:
+                    let glyphPair = (glyphId, pairValueRecord.secondGlyph)
+                    result.glyphPairAdjustments[glyphPair] =
+                      pairValueRecord.valueRecord1.xAdvance
+                inc ci
+          else:
+            discard
+    of 2: # Class pairs
+      buf.eofCheck(i + 14)
+
+      result.coverageOffset = buf.readUint16(i + 0).swap()
+      result.valueFormat1 = buf.readUint16(i + 2).swap()
+      result.valueFormat2 = buf.readUint16(i + 4).swap()
+      result.classDef1Offset = buf.readUint16(i + 6).swap()
+      result.classDef2Offset = buf.readUint16(i + 8).swap()
+      result.class1Count = buf.readUint16(i + 10).swap()
+      result.class2Count = buf.readUint16(i + 12).swap()
+
+      i += 14
+
+      let class2RecordSize =
+        valueFormatSize(result.valueFormat1) +
+        valueFormatSize(result.valueFormat2)
+
+      result.class1Records.setLen(result.class1Count.int)
+      for j in 0 ..< result.class1Count.int:
+        result.class1Records[j] = parseClass1Record(
+          buf, i, result.valueFormat1, result.valueFormat2, result.class2Count
+        )
+        i += class2RecordSize * result.class2Count.int
+
+      result.classDef1 = parseClassDef(buf, offset + result.classDef1Offset.int)
+      result.classDef2 = parseClassDef(buf, offset + result.classDef2Offset.int)
+
+      result.coverage = parseCoverage(buf, offset + result.coverageOffset.int)
+
+      proc classDefFormat1(
+        classDef: ClassDef, table: var Table[uint16, uint16]
+      ) =
+        for i in 0.uint16 ..< classDef.glyphCount:
+          if classDef.classValueArray[i] != 0:
+            table[classDef.startGlyphID + i] = classDef.classValueArray[i]
+
+      proc classDefFormat2(
+        classDef: ClassDef, table: var Table[uint16, uint16]
+      ) =
+        for record in classDef.classRangeRecords:
+          if record.startGlyphID > record.endGlyphID:
+            failUnsupported()
+          if record.class != 0:
+            for glyphId in record.startGlyphID .. record.endGlyphID:
+              table[glyphId] = record.class
+
+      case result.classDef1.classFormat:
+        of 1:
+          classDefFormat1(result.classDef1, result.glyphIdToClass1)
+        of 2:
+          classDefFormat2(result.classDef1, result.glyphIdToClass1)
+        else:
+          discard
+
+      case result.classDef2.classFormat:
+        of 1:
+          classDefFormat1(result.classDef2, result.glyphIdToClass2)
+        of 2:
+          classDefFormat2(result.classDef2, result.glyphIdToClass2)
+        else:
+          discard
+
+      if (result.valueFormat1 and 0b100) != 0:
+        for class1, class1Record in result.class1Records:
+          for class2, class2Record in class1Record.class2Records:
+            if class2Record.valueRecord1.xAdvance != 0:
+              result.classPairAdjustments[(class1.uint16, class2.uint16)] =
+                class2Record.valueRecord1.xAdvance
+    else:
+      failUnsupported()
+
+proc parseLookup(buf: string, offset: int, gpos: GposTable): Lookup =
+  var i = offset
+
+  buf.eofCheck(i + 6)
+
+  result.lookupType = buf.readUint16(i + 0).swap()
+  result.lookupFlag = buf.readUint16(i + 2).swap()
+  result.subTableCount = buf.readUint16(i + 4).swap()
+  i += 6
+
+  buf.eofCheck(i + 2 * result.subTableCount.int)
+
+  result.subTableOffsets = buf.readUint16Seq(i, result.subTableCount.int)
+  i += 2 * result.subTableCount.int
+
+  if (result.lookupFlag and 0x0010) != 0: # USE_MARK_FILTERING_SET
+    buf.eofCheck(i + 2)
+    result.markFilteringSet = buf.readUint16(i).swap()
+
+  for subTableOffset in result.subTableOffsets:
+    if result.lookupType == 2:
+      let pairPos = parsePairPos(buf, offset + subTableOffset.int)
+      if pairPos.glyphPairAdjustments.len > 0 or
+        pairPos.classPairAdjustments.len > 0:
+        gpos.lookupList.pairPosTables.add(pairPos)
+
+proc parseLookupList(buf: string, offset: int, gpos: GposTable): LookupList =
+  var i = offset
+
+  buf.eofCheck(i + 2)
+
+  result.lookupCount = buf.readUint16(i + 0).swap()
+  i += 2
+
+  buf.eofCheck(i + 2 * result.lookupCount.int)
+
+  result.lookupOffsets = buf.readUint16Seq(i, result.lookupCount.int)
+
+  for lookupOffset in result.lookupoffsets:
+    result.lookups.add(parseLookup(buf, offset + lookupOffset.int, gpos))
+
+proc parseGposTable(buf: string, offset: int): GPOSTable =
+  var i = offset
+
+  buf.eofCheck(i + 10)
+
+  result = GPOSTable()
+  result.majorVersion = buf.readUint16(i + 0).swap()
+  result.minorVersion = buf.readUint16(i + 2).swap()
+  result.scriptListOffset = buf.readUint16(i + 4).swap()
+  result.featureListOffset = buf.readUint16(i + 6).swap()
+  result.lookupListOffset = buf.readUint16(i + 8).swap()
+  i += 10
+
+  if result.majorVersion != 1:
+    failUnsupported()
+
+  if result.minorVersion == 0:
+    discard
+  elif result.minorVersion == 1:
+    buf.eofCheck(i + 4)
+    result.featureVariationsOffset = buf.readUint32(i + 0).swap()
+    i += 4
+  else:
+    failUnsupported()
+
+  # result.scriptList = parseScriptList(buf, offset + result.scriptListOffset.int)
+  # result.featureList =
+  #   parseFeatureList(buf, offset + result.featureListOffset.int)
+  result.lookupList =
+    parseLookupList(buf, offset + result.lookupListOffset.int, result)
+
+proc getGlyphId(opentype: OpenType, rune: Rune): uint16 {.inline.} =
   if rune in opentype.cmap.runeToGlyphId:
     result = opentype.cmap.runeToGlyphId[rune]
   else:
@@ -833,7 +1453,7 @@ proc parseGlyph(opentype: OpenType, glyphId: uint16): Path =
   else:
     parseGlyphPath(opentype.buf, i, numberOfContours)
 
-proc parseGlyph(opentype: OpenType, rune: Rune): Path =
+proc parseGlyph(opentype: OpenType, rune: Rune): Path {.inline.} =
   opentype.parseGlyph(opentype.getGlyphId(rune))
 
 proc getGlyphPath*(opentype: OpenType, rune: Rune): Path =
@@ -842,17 +1462,55 @@ proc getGlyphPath*(opentype: OpenType, rune: Rune): Path =
     opentype.glyphPaths[rune].transform(scale(vec2(1, -1)))
   opentype.glyphPaths[rune]
 
-proc getGlyphAdvance*(opentype: OpenType, rune: Rune): float32 =
+proc getLeftSideBearing*(opentype: OpenType, rune: Rune): float32 =
   let glyphId = opentype.getGlyphId(rune).int
   if glyphId < opentype.hmtx.hMetrics.len:
-    opentype.hmtx.hMetrics[glyphId].advanceWidth.float32
+    result = opentype.hmtx.hMetrics[glyphId].leftSideBearing.float32
   else:
-    opentype.hmtx.hMetrics[^1].advanceWidth.float32
+    let index = glyphId - opentype.hmtx.hMetrics.len
+    if index > 0 and index < opentype.hmtx.leftSideBearings.len:
+      result = opentype.hmtx.leftSideBearings[index].float32
+
+proc getAdvance*(opentype: OpenType, rune: Rune): float32 =
+  let glyphId = opentype.getGlyphId(rune).int
+  if glyphId < opentype.hmtx.hMetrics.len:
+    result = opentype.hmtx.hMetrics[glyphId].advanceWidth.float32
+  else:
+    result = opentype.hmtx.hMetrics[^1].advanceWidth.float32
 
 proc getKerningAdjustment*(opentype: OpenType, left, right: Rune): float32 =
-  let pair = (left, right)
-  if pair in opentype.kerningPairs:
-    result = opentype.kerningPairs[pair]
+  let
+    leftGlyphId = opentype.cmap.runeToGlyphId[left]
+    rightGlyphId = opentype.cmap.runeToGlyphId[right]
+    glyphPair = (leftGlyphId, rightGlyphId)
+
+  if opentype.gpos != nil:
+    for pairPos in opentype.gpos.lookupList.pairPosTables:
+      if leftGlyphId notin pairPos.coverage.coveredGlyphs:
+        continue
+
+      case pairPos.posFormat:
+        of 1:
+          if glyphPair in pairPos.glyphPairAdjustments:
+            result = pairPos.glyphPairAdjustments[glyphPair].float32
+            break
+        of 2:
+          var leftClass, rightClass: uint16
+          if leftGlyphId in pairPos.glyphIdToClass1:
+            leftClass = pairPos.glyphIdToClass1[leftGlyphId]
+          if rightGlyphId in pairPos.glyphIdToClass2:
+            rightClass = pairPos.glyphIdToClass2[rightGlyphId]
+
+          let classPair = (leftClass, rightClass)
+          if classPair in pairPos.classPairAdjustments:
+            result = pairPos.classPairAdjustments[classPair].float32
+            break
+        else:
+          discard
+
+  elif opentype.kern != nil:
+    if glyphPair in opentype.kern.kerningPairs:
+      result = opentype.kern.kerningPairs[glyphPair]
 
 proc parseOpenType*(buf: string): OpenType =
   result = OpenType()
@@ -900,30 +1558,14 @@ proc parseOpenType*(buf: string): OpenType =
   result.loca = parseLocaTable(
     buf, result.tableRecords["loca"].offset.int, result.head, result.maxp
   )
-  result.glyf = parseGlyfTable(
-    buf, result.tableRecords["glyf"].offset.int, result.loca
-  )
+  result.glyf =
+    parseGlyfTable(buf, result.tableRecords["glyf"].offset.int, result.loca)
 
   if "kern" in result.tableRecords:
     result.kern = parseKernTable(buf, result.tableRecords["kern"].offset.int)
 
-    for table in result.kern.subTables:
-      if (table.coverage and 1) != 0: # Horizontal data
-        for pair in table.kernPairs:
-          if pair.value != 0 and
-            pair.left in result.cmap.glyphIdToRune and
-            pair.right in result.cmap.glyphIdToRune:
-            let key = (
-              result.cmap.glyphIdToRune[pair.left],
-              result.cmap.glyphIdToRune[pair.right]
-            )
-            var value = pair.value.float32
-            if key in result.kerningPairs:
-              if (table.coverage and 0b1000) != 0: # Override
-                discard
-              else: # Accumulate
-                value += result.kerningPairs[key]
-            result.kerningPairs[key] = value
+  if "GPOS" in result.tableRecords:
+    result.gpos = parseGposTable(buf, result.tableRecords["GPOS"].offset.int)
 
 when defined(release):
   {.pop.}
