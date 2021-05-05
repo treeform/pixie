@@ -1,7 +1,7 @@
 import pixie, pixie/fileformats/png, strformat
 
 block:
-  var font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 64
   let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
@@ -9,7 +9,7 @@ block:
   image.writeFile("tests/fonts/image_fill.png")
 
 block:
-  var font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 64
   let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
@@ -17,14 +17,14 @@ block:
   image.writeFile("tests/fonts/image_stroke.png")
 
 block:
-  var font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 64
   let mask = newMask(200, 100)
   mask.fillText(font, "fill")
   writeFile("tests/fonts/mask_fill.png", mask.encodePng())
 
 block:
-  var font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 64
   let mask = newMask(200, 100)
   mask.strokeText(font, "stroke")
@@ -74,7 +74,7 @@ proc doDiff(rendered: Image, name: string) =
   diffImage.writeFile(&"tests/fonts/diffs/{name}.png")
 
 block:
-  var font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 72
 
   let image = newImage(200, 100)
@@ -84,7 +84,7 @@ block:
   doDiff(image, "basic1")
 
 block:
-  var font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 72
 
   let image = newImage(200, 100)
@@ -94,7 +94,7 @@ block:
   doDiff(image, "basic2")
 
 block:
-  var font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 24
 
   let image = newImage(200, 100)
@@ -104,7 +104,7 @@ block:
   doDiff(image, "basic3")
 
 block:
-  var font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 24
   font.lineHeight = 100
 
@@ -115,7 +115,7 @@ block:
   doDiff(image, "basic4")
 
 block:
-  var font = readFont("tests/fonts/Ubuntu-Regular.ttf")
+  var font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
   font.size = 24
 
   let image = newImage(200, 100)
@@ -125,7 +125,7 @@ block:
   doDiff(image, "basic5")
 
 block:
-  var font = readFont("tests/fonts/Aclonica-Regular.ttf")
+  var font = readFont("tests/fonts/Aclonica-Regular_1.ttf")
   font.size = 24
 
   let image = newImage(200, 100)
@@ -135,7 +135,7 @@ block:
   doDiff(image, "basic6")
 
 block:
-  var font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 24
 
   let image = newImage(200, 100)
@@ -155,7 +155,7 @@ block:
   doDiff(image, "basic7")
 
 block:
-  var font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 24
 
   let image = newImage(200, 100)
@@ -170,7 +170,7 @@ block:
   doDiff(image, "basic8")
 
 block:
-  var font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 24
 
   let image = newImage(200, 100)
@@ -191,7 +191,7 @@ const
   paragraphs = [paragraph, paragraph_2, paragraph_3]
 
 block:
-  var font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 16
 
   let image = newImage(1000, 150)
@@ -209,7 +209,7 @@ block:
     doDiff(image, name)
 
 block:
-  var font = readFont("tests/fonts/Roboto-Regular.ttf")
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 16
 
   let image = newImage(1000, 150)
@@ -228,7 +228,7 @@ block:
     doDiff(image, name)
 
 block:
-  var font = readFont("tests/fonts/Ubuntu-Regular.ttf")
+  var font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
   font.size = 16
 
   let image = newImage(1000, 150)
@@ -246,7 +246,7 @@ block:
     doDiff(image, name)
 
 block:
-  var font = readFont("tests/fonts/Ubuntu-Regular.ttf")
+  var font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
   font.size = 16
 
   let image = newImage(1000, 150)
@@ -265,7 +265,7 @@ block:
     doDiff(image, name)
 
 block:
-  var font = readFont("tests/fonts/IBMPlexSans-Regular.ttf")
+  var font = readFont("tests/fonts/IBMPlexSans-Regular_2.ttf")
   font.size = 16
 
   let image = newImage(1000, 150)
@@ -283,7 +283,7 @@ block:
     doDiff(image, name)
 
 block:
-  var font = readFont("tests/fonts/IBMPlexSans-Regular.ttf")
+  var font = readFont("tests/fonts/IBMPlexSans-Regular_2.ttf")
   font.size = 16
 
   let image = newImage(1000, 150)
@@ -302,7 +302,7 @@ block:
     doDiff(image, name)
 
 block:
-  var font = readFont("tests/fonts/NotoSans-Regular.ttf")
+  var font = readFont("tests/fonts/NotoSans-Regular_4.ttf")
   font.size = 16
 
   let image = newImage(1000, 150)
@@ -320,7 +320,7 @@ block:
     doDiff(image, name)
 
 block:
-  var font = readFont("tests/fonts/NotoSans-Regular.ttf")
+  var font = readFont("tests/fonts/NotoSans-Regular_4.ttf")
   font.size = 16
 
   let image = newImage(1000, 150)
@@ -339,7 +339,7 @@ block:
     doDiff(image, name)
 
 block:
-  var font = readFont("tests/fonts/Pacifico-Regular.ttf")
+  var font = readFont("tests/fonts/Pacifico-Regular_4.ttf")
   font.size = 16
 
   let image = newImage(1000, 150)
@@ -357,7 +357,7 @@ block:
     doDiff(image, name)
 
 block:
-  var font = readFont("tests/fonts/Pacifico-Regular.ttf")
+  var font = readFont("tests/fonts/Pacifico-Regular_4.ttf")
   font.size = 16
 
   let image = newImage(1000, 150)
@@ -374,3 +374,141 @@ block:
 
     let name = if i > 0: &"paragraph5_nokern_{i + 1}" else: "paragraph5_nokern"
     doDiff(image, name)
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 200
+
+  let image = newImage(2800, 400)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(
+    font,
+    "Shehadcometotheconclusion",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh
+  )
+
+  doDiff(image, "huge1")
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 200
+
+  let image = newImage(2800, 400)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(
+    font,
+    "Shehadcometotheconclusion",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh,
+    kerning = false
+  )
+
+  doDiff(image, "huge1_nokern")
+
+block:
+  var font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
+  font.size = 200
+
+  let image = newImage(2800, 400)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(
+    font,
+    "Shehadcometotheconclusion",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh
+  )
+
+  doDiff(image, "huge2")
+
+block:
+  var font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
+  font.size = 200
+
+  let image = newImage(2800, 400)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(
+    font,
+    "Shehadcometotheconclusion",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh,
+    kerning = false
+  )
+
+  doDiff(image, "huge2_nokern")
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 200
+
+  let image = newImage(2800, 400)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(
+    font,
+    "Wrapping text to the next line",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh
+  )
+
+  doDiff(image, "huge3")
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 200
+
+  let image = newImage(2800, 400)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(
+    font,
+    "Wrapping text to the next line",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh,
+    kerning = false
+  )
+
+  doDiff(image, "huge3_nokern")
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 100
+
+  let image = newImage(2800, 200)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(
+    font,
+    "HA HT HX HY IA IT IX IY MA MT MX MY NA NT NX NY",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh
+  )
+
+  doDiff(image, "pairs1")
+
+block:
+  var font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
+  font.size = 100
+
+  let image = newImage(2800, 200)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(
+    font,
+    "V( V) V- V/ V: v; v? v@ VT VV VW VX VY V] Vu Vz V{",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh
+  )
+
+  doDiff(image, "pairs2")
+
+block:
+  var font = readFont("tests/fonts/IBMPlexSans-Regular_2.ttf")
+  font.size = 100
+
+  let image = newImage(2800, 200)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(
+    font,
+    "B, B. BA BJ BT BW BY Bf Bg Bt bw By",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh
+  )
+
+  doDiff(image, "pairs3")
