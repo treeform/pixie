@@ -4,7 +4,7 @@ import pixie/fontformats/opentype, pixie/fontformats/svgfont, pixie/paths,
 const AutoLineHeight* = -1.float32 ## Use default line height for the font size
 
 type
-  Typeface = ref object
+  Typeface* = ref object
     opentype: OpenType
     svgFont: SvgFont
 
