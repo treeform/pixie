@@ -662,7 +662,7 @@ proc parseGlyfTable(buf: string, offset: int, loca: LocaTable): GlyfTable =
   for glyphId in 0 ..< loca.offsets.len:
     result.offsets[glyphId] = offset.uint32 + loca.offsets[glyphId]
 
-proc parseKernTable(buf: string, offset: int, cmap: CmapTable): KernTable =
+proc parseKernTable(buf: string, offset: int): KernTable =
   var i = offset
 
   buf.eofCheck(i + 2)
@@ -710,9 +710,7 @@ proc parseKernTable(buf: string, offset: int, cmap: CmapTable): KernTable =
       for table in result.subTables:
         if (table.coverage and 1) != 0: # Horizontal data
           for pair in table.kernPairs:
-            if pair.value != 0 and
-              pair.left in cmap.glyphIdToRune and
-              pair.right in cmap.glyphIdToRune:
+            if pair.value != 0:
               let key = (pair.left, pair.right)
               var value = pair.value.float32
               if key in result.kerningPairs:
@@ -1000,7 +998,7 @@ proc parsePairPos(buf: string, offset: int): PairPos =
   i += 2
 
   case result.posFormat:
-    of 1:
+    of 1: # Glyph ID pairs
       buf.eofCheck(i + 8)
 
       result.coverageOffset = buf.readUint16(i + 0).swap()
@@ -1052,7 +1050,7 @@ proc parsePairPos(buf: string, offset: int): PairPos =
                 inc ci
           else:
             discard
-    of 2:
+    of 2: # Class pairs
       buf.eofCheck(i + 14)
 
       result.coverageOffset = buf.readUint16(i + 0).swap()
@@ -1563,8 +1561,7 @@ proc parseOpenType*(buf: string): OpenType =
     parseGlyfTable(buf, result.tableRecords["glyf"].offset.int, result.loca)
 
   if "kern" in result.tableRecords:
-    result.kern =
-      parseKernTable(buf, result.tableRecords["kern"].offset.int, result.cmap)
+    result.kern = parseKernTable(buf, result.tableRecords["kern"].offset.int)
 
   if "GPOS" in result.tableRecords:
     result.gpos = parseGposTable(buf, result.tableRecords["GPOS"].offset.int)
