@@ -1,4 +1,5 @@
-import bitops, flatty/binny, math, pixie/common, pixie/paths, sets, tables, unicode, vmath
+import bitops, flatty/binny, math, pixie/common, pixie/paths, sets, tables,
+    unicode, vmath
 
 ## See https://docs.microsoft.com/en-us/typography/opentype/spec/
 
@@ -1098,7 +1099,7 @@ proc parsePairPos(buf: string, offset: int): PairPos =
 
       case result.classDef1.classFormat:
         of 1:
-           classDefFormat1(result.classDef1, result.glyphIdToClass1)
+          classDefFormat1(result.classDef1, result.glyphIdToClass1)
         of 2:
           classDefFormat2(result.classDef1, result.glyphIdToClass1)
         else:
