@@ -1479,6 +1479,10 @@ proc getAdvance*(opentype: OpenType, rune: Rune): float32 =
     result = opentype.hmtx.hMetrics[^1].advanceWidth.float32
 
 proc getKerningAdjustment*(opentype: OpenType, left, right: Rune): float32 =
+  if left notin opentype.cmap.runeToGlyphId or
+    right notin opentype.cmap.runeToGlyphId:
+    return
+
   let
     leftGlyphId = opentype.cmap.runeToGlyphId[left]
     rightGlyphId = opentype.cmap.runeToGlyphId[right]
