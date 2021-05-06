@@ -1,5 +1,13 @@
 import pixie, pixie/fileformats/png, strformat
 
+proc doDiff(rendered: Image, name: string) =
+  rendered.writeFile(&"tests/fonts/rendered/{name}.png")
+  let
+    master = readImage(&"tests/fonts/masters/{name}.png")
+    (diffScore, diffImage) = diff(master, rendered)
+  echo &"{name} score: {diffScore}"
+  diffImage.writeFile(&"tests/fonts/diffs/{name}.png")
+
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 64
@@ -64,14 +72,6 @@ block:
   let mask = newMask(200, 100)
   mask.fillText(font, "Ubuntu ")
   writeFile("tests/fonts/svg_ubuntu.png", mask.encodePng())
-
-proc doDiff(rendered: Image, name: string) =
-  rendered.writeFile(&"tests/fonts/rendered/{name}.png")
-  let
-    master = readImage(&"tests/fonts/masters/{name}.png")
-    (diffScore, diffImage) = diff(master, rendered)
-  echo &"{name} score: {diffScore}"
-  diffImage.writeFile(&"tests/fonts/diffs/{name}.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -512,3 +512,24 @@ block:
   )
 
   doDiff(image, "pairs3")
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 18
+
+  let image = newImage(200, 150)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(
+    font,
+    """First line
+Second line
+Third line
+Fourth line
+Fifth line
+Sixth line
+Seventh line""",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh
+  )
+
+  doDiff(image, "lines1")
