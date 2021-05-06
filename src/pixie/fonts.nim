@@ -1,4 +1,4 @@
-import pixie/fontformats/opentype, pixie/fontformats/svgfont, pixie/paths,
+import bumpy, pixie/fontformats/opentype, pixie/fontformats/svgfont, pixie/paths,
     unicode, vmath
 
 const AutoLineHeight* = -1.float32 ## Use default line height for the font size
@@ -13,9 +13,11 @@ type
     size*: float32 ## Font size in pixels.
     lineHeight*: float32 ## The line height in pixels or AutoLineHeight for the font's default line height.
 
-  Typesetting* = ref object
+  Arrangement* = ref object
+    font*: Font
     runes*: seq[Rune]
     positions*: seq[Vec2]
+    selectionRects*: seq[Rect]
 
   HAlignMode* = enum
     haLeft
@@ -116,8 +118,9 @@ proc typeset*(
   textCase = tcNormal,
   wrap = true,
   kerning = true
-): Typesetting =
-  result = Typesetting()
+): Arrangement =
+  result = Arrangement()
+  result.font = font
   result.runes = toRunes(text)
   result.runes.convertTextCase(textCase)
   result.positions.setLen(result.runes.len)
@@ -128,7 +131,7 @@ proc typeset*(
     else:
       font.defaultLineHeight
 
-  proc glyphAdvance(
+  proc advance(
     font: Font, runes: seq[Rune], i: int, kerning: bool
   ): float32 {.inline.} =
     if kerning and i + 1 < runes.len:
@@ -145,7 +148,7 @@ proc typeset*(
     if rune.canWrap():
       prevCanWrap = i
 
-    let advance = glyphAdvance(font, result.runes, i, kerning)
+    let advance = advance(font, result.runes, i, kerning)
     if rune != Rune(32) and bounds.x > 0 and at.x + advance > bounds.x:
       # Wrap to new line
       at.x = 0
@@ -155,34 +158,16 @@ proc typeset*(
       if prevCanWrap > 0 and prevCanWrap != i:
         for j in prevCanWrap + 1 ..< i:
           result.positions[j] = at
-          at.x += glyphAdvance(font, result.runes, j, kerning)
+          at.x += advance(font, result.runes, j, kerning)
 
     result.positions[i] = at
     at.x += advance
 
-iterator typesetPaths*(
-  font: Font,
-  text: string,
-  bounds = vec2(0, 0),
-  hAlign = haLeft,
-  vAlign = vaTop,
-  textCase = tcNormal,
-  wrap = true,
-  kerning = true
-): Path =
-  let typesetText = font.typeset(
-    text,
-    bounds,
-    hAlign,
-    vAlign,
-    textCase,
-    wrap,
-    kerning
-  )
-  for i in 0 ..< typesetText.runes.len:
-    var path = font.typeface.getGlyphPath(typesetText.runes[i])
+iterator paths*(arrangement: Arrangement): Path =
+  for i in 0 ..< arrangement.runes.len:
+    var path = arrangement.font.typeface.getGlyphPath(arrangement.runes[i])
     path.transform(
-      translate(typesetText.positions[i]) * scale(vec2(font.scale))
+      translate(arrangement.positions[i]) * scale(vec2(arrangement.font.scale))
     )
     yield path
 
