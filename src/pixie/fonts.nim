@@ -107,8 +107,11 @@ proc convertTextCase(runes: var seq[Rune], textCase: TextCase) =
     for rune in runes.mitems:
       rune = rune.toLower()
   of tcTitle:
+    var prevRune = SP
     for rune in runes.mitems:
-      rune = rune.toTitle()
+      if prevRune.isWhiteSpace:
+        rune = rune.toUpper()
+      prevRune = rune
 
 proc canWrap(rune: Rune): bool =
   rune == Rune(32) or rune.isWhiteSpace()
