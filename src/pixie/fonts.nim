@@ -182,7 +182,7 @@ proc typeset*(
         prevCanWrap = i
 
       let advance = advance(font, result.runes, i, kerning)
-      if rune != SP and bounds.x > 0 and at.x + advance > bounds.x:
+      if wrap and rune != SP and bounds.x > 0 and at.x + advance > bounds.x:
         # Wrap to new line
         at.x = 0
         at.y += lineHeight
