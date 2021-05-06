@@ -1,7 +1,10 @@
 import bumpy, pixie/fontformats/opentype, pixie/fontformats/svgfont, pixie/paths,
     unicode, vmath
 
-const AutoLineHeight* = -1.float32 ## Use default line height for the font size
+const
+  AutoLineHeight* = -1.float32 ## Use default line height for the font size
+  LF = Rune(10)
+  SP = Rune(32)
 
 type
   Typeface* = ref object
@@ -58,10 +61,11 @@ proc lineGap*(typeface: Typeface): float32 {.inline.} =
 
 proc getGlyphPath*(typeface: Typeface, rune: Rune): Path {.inline.} =
   ## The glyph path for the rune.
-  if typeface.opentype != nil:
-    typeface.opentype.getGlyphPath(rune)
-  else:
-    typeface.svgFont.getGlyphPath(rune)
+  if rune.uint32 > SP.uint32: # Empty paths for control runes (not tofu)
+    if typeface.opentype != nil:
+      result = typeface.opentype.getGlyphPath(rune)
+    else:
+      result = typeface.svgFont.getGlyphPath(rune)
 
 proc getAdvance*(typeface: Typeface, rune: Rune): float32 {.inline.} =
   ## The advance for the rune in pixels.
@@ -121,9 +125,20 @@ proc typeset*(
 ): Arrangement =
   result = Arrangement()
   result.font = font
-  result.runes = toRunes(text)
+
+  block: # Walk and filter runes
+    var
+      i = 0
+      rune: Rune
+    while i < text.len:
+      fastRuneAt(text, i, rune, true)
+      # Ignore control runes (0 - 31) except LF for now
+      if rune.uint32 >= SP.uint32 or rune.uint32 == LF.uint32:
+        result.runes.add(rune)
+
   result.runes.convertTextCase(textCase)
   result.positions.setLen(result.runes.len)
+  result.selectionRects.setLen(result.runes.len)
 
   let lineHeight =
     if font.lineheight >= 0:
@@ -145,31 +160,38 @@ proc typeset*(
   at.y = round((font.typeface.ascent + font.typeface.lineGap / 2) * font.scale)
   at.y += (lineheight - font.defaultLineHeight) / 2
   for i, rune in result.runes:
-    if rune.canWrap():
-      prevCanWrap = i
-
-    let advance = advance(font, result.runes, i, kerning)
-    if rune != Rune(32) and bounds.x > 0 and at.x + advance > bounds.x:
-      # Wrap to new line
+    if rune == LF:
+      result.positions[i] = at
       at.x = 0
       at.y += lineHeight
+      prevCanWrap = 0
+    else:
+      if rune.canWrap():
+        prevCanWrap = i
 
-      # Go back and wrap glyphs after the wrap index down to the next line
-      if prevCanWrap > 0 and prevCanWrap != i:
-        for j in prevCanWrap + 1 ..< i:
-          result.positions[j] = at
-          at.x += advance(font, result.runes, j, kerning)
+      let advance = advance(font, result.runes, i, kerning)
+      if rune != SP and bounds.x > 0 and at.x + advance > bounds.x:
+        # Wrap to new line
+        at.x = 0
+        at.y += lineHeight
 
-    result.positions[i] = at
-    at.x += advance
+        # Go back and wrap glyphs after the wrap index down to the next line
+        if prevCanWrap > 0 and prevCanWrap != i:
+          for j in prevCanWrap + 1 ..< i:
+            result.positions[j] = at
+            at.x += advance(font, result.runes, j, kerning)
+
+      result.positions[i] = at
+      at.x += advance
 
 iterator paths*(arrangement: Arrangement): Path =
   for i in 0 ..< arrangement.runes.len:
-    var path = arrangement.font.typeface.getGlyphPath(arrangement.runes[i])
-    path.transform(
-      translate(arrangement.positions[i]) * scale(vec2(arrangement.font.scale))
-    )
-    yield path
+    if arrangement.runes[i].uint32 > SP.uint32: # Don't draw control runes
+      var path = arrangement.font.typeface.getGlyphPath(arrangement.runes[i])
+      path.transform(
+        translate(arrangement.positions[i]) * scale(vec2(arrangement.font.scale))
+      )
+      yield path
 
 proc parseOtf*(buf: string): Font =
   result.typeface = Typeface()
