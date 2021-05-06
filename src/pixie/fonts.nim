@@ -107,8 +107,11 @@ proc convertTextCase(runes: var seq[Rune], textCase: TextCase) =
     for rune in runes.mitems:
       rune = rune.toLower()
   of tcTitle:
+    var prevRune = SP
     for rune in runes.mitems:
-      rune = rune.toTitle()
+      if prevRune.isWhiteSpace:
+        rune = rune.toUpper()
+      prevRune = rune
 
 proc canWrap(rune: Rune): bool =
   rune == Rune(32) or rune.isWhiteSpace()
@@ -154,16 +157,25 @@ proc typeset*(
     result += font.typeface.getAdvance(runes[i])
     result *= font.scale
 
+  var fontUnitInitialY = font.typeface.ascent + font.typeface.lineGap / 2
+  if lineHeight != font.defaultLineHeight:
+    fontUnitInitialY += (
+      (lineHeight / font.scale) -
+      (font.typeface.ascent - font.typeface.descent + font.typeface.lineGap)
+    ) / 2
+  let initialY = round(fontUnitInitialY * font.scale)
+
   var
     at: Vec2
     prevCanWrap: int
-  at.y = round((font.typeface.ascent + font.typeface.lineGap / 2) * font.scale)
-  at.y += (lineheight - font.defaultLineHeight) / 2
+  at.y = initialY
   for i, rune in result.runes:
     if rune == LF:
+      let advance = font.typeface.getAdvance(SP) * font.scale
       result.positions[i] = at
       at.x = 0
       at.y += lineHeight
+      result.selectionRects[i] = rect(at.x, at.y - initialY, advance, lineHeight)
       prevCanWrap = 0
     else:
       if rune.canWrap():
@@ -182,6 +194,7 @@ proc typeset*(
             at.x += advance(font, result.runes, j, kerning)
 
       result.positions[i] = at
+      result.selectionRects[i] = rect(at.x, at.y - initialY, advance, lineHeight)
       at.x += advance
 
 iterator paths*(arrangement: Arrangement): Path =

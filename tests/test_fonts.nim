@@ -533,3 +533,23 @@ Seventh line""",
   )
 
   doDiff(image, "lines1")
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 18
+  font.lineHeight = 30
+
+  let image = newImage(200, 150)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(
+    font,
+    """First line
+Second line
+Third line
+Fourth line
+Fifth line""",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh
+  )
+
+  doDiff(image, "lines2")
