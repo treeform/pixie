@@ -553,3 +553,93 @@ Fifth line""",
   )
 
   doDiff(image, "lines2")
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 36
+
+  let image = newImage(800, 800)
+  image.fill(rgba(255, 255, 255, 255))
+
+  image.fillText(
+    font,
+    "TopLeft",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh,
+    hAlign = haLeft,
+    vAlign = vaTop
+  )
+
+  image.fillText(
+    font,
+    "TopCenter",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh,
+    hAlign = haCenter,
+    vAlign = vaTop
+  )
+
+  image.fillText(
+    font,
+    "TopRight",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh,
+    hAlign = haRight,
+    vAlign = vaTop
+  )
+
+  image.fillText(
+    font,
+    "MiddleLeft",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh,
+    hAlign = haLeft,
+    vAlign = vaMiddle
+  )
+
+  image.fillText(
+    font,
+    "MiddleCenter",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh,
+    hAlign = haCenter,
+    vAlign = vaMiddle
+  )
+
+  image.fillText(
+    font,
+    "MiddleRight",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh,
+    hAlign = haRight,
+    vAlign = vaMiddle
+  )
+
+  image.fillText(
+    font,
+    "BottomLeft",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh,
+    hAlign = haLeft,
+    vAlign = vaBottom
+  )
+
+  image.fillText(
+    font,
+    "BottomCenter",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh,
+    hAlign = haCenter,
+    vAlign = vaBottom
+  )
+
+  image.fillText(
+    font,
+    "BottomRight",
+    rgba(0, 0, 0, 255),
+    bounds = image.wh,
+    hAlign = haRight,
+    vAlign = vaBottom
+  )
+
+  doDiff(image, "alignments")

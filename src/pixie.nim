@@ -339,6 +339,14 @@ proc fillText*(
   wrap = true,
   kerning = true
 ) =
+  ## Typesets and fills the text. Optional parameters:
+  ## transform: translation or matrix to apply
+  ## bounds: width determines wrapping and halign, height for valign
+  ## hAlign: horizontal alignment of the text
+  ## vAlign: vertical alignment of the text
+  ## textCase: text character case
+  ## wrap: enable/disable text wrapping
+  ## kerning: enable/disable kerning adjustments to letter spacing
   for path in font.typeset(
     text,
     bounds,
@@ -362,6 +370,14 @@ proc fillText*(
   wrap = true,
   kerning = true
 ) =
+  ## Typesets and fills the text. Optional parameters:
+  ## transform: translation or matrix to apply
+  ## bounds: width determines wrapping and halign, height for valign
+  ## hAlign: horizontal alignment of the text
+  ## vAlign: vertical alignment of the text
+  ## textCase: text character case
+  ## wrap: enable/disable text wrapping
+  ## kerning: enable/disable kerning adjustments to letter spacing
   for path in font.typeset(
     text,
     bounds,
@@ -387,6 +403,14 @@ proc strokeText*(
   wrap = true,
   kerning = true
 ) =
+  ## Typesets and strokes the text. Optional parameters:
+  ## transform: translation or matrix to apply
+  ## bounds: width determines wrapping and halign, height for valign
+  ## hAlign: horizontal alignment of the text
+  ## vAlign: vertical alignment of the text
+  ## textCase: text character case
+  ## wrap: enable/disable text wrapping
+  ## kerning: enable/disable kerning adjustments to letter spacing
   for path in font.typeset(
     text,
     bounds,
@@ -411,6 +435,14 @@ proc strokeText*(
   wrap = true,
   kerning = true
 ) =
+  ## Typesets and strokes the text. Optional parameters:
+  ## transform: translation or matrix to apply
+  ## bounds: width determines wrapping and halign, height for valign
+  ## hAlign: horizontal alignment of the text
+  ## vAlign: vertical alignment of the text
+  ## textCase: text character case
+  ## wrap: enable/disable text wrapping
+  ## kerning: enable/disable kerning adjustments to letter spacing
   for path in font.typeset(
     text,
     bounds,

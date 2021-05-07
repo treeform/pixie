@@ -1,5 +1,5 @@
-import bumpy, pixie/fontformats/opentype, pixie/fontformats/svgfont, pixie/paths,
-    unicode, vmath
+import bumpy, pixie/fontformats/opentype, pixie/fontformats/svgfont,
+    pixie/paths, unicode, vmath
 
 const
   AutoLineHeight* = -1.float32 ## Use default line height for the font size
@@ -126,6 +126,14 @@ proc typeset*(
   wrap = true,
   kerning = true
 ): Arrangement =
+  ## Lays out the character glyphs and returns the arrangement.
+  ## Optional parameters:
+  ## bounds: width determines wrapping and halign, height for valign
+  ## hAlign: horizontal alignment of the text
+  ## vAlign: vertical alignment of the text
+  ## textCase: text character case
+  ## wrap: enable/disable text wrapping
+  ## kerning: enable/disable kerning adjustments to letter spacing
   result = Arrangement()
   result.font = font
 
@@ -138,6 +146,10 @@ proc typeset*(
       # Ignore control runes (0 - 31) except LF for now
       if rune.uint32 >= SP.uint32 or rune.uint32 == LF.uint32:
         result.runes.add(rune)
+
+  if result.runes.len == 0:
+    # No runes to typeset, early return
+    return
 
   result.runes.convertTextCase(textCase)
   result.positions.setLen(result.runes.len)
@@ -197,14 +209,72 @@ proc typeset*(
       result.selectionRects[i] = rect(at.x, at.y - initialY, advance, lineHeight)
       at.x += advance
 
+  if bounds.x > 0 and hAlign != haLeft:
+    # Since horizontal alignment adjustments are different for each line,
+    # find the start and stop of each line of text.
+    var
+      lines: seq[(uint32, uint32)] # (start, stop)
+      start: uint32
+      prevY = result.positions[0].y
+    for i, pos in result.positions:
+      if pos.y != prevY:
+        lines.add((start, i.uint32 - 1))
+        start = i.uint32
+        prevY = pos.y
+    lines.add((start, result.positions.len.uint32 - 1))
+
+    for (start, stop) in lines:
+      var furthestX: float32
+      for i in countdown(stop, start):
+        if result.runes[i] != SP and result.runes[i] != LF:
+          furthestX = result.selectionRects[i].x + result.selectionRects[i].w
+          break
+
+      var xAdjustment: float32
+      case hAlign:
+        of haLeft:
+          discard
+        of haCenter:
+          xAdjustment = (bounds.x - furthestX) / 2
+        of haRight:
+          xAdjustment = bounds.x - furthestX
+
+      if xAdjustment != 0:
+        for i in start .. stop:
+          result.positions[i].x += xAdjustment
+          result.selectionRects[i].x += xAdjustment
+
+  if bounds.y > 0:
+    let
+      finalSelectionRect = result.selectionRects[^1]
+      furthestY = finalSelectionRect.y + finalSelectionRect.h
+
+    var yAdjustment: float32
+    case vAlign:
+      of vaTop:
+        discard
+      of vaMiddle:
+        yAdjustment = round((bounds.y - furthestY) / 2)
+      of vaBottom:
+        yAdjustment = bounds.y - furthestY
+
+    if yAdjustment != 0:
+      for i in 0 ..< result.positions.len:
+        result.positions[i].y += yAdjustment
+        result.selectionRects[i].y += yAdjustment
+
+proc getPath*(arrangement: Arrangement, index: int): Path =
+  ## Returns the path for index.
+  result = arrangement.font.typeface.getGlyphPath(arrangement.runes[index])
+  result.transform(
+    translate(arrangement.positions[index]) *
+    scale(vec2(arrangement.font.scale))
+  )
+
 iterator paths*(arrangement: Arrangement): Path =
+  ## Iterates over the paths for the arrangement.
   for i in 0 ..< arrangement.runes.len:
-    if arrangement.runes[i].uint32 > SP.uint32: # Don't draw control runes
-      var path = arrangement.font.typeface.getGlyphPath(arrangement.runes[i])
-      path.transform(
-        translate(arrangement.positions[i]) * scale(vec2(arrangement.font.scale))
-      )
-      yield path
+    yield arrangement.getPath(i)
 
 proc parseOtf*(buf: string): Font =
   result.typeface = Typeface()
