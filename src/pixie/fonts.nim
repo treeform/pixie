@@ -235,12 +235,12 @@ proc typeset*(
         of haLeft:
           discard
         of haCenter:
-          xAdjustment = round((bounds.x - furthestX) / 2)
+          xAdjustment = (bounds.x - furthestX) / 2
         of haRight:
           xAdjustment = bounds.x - furthestX
 
       if xAdjustment != 0:
-        for i in 0 ..< result.positions.len:
+        for i in start .. stop:
           result.positions[i].x += xAdjustment
           result.selectionRects[i].x += xAdjustment
 
