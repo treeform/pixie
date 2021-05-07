@@ -255,14 +255,16 @@ proc typeset*(
         result.positions[i].y += yAdjustment
         result.selectionRects[i].y += yAdjustment
 
-iterator paths*(arrangement: Arrangement): Path =
+proc getPath*(arrangement: Arrangement, i: int): Path =
+  result = arrangement.font.typeface.getGlyphPath(arrangement.runes[i])
+  result.transform(
+    translate(arrangement.positions[i]) * scale(vec2(arrangement.font.scale))
+  )
+
+iterator paths*(arrangement: Arrangement): (int, Path) =
   for i in 0 ..< arrangement.runes.len:
     if arrangement.runes[i].uint32 > SP.uint32: # Don't draw control runes
-      var path = arrangement.font.typeface.getGlyphPath(arrangement.runes[i])
-      path.transform(
-        translate(arrangement.positions[i]) * scale(vec2(arrangement.font.scale))
-      )
-      yield path
+      yield (i, arrangement.getPath(i))
 
 proc parseOtf*(buf: string): Font =
   result.typeface = Typeface()
