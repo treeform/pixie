@@ -126,6 +126,14 @@ proc typeset*(
   wrap = true,
   kerning = true
 ): Arrangement =
+  ## Lays out the character glyphs and returns the arrangement.
+  ## Optional parameters:
+  ## bounds: width determines wrapping and halign, height for valign
+  ## hAlign: horizontal alignment of the text
+  ## vAlign: vertical alignment of the text
+  ## textCase: text character case
+  ## wrap: enable/disable text wrapping
+  ## kerning: enable/disable kerning adjustments to letter spacing
   result = Arrangement()
   result.font = font
 
@@ -255,16 +263,17 @@ proc typeset*(
         result.positions[i].y += yAdjustment
         result.selectionRects[i].y += yAdjustment
 
-proc getPath*(arrangement: Arrangement, i: int): Path =
+proc getPath*(arrangement: Arrangement, index: int): Path =
+  ## Returns the path for index.
   result = arrangement.font.typeface.getGlyphPath(arrangement.runes[i])
   result.transform(
     translate(arrangement.positions[i]) * scale(vec2(arrangement.font.scale))
   )
 
-iterator paths*(arrangement: Arrangement): (int, Path) =
+iterator paths*(arrangement: Arrangement): Path =
+  ## Iterates over the paths for the arrangement.
   for i in 0 ..< arrangement.runes.len:
-    if arrangement.runes[i].uint32 > SP.uint32: # Don't draw control runes
-      yield (i, arrangement.getPath(i))
+    yield arrangement.getPath(i)
 
 proc parseOtf*(buf: string): Font =
   result.typeface = Typeface()
