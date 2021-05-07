@@ -339,7 +339,7 @@ proc fillText*(
   wrap = true,
   kerning = true
 ) =
-  for path in font.typeset(
+  for _, path in font.typeset(
     text,
     bounds,
     hAlign,
@@ -362,7 +362,7 @@ proc fillText*(
   wrap = true,
   kerning = true
 ) =
-  for path in font.typeset(
+  for _, path in font.typeset(
     text,
     bounds,
     hAlign,
@@ -387,7 +387,7 @@ proc strokeText*(
   wrap = true,
   kerning = true
 ) =
-  for path in font.typeset(
+  for _, path in font.typeset(
     text,
     bounds,
     hAlign,
@@ -411,7 +411,7 @@ proc strokeText*(
   wrap = true,
   kerning = true
 ) =
-  for path in font.typeset(
+  for _, path in font.typeset(
     text,
     bounds,
     hAlign,
