@@ -139,6 +139,10 @@ proc typeset*(
       if rune.uint32 >= SP.uint32 or rune.uint32 == LF.uint32:
         result.runes.add(rune)
 
+  if result.runes.len == 0:
+    # No runes to typeset, early return
+    return
+
   result.runes.convertTextCase(textCase)
   result.positions.setLen(result.runes.len)
   result.selectionRects.setLen(result.runes.len)
@@ -196,6 +200,60 @@ proc typeset*(
       result.positions[i] = at
       result.selectionRects[i] = rect(at.x, at.y - initialY, advance, lineHeight)
       at.x += advance
+
+  if bounds.x > 0 and hAlign != haLeft:
+    # Since horizontal alignment adjustments are different for each line,
+    # find the start and stop of each line of text.
+    var
+      lines: seq[(int, int)] # (start, stop)
+      start: int
+      prevY = result.positions[0].y
+    for i, pos in result.positions:
+      if pos.y != prevY:
+        lines.add((start, i - 1))
+        start = i
+        prevY = pos.y
+    lines.add((start, result.positions.len - 1))
+
+    for (start, stop) in lines:
+      var furthestX: float32
+      for i in countdown(stop, start):
+        if result.runes[i] != SP and result.runes[i] != LF:
+          furthestX = result.selectionRects[i].x + result.selectionRects[i].w
+          break
+
+      var xAdjustment: float32
+      case hAlign:
+        of haLeft:
+          discard
+        of haCenter:
+          xAdjustment = round((bounds.x - furthestX) / 2)
+        of haRight:
+          xAdjustment = bounds.x - furthestX
+
+      if xAdjustment != 0:
+        for i in 0 ..< result.positions.len:
+          result.positions[i].x += xAdjustment
+          result.selectionRects[i].x += xAdjustment
+
+  if bounds.y > 0:
+    let
+      finalSelectionRect = result.selectionRects[^1]
+      furthestY = finalSelectionRect.y + finalSelectionRect.h
+
+    var yAdjustment: float32
+    case vAlign:
+      of vaTop:
+        discard
+      of vaMiddle:
+        yAdjustment = round((bounds.y - furthestY) / 2)
+      of vaBottom:
+        yAdjustment = bounds.y - furthestY
+
+    if yAdjustment != 0:
+      for i in 0 ..< result.positions.len:
+        result.positions[i].y += yAdjustment
+        result.selectionRects[i].y += yAdjustment
 
 iterator paths*(arrangement: Arrangement): Path =
   for i in 0 ..< arrangement.runes.len:

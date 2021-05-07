@@ -1,11 +1,12 @@
-import common, pixie, flatty/memoryused
+import common, pixie
 
-# Clone https://github.com/google/fonts
-# Check out commit ebaa6a7aab9b700da4e30a4682687acdf427eae7
+# Clone https://github.com/treeform/fidgetfonts
 
-let fontPaths = findAllFonts("../fonts")
+let fontPaths = findAllFonts("../fidgetfonts")
 
 for fontPath in fontPaths:
   echo fontPath
-  let font = readFont(fontPath)
-  # echo memoryUsed(font)
+  try:
+    var font = readFont(fontPath)
+  except PixieError:
+    echo "ERROR: ", getCurrentExceptionMsg()
