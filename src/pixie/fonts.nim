@@ -265,9 +265,10 @@ proc typeset*(
 
 proc getPath*(arrangement: Arrangement, index: int): Path =
   ## Returns the path for index.
-  result = arrangement.font.typeface.getGlyphPath(arrangement.runes[i])
+  result = arrangement.font.typeface.getGlyphPath(arrangement.runes[index])
   result.transform(
-    translate(arrangement.positions[i]) * scale(vec2(arrangement.font.scale))
+    translate(arrangement.positions[index]) *
+    scale(vec2(arrangement.font.scale))
   )
 
 iterator paths*(arrangement: Arrangement): Path =
