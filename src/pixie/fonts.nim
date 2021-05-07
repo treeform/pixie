@@ -205,15 +205,15 @@ proc typeset*(
     # Since horizontal alignment adjustments are different for each line,
     # find the start and stop of each line of text.
     var
-      lines: seq[(int, int)] # (start, stop)
-      start: int
+      lines: seq[(uint32, uint32)] # (start, stop)
+      start: uint32
       prevY = result.positions[0].y
     for i, pos in result.positions:
       if pos.y != prevY:
-        lines.add((start, i - 1))
-        start = i
+        lines.add((start, i.uint32 - 1))
+        start = i.uint32
         prevY = pos.y
-    lines.add((start, result.positions.len - 1))
+    lines.add((start, result.positions.len.uint32 - 1))
 
     for (start, stop) in lines:
       var furthestX: float32
