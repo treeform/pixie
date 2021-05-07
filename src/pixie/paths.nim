@@ -999,7 +999,7 @@ proc partitionSegments(
     numPartitions = min(maxPartitions, max(1, segmentCount div 10).uint32)
     partitionHeight = (height.uint32 div numPartitions)
 
-  var partitions = newSeq[seq[(Segment, int16)]](numPartitions)
+  result.setLen(numPartitions)
   for shape in shapes:
     for segment in shape.segments:
       if segment.at.y == segment.to.y: # Skip horizontal
@@ -1012,17 +1012,15 @@ proc partitionSegments(
         winding = -1
 
       if partitionHeight == 0:
-        partitions[0].add((segment, winding))
+        result[0].add((segment, winding))
       else:
         var
           atPartition = max(0, segment.at.y).uint32 div partitionHeight
           toPartition = max(0, ceil(segment.to.y)).uint32 div partitionHeight
-        atPartition = clamp(atPartition, 0, partitions.high.uint32)
-        toPartition = clamp(toPartition, 0, partitions.high.uint32)
+        atPartition = clamp(atPartition, 0, result.high.uint32)
+        toPartition = clamp(toPartition, 0, result.high.uint32)
         for i in atPartition .. toPartition:
-          partitions[i].add((segment, winding))
-
-  partitions
+          result[i].add((segment, winding))
 
 template computeCoverages(
   coverages: var seq[uint8],
