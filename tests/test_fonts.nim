@@ -218,6 +218,7 @@ block:
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 16
+  font.noKerningAdjustments = true
 
   let image = newImage(1000, 150)
 
@@ -227,8 +228,7 @@ block:
       font,
       text,
       rgba(0, 0, 0, 255),
-      bounds = image.wh,
-      kerning = false
+      bounds = image.wh
     )
 
     let name = if i > 0: &"paragraph1_nokern_{i + 1}" else: "paragraph1_nokern"
@@ -255,6 +255,7 @@ block:
 block:
   var font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
   font.size = 16
+  font.noKerningAdjustments = true
 
   let image = newImage(1000, 150)
 
@@ -264,8 +265,7 @@ block:
       font,
       text,
       rgba(0, 0, 0, 255),
-      bounds = image.wh,
-      kerning = false
+      bounds = image.wh
     )
 
     let name = if i > 0: &"paragraph2_nokern_{i + 1}" else: "paragraph2_nokern"
@@ -292,6 +292,7 @@ block:
 block:
   var font = readFont("tests/fonts/IBMPlexSans-Regular_2.ttf")
   font.size = 16
+  font.noKerningAdjustments = true
 
   let image = newImage(1000, 150)
 
@@ -301,8 +302,7 @@ block:
       font,
       text,
       rgba(0, 0, 0, 255),
-      bounds = image.wh,
-      kerning = false
+      bounds = image.wh
     )
 
     let name = if i > 0: &"paragraph3_nokern_{i + 1}" else: "paragraph3_nokern"
@@ -329,6 +329,7 @@ block:
 block:
   var font = readFont("tests/fonts/NotoSans-Regular_4.ttf")
   font.size = 16
+  font.noKerningAdjustments = true
 
   let image = newImage(1000, 150)
 
@@ -338,8 +339,7 @@ block:
       font,
       text,
       rgba(0, 0, 0, 255),
-      bounds = image.wh,
-      kerning = false
+      bounds = image.wh
     )
 
     let name = if i > 0: &"paragraph4_nokern_{i + 1}" else: "paragraph4_nokern"
@@ -366,6 +366,7 @@ block:
 block:
   var font = readFont("tests/fonts/Pacifico-Regular_4.ttf")
   font.size = 16
+  font.noKerningAdjustments = true
 
   let image = newImage(1000, 150)
 
@@ -375,8 +376,7 @@ block:
       font,
       text,
       rgba(0, 0, 0, 255),
-      bounds = image.wh,
-      kerning = false
+      bounds = image.wh
     )
 
     let name = if i > 0: &"paragraph5_nokern_{i + 1}" else: "paragraph5_nokern"
@@ -400,6 +400,7 @@ block:
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 200
+  font.noKerningAdjustments = true
 
   let image = newImage(2800, 400)
   image.fill(rgba(255, 255, 255, 255))
@@ -407,8 +408,7 @@ block:
     font,
     "Shehadcometotheconclusion",
     rgba(0, 0, 0, 255),
-    bounds = image.wh,
-    kerning = false
+    bounds = image.wh
   )
 
   doDiff(image, "huge1_nokern")
@@ -431,6 +431,7 @@ block:
 block:
   var font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
   font.size = 200
+  font.noKerningAdjustments = true
 
   let image = newImage(2800, 400)
   image.fill(rgba(255, 255, 255, 255))
@@ -438,8 +439,7 @@ block:
     font,
     "Shehadcometotheconclusion",
     rgba(0, 0, 0, 255),
-    bounds = image.wh,
-    kerning = false
+    bounds = image.wh
   )
 
   doDiff(image, "huge2_nokern")
@@ -462,6 +462,7 @@ block:
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 200
+  font.noKerningAdjustments = true
 
   let image = newImage(2800, 400)
   image.fill(rgba(255, 255, 255, 255))
@@ -469,8 +470,7 @@ block:
     font,
     "Wrapping text to the next line",
     rgba(0, 0, 0, 255),
-    bounds = image.wh,
-    kerning = false
+    bounds = image.wh
   )
 
   doDiff(image, "huge3_nokern")
