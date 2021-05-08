@@ -128,7 +128,7 @@ proc typeset*(
 ): Arrangement =
   ## Lays out the character glyphs and returns the arrangement.
   ## Optional parameters:
-  ## bounds: width determines wrapping and halign, height for valign
+  ## bounds: width determines wrapping and hAlign, height for vAlign
   ## hAlign: horizontal alignment of the text
   ## vAlign: vertical alignment of the text
   ## textCase: text character case
@@ -209,7 +209,7 @@ proc typeset*(
       result.selectionRects[i] = rect(at.x, at.y - initialY, advance, lineHeight)
       at.x += advance
 
-  if bounds.x > 0 and hAlign != haLeft:
+  if hAlign != haLeft:
     # Since horizontal alignment adjustments are different for each line,
     # find the start and stop of each line of text.
     var
@@ -244,7 +244,7 @@ proc typeset*(
           result.positions[i].x += xAdjustment
           result.selectionRects[i].x += xAdjustment
 
-  if bounds.y > 0:
+  if vAlign != vaTop:
     let
       finalSelectionRect = result.selectionRects[^1]
       furthestY = finalSelectionRect.y + finalSelectionRect.h
@@ -271,10 +271,13 @@ proc getPath*(arrangement: Arrangement, index: int): Path =
     scale(vec2(arrangement.font.scale))
   )
 
-iterator paths*(arrangement: Arrangement): Path =
-  ## Iterates over the paths for the arrangement.
-  for i in 0 ..< arrangement.runes.len:
-    yield arrangement.getPath(i)
+proc computeBounds*(font: Font, text: string): Vec2 =
+  let arrangement = font.typeset(text)
+  if arrangement.runes.len > 0:
+    for rect in arrangement.selectionRects:
+      result.x = max(result.x, rect.x + rect.w)
+    let finalRect = arrangement.selectionRects[^1]
+    result.y = finalRect.y + finalRect.h
 
 proc parseOtf*(buf: string): Font =
   result.typeface = Typeface()
