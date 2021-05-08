@@ -15,6 +15,8 @@ type
     typeface*: Typeface
     size*: float32 ## Font size in pixels.
     lineHeight*: float32 ## The line height in pixels or AutoLineHeight for the font's default line height.
+    textCase*: TextCase
+    noKerningAdjustments*: bool ## Optionally disable kerning pair adjustments
 
   Arrangement* = ref object
     font*: Font
@@ -122,9 +124,7 @@ proc typeset*(
   bounds = vec2(0, 0),
   hAlign = haLeft,
   vAlign = vaTop,
-  textCase = tcNormal,
-  wrap = true,
-  kerning = true
+  wrap = true
 ): Arrangement =
   ## Lays out the character glyphs and returns the arrangement.
   ## Optional parameters:
@@ -151,7 +151,7 @@ proc typeset*(
     # No runes to typeset, early return
     return
 
-  result.runes.convertTextCase(textCase)
+  result.runes.convertTextCase(font.textCase)
   result.positions.setLen(result.runes.len)
   result.selectionRects.setLen(result.runes.len)
 
@@ -161,10 +161,8 @@ proc typeset*(
     else:
       font.defaultLineHeight
 
-  proc advance(
-    font: Font, runes: seq[Rune], i: int, kerning: bool
-  ): float32 {.inline.} =
-    if kerning and i + 1 < runes.len:
+  proc advance(font: Font, runes: seq[Rune], i: int): float32 {.inline.} =
+    if not font.noKerningAdjustments and i + 1 < runes.len:
       result += font.typeface.getKerningAdjustment(runes[i], runes[i + 1])
     result += font.typeface.getAdvance(runes[i])
     result *= font.scale
@@ -193,7 +191,7 @@ proc typeset*(
       if rune.canWrap():
         prevCanWrap = i
 
-      let advance = advance(font, result.runes, i, kerning)
+      let advance = advance(font, result.runes, i)
       if wrap and rune != SP and bounds.x > 0 and at.x + advance > bounds.x:
         # Wrap to new line
         at.x = 0
@@ -203,7 +201,7 @@ proc typeset*(
         if prevCanWrap > 0 and prevCanWrap != i:
           for j in prevCanWrap + 1 ..< i:
             result.positions[j] = at
-            at.x += advance(font, result.runes, j, kerning)
+            at.x += advance(font, result.runes, j)
 
       result.positions[i] = at
       result.selectionRects[i] = rect(at.x, at.y - initialY, advance, lineHeight)
@@ -272,6 +270,7 @@ proc getPath*(arrangement: Arrangement, index: int): Path =
   )
 
 proc computeBounds*(font: Font, text: string): Vec2 =
+  ## Computes the width and height of the text in pixels.
   let arrangement = font.typeset(text)
   if arrangement.runes.len > 0:
     for rect in arrangement.selectionRects:
