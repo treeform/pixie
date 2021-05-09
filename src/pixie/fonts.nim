@@ -131,9 +131,7 @@ proc typeset*(
   ## bounds: width determines wrapping and hAlign, height for vAlign
   ## hAlign: horizontal alignment of the text
   ## vAlign: vertical alignment of the text
-  ## textCase: text character case
   ## wrap: enable/disable text wrapping
-  ## kerning: enable/disable kerning adjustments to letter spacing
   result = Arrangement()
   result.font = font
 
