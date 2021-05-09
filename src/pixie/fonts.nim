@@ -181,9 +181,9 @@ proc typeset*(
     if rune == LF:
       let advance = font.typeface.getAdvance(SP) * font.scale
       result.positions[i] = at
+      result.selectionRects[i] = rect(at.x, at.y - initialY, advance, lineHeight)
       at.x = 0
       at.y += lineHeight
-      result.selectionRects[i] = rect(at.x, at.y - initialY, advance, lineHeight)
       prevCanWrap = 0
     else:
       if rune.canWrap():
@@ -199,6 +199,7 @@ proc typeset*(
         if prevCanWrap > 0 and prevCanWrap != i:
           for j in prevCanWrap + 1 ..< i:
             result.positions[j] = at
+            result.selectionRects[j].xy = vec2(at.x, at.y - initialY)
             at.x += advance(font, result.runes, j)
 
       result.positions[i] = at
