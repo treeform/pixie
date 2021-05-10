@@ -9,7 +9,7 @@ type
     pkGradientRadial
     pkGradientAngular
 
-  Paint* = ref object
+  Paint* = object
     ## Paint used to fill paths.
     case kind*: PaintKind
     of pkSolid:

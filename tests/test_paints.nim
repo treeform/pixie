@@ -9,8 +9,7 @@ const heartShape = """
   """
 
 block:
-  let
-    image = newImage(100, 100)
+  let image = newImage(100, 100)
   image.fillPath(
     heartShape,
     Paint(
@@ -21,8 +20,7 @@ block:
   image.writeFile("tests/images/paths/paintSolid.png")
 
 block:
-  let
-    image = newImage(100, 100)
+  let image = newImage(100, 100)
   image.fillPath(
     heartShape,
     Paint(
@@ -34,8 +32,7 @@ block:
   image.writeFile("tests/images/paths/paintImage.png")
 
 block:
-  let
-    image = newImage(100, 100)
+  let image = newImage(100, 100)
   image.fillPath(
     heartShape,
     Paint(
@@ -47,8 +44,7 @@ block:
   image.writeFile("tests/images/paths/paintImageTiled.png")
 
 block:
-  let
-    image = newImage(100, 100)
+  let image = newImage(100, 100)
   image.fillPath(
     heartShape,
     Paint(
@@ -66,8 +62,7 @@ block:
   image.writeFile("tests/images/paths/gradientLinear.png")
 
 block:
-  let
-    image = newImage(100, 100)
+  let image = newImage(100, 100)
   image.fillPath(
     heartShape,
     Paint(
@@ -87,8 +82,7 @@ block:
   image.writeFile("tests/images/paths/gradientRadial.png")
 
 block:
-  let
-    image = newImage(100, 100)
+  let image = newImage(100, 100)
   image.fillPath(
     heartShape,
     Paint(

@@ -1,5 +1,5 @@
-import bumpy, pixie/fontformats/opentype, pixie/fontformats/svgfont,
-    pixie/paths, unicode, vmath
+import bumpy, chroma, pixie/fontformats/opentype, pixie/fontformats/svgfont,
+    pixie/paints, pixie/paths, unicode, vmath
 
 const
   AutoLineHeight* = -1.float32 ## Use default line height for the font size
@@ -13,8 +13,9 @@ type
 
   Font* = object
     typeface*: Typeface
-    size*: float32 ## Font size in pixels.
+    size*: float32              ## Font size in pixels.
     lineHeight*: float32 ## The line height in pixels or AutoLineHeight for the font's default line height.
+    paint*: Paint
     textCase*: TextCase
     noKerningAdjustments*: bool ## Optionally disable kerning pair adjustments
 
@@ -115,7 +116,7 @@ proc convertTextCase(runes: var seq[Rune], textCase: TextCase) =
         rune = rune.toUpper()
       prevRune = rune
 
-proc canWrap(rune: Rune): bool =
+proc canWrap(rune: Rune): bool {.inline.} =
   rune == Rune(32) or rune.isWhiteSpace()
 
 proc typeset*(
@@ -260,28 +261,31 @@ proc typeset*(
         result.positions[i].y += yAdjustment
         result.selectionRects[i].y += yAdjustment
 
-proc getPath*(arrangement: Arrangement, index: int): Path =
-  ## Returns the path for index.
-  result = arrangement.font.typeface.getGlyphPath(arrangement.runes[index])
-  result.transform(
-    translate(arrangement.positions[index]) *
-    scale(vec2(arrangement.font.scale))
-  )
-
-proc computeBounds*(font: Font, text: string): Vec2 =
-  ## Computes the width and height of the text in pixels.
-  let arrangement = font.typeset(text)
+proc computeBounds*(arrangement: Arrangement): Vec2 =
   if arrangement.runes.len > 0:
     for rect in arrangement.selectionRects:
       result.x = max(result.x, rect.x + rect.w)
     let finalRect = arrangement.selectionRects[^1]
     result.y = finalRect.y + finalRect.h
 
+proc computeBounds*(font: Font, text: string): Vec2 {.inline.} =
+  ## Computes the width and height of the text in pixels.
+  font.typeset(text).computeBounds()
+
+proc getPath*(arrangement: Arrangement, index: int): Path =
+  ## Returns the path for the rune index.
+  result = arrangement.font.typeface.getGlyphPath(arrangement.runes[index])
+  result.transform(
+    translate(arrangement.positions[index]) *
+    scale(vec2(arrangement.font.scale))
+  )
+
 proc parseOtf*(buf: string): Font =
   result.typeface = Typeface()
   result.typeface.opentype = parseOpenType(buf)
   result.size = 12
   result.lineHeight = AutoLineHeight
+  result.paint = Paint(kind: pkSolid, color: rgbx(0, 0, 0, 255))
 
 proc parseTtf*(buf: string): Font =
   parseOtf(buf)
@@ -291,3 +295,4 @@ proc parseSvgFont*(buf: string): Font =
   result.typeface.svgFont = svgfont.parseSvgFont(buf)
   result.size = 12
   result.lineHeight = AutoLineHeight
+  result.paint = Paint(kind: pkSolid, color: rgbx(0, 0, 0, 255))
