@@ -27,7 +27,7 @@ type
     color*: ColorRGBX  ## Color of the stop
     position*: float32 ## Gradient Stop position 0..1.
 
-proc toLineSpace(at, to, point: Vec2): float32 =
+proc toLineSpace(at, to, point: Vec2): float32 {.inline.} =
   ## Convert position on to where it would fall on a line between at and to.
   let
     d = to - at
@@ -69,6 +69,9 @@ proc fillGradientLinear*(image: Image, paint: Paint) =
   if paint.gradientHandlePositions.len != 2:
     raise newException(PixieError, "Linear gradient requires 2 handles")
 
+  if paint.gradientStops.len == 0:
+    raise newException(PixieError, "Gradient must have at least 1 color stop")
+
   let
     at = paint.gradientHandlePositions[0]
     to = paint.gradientHandlePositions[1]
@@ -87,6 +90,9 @@ proc fillGradientRadial*(image: Image, paint: Paint) =
 
   if paint.gradientHandlePositions.len != 3:
     raise newException(PixieError, "Radial gradient requires 3 handles")
+
+  if paint.gradientStops.len == 0:
+    raise newException(PixieError, "Gradient must have at least 1 color stop")
 
   let
     center = paint.gradientHandlePositions[0]
@@ -115,6 +121,9 @@ proc fillGradientAngular*(image: Image, paint: Paint) =
 
   if paint.gradientHandlePositions.len != 3:
     raise newException(PixieError, "Angular gradient requires 2 handles")
+
+  if paint.gradientStops.len == 0:
+    raise newException(PixieError, "Gradient must have at least 1 color stop")
 
   let
     center = paint.gradientHandlePositions[0]
