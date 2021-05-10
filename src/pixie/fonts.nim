@@ -263,8 +263,10 @@ proc typeset*(
 
 proc computeBounds*(arrangement: Arrangement): Vec2 =
   if arrangement.runes.len > 0:
-    for rect in arrangement.selectionRects:
-      result.x = max(result.x, rect.x + rect.w)
+    for i in 0 ..< arrangement.runes.len:
+      if arrangement.runes[i] != LF:
+        let rect = arrangement.selectionRects[i]
+        result.x = max(result.x, rect.x + rect.w)
     let finalRect = arrangement.selectionRects[^1]
     result.y = finalRect.y + finalRect.h
 
