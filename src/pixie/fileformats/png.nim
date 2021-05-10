@@ -415,7 +415,7 @@ proc decodePng*(data: seq[uint8]): Image =
 
     prevChunkType = chunkType
 
-    if pos == data.len:
+    if pos == data.len or prevChunkType == "IEND":
       break
 
   if prevChunkType != "IEND":
