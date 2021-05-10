@@ -20,7 +20,7 @@ block:
   font.size = 64
   let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
-  image.fillText(font, "fill", rgba(0, 0, 0, 255))
+  image.fillText(font, "fill")
   image.writeFile("tests/fonts/image_fill.png")
 
 block:
@@ -28,7 +28,7 @@ block:
   font.size = 64
   let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
-  image.strokeText(font, "stroke", rgba(0, 0, 0, 255))
+  image.strokeText(font, "stroke")
   image.writeFile("tests/fonts/image_stroke.png")
 
 block:
@@ -86,7 +86,7 @@ block:
 
   let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
-  image.fillText(font, "asdf", rgba(0, 0, 0, 255))
+  image.fillText(font, "asdf")
 
   doDiff(image, "basic1")
 
@@ -96,7 +96,7 @@ block:
 
   let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
-  image.fillText(font, "A cow", rgba(0, 0, 0, 255))
+  image.fillText(font, "A cow")
 
   doDiff(image, "basic2")
 
@@ -106,7 +106,7 @@ block:
 
   let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
-  image.fillText(font, "A bit of text HERE", rgba(0, 0, 0, 255))
+  image.fillText(font, "A bit of text HERE")
 
   doDiff(image, "basic3")
 
@@ -117,7 +117,7 @@ block:
 
   let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
-  image.fillText(font, "Line height", rgba(0, 0, 0, 255))
+  image.fillText(font, "Line height")
 
   doDiff(image, "basic4")
 
@@ -127,7 +127,7 @@ block:
 
   let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
-  image.fillText(font, "Another font", rgba(0, 0, 0, 255))
+  image.fillText(font, "Another font")
 
   doDiff(image, "basic5")
 
@@ -137,7 +137,7 @@ block:
 
   let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
-  image.fillText(font, "Different font", rgba(0, 0, 0, 255))
+  image.fillText(font, "Different font")
 
   doDiff(image, "basic6")
 
@@ -147,17 +147,8 @@ block:
 
   let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
-  image.fillText(
-    font,
-    "First line",
-    rgba(0, 0, 0, 255)
-  )
-  image.fillText(
-    font,
-    "Second line",
-    rgba(0, 0, 0, 255),
-    vec2(0, font.defaultLineHeight)
-  )
+  image.fillText(font, "First line")
+  image.fillText(font, "Second line", vec2(0, font.defaultLineHeight))
 
   doDiff(image, "basic7")
 
@@ -170,7 +161,6 @@ block:
   image.fillText(
     font,
     "Wrapping text to new line",
-    rgba(0, 0, 0, 255),
     bounds = vec2(200, 0)
   )
 
@@ -185,7 +175,6 @@ block:
   image.fillText(
     font,
     "Supercalifragilisticexpialidocious",
-    rgba(0, 0, 0, 255),
     bounds = vec2(200, 0)
   )
 
@@ -208,7 +197,6 @@ block:
     image.fillText(
       font,
       text,
-      rgba(0, 0, 0, 255),
       bounds = image.wh
     )
 
@@ -227,7 +215,6 @@ block:
     image.fillText(
       font,
       text,
-      rgba(0, 0, 0, 255),
       bounds = image.wh
     )
 
@@ -245,7 +232,6 @@ block:
     image.fillText(
       font,
       text,
-      rgba(0, 0, 0, 255),
       bounds = image.wh
     )
 
@@ -264,7 +250,6 @@ block:
     image.fillText(
       font,
       text,
-      rgba(0, 0, 0, 255),
       bounds = image.wh
     )
 
@@ -282,7 +267,6 @@ block:
     image.fillText(
       font,
       text,
-      rgba(0, 0, 0, 255),
       bounds = image.wh
     )
 
@@ -301,7 +285,6 @@ block:
     image.fillText(
       font,
       text,
-      rgba(0, 0, 0, 255),
       bounds = image.wh
     )
 
@@ -319,7 +302,6 @@ block:
     image.fillText(
       font,
       text,
-      rgba(0, 0, 0, 255),
       bounds = image.wh
     )
 
@@ -338,7 +320,6 @@ block:
     image.fillText(
       font,
       text,
-      rgba(0, 0, 0, 255),
       bounds = image.wh
     )
 
@@ -356,7 +337,6 @@ block:
     image.fillText(
       font,
       text,
-      rgba(0, 0, 0, 255),
       bounds = image.wh
     )
 
@@ -375,7 +355,6 @@ block:
     image.fillText(
       font,
       text,
-      rgba(0, 0, 0, 255),
       bounds = image.wh
     )
 
@@ -391,7 +370,6 @@ block:
   image.fillText(
     font,
     "Shehadcometotheconclusion",
-    rgba(0, 0, 0, 255),
     bounds = image.wh
   )
 
@@ -407,7 +385,6 @@ block:
   image.fillText(
     font,
     "Shehadcometotheconclusion",
-    rgba(0, 0, 0, 255),
     bounds = image.wh
   )
 
@@ -422,7 +399,6 @@ block:
   image.fillText(
     font,
     "Shehadcometotheconclusion",
-    rgba(0, 0, 0, 255),
     bounds = image.wh
   )
 
@@ -438,7 +414,6 @@ block:
   image.fillText(
     font,
     "Shehadcometotheconclusion",
-    rgba(0, 0, 0, 255),
     bounds = image.wh
   )
 
@@ -453,7 +428,6 @@ block:
   image.fillText(
     font,
     "Wrapping text to the next line",
-    rgba(0, 0, 0, 255),
     bounds = image.wh
   )
 
@@ -469,7 +443,6 @@ block:
   image.fillText(
     font,
     "Wrapping text to the next line",
-    rgba(0, 0, 0, 255),
     bounds = image.wh
   )
 
@@ -484,7 +457,6 @@ block:
   image.fillText(
     font,
     "HA HT HX HY IA IT IX IY MA MT MX MY NA NT NX NY",
-    rgba(0, 0, 0, 255),
     bounds = image.wh
   )
 
@@ -499,7 +471,6 @@ block:
   image.fillText(
     font,
     "V( V) V- V/ V: v; v? v@ VT VV VW VX VY V] Vu Vz V{",
-    rgba(0, 0, 0, 255),
     bounds = image.wh
   )
 
@@ -514,7 +485,6 @@ block:
   image.fillText(
     font,
     "B, B. BA BJ BT BW BY Bf Bg Bt bw By",
-    rgba(0, 0, 0, 255),
     bounds = image.wh
   )
 
@@ -535,7 +505,6 @@ Fourth line
 Fifth line
 Sixth line
 Seventh line""",
-    rgba(0, 0, 0, 255),
     bounds = image.wh
   )
 
@@ -555,7 +524,6 @@ Second line
 Third line
 Fourth line
 Fifth line""",
-    rgba(0, 0, 0, 255),
     bounds = image.wh
   )
 
@@ -571,7 +539,6 @@ block:
   image.fillText(
     font,
     "TopLeft",
-    rgba(0, 0, 0, 255),
     bounds = image.wh,
     hAlign = haLeft,
     vAlign = vaTop
@@ -580,7 +547,6 @@ block:
   image.fillText(
     font,
     "TopCenter",
-    rgba(0, 0, 0, 255),
     bounds = image.wh,
     hAlign = haCenter,
     vAlign = vaTop
@@ -589,7 +555,6 @@ block:
   image.fillText(
     font,
     "TopRight",
-    rgba(0, 0, 0, 255),
     bounds = image.wh,
     hAlign = haRight,
     vAlign = vaTop
@@ -598,7 +563,6 @@ block:
   image.fillText(
     font,
     "MiddleLeft",
-    rgba(0, 0, 0, 255),
     bounds = image.wh,
     hAlign = haLeft,
     vAlign = vaMiddle
@@ -607,7 +571,6 @@ block:
   image.fillText(
     font,
     "MiddleCenter",
-    rgba(0, 0, 0, 255),
     bounds = image.wh,
     hAlign = haCenter,
     vAlign = vaMiddle
@@ -616,7 +579,6 @@ block:
   image.fillText(
     font,
     "MiddleRight",
-    rgba(0, 0, 0, 255),
     bounds = image.wh,
     hAlign = haRight,
     vAlign = vaMiddle
@@ -625,7 +587,6 @@ block:
   image.fillText(
     font,
     "BottomLeft",
-    rgba(0, 0, 0, 255),
     bounds = image.wh,
     hAlign = haLeft,
     vAlign = vaBottom
@@ -634,7 +595,6 @@ block:
   image.fillText(
     font,
     "BottomCenter",
-    rgba(0, 0, 0, 255),
     bounds = image.wh,
     hAlign = haCenter,
     vAlign = vaBottom
@@ -643,10 +603,29 @@ block:
   image.fillText(
     font,
     "BottomRight",
-    rgba(0, 0, 0, 255),
     bounds = image.wh,
     hAlign = haRight,
     vAlign = vaBottom
   )
 
   doDiff(image, "alignments")
+
+block:
+  var font = readFont("tests/fonts/IBMPlexSans-Regular_2.ttf")
+  font.size = 48
+  font.paint = Paint(
+    kind: pkGradientLinear,
+    gradientHandlePositions: @[
+      vec2(0, 50),
+      vec2(100, 50),
+    ],
+    gradientStops: @[
+      ColorStop(color: rgba(255, 0, 0, 255), position: 0),
+      ColorStop(color: rgba(255, 0, 0, 40), position: 1.0),
+    ]
+  )
+
+  let image = newImage(100, 100)
+  image.fillText(font, "Text")
+
+  image.writeFile("tests/fonts/image_paint_fill.png")

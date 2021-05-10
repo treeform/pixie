@@ -327,31 +327,7 @@ proc strokePolygon*(
   mask.strokePath(path, strokeWidth)
 
 proc fillText*(
-  image: Image,
-  font: Font,
-  text: string,
-  color: SomeColor,
-  transform: Vec2 | Mat3 = vec2(0, 0),
-  bounds = vec2(0, 0),
-  hAlign = haLeft,
-  vAlign = vaTop
-) =
-  ## Typesets and fills the text. Optional parameters:
-  ## transform: translation or matrix to apply
-  ## bounds: width determines wrapping and hAlign, height for vAlign
-  ## hAlign: horizontal alignment of the text
-  ## vAlign: vertical alignment of the text
-  let arrangement = font.typeset(
-    text,
-    bounds,
-    hAlign,
-    vAlign
-  )
-  for i in 0 ..< arrangement.runes.len:
-    image.fillPath(arrangement.getPath(i), color, transform)
-
-proc fillText*(
-  mask: Mask,
+  target: Image | Mask,
   font: Font,
   text: string,
   transform: Vec2 | Mat3 = vec2(0, 0),
@@ -364,42 +340,15 @@ proc fillText*(
   ## bounds: width determines wrapping and hAlign, height for vAlign
   ## hAlign: horizontal alignment of the text
   ## vAlign: vertical alignment of the text
-  let arrangement =  font.typeset(
-    text,
-    bounds,
-    hAlign,
-    vAlign
-  )
+  let arrangement = font.typeset(text, bounds, hAlign, vAlign)
   for i in 0 ..< arrangement.runes.len:
-    mask.fillPath(arrangement.getPath(i), transform)
+    when type(target) is Image:
+      target.fillPath(arrangement.getPath(i), font.paint, transform)
+    else: # target is Mask
+      target.fillPath(arrangement.getPath(i), transform)
 
 proc strokeText*(
-  image: Image,
-  font: Font,
-  text: string,
-  color: SomeColor,
-  transform: Vec2 | Mat3 = vec2(0, 0),
-  strokeWidth = 1.0,
-  bounds = vec2(0, 0),
-  hAlign = haLeft,
-  vAlign = vaTop
-) =
-  ## Typesets and strokes the text. Optional parameters:
-  ## transform: translation or matrix to apply
-  ## bounds: width determines wrapping and hAlign, height for vAlign
-  ## hAlign: horizontal alignment of the text
-  ## vAlign: vertical alignment of the text
-  let arrangement = font.typeset(
-    text,
-    bounds,
-    hAlign,
-    vAlign
-  )
-  for i in 0 ..< arrangement.runes.len:
-    image.strokePath(arrangement.getPath(i), color, transform, strokeWidth)
-
-proc strokeText*(
-  mask: Mask,
+  target: Image | Mask,
   font: Font,
   text: string,
   transform: Vec2 | Mat3 = vec2(0, 0),
@@ -413,11 +362,11 @@ proc strokeText*(
   ## bounds: width determines wrapping and hAlign, height for vAlign
   ## hAlign: horizontal alignment of the text
   ## vAlign: vertical alignment of the text
-  let arrangement = font.typeset(
-    text,
-    bounds,
-    hAlign,
-    vAlign
-  )
+  let arrangement = font.typeset(text, bounds, hAlign, vAlign)
   for i in 0 ..< arrangement.runes.len:
-    mask.strokePath(arrangement.getPath(i), transform, strokeWidth)
+    when type(target) is Image:
+      target.strokePath(
+        arrangement.getPath(i), font.paint, transform, strokeWidth
+      )
+    else: # target is Mask
+      target.strokePath(arrangement.getPath(i), transform, strokeWidth)
