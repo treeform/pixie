@@ -609,3 +609,23 @@ block:
   )
 
   doDiff(image, "alignments")
+
+block:
+  var font = readFont("tests/fonts/IBMPlexSans-Regular_2.ttf")
+  font.size = 48
+  font.paint = Paint(
+    kind: pkGradientLinear,
+    gradientHandlePositions: @[
+      vec2(0, 50),
+      vec2(100, 50),
+    ],
+    gradientStops: @[
+      ColorStop(color: rgba(255, 0, 0, 255), position: 0),
+      ColorStop(color: rgba(255, 0, 0, 40), position: 1.0),
+    ]
+  )
+
+  let image = newImage(100, 100)
+  image.fillText(font, "Text")
+
+  image.writeFile("tests/fonts/image_paint_fill.png")
