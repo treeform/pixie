@@ -1516,25 +1516,11 @@ proc fillPath*(
     of pkImageTiled:
       fill.drawTiled(paint.image, paint.imageMat)
     of pkGradientLinear:
-      fill.fillLinearGradient(
-        paint.gradientHandlePositions[0],
-        paint.gradientHandlePositions[1],
-        paint.gradientStops
-      )
+      fill.fillGradientLinear(paint)
     of pkGradientRadial:
-      fill.fillRadialGradient(
-        paint.gradientHandlePositions[0],
-        paint.gradientHandlePositions[1],
-        paint.gradientHandlePositions[2],
-        paint.gradientStops
-      )
+      fill.fillGradientRadial(paint)
     of pkGradientAngular:
-      fill.fillAngularGradient(
-        paint.gradientHandlePositions[0],
-        paint.gradientHandlePositions[1],
-        paint.gradientHandlePositions[2],
-        paint.gradientStops
-      )
+      fill.fillGradientAngular(paint)
 
   fill.draw(mask)
   image.draw(fill, blendMode = paint.blendMode)
@@ -1637,25 +1623,11 @@ proc strokePath*(
     of pkImageTiled:
       fill.drawTiled(paint.image, paint.imageMat)
     of pkGradientLinear:
-      fill.fillLinearGradient(
-        paint.gradientHandlePositions[0],
-        paint.gradientHandlePositions[1],
-        paint.gradientStops
-      )
+      fill.fillGradientLinear(paint)
     of pkGradientRadial:
-      fill.fillRadialGradient(
-        paint.gradientHandlePositions[0],
-        paint.gradientHandlePositions[1],
-        paint.gradientHandlePositions[2],
-        paint.gradientStops
-      )
+      fill.fillGradientRadial(paint)
     of pkGradientAngular:
-      fill.fillAngularGradient(
-        paint.gradientHandlePositions[0],
-        paint.gradientHandlePositions[1],
-        paint.gradientHandlePositions[2],
-        paint.gradientStops
-      )
+      fill.fillGradientAngular(paint)
 
   fill.draw(mask)
   image.draw(fill, blendMode = paint.blendMode)

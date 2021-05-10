@@ -1,4 +1,4 @@
-import blends, chroma, images, vmath
+import blends, chroma, common, images, vmath
 
 type
   PaintKind* = enum
@@ -60,25 +60,38 @@ proc gradientPut(image: Image, x, y: int, a: float32, stops: seq[ColorStop]) =
     )
   image.setRgbaUnsafe(x, y, color.rgba.rgbx())
 
-proc fillLinearGradient*(
-  image: Image,
-  at, to: Vec2,
-  stops: seq[ColorStop]
-) =
+proc fillGradientLinear*(image: Image, paint: Paint) =
   ## Fills a linear gradient.
+
+  if paint.kind != pkGradientLinear:
+    raise newException(PixieError, "Paint kind must be " & $pkGradientLinear)
+
+  if paint.gradientHandlePositions.len != 2:
+    raise newException(PixieError, "Linear gradient requires 2 handles")
+
+  let
+    at = paint.gradientHandlePositions[0]
+    to = paint.gradientHandlePositions[1]
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
-      let xy = vec2(x.float32, y.float32)
-      let a = toLineSpace(at, to, xy)
-      image.gradientPut(x, y, a, stops)
+      let
+        xy = vec2(x.float32, y.float32)
+        a = toLineSpace(at, to, xy)
+      image.gradientPut(x, y, a, paint.gradientStops)
 
-proc fillRadialGradient*(
-  image: Image,
-  center, edge, skew: Vec2,
-  stops: seq[ColorStop]
-) =
+proc fillGradientRadial*(image: Image, paint: Paint) =
   ## Fills a radial gradient.
+
+  if paint.kind != pkGradientRadial:
+    raise newException(PixieError, "Paint kind must be " & $pkGradientRadial)
+
+  if paint.gradientHandlePositions.len != 3:
+    raise newException(PixieError, "Radial gradient requires 3 handles")
+
   let
+    center = paint.gradientHandlePositions[0]
+    edge = paint.gradientHandlePositions[1]
+    skew = paint.gradientHandlePositions[2]
     distanceX = dist(center, edge)
     distanceY = dist(center, skew)
     gradientAngle = normalize(center - edge).angle().fixAngle()
@@ -89,23 +102,29 @@ proc fillRadialGradient*(
     ).inverse()
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
-      let xy = vec2(x.float32, y.float32)
-      let b = (mat * xy).length()
-      image.gradientPut(x, y, b, stops)
+      let
+        xy = vec2(x.float32, y.float32)
+        b = (mat * xy).length()
+      image.gradientPut(x, y, b, paint.gradientStops)
 
-proc fillAngularGradient*(
-  image: Image,
-  center, edge, skew: Vec2,
-  stops: seq[ColorStop]
-) =
-  ## Angular gradient.
-  # TODO: make edge between start and end anti-aliased.
+proc fillGradientAngular*(image: Image, paint: Paint) =
+  ## Fills an angular gradient.
+
+  if paint.kind != pkGradientAngular:
+    raise newException(PixieError, "Paint kind must be " & $pkGradientAngular)
+
+  if paint.gradientHandlePositions.len != 3:
+    raise newException(PixieError, "Angular gradient requires 2 handles")
+
   let
-    gradientAngle = normalize(edge - center).angle().fixAngle()
+    center = paint.gradientHandlePositions[0]
+    edge = paint.gradientHandlePositions[1]
+  # TODO: make edge between start and end anti-aliased.
+  let gradientAngle = normalize(edge - center).angle().fixAngle()
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       let
         xy = vec2(x.float32, y.float32)
         angle = normalize(xy - center).angle()
         a = (angle + gradientAngle + PI/2).fixAngle() / 2 / PI + 0.5
-      image.gradientPut(x, y, a, stops)
+      image.gradientPut(x, y, a, paint.gradientStops)
