@@ -23,14 +23,6 @@ Features:
 
 API reference: https://treeform.github.io/pixie/pixie.html
 
-### Font file formats
-
-Format        | Read
-------------- | -------------
-TTF           | ✅
-OTF           | ✅
-SVG           | ✅
-
 ### Image file formats
 
 Format        | Read          | Write         |
@@ -40,6 +32,14 @@ JPEG          | ✅           |               |
 BMP           | ✅           | ✅            |
 GIF           | ✅           |               |
 SVG           | ✅           |               |
+
+### Font file formats
+
+Format        | Read
+------------- | -------------
+TTF           | ✅
+OTF           | ✅
+SVG           | ✅
 
 ### Joins and caps
 
