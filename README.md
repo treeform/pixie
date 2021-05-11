@@ -117,27 +117,16 @@ image.fillText(font.typeset(text, bounds = vec2(180, 180)), vec2(10, 10))
 ```nim
 let font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
 
-var style1 = font
-style1.size = 12
-style1.paint.color = rgba(200, 200, 200, 255)
-
-var style2 = font
-style2.size = 36
-style2.paint.color = rgba(0, 0, 0, 255)
-
-var style3 = font
-style3.size = 13
-style3.paint.color = rgba(0, 127, 244, 255)
-
-var style4 = font
-style4.size = 14
-style4.paint.color = rgba(80, 80, 80, 255)
+proc style(font: Font, size: float32, color: ColorRGBA): Font =
+  result = font
+  result.size = size
+  result.paint.color = color
 
 let spans = @[
-  newSpan("verb [with object] ", style1),
-  newSpan("strallow\n", style2),
-  newSpan("\nstral·low\n", style3),
-  newSpan("\n1. free (something) from restrictive restrictions \"the regulations are intended to strallow changes in public policy\" ", style4)
+  newSpan("verb [with object] ", font.style(12, rgba(200, 200, 200, 255))),
+  newSpan("strallow\n", font.style(36, rgba(0, 0, 0, 255))),
+  newSpan("\nstral·low\n", font.style(13, rgba(0, 127, 244, 255))),
+  newSpan("\n1. free (something) from restrictive restrictions \"the regulations are intended to strallow changes in public policy\" ", font.style(14, rgba(80, 80, 80, 255)))
 ]
 
 image.fillText(typeset(spans, bounds = vec2(180, 180)), vec2(10, 10))
