@@ -169,6 +169,9 @@ proc typeset*(
         result.fonts.add(span.font)
         start += runes.len
 
+  if result.runes.len == 0:
+    return
+
   result.positions.setLen(result.runes.len)
   result.selectionRects.setLen(result.runes.len)
 
@@ -196,11 +199,9 @@ proc typeset*(
           at.y += 1
           prevCanWrap = 0
           lines[^1][1] = runeIndex
-          lines.add((runeIndex + 1, 0))
+          if runeIndex + 1 < result.runes.len:
+            lines.add((runeIndex + 1, 0))
         else:
-          if rune.canWrap():
-            prevCanWrap = runeIndex
-
           let advance = advance(font, result.runes, runeIndex)
           if wrap and rune != SP and bounds.x > 0 and at.x + advance > bounds.x:
             # Wrap to new line
@@ -219,6 +220,9 @@ proc typeset*(
 
             lines[^1][1] = lineStart - 1
             lines.add((lineStart, 0))
+
+          if rune.canWrap():
+            prevCanWrap = runeIndex
 
           result.positions[runeIndex] = at
           result.selectionRects[runeIndex] = rect(at.x, at.y, advance, 0)
@@ -299,13 +303,12 @@ proc typeset*(
               font.defaultLineHeight
         lineHeights[line] = max(lineHeights[line], fontLineHeight)
         for runeIndex in start .. stop:
-          if line + 1 < lines.len and runeIndex == lines[line][1]:
+          if line + 1 < lines.len and runeIndex == lines[line + 1][0]:
             inc line
             lineHeights[line] = max(lineHeights[line], fontLineHeight)
         # Handle when span and line endings coincide
         if line + 1 < lines.len and stop == lines[line][1]:
           inc line
-          lineHeights[line] = max(lineHeights[line], fontLineHeight)
 
     block: # Vertically position the glyphs
       var
