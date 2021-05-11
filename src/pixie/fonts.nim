@@ -175,15 +175,15 @@ proc typeset*(
   result.positions.setLen(result.runes.len)
   result.selectionRects.setLen(result.runes.len)
 
-  proc advance(font: Font, runes: seq[Rune], i: int): float32 {.inline.} =
-    if not font.noKerningAdjustments and i + 1 < runes.len:
-      result += font.typeface.getKerningAdjustment(runes[i], runes[i + 1])
-    result += font.typeface.getAdvance(runes[i])
-    result *= font.scale
-
   var lines = @[(0, 0)] # (start, stop)
 
   block: # Arrange the glyphs horizontally first (handling line breaks)
+    proc advance(font: Font, runes: seq[Rune], i: int): float32 {.inline.} =
+      if not font.noKerningAdjustments and i + 1 < runes.len:
+        result += font.typeface.getKerningAdjustment(runes[i], runes[i + 1])
+      result += font.typeface.getAdvance(runes[i])
+      result *= font.scale
+
     var
       at: Vec2
       prevCanWrap: int
@@ -199,6 +199,7 @@ proc typeset*(
           at.y += 1
           prevCanWrap = 0
           lines[^1][1] = runeIndex
+          # Start a new line if we are not at the end
           if runeIndex + 1 < result.runes.len:
             lines.add((runeIndex + 1, 0))
         else:

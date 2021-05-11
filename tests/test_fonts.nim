@@ -716,7 +716,6 @@ block:
     ibm = readFont("tests/fonts/IBMPlexSans-Regular_2.ttf")
     noto = readFont("tests/fonts/NotoSans-Regular_4.ttf")
 
-
   var font1 = roboto
   font1.size = 64
 
@@ -740,7 +739,7 @@ block:
 
   var font8 = ubuntu
   font8.size = 54
-  font8.paint.color = rgba(255, 0 ,0, 255)
+  font8.paint.color = rgba(255, 0, 0, 255)
 
   var font9 = roboto
   font9.size = 48
