@@ -17,7 +17,7 @@ Features:
 * Shadows, glows and blurs.
 * Complex masking: Subtract, Intersect, Exclude.
 * Complex blends: Darken, Multiply, Color Dodge, Hue, Luminosity... etc.
-* Many operations are SIMD accelerated where possible.
+* Many operations are SIMD accelerated.
 
 ### Documentation
 
