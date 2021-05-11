@@ -9,6 +9,7 @@ This library is being actively developed and we'd be happy for you to use it.
 `nimble install pixie`
 
 Features:
+* Typesetting and rasterizing text, including styled rich text via spans.
 * Drawing paths, shapes and curves with even-odd and non-zero windings.
 * Pixel-perfect AA quality.
 * Supported file formats are PNG, BMP, JPG, SVG + more in development.
@@ -22,7 +23,14 @@ Features:
 
 API reference: https://treeform.github.io/pixie/pixie.html
 
-### File formats
+### Font file formats
+
+Format        | Read
+------------- | -------------
+TTF           | ✅
+OTF           | ✅
+
+### Image file formats
 
 Format        | Read          | Write         |
 ------------- | ------------- | ------------- |
