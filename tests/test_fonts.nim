@@ -707,3 +707,100 @@ block:
     image.fillRect(rect, rgba(128, 128, 128, 128))
 
   doDiff(image, "selection_rects3")
+
+block:
+  let
+    roboto = readFont("tests/fonts/Roboto-Regular_1.ttf")
+    aclonica = readFont("tests/fonts/Aclonica-Regular_1.ttf")
+    ubuntu = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
+    ibm = readFont("tests/fonts/IBMPlexSans-Regular_2.ttf")
+    noto = readFont("tests/fonts/NotoSans-Regular_4.ttf")
+
+
+  var font1 = roboto
+  font1.size = 64
+
+  var font2 = aclonica
+  font2.size = 80
+
+  var font3 = ibm
+  font3.size = 40
+
+  var font4 = ubuntu
+  font4.size = 56
+
+  var font5 = noto
+  font5.size = 72
+
+  var font6 = roboto
+  font6.size = 48
+
+  var font7 = noto
+  font7.size = 64
+
+  var font8 = ubuntu
+  font8.size = 54
+  font8.paint.color = rgba(255, 0 ,0, 255)
+
+  var font9 = roboto
+  font9.size = 48
+
+  var font10 = aclonica
+  font10.size = 48
+  font10.lineHeight = 120
+
+  let spans = @[
+    newSpan("Using spans, ", font1),
+    newSpan("Pixie ", font2),
+    newSpan("can arrange and rasterize ", font3),
+    newSpan("very complex text layouts. ", font4),
+    newSpan("Spans", font5),
+    newSpan(" can have different ", font6),
+    newSpan("font sizes,", font7),
+    newSpan(" colors", font8),
+    newSpan(" and ", font9),
+    newSpan("line heights.", font10)
+  ]
+
+  let image = newImage(600, 600)
+  image.fill(rgba(255, 255, 255, 255))
+
+  let arrangement = typeset(spans, bounds = image.wh)
+
+  image.fillText(arrangement)
+
+  doDiff(image, "spans4")
+
+block:
+  let ubuntu = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
+
+  var font1 = ubuntu
+  font1.size = 15
+  font1.paint.color = parseHtmlColor("#CACACA").rgba()
+
+  var font2 = ubuntu
+  font2.size = 84
+
+  var font3 = ubuntu
+  font3.size = 18
+  font3.paint.color = parseHtmlColor("#007FF4").rgba()
+
+  var font4 = ubuntu
+  font4.size = 20
+  font4.paint.color = parseHtmlColor("#4F4F4F").rgba()
+
+  let spans = @[
+    newSpan("verb [with object] ", font1),
+    newSpan("strallow\n", font2),
+    newSpan("\nstral·low\n", font3),
+    newSpan("\n1. free (something) from restrictive restrictions \"the regulations are intended to strallow changes in public policy\" ", font4)
+  ]
+
+  let image = newImage(400, 400)
+  image.fill(rgba(255, 255, 255, 255))
+
+  let arrangement = typeset(spans, bounds = vec2(360, 360))
+
+  image.fillText(arrangement, vec2(20, 20))
+
+  doDiff(image, "spans5")
