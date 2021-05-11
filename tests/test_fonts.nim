@@ -689,3 +689,21 @@ block:
     image.fillRect(rect, rgba(128, 128, 128, 128))
 
   doDiff(image, "selection_rects2")
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 16
+
+  let image = newImage(75, 75)
+  image.fill(rgba(255, 255, 255, 255))
+
+  let arrangement = typeset(
+    font, "Wrapping text to new line", bounds = image.wh
+  )
+
+  image.fillText(arrangement)
+
+  for i, rect in arrangement.selectionRects:
+    image.fillRect(rect, rgba(128, 128, 128, 128))
+
+  doDiff(image, "selection_rects3")
