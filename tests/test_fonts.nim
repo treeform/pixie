@@ -13,7 +13,7 @@ block:
   font.size = 24
 
   let bounds = font.computeBounds("Word")
-  doAssert bounds == vec2(56.05078125, 28)
+  doAssert bounds == vec2(57, 28)
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -629,3 +629,81 @@ block:
   image.fillText(font, "Text")
 
   image.writeFile("tests/fonts/image_paint_fill.png")
+
+block:
+  var font1 = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font1.size = 80
+
+  var font2 = readFont("tests/fonts/Aclonica-Regular_1.ttf")
+  font2.size = 100
+
+  var font3 = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
+  font3.size = 48
+
+  let spans = @[
+    newSpan("One span ", font1),
+    newSpan("Two span", font2),
+    newSpan(" Three span", font3)
+  ]
+
+  let image = newImage(700, 250)
+  image.fill(rgba(255, 255, 255, 255))
+
+  let arrangement = typeset(spans, bounds = image.wh)
+
+  image.fillText(arrangement)
+
+  doDiff(image, "spans1")
+
+  for i, rect in arrangement.selectionRects:
+    image.fillRect(rect, rgba(128, 128, 128, 128))
+
+  doDiff(image, "selection_rects1")
+
+block:
+  var font1 = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font1.size = 80
+
+  var font2 = readFont("tests/fonts/Aclonica-Regular_1.ttf")
+  font2.size = 100
+
+  var font3 = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
+  font3.size = 48
+
+  let spans = @[
+    newSpan("One span ", font1),
+    newSpan("Two span", font2),
+    newSpan(" Three span", font3)
+  ]
+
+  let image = newImage(475, 400)
+  image.fill(rgba(255, 255, 255, 255))
+
+  let arrangement = typeset(spans, bounds = image.wh)
+
+  image.fillText(arrangement)
+
+  doDiff(image, "spans2")
+
+  for i, rect in arrangement.selectionRects:
+    image.fillRect(rect, rgba(128, 128, 128, 128))
+
+  doDiff(image, "selection_rects2")
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 16
+
+  let image = newImage(75, 75)
+  image.fill(rgba(255, 255, 255, 255))
+
+  let arrangement = typeset(
+    font, "Wrapping text to new line", bounds = image.wh
+  )
+
+  image.fillText(arrangement)
+
+  for i, rect in arrangement.selectionRects:
+    image.fillRect(rect, rgba(128, 128, 128, 128))
+
+  doDiff(image, "selection_rects3")

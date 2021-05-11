@@ -14,6 +14,6 @@ timeIt "typeset":
 
 timeIt "rasterize":
   image.fill(rgba(255, 255, 255, 255))
-  image.fillText(font, text, rgba(0, 0, 0, 255), bounds = image.wh)
+  image.fillText(font, text, bounds = image.wh)
   # mask.fill(0)
   # mask.fillText(font, text, bounds = mask.wh)
