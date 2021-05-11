@@ -169,6 +169,9 @@ proc typeset*(
         result.fonts.add(span.font)
         start += runes.len
 
+  if result.runes.len == 0:
+    return
+
   result.positions.setLen(result.runes.len)
   result.selectionRects.setLen(result.runes.len)
 
