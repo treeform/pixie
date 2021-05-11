@@ -199,6 +199,7 @@ proc typeset*(
           at.y += 1
           prevCanWrap = 0
           lines[^1][1] = runeIndex
+          # Start a new line if we are not at the end
           if runeIndex + 1 < result.runes.len:
             lines.add((runeIndex + 1, 0))
         else:
