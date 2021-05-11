@@ -11,6 +11,8 @@ proc cutBetween(str, a, b: string): string =
 var md: seq[string]
 
 var exampleFiles = [
+  "examples/text.nim",
+  "examples/text_spans.nim",
   "examples/square.nim",
   "examples/line.nim",
   "examples/rounded_rectangle.nim",

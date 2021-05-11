@@ -91,6 +91,50 @@ z             | ✅            | close path            |
 
 ## Examples
 
+### Text
+[examples/text.nim](examples/text.nim)
+```nim
+var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+font.size = 20
+
+let text = "Typesetting is the arrangement and composition of text in graphic design and publishing in both digital and traditional medias."
+
+image.fillText(font.typeset(text, bounds = vec2(180, 180)), vec2(10, 10))
+```
+![example output](examples/text.png)
+
+### Text spans
+[examples/text_spans.nim](examples/text_spans.nim)
+```nim
+let font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
+
+var style1 = font
+style1.size = 12
+style1.paint.color = rgba(200, 200, 200, 255)
+
+var style2 = font
+style2.size = 36
+style2.paint.color = rgba(0, 0, 0, 255)
+
+var style3 = font
+style3.size = 13
+style3.paint.color = rgba(0, 127, 244, 255)
+
+var style4 = font
+style4.size = 14
+style4.paint.color = rgba(80, 80, 80, 255)
+
+let spans = @[
+  newSpan("verb [with object] ", style1),
+  newSpan("strallow\n", style2),
+  newSpan("\nstral·low\n", style3),
+  newSpan("\n1. free (something) from restrictive restrictions \"the regulations are intended to strallow changes in public policy\" ", style4)
+]
+
+image.fillText(typeset(spans, bounds = vec2(180, 180)), vec2(10, 10))
+```
+![example output](examples/text_spans.png)
+
 ### Square
 [examples/square.nim](examples/square.nim)
 ```nim
