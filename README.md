@@ -29,6 +29,7 @@ Format        | Read
 ------------- | -------------
 TTF           | ✅
 OTF           | ✅
+SVG           | ✅
 
 ### Image file formats
 
