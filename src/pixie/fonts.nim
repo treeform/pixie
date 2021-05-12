@@ -10,6 +10,7 @@ type
   Typeface* = ref object
     opentype: OpenType
     svgFont: SvgFont
+    filePath*: string
 
   Font* = object
     typeface*: Typeface
