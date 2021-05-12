@@ -48,6 +48,11 @@ proc maxScale(m: Mat3): float32 =
     vec2(m[1, 0], m[1, 1]).length
   )
 
+proc isRelative(kind: PathCommandKind): bool =
+  kind in {
+    RMove, RLine, TQuad, RTQuad, RHLine, RVLine, RCubic, RSCubic, RQuad, RArc
+  }
+
 proc parameterCount(kind: PathCommandKind): int =
   ## Returns number of parameters a path command has.
   case kind:
@@ -231,7 +236,17 @@ proc parsePath*(path: string): Path =
 
 proc transform*(path: var Path, mat: Mat3) =
   ## Apply a matrix transform to a path.
+  if mat == mat3():
+    return
+
+  if path.commands.len > 0 and path.commands[0].kind == RMove:
+    path.commands[0].kind = Move
+
   for command in path.commands.mitems:
+    var mat = mat
+    if command.kind.isRelative():
+      mat.pos = vec2(0)
+
     case command.kind:
     of Close:
       discard
@@ -984,7 +999,7 @@ proc partitionSegments(
     numPartitions = min(maxPartitions, max(1, segmentCount div 10).uint32)
     partitionHeight = (height.uint32 div numPartitions)
 
-  var partitions = newSeq[seq[(Segment, int16)]](numPartitions)
+  result.setLen(numPartitions)
   for shape in shapes:
     for segment in shape.segments:
       if segment.at.y == segment.to.y: # Skip horizontal
@@ -997,17 +1012,15 @@ proc partitionSegments(
         winding = -1
 
       if partitionHeight == 0:
-        partitions[0].add((segment, winding))
+        result[0].add((segment, winding))
       else:
         var
           atPartition = max(0, segment.at.y).uint32 div partitionHeight
           toPartition = max(0, ceil(segment.to.y)).uint32 div partitionHeight
-        atPartition = clamp(atPartition, 0, partitions.high.uint32)
-        toPartition = clamp(toPartition, 0, partitions.high.uint32)
+        atPartition = clamp(atPartition, 0, result.high.uint32)
+        toPartition = clamp(toPartition, 0, result.high.uint32)
         for i in atPartition .. toPartition:
-          partitions[i].add((segment, winding))
-
-  partitions
+          result[i].add((segment, winding))
 
 template computeCoverages(
   coverages: var seq[uint8],
@@ -1415,6 +1428,18 @@ proc parseSomePath(
   elif type(path) is seq[seq[Vec2]]:
     path
 
+proc transform(shapes: var seq[seq[Vec2]], transform: Vec2 | Mat3) =
+  when type(transform) is Vec2:
+    if transform != vec2(0, 0):
+      for shape in shapes.mitems:
+        for segment in shape.mitems:
+          segment += transform
+  else:
+    if transform != mat3():
+      for shape in shapes.mitems:
+        for segment in shape.mitems:
+          segment = transform * segment
+
 proc fillPath*(
   image: Image,
   path: SomePath,
@@ -1439,12 +1464,7 @@ proc fillPath*(
   else:
     let pixelScale = 1.0
   var shapes = parseSomePath(path, pixelScale)
-  for shape in shapes.mitems:
-    for segment in shape.mitems:
-      when type(transform) is Vec2:
-        segment += transform
-      else:
-        segment = transform * segment
+  shapes.transform(transform)
   image.fillShapes(shapes, color, windingRule, blendMode)
 
 proc fillPath*(
@@ -1467,30 +1487,26 @@ proc fillPath*(
   else:
     let pixelScale = 1.0
   var shapes = parseSomePath(path, pixelScale)
-  for shape in shapes.mitems:
-    for segment in shape.mitems:
-      when type(transform) is Vec2:
-        segment += transform
-      else:
-        segment = transform * segment
+  shapes.transform(transform)
   mask.fillShapes(shapes, windingRule)
 
 proc fillPath*(
   image: Image,
   path: SomePath,
   paint: Paint,
-  windingRule = wrNonZero,
+  transform: Vec2 | Mat3 = vec2(),
+  windingRule = wrNonZero
 ) =
   ## Fills a path.
   if paint.kind == pkSolid:
-    image.fillPath(path, paint.color)
+    image.fillPath(path, paint.color, transform)
     return
 
   let
     mask = newMask(image.width, image.height)
     fill = newImage(image.width, image.height)
 
-  mask.fillPath(parseSomePath(path), windingRule)
+  mask.fillPath(parseSomePath(path), transform, windingRule)
 
   case paint.kind:
     of pkSolid:
@@ -1500,25 +1516,11 @@ proc fillPath*(
     of pkImageTiled:
       fill.drawTiled(paint.image, paint.imageMat)
     of pkGradientLinear:
-      fill.fillLinearGradient(
-        paint.gradientHandlePositions[0],
-        paint.gradientHandlePositions[1],
-        paint.gradientStops
-      )
+      fill.fillGradientLinear(paint)
     of pkGradientRadial:
-      fill.fillRadialGradient(
-        paint.gradientHandlePositions[0],
-        paint.gradientHandlePositions[1],
-        paint.gradientHandlePositions[2],
-        paint.gradientStops
-      )
+      fill.fillGradientRadial(paint)
     of pkGradientAngular:
-      fill.fillAngularGradient(
-        paint.gradientHandlePositions[0],
-        paint.gradientHandlePositions[1],
-        paint.gradientHandlePositions[2],
-        paint.gradientStops
-      )
+      fill.fillGradientAngular(paint)
 
   fill.draw(mask)
   image.draw(fill, blendMode = paint.blendMode)
@@ -1556,12 +1558,7 @@ proc strokePath*(
   var strokeShapes = strokeShapes(
     parseSomePath(path, pixelScale), strokeWidth, lineCap, lineJoin
   )
-  for shape in strokeShapes.mitems:
-    for segment in shape.mitems:
-      when type(transform) is Vec2:
-        segment += transform
-      else:
-        segment = transform * segment
+  strokeShapes.transform(transform)
   image.fillShapes(strokeShapes, color, wrNonZero, blendMode)
 
 proc strokePath*(
@@ -1593,13 +1590,47 @@ proc strokePath*(
   var strokeShapes = strokeShapes(
     parseSomePath(path, pixelScale), strokeWidth, lineCap, lineJoin
   )
-  for shape in strokeShapes.mitems:
-    for segment in shape.mitems:
-      when type(transform) is Vec2:
-        segment += transform
-      else:
-        segment = transform * segment
+  strokeShapes.transform(transform)
   mask.fillShapes(strokeShapes, wrNonZero)
+
+proc strokePath*(
+  image: Image,
+  path: SomePath,
+  paint: Paint,
+  transform: Vec2 | Mat3 = vec2(),
+  strokeWidth = 1.0,
+  lineCap = lcButt,
+  lineJoin = ljMiter
+) =
+  ## Fills a path.
+  if paint.kind == pkSolid:
+    image.strokePath(
+      path, paint.color, transform, strokeWidth, lineCap, lineJoin
+    )
+    return
+
+  let
+    mask = newMask(image.width, image.height)
+    fill = newImage(image.width, image.height)
+
+  mask.strokePath(parseSomePath(path), transform)
+
+  case paint.kind:
+    of pkSolid:
+      discard # Handled above
+    of pkImage:
+      fill.draw(paint.image, paint.imageMat)
+    of pkImageTiled:
+      fill.drawTiled(paint.image, paint.imageMat)
+    of pkGradientLinear:
+      fill.fillGradientLinear(paint)
+    of pkGradientRadial:
+      fill.fillGradientRadial(paint)
+    of pkGradientAngular:
+      fill.fillGradientAngular(paint)
+
+  fill.draw(mask)
+  image.draw(fill, blendMode = paint.blendMode)
 
 when defined(release):
   {.pop.}

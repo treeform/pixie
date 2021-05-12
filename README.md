@@ -9,6 +9,7 @@ This library is being actively developed and we'd be happy for you to use it.
 `nimble install pixie`
 
 Features:
+* Typesetting and rasterizing text, including styled rich text via spans.
 * Drawing paths, shapes and curves with even-odd and non-zero windings.
 * Pixel-perfect AA quality.
 * Supported file formats are PNG, BMP, JPG, SVG + more in development.
@@ -16,13 +17,13 @@ Features:
 * Shadows, glows and blurs.
 * Complex masking: Subtract, Intersect, Exclude.
 * Complex blends: Darken, Multiply, Color Dodge, Hue, Luminosity... etc.
-* Many operations are SIMD accelerated where possible.
+* Many operations are SIMD accelerated.
 
 ### Documentation
 
 API reference: https://treeform.github.io/pixie/pixie.html
 
-### File formats
+### Image file formats
 
 Format        | Read          | Write         |
 ------------- | ------------- | ------------- |
@@ -31,6 +32,14 @@ JPEG          | ✅           |               |
 BMP           | ✅           | ✅            |
 GIF           | ✅           |               |
 SVG           | ✅           |               |
+
+### Font file formats
+
+Format        | Read
+------------- | -------------
+TTF           | ✅
+OTF           | ✅
+SVG           | ✅
 
 ### Joins and caps
 
@@ -90,6 +99,40 @@ z             | ✅            | close path            |
 `nimble test`
 
 ## Examples
+
+### Text
+[examples/text.nim](examples/text.nim)
+```nim
+var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+font.size = 20
+
+let text = "Typesetting is the arrangement and composition of text in graphic design and publishing in both digital and traditional medias."
+
+image.fillText(font.typeset(text, bounds = vec2(180, 180)), vec2(10, 10))
+```
+![example output](examples/text.png)
+
+### Text spans
+[examples/text_spans.nim](examples/text_spans.nim)
+```nim
+let font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
+
+proc style(font: Font, size: float32, color: ColorRGBA): Font =
+  result = font
+  result.size = size
+  result.paint.color = color
+
+let spans = @[
+  newSpan("verb [with object] ", font.style(12, rgba(200, 200, 200, 255))),
+  newSpan("strallow\n", font.style(36, rgba(0, 0, 0, 255))),
+  newSpan("\nstral·low\n", font.style(13, rgba(0, 127, 244, 255))),
+  newSpan("\n1. free (something) from restrictive restrictions \"the regulations are intended to strallow changes in public policy\" ",
+      font.style(14, rgba(80, 80, 80, 255)))
+]
+
+image.fillText(typeset(spans, bounds = vec2(180, 180)), vec2(10, 10))
+```
+![example output](examples/text_spans.png)
 
 ### Square
 [examples/square.nim](examples/square.nim)

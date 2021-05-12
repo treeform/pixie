@@ -1,13 +1,27 @@
 import bumpy, chroma, flatty/binny, os, pixie/blends, pixie/common,
     pixie/fileformats/bmp, pixie/fileformats/gif, pixie/fileformats/jpg,
-    pixie/fileformats/png, pixie/fileformats/svg, pixie/images, pixie/masks,
-    pixie/paints, pixie/paths, vmath
+    pixie/fileformats/png, pixie/fileformats/svg, pixie/fonts, pixie/images,
+    pixie/masks, pixie/paints, pixie/paths, strutils, vmath
 
-export blends, bumpy, chroma, common, images, masks, paints, paths, vmath
+export blends, bumpy, chroma, common, fonts, images, masks, paints, paths, vmath
 
 type
   FileFormat* = enum
     ffPng, ffBmp, ffJpg, ffGif
+
+proc readFont*(filePath: string): Font =
+  ## Loads a font from a file.
+  result =
+    case splitFile(filePath).ext.toLowerAscii():
+      of ".ttf":
+        parseTtf(readFile(filePath))
+      of ".otf":
+        parseOtf(readFile(filePath))
+      of ".svg":
+        parseSvgFont(readFile(filePath))
+      else:
+        raise newException(PixieError, "Unsupported font format")
+  result.typeface.filePath = filePath
 
 converter autoStraightAlpha*(c: ColorRGBX): ColorRGBA {.inline.} =
   ## Convert a paremultiplied alpha RGBA to a straight alpha RGBA.
@@ -55,7 +69,7 @@ proc writeFile*(image: Image, filePath: string, fileFormat: FileFormat) =
 
 proc writeFile*(image: Image, filePath: string) =
   ## Writes an image to a file.
-  let fileFormat = case splitFile(filePath).ext:
+  let fileFormat = case splitFile(filePath).ext.toLowerAscii():
     of ".png": ffPng
     of ".bmp": ffBmp
     of ".jpg", ".jpeg": ffJpg
@@ -313,3 +327,80 @@ proc strokePolygon*(
   var path: Path
   path.polygon(pos, size, sides)
   mask.strokePath(path, strokeWidth)
+
+proc fillText*(
+  target: Image | Mask,
+  arrangement: Arrangement,
+  transform: Vec2 | Mat3 = vec2(0, 0)
+) =
+  ## Fills the text arrangement.
+  for spanIndex, (start, stop) in arrangement.spans:
+    let font = arrangement.fonts[spanIndex]
+    for runeIndex in start .. stop:
+      var path = font.typeface.getGlyphPath(arrangement.runes[runeIndex])
+      path.transform(
+        translate(arrangement.positions[runeIndex]) *
+        scale(vec2(font.scale))
+      )
+      when type(target) is Image:
+        target.fillPath(path, font.paint, transform)
+      else: # target is Mask
+        target.fillPath(path, transform)
+
+proc fillText*(
+  target: Image | Mask,
+  font: Font,
+  text: string,
+  transform: Vec2 | Mat3 = vec2(0, 0),
+  bounds = vec2(0, 0),
+  hAlign = haLeft,
+  vAlign = vaTop
+) {.inline.} =
+  ## Typesets and fills the text. Optional parameters:
+  ## transform: translation or matrix to apply
+  ## bounds: width determines wrapping and hAlign, height for vAlign
+  ## hAlign: horizontal alignment of the text
+  ## vAlign: vertical alignment of the text
+  fillText(target, font.typeset(text, bounds, hAlign, vAlign), transform)
+
+proc strokeText*(
+  target: Image | Mask,
+  arrangement: Arrangement,
+  transform: Vec2 | Mat3 = vec2(0, 0),
+  strokeWidth = 1.0
+) =
+  ## Strokes the text arrangement.
+  for spanIndex, (start, stop) in arrangement.spans:
+    let font = arrangement.fonts[spanIndex]
+    for runeIndex in start .. stop:
+      var path = font.typeface.getGlyphPath(arrangement.runes[runeIndex])
+      path.transform(
+        translate(arrangement.positions[runeIndex]) *
+        scale(vec2(font.scale))
+      )
+      when type(target) is Image:
+        target.strokePath(path, font.paint, transform, strokeWidth)
+      else: # target is Mask
+        target.strokePath(path, transform, strokeWidth)
+
+proc strokeText*(
+  target: Image | Mask,
+  font: Font,
+  text: string,
+  transform: Vec2 | Mat3 = vec2(0, 0),
+  strokeWidth = 1.0,
+  bounds = vec2(0, 0),
+  hAlign = haLeft,
+  vAlign = vaTop
+) {.inline.} =
+  ## Typesets and strokes the text. Optional parameters:
+  ## transform: translation or matrix to apply
+  ## bounds: width determines wrapping and hAlign, height for vAlign
+  ## hAlign: horizontal alignment of the text
+  ## vAlign: vertical alignment of the text
+  strokeText(
+    target,
+    font.typeset(text, bounds, hAlign, vAlign),
+    transform,
+    strokeWidth
+  )
