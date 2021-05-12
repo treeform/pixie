@@ -1,0 +1,36 @@
+AutoLineHeight	pixie/fonts.html#AutoLineHeight	fonts: AutoLineHeight	
+Typeface	pixie/fonts.html#Typeface	fonts: Typeface	
+Font	pixie/fonts.html#Font	fonts: Font	
+Span	pixie/fonts.html#Span	fonts: Span	
+Arrangement	pixie/fonts.html#Arrangement	fonts: Arrangement	
+haLeft	pixie/fonts.html#haLeft	HAlignMode.haLeft	
+haCenter	pixie/fonts.html#haCenter	HAlignMode.haCenter	
+haRight	pixie/fonts.html#haRight	HAlignMode.haRight	
+HAlignMode	pixie/fonts.html#HAlignMode	fonts: HAlignMode	
+vaTop	pixie/fonts.html#vaTop	VAlignMode.vaTop	
+vaMiddle	pixie/fonts.html#vaMiddle	VAlignMode.vaMiddle	
+vaBottom	pixie/fonts.html#vaBottom	VAlignMode.vaBottom	
+VAlignMode	pixie/fonts.html#VAlignMode	fonts: VAlignMode	
+tcNormal	pixie/fonts.html#tcNormal	TextCase.tcNormal	
+tcUpper	pixie/fonts.html#tcUpper	TextCase.tcUpper	
+tcLower	pixie/fonts.html#tcLower	TextCase.tcLower	
+tcTitle	pixie/fonts.html#tcTitle	TextCase.tcTitle	
+TextCase	pixie/fonts.html#TextCase	fonts: TextCase	
+ascent	pixie/fonts.html#ascent,Typeface	fonts: ascent(typeface: Typeface): float32	
+descent	pixie/fonts.html#descent,Typeface	fonts: descent(typeface: Typeface): float32	
+lineGap	pixie/fonts.html#lineGap,Typeface	fonts: lineGap(typeface: Typeface): float32	
+lineHeight	pixie/fonts.html#lineHeight,Typeface	fonts: lineHeight(typeface: Typeface): float32	
+getGlyphPath	pixie/fonts.html#getGlyphPath,Typeface,Rune	fonts: getGlyphPath(typeface: Typeface; rune: Rune): Path	
+getAdvance	pixie/fonts.html#getAdvance,Typeface,Rune	fonts: getAdvance(typeface: Typeface; rune: Rune): float32	
+getKerningAdjustment	pixie/fonts.html#getKerningAdjustment,Typeface,Rune,Rune	fonts: getKerningAdjustment(typeface: Typeface; left, right: Rune): float32	
+scale	pixie/fonts.html#scale,Font	fonts: scale(font: Font): float32	
+defaultLineHeight	pixie/fonts.html#defaultLineHeight,Font	fonts: defaultLineHeight(font: Font): float32	
+newSpan	pixie/fonts.html#newSpan,string,Font	fonts: newSpan(text: string; font: Font): Span	
+typeset	pixie/fonts.html#typeset,seq[Span]	fonts: typeset(spans: seq[Span]; bounds = vec2(0, 0); hAlign = haLeft; vAlign = vaTop;\n        wrap = true): Arrangement	
+typeset	pixie/fonts.html#typeset,Font,string	fonts: typeset(font: Font; text: string; bounds = vec2(0, 0); hAlign = haLeft;\n        vAlign = vaTop; wrap = true): Arrangement	
+computeBounds	pixie/fonts.html#computeBounds,Arrangement	fonts: computeBounds(arrangement: Arrangement): Vec2	
+computeBounds	pixie/fonts.html#computeBounds,Font,string	fonts: computeBounds(font: Font; text: string): Vec2	
+computeBounds	pixie/fonts.html#computeBounds,seq[Span]	fonts: computeBounds(spans: seq[Span]): Vec2	
+parseOtf	pixie/fonts.html#parseOtf,string	fonts: parseOtf(buf: string): Font	
+parseTtf	pixie/fonts.html#parseTtf,string	fonts: parseTtf(buf: string): Font	
+parseSvgFont	pixie/fonts.html#parseSvgFont,string	fonts: parseSvgFont(buf: string): Font	

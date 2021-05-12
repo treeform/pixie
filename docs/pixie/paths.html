@@ -170,6 +170,10 @@ function main() {
   <li><a class="reference" href="#strokePath%2CMask%2CSomePath%2C%2Cfloat"
     title="strokePath(mask: Mask; path: SomePath; transform: Vec2 | Mat3;
            strokeWidth = 1.0; lineCap = lcButt; lineJoin = ljMiter)">strokePath,<wbr>Mask,<wbr>SomePath,<wbr>,<wbr>float</a></li>
+  <li><a class="reference" href="#strokePath%2CImage%2CSomePath%2CPaint%2Cfloat"
+    title="strokePath(image: Image; path: SomePath; paint: Paint;
+           transform: Vec2 | Mat3 = vec2(); strokeWidth = 1.0; lineCap = lcButt;
+           lineJoin = ljMiter)">strokePath,<wbr>Image,<wbr>SomePath,<wbr>Paint,<wbr>float</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">ellipticalArcTo
@@ -269,7 +273,8 @@ function main() {
     title="fillPath(mask: Mask; path: SomePath; transform: Vec2 | Mat3;
          windingRule = wrNonZero)">fillPath,<wbr>Mask,<wbr>SomePath,<wbr></a></li>
   <li><a class="reference" href="#fillPath%2CImage%2CSomePath%2CPaint"
-    title="fillPath(image: Image; path: SomePath; paint: Paint; windingRule = wrNonZero)">fillPath,<wbr>Image,<wbr>SomePath,<wbr>Paint</a></li>
+    title="fillPath(image: Image; path: SomePath; paint: Paint;
+         transform: Vec2 | Mat3 = vec2(); windingRule = wrNonZero)">fillPath,<wbr>Image,<wbr>SomePath,<wbr>Paint</a></li>
 
   </ul>
 
@@ -605,7 +610,7 @@ Fills a path.
 </dd>
 <a id="fillPath,Image,SomePath,Paint"></a>
 <dt><pre><span class="Keyword">proc</span> <a href="#fillPath%2CImage%2CSomePath%2CPaint"><span class="Identifier">fillPath</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <a href="paths.html#SomePath"><span class="Identifier">SomePath</span></a><span class="Other">;</span> <span class="Identifier">paint</span><span class="Other">:</span> <a href="paints.html#Paint"><span class="Identifier">Paint</span></a><span class="Other">;</span>
-              <span class="Identifier">windingRule</span> <span class="Other">=</span> <span class="Identifier">wrNonZero</span><span class="Other">)</span></pre></dt>
+              <span class="Identifier">transform</span><span class="Other">:</span> <span class="Identifier">Vec2</span> <span class="Operator">|</span> <span class="Identifier">Mat3</span> <span class="Other">=</span> <span class="Identifier">vec2</span><span class="Other">(</span><span class="Other">)</span><span class="Other">;</span> <span class="Identifier">windingRule</span> <span class="Other">=</span> <span class="Identifier">wrNonZero</span><span class="Other">)</span></pre></dt>
 <dd>
 
 Fills a path.
@@ -645,6 +650,15 @@ Strokes a path.
 Strokes a path.
 
 </dd>
+<a id="strokePath,Image,SomePath,Paint,float"></a>
+<dt><pre><span class="Keyword">proc</span> <a href="#strokePath%2CImage%2CSomePath%2CPaint%2Cfloat"><span class="Identifier">strokePath</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="images.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <a href="paths.html#SomePath"><span class="Identifier">SomePath</span></a><span class="Other">;</span> <span class="Identifier">paint</span><span class="Other">:</span> <a href="paints.html#Paint"><span class="Identifier">Paint</span></a><span class="Other">;</span>
+                <span class="Identifier">transform</span><span class="Other">:</span> <span class="Identifier">Vec2</span> <span class="Operator">|</span> <span class="Identifier">Mat3</span> <span class="Other">=</span> <span class="Identifier">vec2</span><span class="Other">(</span><span class="Other">)</span><span class="Other">;</span> <span class="Identifier">strokeWidth</span> <span class="Other">=</span> <span class="FloatNumber">1.0</span><span class="Other">;</span>
+                <span class="Identifier">lineCap</span> <span class="Other">=</span> <span class="Identifier">lcButt</span><span class="Other">;</span> <span class="Identifier">lineJoin</span> <span class="Other">=</span> <span class="Identifier">ljMiter</span><span class="Other">)</span></pre></dt>
+<dd>
+
+Fills a path.
+
+</dd>
 
 </dl></div>
 
@@ -655,7 +669,7 @@ Strokes a path.
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-03-26 21:09:25 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2021-05-12 04:02:26 UTC</small>
       </div>
     </div>
   </div>

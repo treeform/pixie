@@ -3,6 +3,7 @@ ffBmp	pixie.html#ffBmp	FileFormat.ffBmp
 ffJpg	pixie.html#ffJpg	FileFormat.ffJpg	
 ffGif	pixie.html#ffGif	FileFormat.ffGif	
 FileFormat	pixie.html#FileFormat	pixie: FileFormat	
+readFont	pixie.html#readFont,string	pixie: readFont(filePath: string): Font	
 autoStraightAlpha	pixie.html#autoStraightAlpha.c,ColorRGBX	pixie: autoStraightAlpha(c: ColorRGBX): ColorRGBA	
 autoPremultipliedAlpha	pixie.html#autoPremultipliedAlpha.c,ColorRGBA	pixie: autoPremultipliedAlpha(c: ColorRGBA): ColorRGBX	
 decodeImage	pixie.html#decodeImage	pixie: decodeImage(data: string | seq[uint8]): Image	
@@ -36,3 +37,7 @@ fillPolygon	pixie.html#fillPolygon,Image,Vec2,float32,int,SomeColor	pixie: fillP
 fillPolygon	pixie.html#fillPolygon,Mask,Vec2,float32,int	pixie: fillPolygon(mask: Mask; pos: Vec2; size: float32; sides: int)	
 strokePolygon	pixie.html#strokePolygon,Image,Vec2,float32,int,SomeColor,float	pixie: strokePolygon(image: Image; pos: Vec2; size: float32; sides: int;\n              color: SomeColor; strokeWidth = 1.0)	
 strokePolygon	pixie.html#strokePolygon,Mask,Vec2,float32,int,float	pixie: strokePolygon(mask: Mask; pos: Vec2; size: float32; sides: int;\n              strokeWidth = 1.0)	
+fillText	pixie.html#fillText,,Arrangement	pixie: fillText(target: Image | Mask; arrangement: Arrangement;\n         transform: Vec2 | Mat3 = vec2(0, 0))	
+fillText	pixie.html#fillText,,Font,string	pixie: fillText(target: Image | Mask; font: Font; text: string;\n         transform: Vec2 | Mat3 = vec2(0, 0); bounds = vec2(0, 0);\n         hAlign = haLeft; vAlign = vaTop)	
+strokeText	pixie.html#strokeText,,Arrangement,float	pixie: strokeText(target: Image | Mask; arrangement: Arrangement;\n           transform: Vec2 | Mat3 = vec2(0, 0); strokeWidth = 1.0)	
+strokeText	pixie.html#strokeText,,Font,string,float	pixie: strokeText(target: Image | Mask; font: Font; text: string;\n           transform: Vec2 | Mat3 = vec2(0, 0); strokeWidth = 1.0;\n           bounds = vec2(0, 0); hAlign = haLeft; vAlign = vaTop)	

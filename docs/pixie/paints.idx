@@ -7,6 +7,6 @@ pkGradientAngular	pixie/paints.html#pkGradientAngular	PaintKind.pkGradientAngula
 PaintKind	pixie/paints.html#PaintKind	paints: PaintKind	
 Paint	pixie/paints.html#Paint	paints: Paint	
 ColorStop	pixie/paints.html#ColorStop	paints: ColorStop	
-fillLinearGradient	pixie/paints.html#fillLinearGradient,Image,Vec2,Vec2,seq[ColorStop]	paints: fillLinearGradient(image: Image; at, to: Vec2; stops: seq[ColorStop])	
-fillRadialGradient	pixie/paints.html#fillRadialGradient,Image,Vec2,Vec2,Vec2,seq[ColorStop]	paints: fillRadialGradient(image: Image; center, edge, skew: Vec2; stops: seq[ColorStop])	
-fillAngularGradient	pixie/paints.html#fillAngularGradient,Image,Vec2,Vec2,Vec2,seq[ColorStop]	paints: fillAngularGradient(image: Image; center, edge, skew: Vec2;\n                    stops: seq[ColorStop])	
+fillGradientLinear	pixie/paints.html#fillGradientLinear,Image,Paint	paints: fillGradientLinear(image: Image; paint: Paint)	
+fillGradientRadial	pixie/paints.html#fillGradientRadial,Image,Paint	paints: fillGradientRadial(image: Image; paint: Paint)	
+fillGradientAngular	pixie/paints.html#fillGradientAngular,Image,Paint	paints: fillGradientAngular(image: Image; paint: Paint)	
