@@ -1,10 +1,12 @@
-import opengl, pixie, staticglfw except Image
+import opengl, pixie, staticglfw
+export pixie, staticglfw
 
-export pixie, staticglfw except Image
+type Image = pixie.Image
 
 var
   screen* = newImage(800, 600)
   window*: Window
+  mouseWheelDelta*: float32
 
 proc getMousePos*(): Vec2 =
   ## Get the mouse position.
@@ -21,6 +23,9 @@ proc isKeyDown*(keyCode: int): bool =
   ## See key codes: https://www.glfw.org/docs/3.3/group__keys.html
   ## Examples: KEY_SPACE, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT
   getKey(window, keyCode.cint) == PRESS
+
+proc onScroll(window: staticglfw.Window, xoffset, yoffset: float64) {.cdecl.} =
+  mouseWheelDelta += yoffset
 
 proc tick*() =
   ## Called this every frame in a while loop.
@@ -44,6 +49,7 @@ proc tick*() =
 
   swapBuffers(window)
 
+  mouseWheelDelta = 0
   pollEvents()
 
   if windowShouldClose(window) == 1:
@@ -59,6 +65,7 @@ proc start*(title = "Demo") =
   if window == nil:
     quit("Failed to create window.")
   makeContextCurrent(window)
+  discard window.setScrollCallback(onScroll)
   loadExtensions()
 
   # Allocate a texture and bind it.
