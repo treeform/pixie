@@ -1,6 +1,0 @@
-pngSignature	pixie/fileformats/png.html#pngSignature	png: pngSignature	
-decodePng	pixie/fileformats/png.html#decodePng,seq[uint8]	png: decodePng(data: seq[uint8]): Image	
-decodePng	pixie/fileformats/png.html#decodePng,string	png: decodePng(data: string): Image	
-encodePng	pixie/fileformats/png.html#encodePng,int,int,int,pointer,int	png: encodePng(width, height, channels: int; data: pointer; len: int): seq[uint8]	
-encodePng	pixie/fileformats/png.html#encodePng,Image	png: encodePng(image: Image): string	
-encodePng	pixie/fileformats/png.html#encodePng,Mask	png: encodePng(mask: Mask): string	

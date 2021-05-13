@@ -1,2 +1,0 @@
-gifSignatures	pixie/fileformats/gif.html#gifSignatures	gif: gifSignatures	
-decodeGif	pixie/fileformats/gif.html#decodeGif,string	gif: decodeGif(data: string): Image	

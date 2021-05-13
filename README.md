@@ -21,7 +21,7 @@ Features:
 
 ### Documentation
 
-API reference: https://treeform.github.io/pixie/pixie.html
+API reference: https://nimdocs.com/treeform/pixie/pixie.html
 
 ### Image file formats
 
