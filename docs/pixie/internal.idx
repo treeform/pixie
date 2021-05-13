@@ -1,5 +1,0 @@
-gaussianKernel	pixie/internal.html#gaussianKernel,int	internal: gaussianKernel(radius: int): seq[uint32]	
-toStraightAlpha	pixie/internal.html#toStraightAlpha,seq[]	internal: toStraightAlpha(data: var seq[ColorRGBA | ColorRGBX])	
-toPremultipliedAlpha	pixie/internal.html#toPremultipliedAlpha,seq[]	internal: toPremultipliedAlpha(data: var seq[ColorRGBA | ColorRGBX])	
-packAlphaValues	pixie/internal.html#packAlphaValues,M128i	internal: packAlphaValues(v: M128i): M128i	
-unpackAlphaValues	pixie/internal.html#unpackAlphaValues,M128i	internal: unpackAlphaValues(v: M128i): M128i	

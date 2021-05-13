@@ -1,5 +1,0 @@
-PixieError	pixie/common.html#PixieError	common: PixieError	
-fractional	pixie/common.html#fractional,float32	common: fractional(v: float32): float32	
-lerp	pixie/common.html#lerp,uint8,uint8,float32	common: lerp(a, b: uint8; t: float32): uint8	
-lerp	pixie/common.html#lerp,ColorRGBX,ColorRGBX,float32	common: lerp(a, b: ColorRGBX; t: float32): ColorRGBX	
-lerp	pixie/common.html#lerp,Color,Color,float32	common: lerp(a, b: Color; v: float32): Color	

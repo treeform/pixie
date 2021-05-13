@@ -1,3 +1,0 @@
-xmlSignature	pixie/fileformats/svg.html#xmlSignature	svg: xmlSignature	
-svgSignature	pixie/fileformats/svg.html#svgSignature	svg: svgSignature	
-decodeSvg	pixie/fileformats/svg.html#decodeSvg,string,int,int	svg: decodeSvg(data: string; width = 0; height = 0): Image	
