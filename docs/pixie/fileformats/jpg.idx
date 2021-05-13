@@ -1,4 +1,0 @@
-jpgStartOfImage	pixie/fileformats/jpg.html#jpgStartOfImage	jpg: jpgStartOfImage	
-decodeJpg	pixie/fileformats/jpg.html#decodeJpg,seq[uint8]	jpg: decodeJpg(data: seq[uint8]): Image	
-decodeJpg	pixie/fileformats/jpg.html#decodeJpg,string	jpg: decodeJpg(data: string): Image	
-encodeJpg	pixie/fileformats/jpg.html#encodeJpg,Image	jpg: encodeJpg(image: Image): string	

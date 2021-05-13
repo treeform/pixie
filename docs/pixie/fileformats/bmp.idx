@@ -1,4 +1,0 @@
-bmpSignature	pixie/fileformats/bmp.html#bmpSignature	bmp: bmpSignature	
-decodeBmp	pixie/fileformats/bmp.html#decodeBmp,string	bmp: decodeBmp(data: string): Image	
-decodeBmp	pixie/fileformats/bmp.html#decodeBmp,seq[uint8]	bmp: decodeBmp(data: seq[uint8]): Image	
-encodeBmp	pixie/fileformats/bmp.html#encodeBmp,Image	bmp: encodeBmp(image: Image): string	
