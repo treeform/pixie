@@ -1,5 +1,5 @@
 import bumpy, chroma, pixie/fontformats/opentype, pixie/fontformats/svgfont,
-    pixie/paints, pixie/paths, unicode, vmath
+    pixie/images, pixie/masks, pixie/paints, pixie/paths, unicode, vmath
 
 const
   AutoLineHeight* = -1.float32 ## Use default line height for the font size
@@ -400,3 +400,90 @@ proc parseSvgFont*(buf: string): Font =
   result.size = 12
   result.lineHeight = AutoLineHeight
   result.paint = Paint(kind: pkSolid, color: rgbx(0, 0, 0, 255))
+
+proc fillText*(
+  target: Image | Mask,
+  arrangement: Arrangement,
+  transform: Vec2 | Mat3 = vec2(0, 0)
+) =
+  ## Fills the text arrangement.
+  for spanIndex, (start, stop) in arrangement.spans:
+    let font = arrangement.fonts[spanIndex]
+    for runeIndex in start .. stop:
+      var path = font.typeface.getGlyphPath(arrangement.runes[runeIndex])
+      path.transform(
+        translate(arrangement.positions[runeIndex]) *
+        scale(vec2(font.scale))
+      )
+      when type(target) is Image:
+        target.fillPath(path, font.paint, transform)
+      else: # target is Mask
+        target.fillPath(path, transform)
+
+proc fillText*(
+  target: Image | Mask,
+  font: Font,
+  text: string,
+  transform: Vec2 | Mat3 = vec2(0, 0),
+  bounds = vec2(0, 0),
+  hAlign = haLeft,
+  vAlign = vaTop
+) {.inline.} =
+  ## Typesets and fills the text. Optional parameters:
+  ## transform: translation or matrix to apply
+  ## bounds: width determines wrapping and hAlign, height for vAlign
+  ## hAlign: horizontal alignment of the text
+  ## vAlign: vertical alignment of the text
+  fillText(target, font.typeset(text, bounds, hAlign, vAlign), transform)
+
+proc strokeText*(
+  target: Image | Mask,
+  arrangement: Arrangement,
+  transform: Vec2 | Mat3 = vec2(0, 0),
+  strokeWidth = 1.0,
+  lineCap = lcButt,
+  lineJoin = ljMiter
+) =
+  ## Strokes the text arrangement.
+  for spanIndex, (start, stop) in arrangement.spans:
+    let font = arrangement.fonts[spanIndex]
+    for runeIndex in start .. stop:
+      var path = font.typeface.getGlyphPath(arrangement.runes[runeIndex])
+      path.transform(
+        translate(arrangement.positions[runeIndex]) *
+        scale(vec2(font.scale))
+      )
+      when type(target) is Image:
+        target.strokePath(
+          path, font.paint, transform, strokeWidth, lineCap, lineJoin
+        )
+      else: # target is Mask
+        target.strokePath(path, transform, strokeWidth, lineCap, lineJoin)
+
+proc strokeText*(
+  target: Image | Mask,
+  font: Font,
+  text: string,
+  transform: Vec2 | Mat3 = vec2(0, 0),
+  strokeWidth = 1.0,
+  bounds = vec2(0, 0),
+  hAlign = haLeft,
+  vAlign = vaTop,
+  lineCap = lcButt,
+  lineJoin = ljMiter
+) {.inline.} =
+  ## Typesets and strokes the text. Optional parameters:
+  ## transform: translation or matrix to apply
+  ## bounds: width determines wrapping and hAlign, height for vAlign
+  ## hAlign: horizontal alignment of the text
+  ## vAlign: vertical alignment of the text
+  ## lineCap: stroke line cap shape
+  ## lineJoin: stroke line join shape
+  strokeText(
+    target,
+    font.typeset(text, bounds, hAlign, vAlign),
+    transform,
+    strokeWidth,
+    lineCap,
+    lineJoin
+  )
