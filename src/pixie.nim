@@ -77,231 +77,292 @@ proc writeFile*(image: Image, filePath: string) =
       raise newException(PixieError, "Unsupported image file extension")
   image.writeFile(filePath, fileformat)
 
-proc fillRect*(image: Image, rect: Rect, color: SomeColor) =
+proc fillRect*(
+  image: Image,
+  rect: Rect,
+  color: SomeColor,
+  transform: Vec2 | Mat3 = vec2(0, 0)
+) =
   ## Fills a rectangle.
   var path: Path
   path.rect(rect)
-  image.fillPath(path, color)
+  image.fillPath(path, color, transform)
 
-proc fillRect*(mask: Mask, rect: Rect) =
+proc fillRect*(
+  mask: Mask,
+  rect: Rect,
+  transform: Vec2 | Mat3 = vec2(0, 0)
+) =
   ## Fills a rectangle.
   var path: Path
   path.rect(rect)
-  mask.fillPath(path)
+  mask.fillPath(path, transform)
 
 proc strokeRect*(
-  image: Image, rect: Rect, color: SomeColor, strokeWidth = 1.0
+  image: Image,
+  rect: Rect,
+  color: SomeColor,
+  transform: Vec2 | Mat3 = vec2(0, 0),
+  strokeWidth = 1.0
 ) =
   ## Strokes a rectangle.
   var path: Path
   path.rect(rect)
-  image.strokePath(path, color, strokeWidth)
+  image.strokePath(path, color, transform, strokeWidth)
 
-proc strokeRect*(mask: Mask, rect: Rect, strokeWidth = 1.0) =
+proc strokeRect*(
+  mask: Mask,
+  rect: Rect,
+  transform: Vec2 | Mat3 = vec2(0, 0),
+  strokeWidth = 1.0
+) =
   ## Strokes a rectangle.
   var path: Path
   path.rect(rect)
-  mask.strokePath(path, strokeWidth)
+  mask.strokePath(path, transform, strokeWidth)
 
 proc fillRoundedRect*(
   image: Image,
   rect: Rect,
   nw, ne, se, sw: float32,
-  color: SomeColor
+  color: SomeColor,
+  transform: Vec2 | Mat3 = vec2(0, 0)
 ) =
   ## Fills a rounded rectangle.
   var path: Path
   path.roundedRect(rect, nw, ne, se, sw)
-  image.fillPath(path, color)
+  image.fillPath(path, color, transform)
 
 proc fillRoundedRect*(
   image: Image,
   rect: Rect,
   radius: float32,
-  color: SomeColor
+  color: SomeColor,
+  transform: Vec2 | Mat3 = vec2(0, 0)
 ) =
   ## Fills a rounded rectangle.
   var path: Path
   path.roundedRect(rect, radius, radius, radius, radius)
-  image.fillPath(path, color)
+  image.fillPath(path, color, transform)
 
-proc fillRoundedRect*(mask: Mask, rect: Rect, nw, ne, se, sw: float32) =
+proc fillRoundedRect*(
+  mask: Mask,
+  rect: Rect,
+  nw, ne, se, sw: float32,
+  transform: Vec2 | Mat3 = vec2(0, 0)
+) =
   ## Fills a rounded rectangle.
   var path: Path
   path.roundedRect(rect, nw, ne, se, sw)
-  mask.fillPath(path)
+  mask.fillPath(path, transform)
 
-proc fillRoundedRect*(mask: Mask, rect: Rect, radius: float32) =
+proc fillRoundedRect*(
+  mask: Mask,
+  rect: Rect,
+  radius: float32,
+  transform: Vec2 | Mat3 = vec2(0, 0)
+) =
   ## Fills a rounded rectangle.
   var path: Path
   path.roundedRect(rect, radius, radius, radius, radius)
-  mask.fillPath(path)
+  mask.fillPath(path, transform)
 
 proc strokeRoundedRect*(
   image: Image,
   rect: Rect,
   nw, ne, se, sw: float32,
   color: SomeColor,
+  transform: Vec2 | Mat3 = vec2(0, 0),
   strokeWidth = 1.0
 ) =
   ## Strokes a rounded rectangle.
   var path: Path
   path.roundedRect(rect, nw, ne, se, sw)
-  image.strokePath(path, color, strokeWidth)
+  image.strokePath(path, color, transform, strokeWidth)
 
 proc strokeRoundedRect*(
   image: Image,
   rect: Rect,
   radius: float32,
   color: SomeColor,
+  transform: Vec2 | Mat3 = vec2(0, 0),
   strokeWidth = 1.0
 ) =
   ## Strokes a rounded rectangle.
   var path: Path
   path.roundedRect(rect, radius, radius, radius, radius)
-  image.strokePath(path, color, strokeWidth)
+  image.strokePath(path, color, transform, strokeWidth)
 
 proc strokeRoundedRect*(
-  mask: Mask, rect: Rect, nw, ne, se, sw: float32, strokeWidth = 1.0
+  mask: Mask,
+  rect: Rect,
+  nw, ne, se, sw: float32,
+  transform: Vec2 | Mat3 = vec2(0, 0),
+  strokeWidth = 1.0
 ) =
   ## Strokes a rounded rectangle.
   var path: Path
   path.roundedRect(rect, nw, ne, se, sw)
-  mask.strokePath(path, strokeWidth)
+  mask.strokePath(path, transform, strokeWidth)
 
 proc strokeRoundedRect*(
-  mask: Mask, rect: Rect, radius: float32, strokeWidth = 1.0
+  mask: Mask,
+  rect: Rect,
+  radius: float32,
+  transform: Vec2 | Mat3 = vec2(0, 0),
+  strokeWidth = 1.0
 ) =
   ## Strokes a rounded rectangle.
   var path: Path
   path.roundedRect(rect, radius, radius, radius, radius)
-  mask.strokePath(path, strokeWidth)
+  mask.strokePath(path, transform, strokeWidth)
 
 proc strokeSegment*(
   image: Image,
   segment: Segment,
   color: SomeColor,
+  transform: Vec2 | Mat3 = vec2(0, 0),
   strokeWidth = 1.0
 ) =
   ## Strokes a segment (draws a line from segment.at to segment.to).
   var path: Path
   path.moveTo(segment.at)
   path.lineTo(segment.to)
-  image.strokePath(path, color, strokeWidth)
+  image.strokePath(path, color, transform, strokeWidth)
 
-proc strokeSegment*(mask: Mask, segment: Segment, strokeWidth: float32) =
+proc strokeSegment*(
+  mask: Mask,
+  segment: Segment,
+  transform: Vec2 | Mat3 = vec2(0, 0),
+  strokeWidth = 1.0
+) =
   ## Strokes a segment (draws a line from segment.at to segment.to).
   var path: Path
   path.moveTo(segment.at)
   path.lineTo(segment.to)
-  mask.strokePath(path, strokeWidth)
+  mask.strokePath(path, transform, strokeWidth)
 
 proc fillEllipse*(
   image: Image,
   center: Vec2,
   rx, ry: float32,
   color: SomeColor,
+  transform: Vec2 | Mat3 = vec2(0, 0),
   blendMode = bmNormal
 ) =
   ## Fills an ellipse.
   var path: Path
   path.ellipse(center, rx, ry)
-  image.fillPath(path, color, wrNonZero, blendMode)
+  image.fillPath(path, color, transform, wrNonZero, blendMode)
 
 proc fillEllipse*(
   mask: Mask,
   center: Vec2,
-  rx, ry: float32
+  rx, ry: float32,
+  transform: Vec2 | Mat3 = vec2(0, 0)
 ) =
   ## Fills an ellipse.
   var path: Path
   path.ellipse(center, rx, ry)
-  mask.fillPath(path)
+  mask.fillPath(path, transform)
 
 proc strokeEllipse*(
   image: Image,
   center: Vec2,
   rx, ry: float32,
   color: SomeColor,
+  transform: Vec2 | Mat3 = vec2(0, 0),
   strokeWidth = 1.0
 ) =
   ## Strokes an ellipse.
   var path: Path
   path.ellipse(center, rx, ry)
-  image.strokePath(path, color, strokeWidth)
+  image.strokePath(path, color, transform, strokeWidth)
 
 proc strokeEllipse*(
   mask: Mask,
   center: Vec2,
   rx, ry: float32,
+  transform: Vec2 | Mat3 = vec2(0, 0),
   strokeWidth = 1.0
 ) =
   ## Strokes an ellipse.
   var path: Path
   path.ellipse(center, rx, ry)
-  mask.strokePath(path, strokeWidth)
+  mask.strokePath(path, transform, strokeWidth)
 
 proc fillCircle*(
   image: Image,
   center: Vec2,
   radius: float32,
-  color: SomeColor
+  color: SomeColor,
+  transform: Vec2 | Mat3 = vec2(0, 0)
 ) =
   ## Fills a circle.
   var path: Path
   path.ellipse(center, radius, radius)
-  image.fillPath(path, color)
+  image.fillPath(path, color, transform)
 
 proc fillCircle*(
   mask: Mask,
   center: Vec2,
-  radius: float32
+  radius: float32,
+  transform: Vec2 | Mat3 = vec2(0, 0)
 ) =
   ## Fills a circle.
   var path: Path
   path.ellipse(center, radius, radius)
-  mask.fillPath(path)
+  mask.fillPath(path, transform)
 
 proc strokeCircle*(
   image: Image,
   center: Vec2,
   radius: float32,
   color: SomeColor,
+  transform: Vec2 | Mat3 = vec2(0, 0),
   strokeWidth = 1.0
 ) =
   ## Strokes a circle.
   var path: Path
   path.ellipse(center, radius, radius)
-  image.strokePath(path, color, strokeWidth)
+  image.strokePath(path, color, transform, strokeWidth)
 
 proc strokeCircle*(
   mask: Mask,
   center: Vec2,
   radius: float32,
+  transform: Vec2 | Mat3 = vec2(0, 0),
   strokeWidth = 1.0
 ) =
   ## Strokes a circle.
   var path: Path
   path.ellipse(center, radius, radius)
-  mask.fillPath(path)
+  mask.fillPath(path, transform, strokeWidth)
 
 proc fillPolygon*(
   image: Image,
   pos: Vec2,
   size: float32,
   sides: int,
-  color: SomeColor
+  color: SomeColor,
+  transform: Vec2 | Mat3 = vec2(0, 0)
 ) =
   ## Fills a polygon.
   var path: Path
   path.polygon(pos, size, sides)
-  image.fillPath(path, color)
+  image.fillPath(path, color, transform)
 
-proc fillPolygon*(mask: Mask, pos: Vec2, size: float32, sides: int) =
+proc fillPolygon*(
+  mask: Mask,
+  pos: Vec2,
+  size: float32,
+  sides: int,
+  transform: Vec2 | Mat3 = vec2(0, 0)
+) =
   ## Fills a polygon.
   var path: Path
   path.polygon(pos, size, sides)
-  mask.fillPath(path)
+  mask.fillPath(path, transform)
 
 proc strokePolygon*(
   image: Image,
@@ -309,24 +370,26 @@ proc strokePolygon*(
   size: float32,
   sides: int,
   color: SomeColor,
+  transform: Vec2 | Mat3 = vec2(0, 0),
   strokeWidth = 1.0
 ) =
   ## Strokes a polygon.
   var path: Path
   path.polygon(pos, size, sides)
-  image.strokePath(path, color, strokeWidth)
+  image.strokePath(path, color, transform, strokeWidth)
 
 proc strokePolygon*(
   mask: Mask,
   pos: Vec2,
   size: float32,
   sides: int,
+  transform: Vec2 | Mat3 = vec2(0, 0),
   strokeWidth = 1.0
 ) =
   ## Strokes a polygon.
   var path: Path
   path.polygon(pos, size, sides)
-  mask.strokePath(path, strokeWidth)
+  mask.strokePath(path, transform, strokeWidth)
 
 proc fillText*(
   target: Image | Mask,

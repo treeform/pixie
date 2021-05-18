@@ -59,7 +59,11 @@ block:
 block:
   let image = newImage(100, 100)
   image.fill(rgba(0, 255, 255, 255))
-  image.strokeRect(rect(vec2(10, 10), vec2(30, 30)), rgba(255, 255, 0, 255), 10)
+  image.strokeRect(
+    rect(vec2(10, 10), vec2(30, 30)),
+    rgba(255, 255, 0, 255),
+    strokeWidth = 10
+  )
   image.writeFile("tests/images/strokeRect.png")
 
 block:
@@ -79,7 +83,7 @@ block:
     rect(vec2(10, 10), vec2(30, 30)),
     10,
     rgba(255, 255, 0, 255),
-    10
+    strokeWidth = 10
   )
   image.writeFile("tests/images/strokeRoundedRect.png")
 
@@ -112,7 +116,7 @@ block:
     25,
     25,
     rgba(255, 255, 0, 255),
-    10
+    strokeWidth = 10
   )
   image.writeFile("tests/images/strokeEllipse.png")
 
@@ -135,6 +139,6 @@ block:
     30,
     6,
     rgba(255, 255, 0, 255),
-    10
+    strokeWidth = 10
   )
   image.writeFile("tests/images/strokePolygon.png")
