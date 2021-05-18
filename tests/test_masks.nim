@@ -109,7 +109,7 @@ block:
 
 block:
   let mask = newMask(100, 100)
-  mask.strokeRect(rect(vec2(10, 10), vec2(30, 30)), 10)
+  mask.strokeRect(rect(vec2(10, 10), vec2(30, 30)), strokeWidth = 10)
   writeFile("tests/images/masks/strokeRect.png", mask.encodePng())
 
 block:
@@ -119,7 +119,7 @@ block:
 
 block:
   let mask = newMask(100, 100)
-  mask.strokeRoundedRect(rect(vec2(10, 10), vec2(30, 30)), 10, 10)
+  mask.strokeRoundedRect(rect(vec2(10, 10), vec2(30, 30)), 10, strokeWidth = 10)
   writeFile("tests/images/masks/strokeRoundedRect.png", mask.encodePng())
 
 block:
@@ -137,7 +137,7 @@ block:
 
 block:
   let mask = newMask(100, 100)
-  mask.strokeEllipse(vec2(50, 50), 20, 10, 10)
+  mask.strokeEllipse(vec2(50, 50), 20, 10, strokeWidth = 10)
   writeFile("tests/images/masks/strokeEllipse.png", mask.encodePng())
 
 block:
@@ -147,7 +147,7 @@ block:
 
 block:
   let mask = newMask(100, 100)
-  mask.strokePolygon(vec2(50, 50), 30, 6, 10)
+  mask.strokePolygon(vec2(50, 50), 30, 6, strokeWidth = 10)
   writeFile("tests/images/masks/strokePolygon.png", mask.encodePng())
 
 block:
