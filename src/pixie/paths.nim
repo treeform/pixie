@@ -304,34 +304,38 @@ proc addPath*(path: var Path, other: Path) =
   path.commands.add(other.commands)
 
 proc closePath*(path: var Path) =
-  ## Closes a path (draws a line to the start).
+  ## Attempts to add a straight line from the current point to the start of
+  ## the current sub-path. If the shape has already been closed or has only
+  ## one point, this function does nothing.
   path.commands.add(PathCommand(kind: Close))
   path.at = path.start
 
 proc moveTo*(path: var Path, x, y: float32) =
-  ## Moves the current drawing pen to a new position and starts a new shape.
+  ## Begins a new sub-path at the point (x, y).
   path.commands.add(PathCommand(kind: Move, numbers: @[x, y]))
   path.start = vec2(x, y)
   path.at = path.start
 
 proc moveTo*(path: var Path, v: Vec2) {.inline.} =
-  ## Moves the current drawing pen to a new position and starts a new shape.
+  ## Begins a new sub-path at the point (x, y).
   path.moveTo(v.x, v.y)
 
 proc lineTo*(path: var Path, x, y: float32) =
-  ## Adds a line.
+  ## Adds a straight line to the current sub-path by connecting the sub-path's
+  ## last point to the specified (x, y) coordinates.
   path.commands.add(PathCommand(kind: Line, numbers: @[x, y]))
   path.at = vec2(x, y)
 
 proc lineTo*(path: var Path, v: Vec2) {.inline.} =
-  ## Adds a line.
+  ## Adds a straight line to the current sub-path by connecting the sub-path's
+  ## last point to the specified (x, y) coordinates.
   path.lineTo(v.x, v.y)
 
 proc bezierCurveTo*(path: var Path, x1, y1, x2, y2, x3, y3: float32) =
-  ## Adds a cubic Bézier curve to the path. This requires three points.
-  ## The first two points are control points and the third is the end point.
-  ## The starting point is the last point in the current path, which can be
-  ## changed using moveTo() before creating the curve.
+  ## Adds a cubic Bézier curve to the current sub-path. It requires three
+  ## points: the first two are control points and the third one is the end
+  ## point. The starting point is the latest point in the current path,
+  ## which can be changed using moveTo() before creating the Bézier curve.
   path.commands.add(PathCommand(
     kind: Cubic,
     numbers: @[x1, y1, x2, y2, x3, y3]
@@ -339,13 +343,18 @@ proc bezierCurveTo*(path: var Path, x1, y1, x2, y2, x3, y3: float32) =
   path.at = vec2(x3, y3)
 
 proc bezierCurveTo*(path: var Path, ctrl1, ctrl2, to: Vec2) {.inline.} =
+  ## Adds a cubic Bézier curve to the current sub-path. It requires three
+  ## points: the first two are control points and the third one is the end
+  ## point. The starting point is the latest point in the current path,
+  ## which can be changed using moveTo() before creating the Bézier curve.
   path.bezierCurveTo(ctrl1.x, ctrl1.y, ctrl2.x, ctrl2.y, to.x, to.y)
 
 proc quadraticCurveTo*(path: var Path, x1, y1, x2, y2: float32) =
-  ## Adds a quadratic Bézier curve to the path. This requires 2 points.
-  ## The first point is the control point and the second is the end point.
-  ## The starting point is the last point in the current path, which can be
-  ## changed using moveTo() before creating the curve.
+  ## Adds a quadratic Bézier curve to the current sub-path. It requires two
+  ## points: the first one is a control point and the second one is the end
+  ## point. The starting point is the latest point in the current path,
+  ## which can be changed using moveTo() before creating the quadratic
+  ## Bézier curve.
   path.commands.add(PathCommand(
     kind: Quad,
     numbers: @[x1, y1, x2, y2]
@@ -353,11 +362,11 @@ proc quadraticCurveTo*(path: var Path, x1, y1, x2, y2: float32) =
   path.at = vec2(x2, y2)
 
 proc quadraticCurveTo*(path: var Path, ctrl, to: Vec2) {.inline.} =
-  ## Adds a quadratic Bézier curve to the path. This requires 2 points.
-  ## The first point is the control point and the second is the end point.
-  ## The starting point is the last point in the current path, which can be
-  ## changed using moveTo() before creating the curve.
-  ##
+  ## Adds a quadratic Bézier curve to the current sub-path. It requires two
+  ## points: the first one is a control point and the second one is the end
+  ## point. The starting point is the latest point in the current path,
+  ## which can be changed using moveTo() before creating the quadratic
+  ## Bézier curve.
   path.quadraticCurveTo(ctrl.x, ctrl.y, to.x, to.y)
 
 # proc arcTo*(path: var Path, ctrl1, ctrl2: Vec2, radius: float32) {.inline.} =
