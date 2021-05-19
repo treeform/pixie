@@ -364,7 +364,7 @@ proc decodeSvg*(data: string, width = 0, height = 0): Image =
       viewBox = root.attr("viewBox")
       box = viewBox.split(" ")
       viewBoxMinX = parseInt(box[0])
-      viewBoxMinY= parseInt(box[1])
+      viewBoxMinY = parseInt(box[1])
       viewBoxWidth = parseInt(box[2])
       viewBoxHeight = parseInt(box[3])
 

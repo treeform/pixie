@@ -360,64 +360,66 @@ proc quadraticCurveTo*(path: var Path, ctrl, to: Vec2) {.inline.} =
   ##
   path.quadraticCurveTo(ctrl.x, ctrl.y, to.x, to.y)
 
-proc arcTo*(path: var Path, ctrl1, ctrl2: Vec2, radius: float32) {.inline.} =
-  ## Adds a circular arc to the current sub-path, using the given control
-  ## points and radius.
+# proc arcTo*(path: var Path, ctrl1, ctrl2: Vec2, radius: float32) {.inline.} =
+#   ## Adds a circular arc to the current sub-path, using the given control
+#   ## points and radius.
 
-  const epsilon = 1e-6.float32
+#   const epsilon = 1e-6.float32
 
-  var radius = radius
-  if radius < 0:
-    radius = -radius
+#   var radius = radius
+#   if radius < 0:
+#     radius = -radius
 
-  if path.commands.len == 0:
-    path.moveTo(ctrl1)
+#   if path.commands.len == 0:
+#     path.moveTo(ctrl1)
 
-  let
-    a = path.at - ctrl1
-    b = ctrl2 - ctrl1
+#   let
+#     a = path.at - ctrl1
+#     b = ctrl2 - ctrl1
 
-  if a.lengthSq() < epsilon:
-    # If the control point is coincident with at, do nothing
-    discard
-  elif abs(a.y * b.x - a.x * b.y) < epsilon or radius == 0:
-    # If ctrl1, a and b are colinear or coincident or radius is zero
-    path.lineTo(ctrl1)
-  else:
-    let
-      c = ctrl2 - path.at
-      als = a.lengthSq()
-      bls = b.lengthSq()
-      cls = c.lengthSq()
-      al = a.length()
-      bl = b.length()
-      l = radius * tan((PI - arccos((als + bls - cls) / 2 * al * bl)) / 2)
-      ta = l / al
-      tb = l / bl
+#   if a.lengthSq() < epsilon:
+#     # If the control point is coincident with at, do nothing
+#     discard
+#   elif abs(a.y * b.x - a.x * b.y) < epsilon or radius == 0:
+#     # If ctrl1, a and b are colinear or coincident or radius is zero
+#     path.lineTo(ctrl1)
+#   else:
+#     let
+#       c = ctrl2 - path.at
+#       als = a.lengthSq()
+#       bls = b.lengthSq()
+#       cls = c.lengthSq()
+#       al = a.length()
+#       bl = b.length()
+#       l = radius * tan((PI - arccos((als + bls - cls) / 2 * al * bl)) / 2)
+#       ta = l / al
+#       tb = l / bl
 
-    if abs(ta - 1) > epsilon:
-      # If the start tangent is not coincident with path.at
-      path.lineTo(ctrl1 + a * ta)
+#     if abs(ta - 1) > epsilon:
+#       # If the start tangent is not coincident with path.at
+#       path.lineTo(ctrl1 + a * ta)
 
-    let to = ctrl1 + b * tb
-    path.commands.add(PathCommand(
-      kind: Arc,
-      numbers: @[
-        radius,
-        radius,
-        0,
-        0,
-        if a.y * c.x > a.x * c.y: 1 else: 0,
-        to.x,
-        to.y
-      ]
-    ))
-    path.at = to
+#     echo "INSIDE ", (als + bls - cls) / 2 * al * bl, " ", arccos((als + bls - cls) / 2 * al * bl)
 
-proc arcTo*(path: var Path, x1, y1, x2, y2, radius: float32) {.inline.} =
-  ## Adds a circular arc to the current sub-path, using the given control
-  ## points and radius.
-  path.arcTo(vec2(x1, y1), vec2(x2, y2), radius)
+#     let to = ctrl1 + b * tb
+#     path.commands.add(PathCommand(
+#       kind: Arc,
+#       numbers: @[
+#         radius,
+#         radius,
+#         0,
+#         0,
+#         if a.y * c.x > a.x * c.y: 1 else: 0,
+#         to.x,
+#         to.y
+#       ]
+#     ))
+#     path.at = to
+
+# proc arcTo*(path: var Path, x1, y1, x2, y2, radius: float32) {.inline.} =
+#   ## Adds a circular arc to the current sub-path, using the given control
+#   ## points and radius.
+#   path.arcTo(vec2(x1, y1), vec2(x2, y2), radius)
 
 proc ellipticalArcTo*(
   path: var Path,
@@ -1499,7 +1501,7 @@ proc fillPath*(
 ) =
   ## Fills a path.
   if paint.kind == pkSolid:
-    image.fillPath(path, paint.color, transform)
+    image.fillPath(path, paint.color, transform, windingRule)
     return
 
   let
