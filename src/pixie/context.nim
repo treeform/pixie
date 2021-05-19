@@ -118,7 +118,7 @@ proc ellipse*(ctx: Context, x, y, rx, ry: float32) {.inline.} =
   ctx.path.ellipse(x, y, rx, ry)
 
 proc fill*(ctx: Context, path: Path, windingRule = wrNonZero) {.inline.} =
-  ## Fills the current or given path with the current fillStyle.
+  ## Fills the path with the current fillStyle.
   ctx.image.fillPath(
     path,
     ctx.fillStyle,
@@ -127,7 +127,7 @@ proc fill*(ctx: Context, path: Path, windingRule = wrNonZero) {.inline.} =
   )
 
 proc fill*(ctx: Context, windingRule = wrNonZero) {.inline.} =
-  ## Fills the current or given path with the current fillStyle.
+  ## Fills the current path with the current fillStyle.
   ctx.fill(ctx.path, windingRule)
 
 proc stroke*(ctx: Context, path: Path) {.inline.} =
