@@ -131,7 +131,7 @@ proc fill*(ctx: Context, windingRule = wrNonZero) {.inline.} =
   ctx.fill(ctx.path, windingRule)
 
 proc stroke*(ctx: Context, path: Path) {.inline.} =
-  ## Sstrokes (outlines) the current or given path with the current strokeStyle.
+  ## Strokes (outlines) the current or given path with the current strokeStyle.
   ctx.image.strokePath(
     path,
     ctx.strokeStyle,
@@ -142,7 +142,7 @@ proc stroke*(ctx: Context, path: Path) {.inline.} =
   )
 
 proc stroke*(ctx: Context) {.inline.} =
-  ## Sstrokes (outlines) the current or given path with the current strokeStyle.
+  ## Strokes (outlines) the current or given path with the current strokeStyle.
   ctx.stroke(ctx.path)
 
 proc clearRect*(ctx: Context, rect: Rect) =
@@ -204,12 +204,12 @@ proc fillText*(ctx: Context, text: string, at: Vec2) =
   )
 
 proc fillText*(ctx: Context, text: string, x, y: float32) {.inline.} =
-  ## Daws the outlines of the characters of a text string at the specified
+  ## Draws the outlines of the characters of a text string at the specified
   ## coordinates.
   ctx.fillText(text, vec2(x, y))
 
 proc strokeText*(ctx: Context, text: string, at: Vec2) =
-  ## Daws the outlines of the characters of a text string at the specified
+  ## Draws the outlines of the characters of a text string at the specified
   ## coordinates.
 
   if ctx.font.typeface == nil:
@@ -231,7 +231,7 @@ proc strokeText*(ctx: Context, text: string, at: Vec2) =
   )
 
 proc strokeText*(ctx: Context, text: string, x, y: float32) {.inline.} =
-  ## Daws the outlines of the characters of a text string at the specified
+  ## Draws the outlines of the characters of a text string at the specified
   ## coordinates.
   ctx.strokeText(text, vec2(x, y))
 
