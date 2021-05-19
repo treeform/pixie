@@ -236,15 +236,15 @@ proc strokeText*(ctx: Context, text: string, x, y: float32) {.inline.} =
   ctx.strokeText(text, vec2(x, y))
 
 proc getTransform*(ctx: Context): Mat3 {.inline.} =
-  ## Retrieves the current transformation matrix being applied to the context.
+  ## Retrieves the current transform matrix being applied to the context.
   ctx.mat
 
 proc setTransform*(ctx: Context, transform: Mat3) {.inline.} =
-  ## Overridest transformation matrix being applied to the context.
+  ## Overrides the transform matrix being applied to the context.
   ctx.mat = transform
 
 proc setTransform*(ctx: Context, a, b, c, d, e, f: float32) {.inline.} =
-  ## Overridest transformation matrix being applied to the context.
+  ## Overrides the transform matrix being applied to the context.
   ctx.mat = mat3(a, b, 0, c, d, 0, e, f, 1)
 
 proc transform*(ctx: Context, transform: Mat3) {.inline.} =
