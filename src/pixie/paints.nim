@@ -27,6 +27,17 @@ type
     color*: ColorRGBX  ## Color of the stop
     position*: float32 ## Gradient Stop position 0..1.
 
+  SomePaint* = string | Paint | SomeColor
+
+converter parseSomePaint*(paint: SomePaint): Paint {.inline.} =
+  ## Given SomePaint, parse it in different ways.
+  when type(paint) is string:
+    Paint(kind: pkSolid, color: parseHtmlColor(paint).rgba())
+  elif type(paint) is SomeColor:
+    Paint(kind: pkSolid, color: paint.rgba())
+  elif type(paint) is Paint:
+    paint
+
 proc toLineSpace(at, to, point: Vec2): float32 {.inline.} =
   ## Convert position on to where it would fall on a line between at and to.
   let
