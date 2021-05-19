@@ -33,6 +33,9 @@ proc newContext*(image: Image): Context =
   result.fillStyle = Paint(kind: pkSolid, color: rgbx(0, 0, 0, 255))
   result.strokeStyle = Paint(kind: pkSolid, color: rgbx(0, 0, 0, 255))
 
+proc newContext*(width, height: int): Context {.inline.} =
+  newContext(newImage(width, height))
+
 proc beginPath*(ctx: Context) {.inline.} =
   ctx.path = Path()
 
@@ -144,7 +147,7 @@ proc fillText*(ctx: Context, text: string, at: Vec2) =
   ctx.image.fillText(
     ctx.font,
     text,
-    at,
+    ctx.mat * translate(at),
     hAlign = ctx.textAlign
   )
 
@@ -163,7 +166,7 @@ proc strokeText*(ctx: Context, text: string, at: Vec2) =
   ctx.image.strokeText(
     ctx.font,
     text,
-    at,
+    ctx.mat * translate(at),
     ctx.lineWidth,
     hAlign = ctx.textAlign,
     lineCap = ctx.lineCap,
