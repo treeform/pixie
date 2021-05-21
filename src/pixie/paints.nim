@@ -32,9 +32,9 @@ type
 converter parseSomePaint*(paint: SomePaint): Paint {.inline.} =
   ## Given SomePaint, parse it in different ways.
   when type(paint) is string:
-    Paint(kind: pkSolid, color: parseHtmlColor(paint).rgba())
+    Paint(kind: pkSolid, color: parseHtmlColor(paint).rgbx())
   elif type(paint) is SomeColor:
-    Paint(kind: pkSolid, color: paint.rgba())
+    Paint(kind: pkSolid, color: paint.rgbx())
   elif type(paint) is Paint:
     paint
 

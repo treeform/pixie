@@ -136,9 +136,9 @@ proc stroke*(ctx: Context, path: Path) {.inline.} =
     path,
     ctx.strokeStyle,
     ctx.mat,
-    strokeWidth = ctx.lineWidth,
-    lineCap = ctx.lineCap,
-    lineJoin = ctx.lineJoin
+    ctx.lineWidth,
+    ctx.lineCap,
+    ctx.lineJoin
   )
 
 proc stroke*(ctx: Context) {.inline.} =
@@ -159,7 +159,7 @@ proc fillRect*(ctx: Context, rect: Rect) =
   ## Draws a rectangle that is filled according to the current fillStyle.
   var path: Path
   path.rect(rect)
-  ctx.image.fillPath(path, ctx.fillStyle, ctx.mat)
+  ctx.fill(path)
 
 proc fillRect*(ctx: Context, x, y, width, height: float32) {.inline.} =
   ## Draws a rectangle that is filled according to the current fillStyle.
@@ -170,14 +170,7 @@ proc strokeRect*(ctx: Context, rect: Rect) =
   ## strokeStyle and other context settings.
   var path: Path
   path.rect(rect)
-  ctx.image.strokePath(
-    path,
-    ctx.strokeStyle,
-    ctx.mat,
-    ctx.lineWidth,
-    ctx.lineCap,
-    ctx.lineJoin
-  )
+  ctx.stroke(path)
 
 proc strokeRect*(ctx: Context, x, y, width, height: float32) {.inline.} =
   ## Draws a rectangle that is stroked (outlined) according to the current
@@ -311,3 +304,99 @@ proc restore*(ctx: Context) =
     ctx.lineJoin = state.lineJoin
     ctx.font = state.font
     ctx.textAlign = state.textAlign
+
+# Additional procs that are not part of the JS API
+
+proc roundedRect*(ctx: Context, x, y, w, h, nw, ne, se, sw: float32) {.inline.} =
+  ## Adds a rounded rectangle to the current path.
+  ctx.path.roundedRect(x, y, w, h, nw, ne, se, sw)
+
+proc roundedRect*(ctx: Context, rect: Rect, nw, ne, se, sw: float32) {.inline.} =
+  ## Adds a rounded rectangle to the current path.
+  ctx.path.roundedRect(rect, nw, ne, se, sw)
+
+proc circle*(ctx: Context, cx, cy, r: float32) {.inline.} =
+  ## Adds a circle to the current path.
+  ctx.path.circle(cx, cy, r)
+
+proc circle*(ctx: Context, center: Vec2, r: float32) {.inline.} =
+  ## Adds a circle to the current path.
+  ctx.path.circle(center, r)
+
+proc polygon*(ctx: Context, x, y, size: float32, sides: int) {.inline.} =
+  ## Adds an n-sided regular polygon at (x, y) of size to the current path.
+  ctx.path.polygon(x, y, size, sides)
+
+proc polygon*(ctx: Context, pos: Vec2, size: float32, sides: int) {.inline.} =
+  ## Adds an n-sided regular polygon at (x, y) of size to the current path.
+  ctx.path.polygon(pos, size, sides)
+
+proc fillRoundedRect*(ctx: Context, rect: Rect, nw, ne, se, sw: float32) =
+  ## Draws a rounded rectangle that is filled according to the current fillStyle.
+  var path: Path
+  path.roundedRect(rect, nw, ne, se, sw)
+  ctx.fill(path)
+
+proc fillRoundedRect*(ctx: Context, rect: Rect, radius: float32) {.inline.} =
+  ## Draws a rounded rectangle that is filled according to the current fillStyle.
+  ctx.fillRoundedRect(rect, radius, radius, radius, radius)
+
+proc strokeRoundedRect*(ctx: Context, rect: Rect, nw, ne, se, sw: float32) =
+  ## Draws a rounded rectangle that is stroked (outlined) according to the
+  ## current strokeStyle and other context settings.
+  var path: Path
+  path.roundedRect(rect, nw, ne, se, sw)
+  ctx.stroke(path)
+
+proc strokeRoundedRect*(ctx: Context, rect: Rect, radius: float32) {.inline.} =
+  ## Draws a rounded rectangle that is stroked (outlined) according to the
+  ## current strokeStyle and other context settings.
+  ctx.strokeRoundedRect(rect, radius, radius, radius, radius)
+
+proc strokeSegment*(ctx: Context, segment: Segment) =
+  ## Strokes a segment (draws a line from segment.at to segment.to) according
+  ## to the current strokeStyle and other context settings.
+  var path: Path
+  path.moveTo(segment.at)
+  path.lineTo(segment.to)
+  ctx.stroke(path)
+
+proc fillEllipse*(ctx: Context, center: Vec2, rx, ry: float32) =
+  ## Draws an ellipse that is filled according to the current fillStyle.
+  var path: Path
+  path.ellipse(center, rx, ry)
+  ctx.fill(path)
+
+proc strokeEllipse*(ctx: Context, center: Vec2, rx, ry: float32) =
+  ## Draws an ellipse that is stroked (outlined) according to the current
+  ## strokeStyle and other context settings.
+  var path: Path
+  path.ellipse(center, rx, ry)
+  ctx.stroke(path)
+
+proc fillCircle*(ctx: Context, center: Vec2, radius: float32) =
+  ## Draws a circle that is filled according to the current fillStyle.
+  var path: Path
+  path.ellipse(center, radius, radius)
+  ctx.fill(path)
+
+proc strokeCircle*(ctx: Context, center: Vec2, radius: float32) =
+  ## Draws a circle that is stroked (outlined) according to the current
+  ## strokeStyle and other context settings.
+  var path: Path
+  path.ellipse(center, radius, radius)
+  ctx.stroke(path)
+
+proc fillPolygon*(ctx: Context, pos: Vec2, size: float32, sides: int) =
+  ## Draws an n-sided regular polygon at (x, y) of size that is filled according
+  ## to the current fillStyle.
+  var path: Path
+  path.polygon(pos, size, sides)
+  ctx.fill(path)
+
+proc strokePolygon*(ctx: Context, pos: Vec2, size: float32, sides: int) =
+  ## Draws an n-sided regular polygon at (x, y) of size that is stroked
+  ## (outlined) according to the current strokeStyle and other context settings.
+  var path: Path
+  path.polygon(pos, size, sides)
+  ctx.stroke(path)

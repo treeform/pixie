@@ -4,15 +4,16 @@ let
   image = newImage(200, 200)
   lines = newImage(200, 200)
   mask = newMask(200, 200)
-  color = parseHtmlColor("#F8D1DD").rgba
 
 lines.fill(parseHtmlColor("#FC427B").rgba)
 image.fill(rgba(255, 255, 255, 255))
 
-lines.strokeSegment(
-  segment(vec2(25, 25), vec2(175, 175)), color, strokeWidth = 30)
-lines.strokeSegment(
-  segment(vec2(25, 175), vec2(175, 25)), color, strokeWidth = 30)
+let ctx = newContext(lines)
+ctx.strokeStyle = "#F8D1DD"
+ctx.lineWidth = 30
+
+ctx.strokeSegment(segment(vec2(25, 25), vec2(175, 175)))
+ctx.strokeSegment(segment(vec2(25, 175), vec2(175, 25)))
 
 mask.fillPath(
   """
