@@ -655,8 +655,10 @@ block:
 
   doDiff(image, "spans1")
 
+  let ctx = newContext(image)
+  ctx.fillStyle = rgba(128, 128, 128, 128)
   for i, rect in arrangement.selectionRects:
-    image.fillRect(rect, rgba(128, 128, 128, 128))
+    ctx.fillRect(rect)
 
   doDiff(image, "selection_rects1")
 
@@ -685,8 +687,10 @@ block:
 
   doDiff(image, "spans2")
 
+  let ctx = newContext(image)
+  ctx.fillStyle = rgba(128, 128, 128, 128)
   for i, rect in arrangement.selectionRects:
-    image.fillRect(rect, rgba(128, 128, 128, 128))
+    ctx.fillRect(rect)
 
   doDiff(image, "selection_rects2")
 
@@ -703,8 +707,10 @@ block:
 
   image.fillText(arrangement)
 
+  let ctx = newContext(image)
+  ctx.fillStyle = rgba(128, 128, 128, 128)
   for i, rect in arrangement.selectionRects:
-    image.fillRect(rect, rgba(128, 128, 128, 128))
+    ctx.fillRect(rect)
 
   doDiff(image, "selection_rects3")
 

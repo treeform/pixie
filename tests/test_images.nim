@@ -106,15 +106,17 @@ block:
   doAssert a[0, 0] == rgbx(44, 33, 22, 55)
 
 block:
-  let image = newImage(100, 100)
-  image.fill(rgba(0, 0, 0, 255))
-  image.fillRect(rect(25, 25, 50, 50), rgba(255, 255, 255, 255))
-  image.blur(20)
-  image.writeFile("tests/images/imageblur20.png")
+  let ctx = newContext(100, 100)
+  ctx.fillStyle = rgba(255, 255, 255, 255)
+  ctx.image.fill(rgba(0, 0, 0, 255))
+  ctx.fillRect(rect(25, 25, 50, 50), )
+  ctx.image.blur(20)
+  ctx.image.writeFile("tests/images/imageblur20.png")
 
 block:
-  let image = newImage(100, 100)
-  image.fill(rgba(0, 0, 0, 255))
-  image.fillRect(rect(25, 25, 50, 50), rgba(255, 255, 255, 255))
-  image.blur(20, rgba(0, 0, 0, 255))
-  image.writeFile("tests/images/imageblur20oob.png")
+  let ctx = newContext(100, 100)
+  ctx.fillStyle = rgba(255, 255, 255, 255)
+  ctx.image.fill(rgba(0, 0, 0, 255))
+  ctx.fillRect(rect(25, 25, 50, 50))
+  ctx.image.blur(20, rgba(0, 0, 0, 255))
+  ctx.image.writeFile("tests/images/imageblur20oob.png")

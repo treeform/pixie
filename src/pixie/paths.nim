@@ -569,12 +569,16 @@ proc ellipse*(path: var Path, center: Vec2, rx, ry: float32) {.inline.} =
   ## Adds a ellipse.
   path.ellipse(center.x, center.y, rx, ry)
 
+proc circle*(path: var Path, cx, cy, r: float32) {.inline.} =
+  ## Adds a circle.
+  path.ellipse(cx, cy, r, r)
+
 proc circle*(path: var Path, center: Vec2, r: float32) {.inline.} =
   ## Adds a circle.
   path.ellipse(center.x, center.y, r, r)
 
 proc polygon*(path: var Path, x, y, size: float32, sides: int) =
-  ## Draws an n-sided regular polygon at (x, y) with the parameter size.
+  ## Adds an n-sided regular polygon at (x, y) with the parameter size.
   path.moveTo(x + size * cos(0.0), y + size * sin(0.0))
   for side in 0 .. sides:
     path.lineTo(
@@ -583,7 +587,7 @@ proc polygon*(path: var Path, x, y, size: float32, sides: int) =
     )
 
 proc polygon*(path: var Path, pos: Vec2, size: float32, sides: int) {.inline.} =
-  ## Draws a n-sided regular polygon at (x, y) with the parameter size.
+  ## Adds a n-sided regular polygon at (x, y) with the parameter size.
   path.polygon(pos.x, pos.y, size, sides)
 
 proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =

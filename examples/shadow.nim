@@ -4,11 +4,14 @@ let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
 
 let polygonImage = newImage(200, 200)
-polygonImage.fillPolygon(
+
+let ctx = newContext(polygonImage)
+ctx.fillStyle = rgba(255, 255, 255, 255)
+
+ctx.fillPolygon(
   vec2(100, 100),
   70,
-  sides = 8,
-  rgba(255, 255, 255, 255)
+  sides = 8
 )
 
 let shadow = polygonImage.shadow(

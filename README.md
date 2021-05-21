@@ -137,35 +137,44 @@ image.fillText(typeset(spans, bounds = vec2(180, 180)), vec2(10, 10))
 ### Square
 [examples/square.nim](examples/square.nim)
 ```nim
+let ctx = newContext(image)
+ctx.fillStyle = rgba(255, 0, 0, 255)
+
 let
   pos = vec2(50, 50)
   wh = vec2(100, 100)
 
-image.fillRect(rect(pos, wh), rgba(255, 0, 0, 255))
+ctx.fillRect(rect(pos, wh))
 ```
 ![example output](examples/square.png)
 
 ### Line
 [examples/line.nim](examples/line.nim)
 ```nim
+let ctx = newContext(image)
+ctx.strokeStyle = "#FF5C00"
+ctx.lineWidth = 10
+
 let
   start = vec2(25, 25)
   stop = vec2(175, 175)
-  color = parseHtmlColor("#FF5C00").rgba
 
-image.strokeSegment(segment(start, stop), color, strokeWidth = 10)
+ctx.strokeSegment(segment(start, stop))
 ```
 ![example output](examples/line.png)
 
 ### Rounded rectangle
 [examples/rounded_rectangle.nim](examples/rounded_rectangle.nim)
 ```nim
+let ctx = newContext(image)
+ctx.fillStyle = rgba(0, 255, 0, 255)
+
 let
   pos = vec2(50, 50)
   wh = vec2(100, 100)
   r = 25.0
 
-image.fillRoundedRect(rect(pos, wh), r, rgba(0, 255, 0, 255))
+ctx.fillRoundedRect(rect(pos, wh), r)
 ```
 ![example output](examples/rounded_rectangle.png)
 
@@ -189,10 +198,12 @@ image.fillPath(
 ### Masking
 [examples/masking.nim](examples/masking.nim)
 ```nim
-lines.strokeSegment(
-  segment(vec2(25, 25), vec2(175, 175)), color, strokeWidth = 30)
-lines.strokeSegment(
-  segment(vec2(25, 175), vec2(175, 25)), color, strokeWidth = 30)
+let ctx = newContext(lines)
+ctx.strokeStyle = "#F8D1DD"
+ctx.lineWidth = 30
+
+ctx.strokeSegment(segment(vec2(25, 25), vec2(175, 175)))
+ctx.strokeSegment(segment(vec2(25, 175), vec2(175, 25)))
 
 mask.fillPath(
   """
@@ -263,11 +274,14 @@ image.fillPath(
 [examples/shadow.nim](examples/shadow.nim)
 ```nim
 let polygonImage = newImage(200, 200)
-polygonImage.fillPolygon(
+
+let ctx = newContext(polygonImage)
+ctx.fillStyle = rgba(255, 255, 255, 255)
+
+ctx.fillPolygon(
   vec2(100, 100),
   70,
-  sides = 8,
-  rgba(255, 255, 255, 255)
+  sides = 8
 )
 
 let shadow = polygonImage.shadow(
