@@ -2,7 +2,7 @@ name: Run tests
 on: [push, pull_request]
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: [ubuntu-latest, ubuntu-18.04-x86]
 
     steps:
     - uses: actions/checkout@v1
