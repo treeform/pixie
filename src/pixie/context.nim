@@ -374,11 +374,24 @@ proc strokeEllipse*(ctx: Context, center: Vec2, rx, ry: float32) =
   path.ellipse(center, rx, ry)
   ctx.stroke(path)
 
+proc fillCircle*(ctx: Context, circle: Circle) =
+  ## Draws a circle that is filled according to the current fillStyle
+  var path: Path
+  path.circle(circle.pos, circle.radius)
+  ctx.fill(path)
+
 proc fillCircle*(ctx: Context, center: Vec2, radius: float32) =
   ## Draws a circle that is filled according to the current fillStyle.
   var path: Path
   path.ellipse(center, radius, radius)
   ctx.fill(path)
+
+proc strokeCircle*(ctx: Context, circle: Circle) =
+  ## Draws a circle that is stroked (outlined) according to the current
+  ## strokeStyle and other context settings.
+  var path: Path
+  path.circle(circle.pos, circle.radius)
+  ctx.stroke(path)
 
 proc strokeCircle*(ctx: Context, center: Vec2, radius: float32) =
   ## Draws a circle that is stroked (outlined) according to the current
