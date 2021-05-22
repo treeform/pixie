@@ -2,7 +2,23 @@ name: Run tests
 on: [push, pull_request]
 jobs:
   build:
-    runs-on: [ubuntu-latest, ubuntu-18.04-x86]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        compiler: [ g++-10 ]
+        include:
+          - os: ubuntu-latest
+            compiler: g++-10
+            target: Linux
+
+          - os: macos-latest
+            compiler: g++-10
+            target: Macos
+
+          - os: windows-latest
+            compiler: cl
+            target: Windows
 
     steps:
     - uses: actions/checkout@v1
