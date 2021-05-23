@@ -24,23 +24,9 @@ jobs:
           uname -a
           echo ::set-output name=uname::$(uname -a)
 
-        - name: Cache choosenim
-          id: cache-choosenim
-          uses: actions/cache@v1
-          with:
-            path: ~/.choosenim
-            key: ${{ runner.os }}-choosenim-stable
+          apt-get install nim
 
-        - name: Cache nimble
-          id: cache-nimble
-          uses: actions/cache@v1
-          with:
-            path: ~/.nimble
-            key: ${{ runner.os }}-nimble-stable
-
-        - uses: jiro4989/setup-nim-action@v1
-
-        - run: nimble test -y
+          nimble test -y
 
     - name: Get the output
       # Echo the `uname` output parameter from the `runcmd` step
