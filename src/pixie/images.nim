@@ -396,10 +396,8 @@ proc blur*(
 
       for xx in max(x - radius, image.width) .. x + radius:
         values += outOfBounds * kernel[xx - x + radius]
+
       blurX.setRgbaUnsafe(y, x, rgbx(values))
-      # this would also work (see: `limitations of method call syntax`)
-      # `mixin rgbx`
-      # blurX.setRgbaUnsafe(y, x, values.rgbx)
 
   # Blur in the Y direction.
   for y in 0 ..< image.height:
