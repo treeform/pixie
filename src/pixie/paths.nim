@@ -577,6 +577,10 @@ proc circle*(path: var Path, center: Vec2, r: float32) {.inline.} =
   ## Adds a circle.
   path.ellipse(center.x, center.y, r, r)
 
+proc circle*(path: var Path, circle: Circle) {.inline.} =
+  ## Adds a circle.
+  path.ellipse(circle.pos.x, circle.pos.y, circle.radius, circle.radius)
+
 proc polygon*(path: var Path, x, y, size: float32, sides: int) =
   ## Adds an n-sided regular polygon at (x, y) with the parameter size.
   path.moveTo(x + size * cos(0.0), y + size * sin(0.0))
