@@ -54,8 +54,6 @@ proc tick*() =
 
   ctx.setTransform(scale(vec2(dpi, dpi)))
 
-import print
-
 proc start*(title = "Demo", width = 800, height = 600) =
   ## Start the demo.
   if init() == 0:
@@ -71,13 +69,10 @@ proc start*(title = "Demo", width = 800, height = 600) =
   var xscale, yscale: cfloat
   window.getWindowContentScale(xscale.addr, yscale.addr)
   dpi = xscale
-  print dpi
   screen = newImage(int(width.float32 * dpi), int(height.float32 * dpi))
   window.setWindowSize(screen.width.cint, screen.height.cint)
   glViewport(0, 0, screen.width.cint, screen.height.cint)
   ctx = newContext(screen)
-
-  #ctx.lineWidth = 1 * dpi
 
   # Allocate a texture and bind it.
   var dataPtr = screen.data[0].addr
