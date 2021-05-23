@@ -1,5 +1,5 @@
 import bumpy, chroma, pixie/blends, pixie/common, pixie/fonts, pixie/images,
-    pixie/paints, pixie/paths, vmath
+    pixie/masks, pixie/paints, pixie/paths, vmath
 
 ## This file provides a Nim version of the Canvas 2D API commonly used on the
 ## web. The goal is to make picking up Pixie easy for developers familiar with
@@ -17,16 +17,18 @@ type
     textAlign*: HAlignMode
     path: Path
     mat: Mat3
+    mask: Mask
     stateStack: seq[ContextState]
 
   ContextState = object
-    mat: Mat3
     fillStyle, strokeStyle: Paint
     lineWidth: float32
     lineCap: LineCap
     lineJoin: LineJoin
     font: Font
     textAlign: HAlignMode
+    mat: Mat3
+    mask: Mask
 
 proc newContext*(image: Image): Context =
   ## Create a new Context that will draw to the parameter image.
@@ -119,27 +121,69 @@ proc ellipse*(ctx: Context, x, y, rx, ry: float32) {.inline.} =
 
 proc fill*(ctx: Context, path: Path, windingRule = wrNonZero) {.inline.} =
   ## Fills the path with the current fillStyle.
-  ctx.image.fillPath(
-    path,
-    ctx.fillStyle,
-    ctx.mat,
-    windingRule = windingRule
-  )
+  if ctx.mask != nil:
+    let tmp = newImage(ctx.image.width, ctx.image.height)
+    tmp.fillPath(
+      path,
+      ctx.fillStyle,
+      ctx.mat,
+      windingRule
+    )
+    tmp.draw(ctx.mask)
+    ctx.image.draw(tmp)
+  else:
+    ctx.image.fillPath(
+      path,
+      ctx.fillStyle,
+      ctx.mat,
+      windingRule
+    )
 
 proc fill*(ctx: Context, windingRule = wrNonZero) {.inline.} =
   ## Fills the current path with the current fillStyle.
   ctx.fill(ctx.path, windingRule)
 
+proc clip*(ctx: Context, path: Path, windingRule = wrNonZero) {.inline.} =
+  ## Turns the path into the current clipping region. The previous clipping
+  ## region, if any, is intersected with the current or given path to create
+  ## the new clipping region.
+  let mask = newMask(ctx.image.width, ctx.image.height)
+  mask.fillPath(path, ctx.mat, windingRule)
+
+  if ctx.mask == nil:
+    ctx.mask = mask
+  else:
+    ctx.mask.draw(mask, blendMode = bmMask)
+
+proc clip*(ctx: Context, windingRule = wrNonZero) {.inline.} =
+  ## Turns the current path into the current clipping region. The previous
+  ## clipping region, if any, is intersected with the current or given path
+  ## to create the new clipping region.
+  ctx.clip(ctx.path, windingRule)
+
 proc stroke*(ctx: Context, path: Path) {.inline.} =
   ## Strokes (outlines) the current or given path with the current strokeStyle.
-  ctx.image.strokePath(
-    path,
-    ctx.strokeStyle,
-    ctx.mat,
-    ctx.lineWidth,
-    ctx.lineCap,
-    ctx.lineJoin
-  )
+  if ctx.mask != nil:
+    let tmp = newImage(ctx.image.width, ctx.image.height)
+    tmp.strokePath(
+      path,
+      ctx.strokeStyle,
+      ctx.mat,
+      ctx.lineWidth,
+      ctx.lineCap,
+      ctx.lineJoin
+    )
+    tmp.draw(ctx.mask)
+    ctx.image.draw(tmp)
+  else:
+    ctx.image.strokePath(
+      path,
+      ctx.strokeStyle,
+      ctx.mat,
+      ctx.lineWidth,
+      ctx.lineCap,
+      ctx.lineJoin
+    )
 
 proc stroke*(ctx: Context) {.inline.} =
   ## Strokes (outlines) the current or given path with the current strokeStyle.
@@ -189,12 +233,24 @@ proc fillText*(ctx: Context, text: string, at: Vec2) =
   at.y -= round(ctx.font.typeface.ascent * ctx.font.scale)
 
   ctx.font.paint = ctx.fillStyle
-  ctx.image.fillText(
-    ctx.font,
-    text,
-    ctx.mat * translate(at),
-    hAlign = ctx.textAlign
-  )
+
+  if ctx.mask != nil:
+    let tmp = newImage(ctx.image.width, ctx.image.height)
+    tmp.fillText(
+      ctx.font,
+      text,
+      ctx.mat * translate(at),
+      hAlign = ctx.textAlign
+    )
+    tmp.draw(ctx.mask)
+    ctx.image.draw(tmp)
+  else:
+    ctx.image.fillText(
+      ctx.font,
+      text,
+      ctx.mat * translate(at),
+      hAlign = ctx.textAlign
+    )
 
 proc fillText*(ctx: Context, text: string, x, y: float32) {.inline.} =
   ## Draws the outlines of the characters of a text string at the specified
@@ -213,15 +269,30 @@ proc strokeText*(ctx: Context, text: string, at: Vec2) =
   at.y -= round(ctx.font.typeface.ascent * ctx.font.scale)
 
   ctx.font.paint = ctx.strokeStyle
-  ctx.image.strokeText(
-    ctx.font,
-    text,
-    ctx.mat * translate(at),
-    ctx.lineWidth,
-    hAlign = ctx.textAlign,
-    lineCap = ctx.lineCap,
-    lineJoin = ctx.lineJoin
-  )
+
+  if ctx.mask != nil:
+    let tmp = newImage(ctx.image.width, ctx.image.height)
+    tmp.strokeText(
+      ctx.font,
+      text,
+      ctx.mat * translate(at),
+      ctx.lineWidth,
+      hAlign = ctx.textAlign,
+      lineCap = ctx.lineCap,
+      lineJoin = ctx.lineJoin
+    )
+    tmp.draw(ctx.mask)
+    ctx.image.draw(tmp)
+  else:
+    ctx.image.strokeText(
+      ctx.font,
+      text,
+      ctx.mat * translate(at),
+      ctx.lineWidth,
+      hAlign = ctx.textAlign,
+      lineCap = ctx.lineCap,
+      lineJoin = ctx.lineJoin
+    )
 
 proc strokeText*(ctx: Context, text: string, x, y: float32) {.inline.} =
   ## Draws the outlines of the characters of a text string at the specified
@@ -280,7 +351,6 @@ proc save*(ctx: Context) =
   ## Saves the entire state of the canvas by pushing the current state onto
   ## a stack.
   var state: ContextState
-  state.mat = ctx.mat
   state.fillStyle = ctx.fillStyle
   state.strokeStyle = ctx.strokeStyle
   state.lineWidth = ctx.lineWidth
@@ -288,6 +358,8 @@ proc save*(ctx: Context) =
   state.lineJoin = ctx.lineJoin
   state.font = ctx.font
   state.textAlign = ctx.textAlign
+  state.mat = ctx.mat
+  state.mask = if ctx.mask != nil: ctx.mask.copy() else: nil
   ctx.stateStack.add(state)
 
 proc restore*(ctx: Context) =
@@ -296,7 +368,6 @@ proc restore*(ctx: Context) =
   ## nothing.
   if ctx.stateStack.len > 0:
     let state = ctx.stateStack.pop()
-    ctx.mat = state.mat
     ctx.fillStyle = state.fillStyle
     ctx.strokeStyle = state.strokeStyle
     ctx.lineWidth = state.lineWidth
@@ -304,6 +375,8 @@ proc restore*(ctx: Context) =
     ctx.lineJoin = state.lineJoin
     ctx.font = state.font
     ctx.textAlign = state.textAlign
+    ctx.mat = state.mat
+    ctx.mask = state.mask
 
 # Additional procs that are not part of the JS API
 
