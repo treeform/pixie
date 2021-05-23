@@ -396,8 +396,10 @@ proc blur*(
 
       for xx in max(x - radius, image.width) .. x + radius:
         values += outOfBounds * kernel[xx - x + radius]
-
-      blurX.setRgbaUnsafe(y, x, values.rgbx())
+      blurX.setRgbaUnsafe(y, x, rgbx(values))
+      # this would also work (see: `limitations of method call syntax`)
+      # `mixin rgbx`
+      # blurX.setRgbaUnsafe(y, x, values.rgbx)
 
   # Blur in the Y direction.
   for y in 0 ..< image.height:
@@ -412,7 +414,7 @@ proc blur*(
       for yy in max(y - radius, image.height) .. y + radius:
         values += outOfBounds * kernel[yy - y + radius]
 
-      image.setRgbaUnsafe(x, y, values.rgbx())
+      image.setRgbaUnsafe(x, y, rgbx(values))
 
 proc newMask*(image: Image): Mask =
   ## Returns a new mask using the alpha values of the parameter image.
