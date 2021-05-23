@@ -310,3 +310,86 @@ block:
   ctx.fillRect(150, 40, 100, 100)
 
   ctx.image.writeFile("tests/images/context/save_1.png")
+
+block:
+  let ctx = newContext(newImage(300, 150))
+
+  ctx.beginPath()
+  ctx.circle(100, 75, 50)
+  ctx.clip()
+
+  ctx.fillStyle = "blue"
+  ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
+  ctx.fillStyle = "orange"
+  ctx.fillRect(0, 0, 100, 100)
+
+  ctx.image.writeFile("tests/images/context/clip_1.png")
+
+block:
+  let ctx = newContext(newImage(300, 150))
+
+  ctx.fillStyle = "blue"
+  ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
+
+  ctx.beginPath()
+  ctx.circle(100, 75, 50)
+  ctx.clip()
+
+  ctx.fillStyle = "red"
+  ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
+  ctx.fillStyle = "orange"
+  ctx.fillRect(0, 0, 100, 100)
+
+  ctx.image.writeFile("tests/images/context/clip_1b.png")
+
+block:
+  let ctx = newContext(newImage(300, 150))
+
+  ctx.save()
+
+  ctx.beginPath()
+  ctx.circle(100, 75, 50)
+  ctx.clip()
+
+  ctx.fillStyle = "red"
+  ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
+  ctx.fillStyle = "orange"
+  ctx.fillRect(0, 0, 100, 100)
+
+  ctx.restore()
+
+  ctx.fillStyle = "blue"
+  ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
+
+  ctx.image.writeFile("tests/images/context/clip_1c.png")
+
+block:
+  let ctx = newContext(newImage(300, 150))
+
+  var region: Path
+  region.rect(80, 10, 20, 130)
+  region.rect(40, 50, 100, 50)
+  ctx.clip(region, wrEvenOdd)
+
+  ctx.fillStyle = "blue"
+  ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
+
+  ctx.image.writeFile("tests/images/context/clip_2.png")
+
+block:
+  let image = newImage(300, 150)
+
+  let ctx = newContext(image)
+
+  var circlePath: Path
+  circlePath.circle(150, 75, 75)
+  var squarePath: Path
+  squarePath.rect(85, 10, 130, 130)
+
+  ctx.clip(circlePath)
+  ctx.clip(squarePath)
+
+  ctx.fillStyle = "blue"
+  ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
+
+  image.writeFile("tests/images/context/clip_3.png")
