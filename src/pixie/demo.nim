@@ -1,19 +1,19 @@
-import opengl, pixie, staticglfw
-
-export pixie, staticglfw
-
-type Image = pixie.Image
+import opengl, pixie, pixie/context
+import staticglfw except Image
+export pixie
+export staticglfw except Image
 
 var
-  screen* = newImage(800, 600)
+  dpi: float32 = 1.0
+  screen*: Image
+  ctx*: Context
   window*: Window
-  mouseWheelDelta*: float32
 
 proc getMousePos*(): Vec2 =
   ## Get the mouse position.
   var xpos, ypos: float64
   getCursorPos(window, xpos.addr, ypos.addr)
-  vec2(xpos, ypos)
+  vec2(xpos, ypos) / dpi
 
 proc isMouseDown*(): bool =
   ## Get if the left mouse button is down.
@@ -24,9 +24,6 @@ proc isKeyDown*(keyCode: int): bool =
   ## See key codes: https://www.glfw.org/docs/3.3/group__keys.html
   ## Examples: KEY_SPACE, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT
   getKey(window, keyCode.cint) == PRESS
-
-proc onScroll(window: staticglfw.Window, xoffset, yoffset: float64) {.cdecl.} =
-  mouseWheelDelta += yoffset
 
 proc tick*() =
   ## Called this every frame in a while loop.
@@ -50,24 +47,32 @@ proc tick*() =
 
   swapBuffers(window)
 
-  mouseWheelDelta = 0
   pollEvents()
 
   if windowShouldClose(window) == 1:
     quit()
 
-proc start*(title = "Demo") =
+  ctx.setTransform(scale(vec2(dpi, dpi)))
+
+proc start*(title = "Demo", width = 800, height = 600) =
   ## Start the demo.
   if init() == 0:
     quit("Failed to Initialize GLFW.")
 
   windowHint(RESIZABLE, false.cint)
-  window = createWindow(screen.width.cint, screen.height.cint, title, nil, nil)
+  window = createWindow(width.cint, height.cint, title, nil, nil)
   if window == nil:
     quit("Failed to create window.")
   makeContextCurrent(window)
-  discard window.setScrollCallback(onScroll)
   loadExtensions()
+
+  var xscale, yscale: cfloat
+  window.getWindowContentScale(xscale.addr, yscale.addr)
+  dpi = xscale
+  screen = newImage(int(width.float32 * dpi), int(height.float32 * dpi))
+  window.setWindowSize(screen.width.cint, screen.height.cint)
+  glViewport(0, 0, screen.width.cint, screen.height.cint)
+  ctx = newContext(screen)
 
   # Allocate a texture and bind it.
   var dataPtr = screen.data[0].addr
