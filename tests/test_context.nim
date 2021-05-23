@@ -366,6 +366,51 @@ block:
 block:
   let ctx = newContext(newImage(300, 150))
 
+  ctx.fillStyle = "blue"
+  ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
+
+  ctx.beginPath()
+  ctx.circle(100, 75, 50)
+  ctx.clip()
+
+  ctx.saveLayer()
+
+  ctx.fillStyle = "red"
+  ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
+  ctx.fillStyle = "orange"
+  ctx.fillRect(0, 0, 100, 100)
+
+  ctx.restore()
+
+  ctx.image.writeFile("tests/images/context/clip_1d.png")
+
+block:
+  let ctx = newContext(newImage(300, 150))
+
+  ctx.save()
+
+  ctx.beginPath()
+  ctx.circle(100, 75, 50)
+  ctx.clip()
+
+  ctx.saveLayer()
+
+  ctx.fillStyle = "red"
+  ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
+  ctx.fillStyle = "orange"
+  ctx.fillRect(0, 0, 100, 100)
+
+  ctx.restore() # Pop the layer
+  ctx.restore() # Pop the clip
+
+  ctx.fillStyle = "blue"
+  ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
+
+  ctx.image.writeFile("tests/images/context/clip_1e.png")
+
+block:
+  let ctx = newContext(newImage(300, 150))
+
   var region: Path
   region.rect(80, 10, 20, 130)
   region.rect(40, 50, 100, 50)
@@ -393,3 +438,31 @@ block:
   ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
 
   image.writeFile("tests/images/context/clip_3.png")
+
+block:
+  let image = newImage(300, 150)
+
+  let ctx = newContext(image)
+  ctx.font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  ctx.font.size = 50
+  ctx.fillStyle = "blue"
+
+  ctx.saveLayer()
+
+  var circlePath: Path
+  circlePath.circle(150, 75, 75)
+
+  ctx.clip(circlePath)
+
+  ctx.fillText("Hello world", 50, 90)
+
+  ctx.restore()
+
+  image.writeFile("tests/images/context/clip_text.png")
+
+block:
+  let ctx = newContext(100, 100)
+  ctx.font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+
+  let metrics = ctx.measureText("Hello world")
+  doAssert metrics.width == 61

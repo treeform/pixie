@@ -18,6 +18,7 @@ type
     path: Path
     mat: Mat3
     mask: Mask
+    layer: Image
     stateStack: seq[ContextState]
 
   ContextState = object
@@ -29,6 +30,10 @@ type
     textAlign: HAlignMode
     mat: Mat3
     mask: Mask
+    layer: Image
+
+  TextMetrics* = object
+    width*: float32
 
 proc newContext*(image: Image): Context =
   ## Create a new Context that will draw to the parameter image.
@@ -42,6 +47,116 @@ proc newContext*(image: Image): Context =
 proc newContext*(width, height: int): Context {.inline.} =
   ## Create a new Context that will draw to a new image of width and height.
   newContext(newImage(width, height))
+
+proc state(ctx: Context): ContextState =
+  result.fillStyle = ctx.fillStyle
+  result.strokeStyle = ctx.strokeStyle
+  result.lineWidth = ctx.lineWidth
+  result.lineCap = ctx.lineCap
+  result.lineJoin = ctx.lineJoin
+  result.font = ctx.font
+  result.textAlign = ctx.textAlign
+  result.mat = ctx.mat
+  result.mask = if ctx.mask != nil: ctx.mask.copy() else: nil
+
+proc save*(ctx: Context) {.inline.} =
+  ## Saves the entire state of the canvas by pushing the current state onto
+  ## a stack.
+  ctx.stateStack.add(ctx.state())
+
+proc saveLayer*(ctx: Context) =
+  var state = ctx.state()
+  state.layer = ctx.layer
+  ctx.stateStack.add(state)
+  ctx.layer = newImage(ctx.image.width, ctx.image.height)
+
+proc restore*(ctx: Context) =
+  ## Restores the most recently saved canvas state by popping the top entry
+  ## in the drawing state stack. If there is no saved state, this method does
+  ## nothing.
+  if ctx.stateStack.len == 0:
+    return
+
+  let
+    poppedLayer = ctx.layer
+    poppedMask = ctx.mask
+
+  let state = ctx.stateStack.pop()
+  ctx.fillStyle = state.fillStyle
+  ctx.strokeStyle = state.strokeStyle
+  ctx.lineWidth = state.lineWidth
+  ctx.lineCap = state.lineCap
+  ctx.lineJoin = state.lineJoin
+  ctx.font = state.font
+  ctx.textAlign = state.textAlign
+  ctx.mat = state.mat
+  ctx.mask = state.mask
+  ctx.layer = state.layer
+
+  if poppedLayer != nil: # If there is a layer being popped
+    if poppedMask != nil: # If there is a mask, apply it
+      poppedLayer.draw(poppedMask)
+    if ctx.layer != nil: # If we popped to another layer, draw to it
+      ctx.layer.draw(poppedLayer)
+    else: # Otherwise draw to the root image
+      ctx.image.draw(poppedLayer)
+
+proc fill(
+  ctx: Context, image: Image, path: Path, windingRule: WindingRule
+) {.inline.} =
+  image.fillPath(
+    path,
+    ctx.fillStyle,
+    ctx.mat,
+    windingRule
+  )
+
+proc stroke(ctx: Context, image: Image, path: Path) {.inline.} =
+  image.strokePath(
+    path,
+    ctx.strokeStyle,
+    ctx.mat,
+    ctx.lineWidth,
+    ctx.lineCap,
+    ctx.lineJoin
+  )
+
+proc fillText(ctx: Context, image: Image, text: string, at: Vec2) {.inline.} =
+  if ctx.font.typeface == nil:
+    raise newException(PixieError, "No font has been set on this Context")
+
+  # Canvas positions text relative to the alphabetic baseline by default
+  var at = at
+  at.y -= round(ctx.font.typeface.ascent * ctx.font.scale)
+
+  ctx.font.paint = ctx.fillStyle
+
+  image.fillText(
+    ctx.font,
+    text,
+    ctx.mat * translate(at),
+    hAlign = ctx.textAlign
+  )
+
+proc strokeText(ctx: Context, image: Image, text: string, at: Vec2) {.inline.} =
+  if ctx.font.typeface == nil:
+    raise newException(PixieError, "No font has been set on this Context")
+
+  # Canvas positions text relative to the alphabetic baseline by default
+  var at = at
+  at.y -= round(ctx.font.typeface.ascent * ctx.font.scale)
+
+  ctx.font.paint = ctx.strokeStyle
+
+  image.strokeText(
+    ctx.font,
+    text,
+    ctx.mat * translate(at),
+    ctx.lineWidth,
+    hAlign = ctx.textAlign,
+    lineCap = ctx.lineCap,
+    lineJoin = ctx.lineJoin
+  )
 
 proc beginPath*(ctx: Context) {.inline.} =
   ## Starts a new path by emptying the list of sub-paths.
@@ -121,23 +236,14 @@ proc ellipse*(ctx: Context, x, y, rx, ry: float32) {.inline.} =
 
 proc fill*(ctx: Context, path: Path, windingRule = wrNonZero) {.inline.} =
   ## Fills the path with the current fillStyle.
-  if ctx.mask != nil:
-    let tmp = newImage(ctx.image.width, ctx.image.height)
-    tmp.fillPath(
-      path,
-      ctx.fillStyle,
-      ctx.mat,
-      windingRule
-    )
-    tmp.draw(ctx.mask)
-    ctx.image.draw(tmp)
+  if ctx.mask != nil and ctx.layer == nil:
+    ctx.saveLayer()
+    ctx.fill(ctx.layer, path, windingRule)
+    ctx.restore()
+  elif ctx.layer != nil:
+    ctx.fill(ctx.layer, path, windingRule)
   else:
-    ctx.image.fillPath(
-      path,
-      ctx.fillStyle,
-      ctx.mat,
-      windingRule
-    )
+    ctx.fill(ctx.image, path, windingRule)
 
 proc fill*(ctx: Context, windingRule = wrNonZero) {.inline.} =
   ## Fills the current path with the current fillStyle.
@@ -163,27 +269,14 @@ proc clip*(ctx: Context, windingRule = wrNonZero) {.inline.} =
 
 proc stroke*(ctx: Context, path: Path) {.inline.} =
   ## Strokes (outlines) the current or given path with the current strokeStyle.
-  if ctx.mask != nil:
-    let tmp = newImage(ctx.image.width, ctx.image.height)
-    tmp.strokePath(
-      path,
-      ctx.strokeStyle,
-      ctx.mat,
-      ctx.lineWidth,
-      ctx.lineCap,
-      ctx.lineJoin
-    )
-    tmp.draw(ctx.mask)
-    ctx.image.draw(tmp)
+  if ctx.mask != nil and ctx.layer == nil:
+    ctx.saveLayer()
+    ctx.stroke(ctx.layer, path)
+    ctx.restore()
+  elif ctx.layer != nil:
+    ctx.stroke(ctx.layer, path)
   else:
-    ctx.image.strokePath(
-      path,
-      ctx.strokeStyle,
-      ctx.mat,
-      ctx.lineWidth,
-      ctx.lineCap,
-      ctx.lineJoin
-    )
+    ctx.stroke(ctx.image, path)
 
 proc stroke*(ctx: Context) {.inline.} =
   ## Strokes (outlines) the current or given path with the current strokeStyle.
@@ -193,11 +286,18 @@ proc clearRect*(ctx: Context, rect: Rect) =
   ## Erases the pixels in a rectangular area.
   var path: Path
   path.rect(rect)
-  ctx.image.fillPath(
-    path,
-    Paint(kind: pkSolid, color:rgbx(0, 0, 0, 0), blendMode: bmOverwrite),
-    ctx.mat
-  )
+  if ctx.layer != nil:
+    ctx.layer.fillPath(
+      path,
+      Paint(kind: pkSolid, color:rgbx(0, 0, 0, 0), blendMode: bmOverwrite),
+      ctx.mat
+    )
+  else:
+    ctx.image.fillPath(
+      path,
+      Paint(kind: pkSolid, color:rgbx(0, 0, 0, 0), blendMode: bmOverwrite),
+      ctx.mat
+    )
 
 proc clearRect*(ctx: Context, x, y, width, height: float32) {.inline.} =
   ## Erases the pixels in a rectangular area.
@@ -228,33 +328,14 @@ proc strokeRect*(ctx: Context, x, y, width, height: float32) {.inline.} =
 proc fillText*(ctx: Context, text: string, at: Vec2) =
   ## Draws a text string at the specified coordinates, filling the string's
   ## characters with the current fillStyle
-
-  if ctx.font.typeface == nil:
-    raise newException(PixieError, "No font has been set on this Context")
-
-  # Canvas positions text relative to the alphabetic baseline by default
-  var at = at
-  at.y -= round(ctx.font.typeface.ascent * ctx.font.scale)
-
-  ctx.font.paint = ctx.fillStyle
-
-  if ctx.mask != nil:
-    let tmp = newImage(ctx.image.width, ctx.image.height)
-    tmp.fillText(
-      ctx.font,
-      text,
-      ctx.mat * translate(at),
-      hAlign = ctx.textAlign
-    )
-    tmp.draw(ctx.mask)
-    ctx.image.draw(tmp)
+  if ctx.mask != nil and ctx.layer == nil:
+    ctx.saveLayer()
+    ctx.fillText(ctx.layer, text, at)
+    ctx.restore()
+  elif ctx.layer != nil:
+    ctx.fillText(ctx.layer, text, at)
   else:
-    ctx.image.fillText(
-      ctx.font,
-      text,
-      ctx.mat * translate(at),
-      hAlign = ctx.textAlign
-    )
+    ctx.fillText(ctx.image, text, at)
 
 proc fillText*(ctx: Context, text: string, x, y: float32) {.inline.} =
   ## Draws the outlines of the characters of a text string at the specified
@@ -264,44 +345,28 @@ proc fillText*(ctx: Context, text: string, x, y: float32) {.inline.} =
 proc strokeText*(ctx: Context, text: string, at: Vec2) =
   ## Draws the outlines of the characters of a text string at the specified
   ## coordinates.
-
-  if ctx.font.typeface == nil:
-    raise newException(PixieError, "No font has been set on this Context")
-
-  # Canvas positions text relative to the alphabetic baseline by default
-  var at = at
-  at.y -= round(ctx.font.typeface.ascent * ctx.font.scale)
-
-  ctx.font.paint = ctx.strokeStyle
-
-  if ctx.mask != nil:
-    let tmp = newImage(ctx.image.width, ctx.image.height)
-    tmp.strokeText(
-      ctx.font,
-      text,
-      ctx.mat * translate(at),
-      ctx.lineWidth,
-      hAlign = ctx.textAlign,
-      lineCap = ctx.lineCap,
-      lineJoin = ctx.lineJoin
-    )
-    tmp.draw(ctx.mask)
-    ctx.image.draw(tmp)
+  if ctx.mask != nil and ctx.layer == nil:
+    ctx.saveLayer()
+    ctx.strokeText(ctx.layer, text, at)
+    ctx.restore()
+  elif ctx.layer != nil:
+    ctx.strokeText(ctx.layer, text, at)
   else:
-    ctx.image.strokeText(
-      ctx.font,
-      text,
-      ctx.mat * translate(at),
-      ctx.lineWidth,
-      hAlign = ctx.textAlign,
-      lineCap = ctx.lineCap,
-      lineJoin = ctx.lineJoin
-    )
+    ctx.strokeText(ctx.image, text, at)
 
 proc strokeText*(ctx: Context, text: string, x, y: float32) {.inline.} =
   ## Draws the outlines of the characters of a text string at the specified
   ## coordinates.
   ctx.strokeText(text, vec2(x, y))
+
+proc measureText*(ctx: Context, text: string): TextMetrics =
+  ## Returns a TextMetrics object that contains information about the measured
+  ## text (such as its width, for example).
+  if ctx.font.typeface == nil:
+    raise newException(PixieError, "No font has been set on this Context")
+
+  let bounds = typeset(ctx.font, text).computeBounds()
+  result.width = bounds.x
 
 proc getTransform*(ctx: Context): Mat3 {.inline.} =
   ## Retrieves the current transform matrix being applied to the context.
@@ -350,37 +415,6 @@ proc rotate*(ctx: Context, angle: float32) {.inline.} =
 proc resetTransform*(ctx: Context) {.inline.} =
   ## Resets the current transform to the identity matrix.
   ctx.mat = mat3()
-
-proc save*(ctx: Context) =
-  ## Saves the entire state of the canvas by pushing the current state onto
-  ## a stack.
-  var state: ContextState
-  state.fillStyle = ctx.fillStyle
-  state.strokeStyle = ctx.strokeStyle
-  state.lineWidth = ctx.lineWidth
-  state.lineCap = ctx.lineCap
-  state.lineJoin = ctx.lineJoin
-  state.font = ctx.font
-  state.textAlign = ctx.textAlign
-  state.mat = ctx.mat
-  state.mask = if ctx.mask != nil: ctx.mask.copy() else: nil
-  ctx.stateStack.add(state)
-
-proc restore*(ctx: Context) =
-  ## Restores the most recently saved canvas state by popping the top entry
-  ## in the drawing state stack. If there is no saved state, this method does
-  ## nothing.
-  if ctx.stateStack.len > 0:
-    let state = ctx.stateStack.pop()
-    ctx.fillStyle = state.fillStyle
-    ctx.strokeStyle = state.strokeStyle
-    ctx.lineWidth = state.lineWidth
-    ctx.lineCap = state.lineCap
-    ctx.lineJoin = state.lineJoin
-    ctx.font = state.font
-    ctx.textAlign = state.textAlign
-    ctx.mat = state.mat
-    ctx.mask = state.mask
 
 # Additional procs that are not part of the JS API
 
