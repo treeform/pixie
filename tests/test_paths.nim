@@ -256,6 +256,44 @@ block:
 
   image.writeFile("tests/images/paths/lcSquare.png")
 
+block:
+  let
+    image = newImage(60, 120)
+    path = parsePath("M 0 0 L 50 0")
+  image.fill(rgba(255, 255, 255, 255))
+
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), vec2(5, 5), 10, lcButt, ljBevel,
+  )
+
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), vec2(5, 25), 10, lcButt, ljBevel,
+    dashes = @[2.float32,2]
+  )
+
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), vec2(5, 45), 10, lcButt, ljBevel,
+    dashes = @[4.float32,4]
+  )
+
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), vec2(5, 65), 10, lcButt, ljBevel,
+    dashes = @[2.float32, 4, 6, 2]
+  )
+
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), vec2(5, 85), 10, lcButt, ljBevel,
+    dashes = @[1.float32]
+  )
+
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), vec2(5, 105), 10, lcButt, ljBevel,
+    dashes = @[1.float32, 2, 3, 4, 5, 6, 7, 8, 9]
+  )
+
+  image.writeFile("tests/images/paths/dashes.png")
+
+
 # Potential error cases, ensure they do not crash
 
 block:
