@@ -1320,16 +1320,26 @@ proc fillShapes(
         mask.setValueUnsafe(x, y, blended)
       inc x
 
+proc miterLimitToAngle*(limit: float32): float32 =
+  ## Converts milter-limit-ratio to miter-limit-angle.
+  arcsin(1 / limit) * 2
+
+proc angleToMiterLimit*(angle: float32): float32 =
+  ## Converts miter-limit-angle to milter-limit-ratio.
+  1 / sin(angle / 2)
+
 proc strokeShapes(
   shapes: seq[seq[Vec2]],
   strokeWidth: float32,
   lineCap: LineCap,
   lineJoin: LineJoin,
-  miterAngleLimit: float32,
+  miterLimit: float32,
   dashes: seq[float32]
 ): seq[seq[Vec2]] =
   if strokeWidth == 0:
     return
+
+  let miterAngleLimit = miterLimitToAngle(miterLimit)
 
   let halfStroke = strokeWidth / 2
 
@@ -1565,7 +1575,7 @@ proc strokePath*(
   strokeWidth = 1.0,
   lineCap = lcButt,
   lineJoin = ljMiter,
-  miterAngleLimit: float32 = degToRad(28.96),
+  miterLimit: float32 = 10,
   dashes: seq[float32] = @[],
 ) =
   ## Strokes a path.
@@ -1574,7 +1584,7 @@ proc strokePath*(
     strokeWidth,
     lineCap,
     lineJoin,
-    miterAngleLimit,
+    miterLimit,
     dashes
   )
   strokeShapes.transform(transform)
@@ -1588,7 +1598,7 @@ proc strokePath*(
   strokeWidth = 1.0,
   lineCap = lcButt,
   lineJoin = ljMiter,
-  miterAngleLimit: float32 = degToRad(28.96),
+  miterLimit: float32 = 10,
   dashes: seq[float32] = @[]
 ) =
   ## Strokes a path.
@@ -1598,7 +1608,7 @@ proc strokePath*(
       strokeWidth,
       lineCap,
       lineJoin,
-      miterAngleLimit,
+      miterLimit,
       dashes
     )
     strokeShapes.transform(transform)
@@ -1615,7 +1625,7 @@ proc strokePath*(
     strokeWidth,
     lineCap,
     lineJoin,
-    miterAngleLimit,
+    miterLimit,
     dashes
   )
 

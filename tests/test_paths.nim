@@ -1,4 +1,4 @@
-import chroma, pixie, pixie/fileformats/png
+import chroma, pixie, pixie/fileformats/png, strformat
 
 block:
   let pathStr = """
@@ -293,6 +293,30 @@ block:
 
   image.writeFile("tests/images/paths/dashes.png")
 
+block:
+  proc miterTest(angle, limit: float32) =
+    let
+      image = newImage(60, 60)
+    image.fill(rgba(255, 255, 255, 255))
+    var path: Path
+    path.moveTo(-20, 0)
+    path.lineTo(0, 0)
+    let th = angle.float32.degToRad() + PI/2
+    path.lineTo(sin(th)*20, cos(th)*20)
+
+    image.strokePath(
+      path, rgba(0, 0, 0, 255), vec2(30, 30), 8, lcButt, ljMiter,
+      miterLimit = limit
+    )
+    image.writeFile(&"tests/images/paths/miterLimit_{angle.int}deg_{limit:0.2f}num.png")
+
+  miterTest(10, 2)
+  miterTest(145, 2)
+  miterTest(155, 2)
+  miterTest(165, 2)
+  miterTest(165, 10)
+  miterTest(145, 3.32)
+  miterTest(145, 3.33)
 
 # Potential error cases, ensure they do not crash
 
