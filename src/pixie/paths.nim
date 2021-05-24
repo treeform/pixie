@@ -1492,40 +1492,9 @@ proc transform(shapes: var seq[seq[Vec2]], transform: Vec2 | Mat3) =
           segment = transform * segment
 
 proc fillPath*(
-  image: Image,
-  path: SomePath,
-  color: SomeColor,
-  windingRule = wrNonZero,
-  blendMode = bmNormal
-) {.inline.} =
-  ## Fills a path.
-  image.fillShapes(parseSomePath(path), color, windingRule, blendMode)
-
-proc fillPath*(
-  image: Image,
-  path: SomePath,
-  color: SomeColor,
-  transform: Vec2 | Mat3,
-  windingRule = wrNonZero,
-  blendMode = bmNormal
-) =
-  ## Fills a path.
-  var shapes = parseSomePath(path, transform.pixelScale())
-  shapes.transform(transform)
-  image.fillShapes(shapes, color, windingRule, blendMode)
-
-proc fillPath*(
   mask: Mask,
   path: SomePath,
-  windingRule = wrNonZero
-) {.inline.} =
-  ## Fills a path.
-  mask.fillShapes(parseSomePath(path), windingRule)
-
-proc fillPath*(
-  mask: Mask,
-  path: SomePath,
-  transform: Vec2 | Mat3,
+  transform: Vec2 | Mat3 = vec2(),
   windingRule = wrNonZero
 ) =
   ## Fills a path.
@@ -1542,7 +1511,9 @@ proc fillPath*(
 ) =
   ## Fills a path.
   if paint.kind == pkSolid:
-    image.fillPath(path, paint.color, transform, windingRule)
+    var shapes = parseSomePath(path, transform.pixelScale())
+    shapes.transform(transform)
+    image.fillShapes(shapes, paint.color, windingRule, paint.blendMode)
     return
 
   let
