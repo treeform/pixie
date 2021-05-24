@@ -303,6 +303,13 @@ type
     # featureList: FeatureList
     lookupList: LookupList
 
+  PostTable = ref object
+    version: float32
+    italicAngle: float32
+    underlinePosition: int16
+    underlineThickness: int16
+    isFixedPitch: uint32
+
   OpenType* = ref object
     buf*: string
     version*: uint32
@@ -322,6 +329,7 @@ type
     glyf*: GlyfTable
     kern*: KernTable
     gpos*: GposTable
+    post*: PostTable
     glyphPaths: Table[Rune, Path]
 
 when defined(release):
@@ -1194,6 +1202,16 @@ proc parseGposTable(buf: string, offset: int): GPOSTable =
   result.lookupList =
     parseLookupList(buf, offset + result.lookupListOffset.int, result)
 
+proc parsePostTable(buf: string, offset: int): PostTable =
+  buf.eofCheck(offset + 14)
+
+  result = PostTable()
+  result.version = buf.readFixed32(offset + 0)
+  result.italicAngle = buf.readFixed32(offset + 4)
+  result.underlinePosition = buf.readInt16(offset + 8).swap()
+  result.underlineThickness = buf.readInt16(offset + 10).swap()
+  result.isFixedPitch = buf.readUint32(offset + 12).swap()
+
 proc getGlyphId(opentype: OpenType, rune: Rune): uint16 {.inline.} =
   if rune in opentype.cmap.runeToGlyphId:
     result = opentype.cmap.runeToGlyphId[rune]
@@ -1544,7 +1562,8 @@ proc parseOpenType*(buf: string): OpenType =
     i += 16
 
   const requiredTables = [
-    "cmap", "head", "hhea", "hmtx", "maxp", "name", "OS/2", "loca", "glyf"
+    "cmap", "head", "hhea", "hmtx", "maxp", "name", "OS/2", "loca", "glyf",
+    "post"
   ]
   for table in requiredTables:
     if table notin result.tableRecords:
@@ -1570,6 +1589,8 @@ proc parseOpenType*(buf: string): OpenType =
 
   if "GPOS" in result.tableRecords:
     result.gpos = parseGposTable(buf, result.tableRecords["GPOS"].offset.int)
+
+  result.post = parsePostTable(buf, result.tableRecords["post"].offset.int)
 
 when defined(release):
   {.pop.}
