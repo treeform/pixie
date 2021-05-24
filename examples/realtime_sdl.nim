@@ -43,7 +43,6 @@ proc display() =
 
   inc frameCount
 
-  # cairo surface -> sdl serface -> sdl texture -> copy to render
   var dataPtr = ctx.image.data[0].addr
   mainSerface.pixels = dataPtr
   mainTexture = render.createTextureFromSurface(mainSerface)
