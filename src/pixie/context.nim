@@ -11,6 +11,7 @@ type
     image*: Image
     fillStyle*, strokeStyle*: Paint
     lineWidth*: float32
+    miterLimit*: float32
     lineCap*: LineCap
     lineJoin*: LineJoin
     font*: Font
@@ -24,6 +25,7 @@ type
   ContextState = object
     fillStyle, strokeStyle: Paint
     lineWidth: float32
+    miterLimit: float32
     lineCap: LineCap
     lineJoin: LineJoin
     font: Font
@@ -41,6 +43,7 @@ proc newContext*(image: Image): Context =
   result.image = image
   result.mat = mat3()
   result.lineWidth = 1
+  result.miterLimit = 10
   result.fillStyle = Paint(kind: pkSolid, color: rgbx(0, 0, 0, 255))
   result.strokeStyle = Paint(kind: pkSolid, color: rgbx(0, 0, 0, 255))
 
@@ -52,6 +55,7 @@ proc state(ctx: Context): ContextState =
   result.fillStyle = ctx.fillStyle
   result.strokeStyle = ctx.strokeStyle
   result.lineWidth = ctx.lineWidth
+  result.miterLimit = ctx.miterLimit
   result.lineCap = ctx.lineCap
   result.lineJoin = ctx.lineJoin
   result.font = ctx.font
@@ -85,6 +89,7 @@ proc restore*(ctx: Context) =
   ctx.fillStyle = state.fillStyle
   ctx.strokeStyle = state.strokeStyle
   ctx.lineWidth = state.lineWidth
+  ctx.miterLimit = state.miterLimit
   ctx.lineCap = state.lineCap
   ctx.lineJoin = state.lineJoin
   ctx.font = state.font
@@ -118,7 +123,8 @@ proc stroke(ctx: Context, image: Image, path: Path) {.inline.} =
     ctx.mat,
     ctx.lineWidth,
     ctx.lineCap,
-    ctx.lineJoin
+    ctx.lineJoin,
+    ctx.miterLimit
   )
 
 proc fillText(ctx: Context, image: Image, text: string, at: Vec2) {.inline.} =
@@ -155,7 +161,8 @@ proc strokeText(ctx: Context, image: Image, text: string, at: Vec2) {.inline.} =
     ctx.lineWidth,
     hAlign = ctx.textAlign,
     lineCap = ctx.lineCap,
-    lineJoin = ctx.lineJoin
+    lineJoin = ctx.lineJoin,
+    miterLimit = ctx.miterLimit
   )
 
 proc beginPath*(ctx: Context) {.inline.} =

@@ -36,7 +36,9 @@ type
 
   SomePath* = Path | string | seq[seq[Vec2]]
 
-const epsilon = 0.0001 * PI ## Tiny value used for some computations.
+const
+  epsilon = 0.0001 * PI ## Tiny value used for some computations.
+  defaultMiterLimit*: float32 = 4
 
 when defined(release):
   {.push checks: off.}
@@ -1546,7 +1548,7 @@ proc strokePath*(
   strokeWidth = 1.0,
   lineCap = lcButt,
   lineJoin = ljMiter,
-  miterLimit: float32 = 4,
+  miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[],
 ) =
   ## Strokes a path.
@@ -1569,7 +1571,7 @@ proc strokePath*(
   strokeWidth = 1.0,
   lineCap = lcButt,
   lineJoin = ljMiter,
-  miterLimit: float32 = 4,
+  miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[]
 ) =
   ## Strokes a path.

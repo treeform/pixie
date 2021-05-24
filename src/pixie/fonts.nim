@@ -442,7 +442,8 @@ proc strokeText*(
   transform: Vec2 | Mat3 = vec2(0, 0),
   strokeWidth = 1.0,
   lineCap = lcButt,
-  lineJoin = ljMiter
+  lineJoin = ljMiter,
+  miterLimit = defaultMiterLimit
 ) =
   ## Strokes the text arrangement.
   for spanIndex, (start, stop) in arrangement.spans:
@@ -470,7 +471,8 @@ proc strokeText*(
   hAlign = haLeft,
   vAlign = vaTop,
   lineCap = lcButt,
-  lineJoin = ljMiter
+  lineJoin = ljMiter,
+  miterLimit = defaultMiterLimit
 ) {.inline.} =
   ## Typesets and strokes the text. Optional parameters:
   ## transform: translation or matrix to apply
