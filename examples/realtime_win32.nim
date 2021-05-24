@@ -74,7 +74,7 @@ proc draw() =
   )
   discard ReleaseDC(hwnd, dc)
 
-proc WindowProc(hwnd: HWND, message: UINT, wParam: WPARAM,
+proc windowProc(hwnd: HWND, message: UINT, wParam: WPARAM,
     lParam: LPARAM): LRESULT {.stdcall.} =
   case message
   of WM_DESTROY:
@@ -92,7 +92,7 @@ proc main() =
     wndclass: WNDCLASS
 
   wndclass.style = CS_HREDRAW or CS_VREDRAW
-  wndclass.lpfnWndProc = WindowProc
+  wndclass.lpfnWndProc = windowProc
   wndclass.cbClsExtra = 0
   wndclass.cbWndExtra = 0
   wndclass.hInstance = hInstance
