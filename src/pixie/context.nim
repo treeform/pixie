@@ -11,11 +11,13 @@ type
     image*: Image
     fillStyle*, strokeStyle*: Paint
     lineWidth*: float32
+    miterLimit*: float32
     lineCap*: LineCap
     lineJoin*: LineJoin
     font*: Font
     textAlign*: HAlignMode
     path: Path
+    lineDash: seq[float32]
     mat: Mat3
     mask: Mask
     layer: Image
@@ -24,10 +26,12 @@ type
   ContextState = object
     fillStyle, strokeStyle: Paint
     lineWidth: float32
+    miterLimit: float32
     lineCap: LineCap
     lineJoin: LineJoin
     font: Font
     textAlign: HAlignMode
+    lineDash: seq[float32]
     mat: Mat3
     mask: Mask
     layer: Image
@@ -41,6 +45,7 @@ proc newContext*(image: Image): Context =
   result.image = image
   result.mat = mat3()
   result.lineWidth = 1
+  result.miterLimit = 10
   result.fillStyle = Paint(kind: pkSolid, color: rgbx(0, 0, 0, 255))
   result.strokeStyle = Paint(kind: pkSolid, color: rgbx(0, 0, 0, 255))
 
@@ -52,26 +57,31 @@ proc state(ctx: Context): ContextState =
   result.fillStyle = ctx.fillStyle
   result.strokeStyle = ctx.strokeStyle
   result.lineWidth = ctx.lineWidth
+  result.miterLimit = ctx.miterLimit
   result.lineCap = ctx.lineCap
   result.lineJoin = ctx.lineJoin
   result.font = ctx.font
   result.textAlign = ctx.textAlign
+  result.lineDash = ctx.lineDash
   result.mat = ctx.mat
   result.mask = if ctx.mask != nil: ctx.mask.copy() else: nil
 
 proc save*(ctx: Context) {.inline.} =
-  ## Saves the entire state of the canvas by pushing the current state onto
+  ## Saves the entire state of the context by pushing the current state onto
   ## a stack.
   ctx.stateStack.add(ctx.state())
 
 proc saveLayer*(ctx: Context) =
+  ## Saves the entire state of the context by pushing the current state onto
+  ## a stack and allocates a new image layer for subsequent drawing. Calling
+  ## restore blends the current layer image onto the prior layer or root image.
   var state = ctx.state()
   state.layer = ctx.layer
   ctx.stateStack.add(state)
   ctx.layer = newImage(ctx.image.width, ctx.image.height)
 
 proc restore*(ctx: Context) =
-  ## Restores the most recently saved canvas state by popping the top entry
+  ## Restores the most recently saved context state by popping the top entry
   ## in the drawing state stack. If there is no saved state, this method does
   ## nothing.
   if ctx.stateStack.len == 0:
@@ -85,10 +95,12 @@ proc restore*(ctx: Context) =
   ctx.fillStyle = state.fillStyle
   ctx.strokeStyle = state.strokeStyle
   ctx.lineWidth = state.lineWidth
+  ctx.miterLimit = state.miterLimit
   ctx.lineCap = state.lineCap
   ctx.lineJoin = state.lineJoin
   ctx.font = state.font
   ctx.textAlign = state.textAlign
+  ctx.lineDash = state.lineDash
   ctx.mat = state.mat
   ctx.mask = state.mask
   ctx.layer = state.layer
@@ -118,7 +130,9 @@ proc stroke(ctx: Context, image: Image, path: Path) {.inline.} =
     ctx.mat,
     ctx.lineWidth,
     ctx.lineCap,
-    ctx.lineJoin
+    ctx.lineJoin,
+    ctx.miterLimit,
+    ctx.lineDash
   )
 
 proc fillText(ctx: Context, image: Image, text: string, at: Vec2) {.inline.} =
@@ -155,7 +169,9 @@ proc strokeText(ctx: Context, image: Image, text: string, at: Vec2) {.inline.} =
     ctx.lineWidth,
     hAlign = ctx.textAlign,
     lineCap = ctx.lineCap,
-    lineJoin = ctx.lineJoin
+    lineJoin = ctx.lineJoin,
+    miterLimit = ctx.miterLimit,
+    dashes = ctx.lineDash
   )
 
 proc beginPath*(ctx: Context) {.inline.} =
@@ -289,13 +305,13 @@ proc clearRect*(ctx: Context, rect: Rect) =
   if ctx.layer != nil:
     ctx.layer.fillPath(
       path,
-      Paint(kind: pkSolid, color:rgbx(0, 0, 0, 0), blendMode: bmOverwrite),
+      Paint(kind: pkSolid, color: rgbx(0, 0, 0, 0), blendMode: bmOverwrite),
       ctx.mat
     )
   else:
     ctx.image.fillPath(
       path,
-      Paint(kind: pkSolid, color:rgbx(0, 0, 0, 0), blendMode: bmOverwrite),
+      Paint(kind: pkSolid, color: rgbx(0, 0, 0, 0), blendMode: bmOverwrite),
       ctx.mat
     )
 
@@ -368,6 +384,12 @@ proc measureText*(ctx: Context, text: string): TextMetrics =
   let bounds = typeset(ctx.font, text).computeBounds()
   result.width = bounds.x
 
+proc getLineDash*(ctx: Context): seq[float32] {.inline.} =
+  ctx.lineDash
+
+proc setLineDash*(ctx: Context, lineDash: seq[float32]) {.inline.} =
+  ctx.lineDash = lineDash
+
 proc getTransform*(ctx: Context): Mat3 {.inline.} =
   ## Retrieves the current transform matrix being applied to the context.
   ctx.mat
@@ -399,12 +421,12 @@ proc translate*(ctx: Context, x, y: float32) {.inline.} =
   ctx.mat = ctx.mat * translate(vec2(x, y))
 
 proc scale*(ctx: Context, v: Vec2) {.inline.} =
-  ## Adds a scaling transformation to the canvas units horizontally and/or
+  ## Adds a scaling transformation to the context units horizontally and/or
   ## vertically.
   ctx.mat = ctx.mat * scale(v)
 
 proc scale*(ctx: Context, x, y: float32) {.inline.} =
-  ## Adds a scaling transformation to the canvas units horizontally and/or
+  ## Adds a scaling transformation to the context units horizontally and/or
   ## vertically.
   ctx.mat = ctx.mat * scale(vec2(x, y))
 

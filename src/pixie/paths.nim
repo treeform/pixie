@@ -36,7 +36,9 @@ type
 
   SomePath* = Path | string | seq[seq[Vec2]]
 
-const epsilon = 0.0001 * PI ## Tiny value used for some computations.
+const
+  epsilon = 0.0001 * PI ## Tiny value used for some computations.
+  defaultMiterLimit*: float32 = 4
 
 when defined(release):
   {.push checks: off.}
@@ -1422,15 +1424,16 @@ proc strokeShapes(
           shape[0]
         ))
 
+    var dashes = dashes
+    if dashes.len mod 2 != 0:
+      dashes.add(dashes)
+
     for i in 1 ..< shape.len:
       let
         pos = shape[i]
         prevPos = shape[i - 1]
 
       if dashes.len > 0:
-        var dashes = dashes
-        if dashes.len mod 2 != 0:
-          dashes.add(dashes[^1])
         var distance = dist(prevPos, pos)
         let dir = dir(pos, prevPos)
         var currPos = prevPos
@@ -1546,8 +1549,8 @@ proc strokePath*(
   strokeWidth = 1.0,
   lineCap = lcButt,
   lineJoin = ljMiter,
-  miterLimit: float32 = 4,
-  dashes: seq[float32] = @[],
+  miterLimit = defaultMiterLimit,
+  dashes: seq[float32] = @[]
 ) =
   ## Strokes a path.
   var strokeShapes = strokeShapes(
@@ -1569,7 +1572,7 @@ proc strokePath*(
   strokeWidth = 1.0,
   lineCap = lcButt,
   lineJoin = ljMiter,
-  miterLimit: float32 = 4,
+  miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[]
 ) =
   ## Strokes a path.

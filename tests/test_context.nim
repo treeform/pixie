@@ -408,7 +408,6 @@ block:
 
   ctx.image.writeFile("tests/images/context/clip_1e.png")
 
-
 block:
   let ctx = newContext(newImage(300, 150))
 
@@ -491,3 +490,28 @@ block:
 
   let metrics = ctx.measureText("Hello world")
   doAssert metrics.width == 61
+
+block:
+  let
+    image = newImage(300, 150)
+    ctx = newContext(image)
+
+  var y = 15.float32
+
+  proc drawDashedLine(pattern: seq[float32]) =
+    ctx.beginPath();
+    ctx.setLineDash(pattern);
+    ctx.moveTo(0, y);
+    ctx.lineTo(300, y);
+    ctx.stroke();
+    y += 20;
+
+  drawDashedLine(@[]);
+  drawDashedLine(@[1.float32, 1]);
+  drawDashedLine(@[10.float32, 10]);
+  drawDashedLine(@[20.float32, 5]);
+  drawDashedLine(@[15.float32, 3, 3, 3]);
+  drawDashedLine(@[20.float32, 3, 3, 3, 3, 3, 3, 3]);
+  drawDashedLine(@[12.float32, 3, 3]);
+
+  image.writeFile("tests/images/context/setLineDash_1.png")

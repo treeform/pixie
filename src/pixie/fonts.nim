@@ -442,7 +442,9 @@ proc strokeText*(
   transform: Vec2 | Mat3 = vec2(0, 0),
   strokeWidth = 1.0,
   lineCap = lcButt,
-  lineJoin = ljMiter
+  lineJoin = ljMiter,
+  miterLimit = defaultMiterLimit,
+  dashes: seq[float32] = @[]
 ) =
   ## Strokes the text arrangement.
   for spanIndex, (start, stop) in arrangement.spans:
@@ -455,10 +457,25 @@ proc strokeText*(
       )
       when type(target) is Image:
         target.strokePath(
-          path, font.paint, transform, strokeWidth, lineCap, lineJoin
+          path,
+          font.paint,
+          transform,
+          strokeWidth,
+          lineCap,
+          lineJoin,
+          miterLimit,
+          dashes
         )
       else: # target is Mask
-        target.strokePath(path, transform, strokeWidth, lineCap, lineJoin)
+        target.strokePath(
+          path,
+          transform,
+          strokeWidth,
+          lineCap,
+          lineJoin,
+          miterLimit,
+          dashes
+        )
 
 proc strokeText*(
   target: Image | Mask,
@@ -470,7 +487,9 @@ proc strokeText*(
   hAlign = haLeft,
   vAlign = vaTop,
   lineCap = lcButt,
-  lineJoin = ljMiter
+  lineJoin = ljMiter,
+  miterLimit = defaultMiterLimit,
+  dashes: seq[float32] = @[]
 ) {.inline.} =
   ## Typesets and strokes the text. Optional parameters:
   ## transform: translation or matrix to apply
@@ -485,5 +504,7 @@ proc strokeText*(
     transform,
     strokeWidth,
     lineCap,
-    lineJoin
+    lineJoin,
+    miterLimit,
+    dashes
   )
