@@ -1,7 +1,7 @@
 ## Load SVG files.
 
-import chroma, pixie/common, pixie/images, pixie/paths, pixie/paints, strutils, vmath,
-    xmlparser, xmltree
+import chroma, pixie/common, pixie/images, pixie/paints, pixie/paths, strutils,
+    vmath, xmlparser, xmltree
 
 const
   xmlSignature* = "<?xml"

@@ -408,7 +408,6 @@ block:
 
   ctx.image.writeFile("tests/images/context/clip_1e.png")
 
-
 block:
   let ctx = newContext(newImage(300, 150))
 

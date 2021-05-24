@@ -296,13 +296,13 @@ proc clearRect*(ctx: Context, rect: Rect) =
   if ctx.layer != nil:
     ctx.layer.fillPath(
       path,
-      Paint(kind: pkSolid, color:rgbx(0, 0, 0, 0), blendMode: bmOverwrite),
+      Paint(kind: pkSolid, color: rgbx(0, 0, 0, 0), blendMode: bmOverwrite),
       ctx.mat
     )
   else:
     ctx.image.fillPath(
       path,
-      Paint(kind: pkSolid, color:rgbx(0, 0, 0, 0), blendMode: bmOverwrite),
+      Paint(kind: pkSolid, color: rgbx(0, 0, 0, 0), blendMode: bmOverwrite),
       ctx.mat
     )
 
