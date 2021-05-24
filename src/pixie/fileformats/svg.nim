@@ -221,6 +221,18 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
       else:
         failInvalidTransform(transform)
 
+proc fill(img: Image, ctx: Ctx, path: Path) {.inline.} =
+  img.fillPath(path, ctx.fill, ctx.transform, ctx.fillRule)
+
+proc stroke(img: Image, ctx: Ctx, path: Path) {.inline.} =
+  img.strokePath(
+    path,
+    ctx.stroke,
+    ctx.transform,
+    ctx.strokeWidth,
+    miterLimit = ctx.strokeMiterLimit
+  )
+
 proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
   if node.kind != xnElement:
     # Skip <!-- comments -->
@@ -243,15 +255,9 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
       ctx = decodeCtx(ctxStack[^1], node)
       path = parsePath(d)
     if ctx.fill != ColorRGBX():
-      img.fillPath(path, ctx.fill, ctx.transform, ctx.fillRule)
+      img.fill(ctx, path)
     if ctx.shouldStroke:
-      img.strokePath(
-        path,
-        ctx.stroke,
-        ctx.transform,
-        ctx.strokeWidth,
-        miterLimit = ctx.strokeMiterLimit
-      )
+      img.stroke(ctx, path)
 
   of "line":
     let
@@ -267,15 +273,9 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     path.closePath()
 
     if ctx.fill != ColorRGBX():
-      img.fillPath(path, ctx.fill, ctx.transform)
+      img.fill(ctx, path)
     if ctx.shouldStroke:
-      img.strokePath(
-        path,
-        ctx.stroke,
-        ctx.transform,
-        ctx.strokeWidth,
-        miterLimit = ctx.strokeMiterLimit
-      )
+      img.stroke(ctx, path)
 
   of "polyline", "polygon":
     let
@@ -309,15 +309,9 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
       path.closePath()
 
     if ctx.fill != ColorRGBX():
-      img.fillPath(path, ctx.fill, ctx.transform)
+      img.fill(ctx, path)
     if ctx.shouldStroke:
-      img.strokePath(
-        path,
-        ctx.stroke,
-        ctx.transform,
-        ctx.strokeWidth,
-        miterLimit = ctx.strokeMiterLimit
-      )
+      img.stroke(ctx, path)
 
   of "rect":
     let
@@ -353,15 +347,9 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
       path.rect(x, y, width, height)
 
     if ctx.fill != ColorRGBX():
-      img.fillPath(path, ctx.fill, ctx.transform)
+      img.fill(ctx, path)
     if ctx.shouldStroke:
-      img.strokePath(
-        path,
-        ctx.stroke,
-        ctx.transform,
-        ctx.strokeWidth,
-        miterLimit = ctx.strokeMiterLimit
-      )
+      img.stroke(ctx, path)
 
   of "circle", "ellipse":
     let
@@ -381,15 +369,9 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     path.ellipse(cx, cy, rx, ry)
 
     if ctx.fill != ColorRGBX():
-      img.fillPath(path, ctx.fill, ctx.transform)
+      img.fill(ctx, path)
     if ctx.shouldStroke:
-      img.strokePath(
-        path,
-        ctx.stroke,
-        ctx.transform,
-        ctx.strokeWidth,
-        miterLimit = ctx.strokeMiterLimit
-      )
+      img.stroke(ctx, path)
 
   else:
     raise newException(PixieError, "Unsupported SVG tag: " & node.tag & ".")
