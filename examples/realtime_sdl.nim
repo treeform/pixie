@@ -1,6 +1,6 @@
-## This example show how to have real time cairo using sdl2 backend
+## This example show how to have real time pixie using sdl2 API.
 
-import sdl2, sdl2/gfx, math, pixie
+import math, pixie, sdl2, sdl2/gfx
 
 let
   w: int32 = 256
@@ -23,17 +23,21 @@ proc display() =
   var linerGradient = Paint(kind: pkGradientLinear)
   linerGradient.gradientHandlePositions.add(vec2(0, 0))
   linerGradient.gradientHandlePositions.add(vec2(0, 256))
-  linerGradient.gradientStops.add(ColorStop(color: rgbx(0, 0, 0, 255), position: 0))
-  linerGradient.gradientStops.add(ColorStop(color: rgbx(255, 255, 255, 255), position: 1))
+  linerGradient.gradientStops.add(
+    ColorStop(color: rgbx(0, 0, 0, 255), position: 0))
+  linerGradient.gradientStops.add(
+    ColorStop(color: rgbx(255, 255, 255, 255), position: 1))
   ctx.fillStyle = linerGradient
   ctx.fillRect(0, 0, 256, 256)
 
-  var radialGradient  = Paint(kind: pkGradientRadial)
+  var radialGradient = Paint(kind: pkGradientRadial)
   radialGradient.gradientHandlePositions.add(vec2(128, 128))
   radialGradient.gradientHandlePositions.add(vec2(256, 128))
   radialGradient.gradientHandlePositions.add(vec2(128, 256))
-  radialGradient.gradientStops.add(ColorStop(color: rgbx(255, 255, 255, 255), position: 0))
-  radialGradient.gradientStops.add(ColorStop(color: rgbx(0, 0, 0, 255), position: 1))
+  radialGradient.gradientStops.add(
+    ColorStop(color: rgbx(255, 255, 255, 255), position: 0))
+  radialGradient.gradientStops.add(
+    ColorStop(color: rgbx(0, 0, 0, 255), position: 1))
   ctx.fillStyle = radialGradient
   ctx.fillCircle(vec2(128.0, 128.0 + sin(float(frameCount)/10.0) * 20), 76.8)
 

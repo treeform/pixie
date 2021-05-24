@@ -1,4 +1,6 @@
-import winim/lean, pixie
+## This example show how to have real time pixie using win32 API.
+
+import pixie, winim/lean
 
 let
   w: int32 = 256
@@ -16,17 +18,21 @@ proc draw() =
   var linerGradient = Paint(kind: pkGradientLinear)
   linerGradient.gradientHandlePositions.add(vec2(0, 0))
   linerGradient.gradientHandlePositions.add(vec2(0, 256))
-  linerGradient.gradientStops.add(ColorStop(color: rgbx(0, 0, 0, 255), position: 0))
-  linerGradient.gradientStops.add(ColorStop(color: rgbx(255, 255, 255, 255), position: 1))
+  linerGradient.gradientStops.add(
+    ColorStop(color: rgbx(0, 0, 0, 255), position: 0))
+  linerGradient.gradientStops.add(
+    ColorStop(color: rgbx(255, 255, 255, 255), position: 1))
   ctx.fillStyle = linerGradient
   ctx.fillRect(0, 0, 256, 256)
 
-  var radialGradient  = Paint(kind: pkGradientRadial)
+  var radialGradient = Paint(kind: pkGradientRadial)
   radialGradient.gradientHandlePositions.add(vec2(128, 128))
   radialGradient.gradientHandlePositions.add(vec2(256, 128))
   radialGradient.gradientHandlePositions.add(vec2(128, 256))
-  radialGradient.gradientStops.add(ColorStop(color: rgbx(255, 255, 255, 255), position: 0))
-  radialGradient.gradientStops.add(ColorStop(color: rgbx(0, 0, 0, 255), position: 1))
+  radialGradient.gradientStops.add(
+    ColorStop(color: rgbx(255, 255, 255, 255), position: 0))
+  radialGradient.gradientStops.add(
+    ColorStop(color: rgbx(0, 0, 0, 255), position: 1))
   ctx.fillStyle = radialGradient
   ctx.fillCircle(vec2(128.0, 128.0 + sin(float(frameCount)/10.0) * 20), 76.8)
 
@@ -67,7 +73,8 @@ proc draw() =
   )
   discard ReleaseDC(hwnd, dc)
 
-proc WindowProc(hwnd: HWND, message: UINT, wParam: WPARAM, lParam: LPARAM): LRESULT {.stdcall.} =
+proc WindowProc(hwnd: HWND, message: UINT, wParam: WPARAM,
+    lParam: LPARAM): LRESULT {.stdcall.} =
   case message
   of WM_DESTROY:
     PostQuitMessage(0)
