@@ -408,6 +408,31 @@ block:
 
   ctx.image.writeFile("tests/images/context/clip_1e.png")
 
+
+block:
+  let ctx = newContext(newImage(300, 150))
+
+  ctx.save()
+
+  ctx.beginPath()
+  ctx.circle(100, 75, 50)
+  ctx.clip()
+
+  ctx.saveLayer()
+
+  ctx.fillStyle = "red"
+  ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
+
+  ctx.restore()
+  ctx.saveLayer()
+
+  ctx.fillStyle = "orange"
+  ctx.fillRect(0, 0, 100, 100)
+
+  ctx.restore() # Pop the layer
+
+  ctx.image.writeFile("tests/images/context/clip_1f.png")
+
 block:
   let ctx = newContext(newImage(300, 150))
 
