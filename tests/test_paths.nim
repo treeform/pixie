@@ -47,7 +47,7 @@ block:
     image = newImage(100, 100)
     pathStr = "M 10 10 L 90 90"
     color = rgba(255, 0, 0, 255)
-  image.strokePath(pathStr, color, 10)
+  image.strokePath(pathStr, color, strokeWidth=10)
   image.writeFile("tests/images/paths/pathStroke1.png")
 
 block:
@@ -55,7 +55,7 @@ block:
     image = newImage(100, 100)
     pathStr = "M 10 10 L 50 60 90 90"
     color = rgba(255, 0, 0, 255)
-  image.strokePath(pathStr, color, 10)
+  image.strokePath(pathStr, color, strokeWidth=10)
   image.writeFile("tests/images/paths/pathStroke2.png")
 
 block:

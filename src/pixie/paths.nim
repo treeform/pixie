@@ -41,12 +41,15 @@ const epsilon = 0.0001 * PI ## Tiny value used for some computations.
 when defined(release):
   {.push checks: off.}
 
-proc maxScale(m: Mat3): float32 =
-  ## What is the largest scale factor of this matrix?
-  max(
-    vec2(m[0, 0], m[0, 1]).length,
-    vec2(m[1, 0], m[1, 1]).length
-  )
+proc pixelScale(transform: Vec2 | Mat3): float32 =
+  ## What is the largest scale factor of this transform?
+  when type(transform) is Vec2:
+    return 1.0
+  else:
+    max(
+      vec2(transform[0, 0], transform[0, 1]).length,
+      vec2(transform[1, 0], transform[1, 1]).length
+    )
 
 proc isRelative(kind: PathCommandKind): bool =
   kind in {
@@ -1494,11 +1497,7 @@ proc fillPath*(
   blendMode = bmNormal
 ) =
   ## Fills a path.
-  when type(transform) is Mat3:
-    let pixelScale = transform.maxScale()
-  else:
-    let pixelScale = 1.0
-  var shapes = parseSomePath(path, pixelScale)
+  var shapes = parseSomePath(path, transform.pixelScale())
   shapes.transform(transform)
   image.fillShapes(shapes, color, windingRule, blendMode)
 
@@ -1517,11 +1516,7 @@ proc fillPath*(
   windingRule = wrNonZero
 ) =
   ## Fills a path.
-  when type(transform) is Mat3:
-    let pixelScale = transform.maxScale()
-  else:
-    let pixelScale = 1.0
-  var shapes = parseSomePath(path, pixelScale)
+  var shapes = parseSomePath(path, transform.pixelScale())
   shapes.transform(transform)
   mask.fillShapes(shapes, windingRule)
 
@@ -1561,80 +1556,9 @@ proc fillPath*(
   image.draw(fill, blendMode = paint.blendMode)
 
 proc strokePath*(
-  image: Image,
-  path: SomePath,
-  color: SomeColor,
-  strokeWidth = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
-  miterAngleLimit: float32 = degToRad(28.96),
-  dashes: seq[float32] = @[],
-  blendMode = bmNormal
-) =
-  ## Strokes a path.
-  let strokeShapes = strokeShapes(
-    parseSomePath(path),
-    strokeWidth,
-    lineCap,
-    lineJoin,
-    miterAngleLimit,
-    dashes
-  )
-  image.fillShapes(strokeShapes, color, wrNonZero, blendMode)
-
-proc strokePath*(
-  image: Image,
-  path: SomePath,
-  color: SomeColor,
-  transform: Vec2 | Mat3,
-  strokeWidth = 1.0.float32,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
-  miterAngleLimit: float32 = degToRad(28.96),
-  dashes: seq[float32] = @[],
-  blendMode = bmNormal,
-  forseme = false
-) =
-  ## Strokes a path.
-  when type(transform) is Mat3:
-    let pixelScale = transform.maxScale()
-  else:
-    let pixelScale = 1.0
-  var strokeShapes = strokeShapes(
-    parseSomePath(path, pixelScale),
-    strokeWidth,
-    lineCap,
-    lineJoin,
-    miterAngleLimit,
-    dashes
-  )
-  strokeShapes.transform(transform)
-  image.fillShapes(strokeShapes, color, wrNonZero, blendMode)
-
-proc strokePath*(
   mask: Mask,
   path: SomePath,
-  strokeWidth = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
-  miterAngleLimit: float32 = degToRad(28.96),
-  dashes: seq[float32] = @[]
-) =
-  ## Strokes a path.
-  let strokeShapes = strokeShapes(
-    parseSomePath(path),
-    strokeWidth,
-    lineCap,
-    lineJoin,
-    miterAngleLimit,
-    dashes
-  )
-  mask.fillShapes(strokeShapes, wrNonZero)
-
-proc strokePath*(
-  mask: Mask,
-  path: SomePath,
-  transform: Vec2 | Mat3,
+  transform: Vec2 | Mat3 = vec2(),
   strokeWidth = 1.0,
   lineCap = lcButt,
   lineJoin = ljMiter,
@@ -1642,12 +1566,8 @@ proc strokePath*(
   dashes: seq[float32] = @[],
 ) =
   ## Strokes a path.
-  when type(transform) is Mat3:
-    let pixelScale = transform.maxScale()
-  else:
-    let pixelScale = 1.0
   var strokeShapes = strokeShapes(
-    parseSomePath(path, pixelScale),
+    parseSomePath(path, transform.pixelScale()),
     strokeWidth,
     lineCap,
     lineJoin,
@@ -1668,19 +1588,18 @@ proc strokePath*(
   miterAngleLimit: float32 = degToRad(28.96),
   dashes: seq[float32] = @[]
 ) =
-  ## Fills a path.
+  ## Strokes a path.
   if paint.kind == pkSolid:
-    image.strokePath(
-      path,
-      paint.color,
-      transform,
+    var strokeShapes = strokeShapes(
+      parseSomePath(path, transform.pixelScale()),
       strokeWidth,
       lineCap,
       lineJoin,
       miterAngleLimit,
-      dashes,
-      forseme=true
+      dashes
     )
+    strokeShapes.transform(transform)
+    image.fillShapes(strokeShapes, paint.color, wrNonZero, blendMode = paint.blendMode)
     return
 
   let
