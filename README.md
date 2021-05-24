@@ -93,6 +93,14 @@ Q,q,T,t       | ✅            | quadratic to          |
 A,a           | ✅            | arc to                |
 z             | ✅            | close path            |
 
+### Realtime Examples
+
+Here are some examples of using Pixie for realtime rendering with some popular windowing libraries:
+
+* [examples/realtime_glfw.nim](examples/realtime_glfw.nim)
+* [examples/realtime_glut.nim](examples/realtime_glut.nim)
+* [examples/realtime_sdl.nim](examples/realtime_sdl.nim)
+* [examples/realtime_win32.nim](examples/realtime_win32.nim)
 
 ## Testing
 
