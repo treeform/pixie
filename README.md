@@ -84,13 +84,13 @@ Supported Mask Modes:
 
 Format        | Supported     | Description           |
 ------------- | ------------- | --------------------- |
-M,m           | ✅            | move to               |
-L,l           | ✅            | line to               |
-h,h           | ✅            | horizontal line to    |
-V,v           | ✅            | vertical line to      |
-C,c,S,s       | ✅            | cublic to             |
-Q,q,T,t       | ✅            | quadratic to          |
-A,a           | ✅            | arc to                |
+M m           | ✅            | move to               |
+L l           | ✅            | line to               |
+h h           | ✅            | horizontal line to    |
+V v           | ✅            | vertical line to      |
+C c S s       | ✅            | cublic to             |
+Q q T t       | ✅            | quadratic to          |
+A a           | ✅            | arc to                |
 z             | ✅            | close path            |
 
 ### Realtime Examples
