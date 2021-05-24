@@ -1612,7 +1612,8 @@ proc strokePath*(
       dashes
     )
     strokeShapes.transform(transform)
-    image.fillShapes(strokeShapes, paint.color, wrNonZero, blendMode = paint.blendMode)
+    image.fillShapes(
+      strokeShapes, paint.color, wrNonZero, blendMode = paint.blendMode)
     return
 
   let
