@@ -34,7 +34,10 @@ converter parseSomePaint*(paint: SomePaint): Paint {.inline.} =
   when type(paint) is string:
     Paint(kind: pkSolid, color: parseHtmlColor(paint).rgbx())
   elif type(paint) is SomeColor:
-    Paint(kind: pkSolid, color: paint.rgbx())
+    when type(paint) is ColorRGBX:
+      Paint(kind: pkSolid, color: paint)
+    else:
+      Paint(kind: pkSolid, color: paint.rgbx())
   elif type(paint) is Paint:
     paint
 

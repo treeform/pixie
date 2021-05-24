@@ -1,4 +1,4 @@
-import chroma, pixie, pixie/fileformats/png
+import chroma, pixie, pixie/fileformats/png, strformat
 
 block:
   let pathStr = """
@@ -47,7 +47,7 @@ block:
     image = newImage(100, 100)
     pathStr = "M 10 10 L 90 90"
     color = rgba(255, 0, 0, 255)
-  image.strokePath(pathStr, color, 10)
+  image.strokePath(pathStr, color, strokeWidth=10)
   image.writeFile("tests/images/paths/pathStroke1.png")
 
 block:
@@ -55,7 +55,7 @@ block:
     image = newImage(100, 100)
     pathStr = "M 10 10 L 50 60 90 90"
     color = rgba(255, 0, 0, 255)
-  image.strokePath(pathStr, color, 10)
+  image.strokePath(pathStr, color, strokeWidth=10)
   image.writeFile("tests/images/paths/pathStroke2.png")
 
 block:
@@ -255,6 +255,68 @@ block:
   image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcSquare, ljBevel)
 
   image.writeFile("tests/images/paths/lcSquare.png")
+
+block:
+  let
+    image = newImage(60, 120)
+    path = parsePath("M 0 0 L 50 0")
+  image.fill(rgba(255, 255, 255, 255))
+
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), vec2(5, 5), 10, lcButt, ljBevel,
+  )
+
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), vec2(5, 25), 10, lcButt, ljBevel,
+    dashes = @[2.float32,2]
+  )
+
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), vec2(5, 45), 10, lcButt, ljBevel,
+    dashes = @[4.float32,4]
+  )
+
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), vec2(5, 65), 10, lcButt, ljBevel,
+    dashes = @[2.float32, 4, 6, 2]
+  )
+
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), vec2(5, 85), 10, lcButt, ljBevel,
+    dashes = @[1.float32]
+  )
+
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), vec2(5, 105), 10, lcButt, ljBevel,
+    dashes = @[1.float32, 2, 3, 4, 5, 6, 7, 8, 9]
+  )
+
+  image.writeFile("tests/images/paths/dashes.png")
+
+block:
+  proc miterTest(angle, limit: float32) =
+    let
+      image = newImage(60, 60)
+    image.fill(rgba(255, 255, 255, 255))
+    var path: Path
+    path.moveTo(-20, 0)
+    path.lineTo(0, 0)
+    let th = angle.float32.degToRad() + PI/2
+    path.lineTo(sin(th)*20, cos(th)*20)
+
+    image.strokePath(
+      path, rgba(0, 0, 0, 255), vec2(30, 30), 8, lcButt, ljMiter,
+      miterLimit = limit
+    )
+    image.writeFile(&"tests/images/paths/miterLimit_{angle.int}deg_{limit:0.2f}num.png")
+
+  miterTest(10, 2)
+  miterTest(145, 2)
+  miterTest(155, 2)
+  miterTest(165, 2)
+  miterTest(165, 10)
+  miterTest(145, 3.32)
+  miterTest(145, 3.33)
 
 # Potential error cases, ensure they do not crash
 

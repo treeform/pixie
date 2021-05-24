@@ -193,7 +193,11 @@ proc clearRect*(ctx: Context, rect: Rect) =
   ## Erases the pixels in a rectangular area.
   var path: Path
   path.rect(rect)
-  ctx.image.fillPath(path, rgbx(0, 0, 0, 0), ctx.mat, blendMode = bmOverwrite)
+  ctx.image.fillPath(
+    path,
+    Paint(kind: pkSolid, color:rgbx(0, 0, 0, 0), blendMode: bmOverwrite),
+    ctx.mat
+  )
 
 proc clearRect*(ctx: Context, x, y, width, height: float32) {.inline.} =
   ## Erases the pixels in a rectangular area.

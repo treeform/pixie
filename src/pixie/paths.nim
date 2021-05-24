@@ -41,12 +41,15 @@ const epsilon = 0.0001 * PI ## Tiny value used for some computations.
 when defined(release):
   {.push checks: off.}
 
-proc maxScale(m: Mat3): float32 =
-  ## What is the largest scale factor of this matrix?
-  max(
-    vec2(m[0, 0], m[0, 1]).length,
-    vec2(m[1, 0], m[1, 1]).length
-  )
+proc pixelScale(transform: Vec2 | Mat3): float32 =
+  ## What is the largest scale factor of this transform?
+  when type(transform) is Vec2:
+    return 1.0
+  else:
+    max(
+      vec2(transform[0, 0], transform[0, 1]).length,
+      vec2(transform[1, 0], transform[1, 1]).length
+    )
 
 proc isRelative(kind: PathCommandKind): bool =
   kind in {
@@ -1317,15 +1320,26 @@ proc fillShapes(
         mask.setValueUnsafe(x, y, blended)
       inc x
 
+proc miterLimitToAngle*(limit: float32): float32 =
+  ## Converts milter-limit-ratio to miter-limit-angle.
+  arcsin(1 / limit) * 2
+
+proc angleToMiterLimit*(angle: float32): float32 =
+  ## Converts miter-limit-angle to milter-limit-ratio.
+  1 / sin(angle / 2)
+
 proc strokeShapes(
   shapes: seq[seq[Vec2]],
   strokeWidth: float32,
   lineCap: LineCap,
   lineJoin: LineJoin,
-  miterAngleLimit = degToRad(28.96)
+  miterLimit: float32,
+  dashes: seq[float32]
 ): seq[seq[Vec2]] =
   if strokeWidth == 0:
     return
+
+  let miterAngleLimit = miterLimitToAngle(miterLimit)
 
   let halfStroke = strokeWidth / 2
 
@@ -1413,7 +1427,25 @@ proc strokeShapes(
         pos = shape[i]
         prevPos = shape[i - 1]
 
-      shapeStroke.add(makeRect(prevPos, pos))
+      if dashes.len > 0:
+        var dashes = dashes
+        if dashes.len mod 2 != 0:
+          dashes.add(dashes[^1])
+        var distance = dist(prevPos, pos)
+        let dir = dir(pos, prevPos)
+        var currPos = prevPos
+        block dashLoop:
+          while true:
+            for i, d in dashes:
+              if i mod 2 == 0:
+                let d = min(distance, d)
+                shapeStroke.add(makeRect(currPos, currPos + dir * d))
+              currPos += dir * d
+              distance -= d
+              if distance <= 0:
+                break dashLoop
+      else:
+        shapeStroke.add(makeRect(prevPos, pos))
 
       # If we need a line join
       if i < shape.len - 1:
@@ -1460,52 +1492,13 @@ proc transform(shapes: var seq[seq[Vec2]], transform: Vec2 | Mat3) =
           segment = transform * segment
 
 proc fillPath*(
-  image: Image,
-  path: SomePath,
-  color: SomeColor,
-  windingRule = wrNonZero,
-  blendMode = bmNormal
-) {.inline.} =
-  ## Fills a path.
-  image.fillShapes(parseSomePath(path), color, windingRule, blendMode)
-
-proc fillPath*(
-  image: Image,
-  path: SomePath,
-  color: SomeColor,
-  transform: Vec2 | Mat3,
-  windingRule = wrNonZero,
-  blendMode = bmNormal
-) =
-  ## Fills a path.
-  when type(transform) is Mat3:
-    let pixelScale = transform.maxScale()
-  else:
-    let pixelScale = 1.0
-  var shapes = parseSomePath(path, pixelScale)
-  shapes.transform(transform)
-  image.fillShapes(shapes, color, windingRule, blendMode)
-
-proc fillPath*(
   mask: Mask,
   path: SomePath,
-  windingRule = wrNonZero
-) {.inline.} =
-  ## Fills a path.
-  mask.fillShapes(parseSomePath(path), windingRule)
-
-proc fillPath*(
-  mask: Mask,
-  path: SomePath,
-  transform: Vec2 | Mat3,
+  transform: Vec2 | Mat3 = vec2(),
   windingRule = wrNonZero
 ) =
   ## Fills a path.
-  when type(transform) is Mat3:
-    let pixelScale = transform.maxScale()
-  else:
-    let pixelScale = 1.0
-  var shapes = parseSomePath(path, pixelScale)
+  var shapes = parseSomePath(path, transform.pixelScale())
   shapes.transform(transform)
   mask.fillShapes(shapes, windingRule)
 
@@ -1518,7 +1511,9 @@ proc fillPath*(
 ) =
   ## Fills a path.
   if paint.kind == pkSolid:
-    image.fillPath(path, paint.color, transform, windingRule)
+    var shapes = parseSomePath(path, transform.pixelScale())
+    shapes.transform(transform)
+    image.fillShapes(shapes, paint.color, windingRule, paint.blendMode)
     return
 
   let
@@ -1545,69 +1540,23 @@ proc fillPath*(
   image.draw(fill, blendMode = paint.blendMode)
 
 proc strokePath*(
-  image: Image,
+  mask: Mask,
   path: SomePath,
-  color: SomeColor,
+  transform: Vec2 | Mat3 = vec2(),
   strokeWidth = 1.0,
   lineCap = lcButt,
   lineJoin = ljMiter,
-  blendMode = bmNormal
+  miterLimit: float32 = 4,
+  dashes: seq[float32] = @[],
 ) =
   ## Strokes a path.
-  let strokeShapes = strokeShapes(
-    parseSomePath(path), strokeWidth, lineCap, lineJoin
-  )
-  image.fillShapes(strokeShapes, color, wrNonZero, blendMode)
-
-proc strokePath*(
-  image: Image,
-  path: SomePath,
-  color: SomeColor,
-  transform: Vec2 | Mat3,
-  strokeWidth = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
-  blendMode = bmNormal
-) =
-  ## Strokes a path.
-  when type(transform) is Mat3:
-    let pixelScale = transform.maxScale()
-  else:
-    let pixelScale = 1.0
   var strokeShapes = strokeShapes(
-    parseSomePath(path, pixelScale), strokeWidth, lineCap, lineJoin
-  )
-  strokeShapes.transform(transform)
-  image.fillShapes(strokeShapes, color, wrNonZero, blendMode)
-
-proc strokePath*(
-  mask: Mask,
-  path: SomePath,
-  strokeWidth = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter
-) =
-  ## Strokes a path.
-  let strokeShapes = strokeShapes(
-    parseSomePath(path), strokeWidth, lineCap, lineJoin
-  )
-  mask.fillShapes(strokeShapes, wrNonZero)
-
-proc strokePath*(
-  mask: Mask,
-  path: SomePath,
-  transform: Vec2 | Mat3,
-  strokeWidth = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter
-) =
-  ## Strokes a path.
-  when type(transform) is Mat3:
-    let pixelScale = transform.maxScale()
-  else:
-    let pixelScale = 1.0
-  var strokeShapes = strokeShapes(
-    parseSomePath(path, pixelScale), strokeWidth, lineCap, lineJoin
+    parseSomePath(path, transform.pixelScale()),
+    strokeWidth,
+    lineCap,
+    lineJoin,
+    miterLimit,
+    dashes
   )
   strokeShapes.transform(transform)
   mask.fillShapes(strokeShapes, wrNonZero)
@@ -1619,20 +1568,38 @@ proc strokePath*(
   transform: Vec2 | Mat3 = vec2(),
   strokeWidth = 1.0,
   lineCap = lcButt,
-  lineJoin = ljMiter
+  lineJoin = ljMiter,
+  miterLimit: float32 = 4,
+  dashes: seq[float32] = @[]
 ) =
-  ## Fills a path.
+  ## Strokes a path.
   if paint.kind == pkSolid:
-    image.strokePath(
-      path, paint.color, transform, strokeWidth, lineCap, lineJoin
+    var strokeShapes = strokeShapes(
+      parseSomePath(path, transform.pixelScale()),
+      strokeWidth,
+      lineCap,
+      lineJoin,
+      miterLimit,
+      dashes
     )
+    strokeShapes.transform(transform)
+    image.fillShapes(
+      strokeShapes, paint.color, wrNonZero, blendMode = paint.blendMode)
     return
 
   let
     mask = newMask(image.width, image.height)
     fill = newImage(image.width, image.height)
 
-  mask.strokePath(parseSomePath(path), transform)
+  mask.strokePath(
+    parseSomePath(path),
+    transform,
+    strokeWidth,
+    lineCap,
+    lineJoin,
+    miterLimit,
+    dashes
+  )
 
   case paint.kind:
     of pkSolid:

@@ -1,6 +1,6 @@
 ## Load SVG files.
 
-import chroma, pixie/common, pixie/images, pixie/paths, strutils, vmath,
+import chroma, pixie/common, pixie/images, pixie/paths, pixie/paints, strutils, vmath,
     xmlparser, xmltree
 
 const
