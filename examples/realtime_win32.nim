@@ -38,7 +38,7 @@ proc draw() =
 
   inc frameCount
 
-  # Draw image pixels onto glfw-win32-window without openGL
+  # Draw image pixels onto win32 window.
   let
     w = screen.width.int32
     h = screen.height.int32
@@ -52,6 +52,7 @@ proc draw() =
   info.bmiHeader.biSizeImage = w * h * 4
   info.bmiHeader.biCompression = BI_RGB
   var bgrBuffer = newSeq[uint8](screen.data.len * 4)
+  # Convert to BGRA.
   for i, c in screen.data:
     bgrBuffer[i*4+0] = c.b
     bgrBuffer[i*4+1] = c.g
@@ -105,8 +106,17 @@ proc main() =
     MessageBox(0, "This program requires Windows NT!", appName, MB_ICONERROR)
     return
 
+  # Figure out the right size of the window we want.
+  var rect: lean.RECT
+  rect.left   = 0
+  rect.top    = 0
+  rect.right  = w
+  rect.bottom = h
+  AdjustWindowRectEx(cast[LPRECT](rect.addr), WS_OVERLAPPEDWINDOW, 0, 0)
+
+  # Open the window.
   hwnd = CreateWindow(appName, "Win32/Pixie", WS_OVERLAPPEDWINDOW,
-    CW_USEDEFAULT, CW_USEDEFAULT, w, h,
+    CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top,
     0, 0, hInstance, nil)
 
   ShowWindow(hwnd, SW_SHOW)
