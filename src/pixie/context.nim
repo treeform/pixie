@@ -67,18 +67,21 @@ proc state(ctx: Context): ContextState =
   result.mask = if ctx.mask != nil: ctx.mask.copy() else: nil
 
 proc save*(ctx: Context) {.inline.} =
-  ## Saves the entire state of the canvas by pushing the current state onto
+  ## Saves the entire state of the context by pushing the current state onto
   ## a stack.
   ctx.stateStack.add(ctx.state())
 
 proc saveLayer*(ctx: Context) =
+  ## Saves the entire state of the context by pushing the current state onto
+  ## a stack and allocates a new image layer for subsequent drawing. Calling
+  ## restore blends the current layer image onto the prior layer or root image.
   var state = ctx.state()
   state.layer = ctx.layer
   ctx.stateStack.add(state)
   ctx.layer = newImage(ctx.image.width, ctx.image.height)
 
 proc restore*(ctx: Context) =
-  ## Restores the most recently saved canvas state by popping the top entry
+  ## Restores the most recently saved context state by popping the top entry
   ## in the drawing state stack. If there is no saved state, this method does
   ## nothing.
   if ctx.stateStack.len == 0:
@@ -418,12 +421,12 @@ proc translate*(ctx: Context, x, y: float32) {.inline.} =
   ctx.mat = ctx.mat * translate(vec2(x, y))
 
 proc scale*(ctx: Context, v: Vec2) {.inline.} =
-  ## Adds a scaling transformation to the canvas units horizontally and/or
+  ## Adds a scaling transformation to the context units horizontally and/or
   ## vertically.
   ctx.mat = ctx.mat * scale(v)
 
 proc scale*(ctx: Context, x, y: float32) {.inline.} =
-  ## Adds a scaling transformation to the canvas units horizontally and/or
+  ## Adds a scaling transformation to the context units horizontally and/or
   ## vertically.
   ctx.mat = ctx.mat * scale(vec2(x, y))
 
