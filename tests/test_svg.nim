@@ -12,7 +12,8 @@ const files = [
   "quad01",
   "Ghostscript_Tiger",
   "scale",
-  "miterlimit"
+  "miterlimit",
+  "dashes"
 ]
 
 for file in files:

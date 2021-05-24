@@ -14,6 +14,7 @@ type Ctx = object
   strokeLineCap: LineCap
   strokeLineJoin: LineJoin
   strokeMiterLimit: float32
+  strokeDashArray: seq[float32]
   transform: Mat3
   shouldStroke: bool
 
@@ -43,6 +44,7 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
     strokeLineCap = node.attr("stroke-linecap")
     strokeLineJoin = node.attr("stroke-linejoin")
     strokeMiterLimit = node.attr("stroke-miterlimit")
+    strokeDashArray = node.attr("stroke-dasharray")
     transform = node.attr("transform")
     style = node.attr("style")
 
@@ -70,6 +72,9 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
       of "stroke-miterlimit":
         if strokeMiterLimit.len == 0:
           strokeMiterLimit = parts[1].strip()
+      of "stroke-dasharray":
+        if strokeDashArray.len == 0:
+          strokeDashArray = parts[1].strip()
 
   if fillRule == "":
     discard # Inherit
@@ -148,6 +153,13 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
     discard
   else:
     result.strokeMiterLimit = parseFloat(strokeMiterLimit)
+
+  if strokeDashArray == "":
+    discard
+  else:
+    var values = strokeDashArray.replace(',', ' ').split(' ')
+    for value in values:
+      result.strokeDashArray.add(parseFloat(value))
 
   if transform == "":
     discard # Inherit
@@ -230,7 +242,8 @@ proc stroke(img: Image, ctx: Ctx, path: Path) {.inline.} =
     ctx.stroke,
     ctx.transform,
     ctx.strokeWidth,
-    miterLimit = ctx.strokeMiterLimit
+    miterLimit = ctx.strokeMiterLimit,
+    dashes = ctx.strokeDashArray
   )
 
 proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
@@ -270,10 +283,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     var path: Path
     path.moveTo(x1, y1)
     path.lineTo(x2, y2)
-    path.closePath()
 
-    if ctx.fill != ColorRGBX():
-      img.fill(ctx, path)
     if ctx.shouldStroke:
       img.stroke(ctx, path)
 
@@ -305,11 +315,13 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
       path.lineTo(vecs[i])
 
     # The difference between polyline and polygon is whether we close the path
+    # and fill or not
     if node.tag == "polygon":
       path.closePath()
 
-    if ctx.fill != ColorRGBX():
-      img.fill(ctx, path)
+      if ctx.fill != ColorRGBX():
+        img.fill(ctx, path)
+
     if ctx.shouldStroke:
       img.stroke(ctx, path)
 

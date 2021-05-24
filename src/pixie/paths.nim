@@ -1424,15 +1424,16 @@ proc strokeShapes(
           shape[0]
         ))
 
+    var dashes = dashes
+    if dashes.len mod 2 != 0:
+      dashes.add(dashes)
+
     for i in 1 ..< shape.len:
       let
         pos = shape[i]
         prevPos = shape[i - 1]
 
       if dashes.len > 0:
-        var dashes = dashes
-        if dashes.len mod 2 != 0:
-          dashes.add(dashes)
         var distance = dist(prevPos, pos)
         let dir = dir(pos, prevPos)
         var currPos = prevPos
