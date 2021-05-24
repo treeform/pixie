@@ -1546,7 +1546,7 @@ proc strokePath*(
   strokeWidth = 1.0,
   lineCap = lcButt,
   lineJoin = ljMiter,
-  miterLimit: float32 = 10,
+  miterLimit: float32 = 4,
   dashes: seq[float32] = @[],
 ) =
   ## Strokes a path.
@@ -1569,7 +1569,7 @@ proc strokePath*(
   strokeWidth = 1.0,
   lineCap = lcButt,
   lineJoin = ljMiter,
-  miterLimit: float32 = 10,
+  miterLimit: float32 = 4,
   dashes: seq[float32] = @[]
 ) =
   ## Strokes a path.
