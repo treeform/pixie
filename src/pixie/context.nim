@@ -17,6 +17,7 @@ type
     font*: Font
     textAlign*: HAlignMode
     path: Path
+    lineDash: seq[float32]
     mat: Mat3
     mask: Mask
     layer: Image
@@ -30,6 +31,7 @@ type
     lineJoin: LineJoin
     font: Font
     textAlign: HAlignMode
+    lineDash: seq[float32]
     mat: Mat3
     mask: Mask
     layer: Image
@@ -60,6 +62,7 @@ proc state(ctx: Context): ContextState =
   result.lineJoin = ctx.lineJoin
   result.font = ctx.font
   result.textAlign = ctx.textAlign
+  result.lineDash = ctx.lineDash
   result.mat = ctx.mat
   result.mask = if ctx.mask != nil: ctx.mask.copy() else: nil
 
@@ -94,6 +97,7 @@ proc restore*(ctx: Context) =
   ctx.lineJoin = state.lineJoin
   ctx.font = state.font
   ctx.textAlign = state.textAlign
+  ctx.lineDash = state.lineDash
   ctx.mat = state.mat
   ctx.mask = state.mask
   ctx.layer = state.layer
@@ -124,7 +128,8 @@ proc stroke(ctx: Context, image: Image, path: Path) {.inline.} =
     ctx.lineWidth,
     ctx.lineCap,
     ctx.lineJoin,
-    ctx.miterLimit
+    ctx.miterLimit,
+    ctx.lineDash
   )
 
 proc fillText(ctx: Context, image: Image, text: string, at: Vec2) {.inline.} =
@@ -162,7 +167,8 @@ proc strokeText(ctx: Context, image: Image, text: string, at: Vec2) {.inline.} =
     hAlign = ctx.textAlign,
     lineCap = ctx.lineCap,
     lineJoin = ctx.lineJoin,
-    miterLimit = ctx.miterLimit
+    miterLimit = ctx.miterLimit,
+    dashes = ctx.lineDash
   )
 
 proc beginPath*(ctx: Context) {.inline.} =
@@ -374,6 +380,12 @@ proc measureText*(ctx: Context, text: string): TextMetrics =
 
   let bounds = typeset(ctx.font, text).computeBounds()
   result.width = bounds.x
+
+proc getLineDash*(ctx: Context): seq[float32] {.inline.} =
+  ctx.lineDash
+
+proc setLineDash*(ctx: Context, lineDash: seq[float32]) {.inline.} =
+  ctx.lineDash = lineDash
 
 proc getTransform*(ctx: Context): Mat3 {.inline.} =
   ## Retrieves the current transform matrix being applied to the context.

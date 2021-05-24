@@ -1432,7 +1432,7 @@ proc strokeShapes(
       if dashes.len > 0:
         var dashes = dashes
         if dashes.len mod 2 != 0:
-          dashes.add(dashes[^1])
+          dashes.add(dashes)
         var distance = dist(prevPos, pos)
         let dir = dir(pos, prevPos)
         var currPos = prevPos
@@ -1549,7 +1549,7 @@ proc strokePath*(
   lineCap = lcButt,
   lineJoin = ljMiter,
   miterLimit = defaultMiterLimit,
-  dashes: seq[float32] = @[],
+  dashes: seq[float32] = @[]
 ) =
   ## Strokes a path.
   var strokeShapes = strokeShapes(
