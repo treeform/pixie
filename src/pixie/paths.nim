@@ -1422,15 +1422,18 @@ proc strokeShapes(
         if dashes.len mod 2 != 0:
           dashes.add(dashes[^1])
         var distance = dist(prevPos, pos)
-        let dir = -dir(prevPos, pos)
-        var curPos = prevPos
-        while distance > 0:
-          for i, d in dashes:
-            if i mod 2 == 0:
-              let d = min(distance, d)
-              shapeStroke.add(makeRect(curPos, curPos + dir * d))
-            curPos += dir * d
-            distance -= d
+        let dir = dir(pos, prevPos)
+        var currPos = prevPos
+        block dashLoop:
+          while true:
+            for i, d in dashes:
+              if i mod 2 == 0:
+                let d = min(distance, d)
+                shapeStroke.add(makeRect(currPos, currPos + dir * d))
+              currPos += dir * d
+              distance -= d
+              if distance <= 0:
+                break dashLoop
       else:
         shapeStroke.add(makeRect(prevPos, pos))
 
