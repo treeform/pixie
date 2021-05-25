@@ -136,6 +136,11 @@ proc parsePath*(path: string): Path =
             "Invalid path, wrong number of parameters"
           )
         for batch in 0 ..< numbers.len div paramCount:
+          if batch > 0:
+            if kind == Move:
+              kind = Line
+            elif kind == RMove:
+              kind = RLine
           result.commands.add(PathCommand(
             kind: kind,
             numbers: numbers[batch * paramCount ..< (batch + 1) * paramCount]
@@ -1523,7 +1528,11 @@ proc fillPath*(
     mask = newMask(image.width, image.height)
     fill = newImage(image.width, image.height)
 
-  mask.fillPath(parseSomePath(path), transform, windingRule)
+  mask.fillPath(
+    parseSomePath(path, transform.pixelScale()),
+    transform,
+    windingRule
+  )
 
   case paint.kind:
     of pkSolid:
@@ -1595,7 +1604,7 @@ proc strokePath*(
     fill = newImage(image.width, image.height)
 
   mask.strokePath(
-    parseSomePath(path),
+    parseSomePath(path, transform.pixelScale()),
     transform,
     strokeWidth,
     lineCap,

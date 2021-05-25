@@ -5,7 +5,14 @@ block:
   m 1 2 3 4 5 6
   """
   let path = parsePath(pathStr)
-  doAssert $path == "m1 2 m3 4 m5 6"
+  doAssert $path == "m1 2 l3 4 l5 6"
+
+block:
+  let pathStr = """
+  l 1 2 3 4 5 6
+  """
+  let path = parsePath(pathStr)
+  doAssert $path == "l1 2 l3 4 l5 6"
 
 block:
   let pathStr = """
