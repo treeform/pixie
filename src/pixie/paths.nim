@@ -34,7 +34,7 @@ type
     commands*: seq[PathCommand]
     start, at: Vec2 # Maintained by moveTo, lineTo, etc. Used by arcTo.
 
-  SomePath* = Path | string | seq[seq[Vec2]]
+  SomePath* = Path | string
 
 const
   epsilon = 0.0001 * PI ## Tiny value used for some computations.
@@ -604,7 +604,7 @@ proc polygon*(path: var Path, pos: Vec2, size: float32, sides: int) {.inline.} =
   ## Adds a n-sided regular polygon at (x, y) with the parameter size.
   path.polygon(pos.x, pos.y, size, sides)
 
-proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
+proc commandsToShapes(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
   ## Converts SVG-like commands to line segments.
   var
     start, at: Vec2
@@ -1164,14 +1164,6 @@ proc fillShapes(
     stopY = min(image.height, (bounds.y + bounds.h).int)
     blender = blendMode.blender()
 
-  when defined(amd64) and not defined(pixieNoSimd):
-    let
-      blenderSimd = blendMode.blenderSimd()
-      first32 = cast[M128i]([uint32.high, 0, 0, 0]) # First 32 bits
-      oddMask = mm_set1_epi16(cast[int16](0xff00))
-      div255 = mm_set1_epi16(cast[int16](0x8081))
-      vColor = mm_set1_epi32(cast[int32](rgbx))
-
   var
     coverages = newSeq[uint8](image.width)
     hits = newSeq[(float32, int16)](4)
@@ -1190,51 +1182,58 @@ proc fillShapes(
     # Apply the coverage and blend
     var x = startX
     when defined(amd64) and not defined(pixieNoSimd):
-      # When supported, SIMD blend as much as possible
-      for _ in countup(x, image.width - 16, 4):
-        var coverage = mm_loadu_si128(coverages[x].addr)
-        coverage = mm_and_si128(coverage, first32)
-
+      if blendMode.hasSimdBlender():
+        # When supported, SIMD blend as much as possible
         let
-          index = image.dataIndex(x, y)
-          eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
-        if mm_movemask_epi8(eqZero) != 0xffff:
-          # If the coverages are not all zero
-          if mm_movemask_epi8(mm_cmpeq_epi32(coverage, first32)) == 0xffff:
-            # Coverages are all 255
-            if rgbx.a == 255 and blendMode == bmNormal:
-              mm_storeu_si128(image.data[index].addr, vColor)
+          blenderSimd = blendMode.blenderSimd()
+          first32 = cast[M128i]([uint32.high, 0, 0, 0]) # First 32 bits
+          oddMask = mm_set1_epi16(cast[int16](0xff00))
+          div255 = mm_set1_epi16(cast[int16](0x8081))
+          vColor = mm_set1_epi32(cast[int32](rgbx))
+        for _ in countup(x, image.width - 16, 4):
+          var coverage = mm_loadu_si128(coverages[x].addr)
+          coverage = mm_and_si128(coverage, first32)
+
+          let
+            index = image.dataIndex(x, y)
+            eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
+          if mm_movemask_epi8(eqZero) != 0xffff:
+            # If the coverages are not all zero
+            if mm_movemask_epi8(mm_cmpeq_epi32(coverage, first32)) == 0xffff:
+              # Coverages are all 255
+              if rgbx.a == 255 and blendMode == bmNormal:
+                mm_storeu_si128(image.data[index].addr, vColor)
+              else:
+                let backdrop = mm_loadu_si128(image.data[index].addr)
+                mm_storeu_si128(
+                  image.data[index].addr,
+                  blenderSimd(backdrop, vColor)
+                )
             else:
+              # Coverages are not all 255
+              coverage = unpackAlphaValues(coverage)
+              # Shift the coverages from `a` to `g` and `a` for multiplying
+              coverage = mm_or_si128(coverage, mm_srli_epi32(coverage, 16))
+
+              var
+                source = vColor
+                sourceEven = mm_slli_epi16(source, 8)
+                sourceOdd = mm_and_si128(source, oddMask)
+
+              sourceEven = mm_mulhi_epu16(sourceEven, coverage)
+              sourceOdd = mm_mulhi_epu16(sourceOdd, coverage)
+
+              sourceEven = mm_srli_epi16(mm_mulhi_epu16(sourceEven, div255), 7)
+              sourceOdd = mm_srli_epi16(mm_mulhi_epu16(sourceOdd, div255), 7)
+
+              source = mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
+
               let backdrop = mm_loadu_si128(image.data[index].addr)
               mm_storeu_si128(
                 image.data[index].addr,
-                blenderSimd(backdrop, vColor)
+                blenderSimd(backdrop, source)
               )
-          else:
-            # Coverages are not all 255
-            coverage = unpackAlphaValues(coverage)
-            # Shift the coverages from `a` to `g` and `a` for multiplying
-            coverage = mm_or_si128(coverage, mm_srli_epi32(coverage, 16))
-
-            var
-              source = vColor
-              sourceEven = mm_slli_epi16(source, 8)
-              sourceOdd = mm_and_si128(source, oddMask)
-
-            sourceEven = mm_mulhi_epu16(sourceEven, coverage)
-            sourceOdd = mm_mulhi_epu16(sourceOdd, coverage)
-
-            sourceEven = mm_srli_epi16(mm_mulhi_epu16(sourceEven, div255), 7)
-            sourceOdd = mm_srli_epi16(mm_mulhi_epu16(sourceOdd, div255), 7)
-
-            source = mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
-
-            let backdrop = mm_loadu_si128(image.data[index].addr)
-            mm_storeu_si128(
-              image.data[index].addr,
-              blenderSimd(backdrop, source)
-            )
-        x += 4
+          x += 4
 
     while x < image.width:
       if x + 8 <= coverages.len:
@@ -1328,11 +1327,11 @@ proc fillShapes(
       inc x
 
 proc miterLimitToAngle*(limit: float32): float32 =
-  ## Converts milter-limit-ratio to miter-limit-angle.
+  ## Converts miter-limit-ratio to miter-limit-angle.
   arcsin(1 / limit) * 2
 
 proc angleToMiterLimit*(angle: float32): float32 =
-  ## Converts miter-limit-angle to milter-limit-ratio.
+  ## Converts miter-limit-angle to miter-limit-ratio.
   1 / sin(angle / 2)
 
 proc strokeShapes(
@@ -1528,11 +1527,7 @@ proc fillPath*(
     mask = newMask(image.width, image.height)
     fill = newImage(image.width, image.height)
 
-  mask.fillPath(
-    parseSomePath(path, transform.pixelScale()),
-    transform,
-    windingRule
-  )
+  mask.fillPath(path, transform, windingRule)
 
   case paint.kind:
     of pkSolid:
@@ -1604,7 +1599,7 @@ proc strokePath*(
     fill = newImage(image.width, image.height)
 
   mask.strokePath(
-    parseSomePath(path, transform.pixelScale()),
+    path,
     transform,
     strokeWidth,
     lineCap,

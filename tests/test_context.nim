@@ -515,3 +515,19 @@ block:
   drawDashedLine(@[12.float32, 3, 3]);
 
   image.writeFile("tests/images/context/setLineDash_1.png")
+
+block:
+  let
+    image = newImage(300, 150)
+    ctx = newContext(image)
+
+  image.fill(rgba(255, 255, 255, 255))
+
+  var paint = Paint(kind: pkSolid, color: rgba(0, 0, 255, 255))
+  paint.blendMode = bmExclusion
+
+  ctx.fillStyle = paint
+
+  ctx.fillRect(10, 10, 100, 100)
+
+  image.writeFile("tests/images/context/blendmode_1.png")
