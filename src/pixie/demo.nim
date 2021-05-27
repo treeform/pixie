@@ -1,7 +1,9 @@
 import opengl, pixie, pixie/context
-import staticglfw except Image
 
 export pixie
+
+import staticglfw except Image
+
 export staticglfw except Image
 
 var
