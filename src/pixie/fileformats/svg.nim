@@ -36,6 +36,13 @@ proc initCtx(): Ctx =
 proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
   result = inherited
 
+  proc splitArgs(s: string): seq[string] =
+    # Handles (1,1) or (1 1) or (1, 1) or (1,1 2,2) etc
+    let tmp = s.replace(',', ' ').split(' ')
+    for entry in tmp:
+      if entry.len > 0:
+        result.add(entry)
+
   var
     fillRule = node.attr("fill-rule")
     fill = node.attr("fill")
@@ -157,7 +164,7 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
   if strokeDashArray == "":
     discard
   else:
-    var values = strokeDashArray.replace(',', ' ').split(' ')
+    var values = splitArgs(strokeDashArray)
     for value in values:
       result.strokeDashArray.add(parseFloat(value))
 
@@ -178,55 +185,46 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
       remaining = remaining[index + 1 .. ^1]
 
       if f.startsWith("matrix("):
-        let arr =
-          if f.contains(","):
-            f[7 .. ^2].split(",")
-          else:
-            f[7 .. ^2].split(" ")
+        let arr = splitArgs(f[7 .. ^2])
         if arr.len != 6:
           failInvalidTransform(transform)
         var m = mat3()
-        m[0, 0] = parseFloat(arr[0].strip())
-        m[0, 1] = parseFloat(arr[1].strip())
-        m[1, 0] = parseFloat(arr[2].strip())
-        m[1, 1] = parseFloat(arr[3].strip())
-        m[2, 0] = parseFloat(arr[4].strip())
-        m[2, 1] = parseFloat(arr[5].strip())
+        m[0, 0] = parseFloat(arr[0])
+        m[0, 1] = parseFloat(arr[1])
+        m[1, 0] = parseFloat(arr[2])
+        m[1, 1] = parseFloat(arr[3])
+        m[2, 0] = parseFloat(arr[4])
+        m[2, 1] = parseFloat(arr[5])
         result.transform = result.transform * m
       elif f.startsWith("translate("):
         let
-          components = f[10 .. ^2].split(" ")
-          tx = parseFloat(components[0].strip())
+          components = splitArgs(f[10 .. ^2])
+          tx = parseFloat(components[0])
           ty =
-            if components[1].len == 0:
+            if components.len == 1:
               0.0
             else:
-              parseFloat(components[1].strip())
+              parseFloat(components[1])
         result.transform = result.transform * translate(vec2(tx, ty))
       elif f.startsWith("rotate("):
         let
-          values = f[7 .. ^2].split(" ")
-          angle: float32 = parseFloat(values[0].strip()) * -PI / 180
+          values = splitArgs(f[7 .. ^2])
+          angle: float32 = parseFloat(values[0]) * -PI / 180
         var cx, cy: float32
         if values.len > 1:
-          cx = parseFloat(values[1].strip())
+          cx = parseFloat(values[1])
         if values.len > 2:
-          cy = parseFloat(values[2].strip())
+          cy = parseFloat(values[2])
         let center = vec2(cx, cy)
         result.transform = result.transform *
           translate(center) * rotate(angle) * translate(-center)
       elif f.startsWith("scale("):
         let
-          values =
-            if f.contains(","):
-              f[6 .. ^2].split(",")
-            else:
-              f[6 .. ^2].split(" ")
-        let
-          sx: float32 = parseFloat(values[0].strip())
+          values = splitArgs(f[6 .. ^2])
+          sx: float32 = parseFloat(values[0])
           sy: float32 =
             if values.len > 1:
-              parseFloat(values[1].strip())
+              parseFloat(values[1])
             else:
               sx
         result.transform = result.transform * scale(vec2(sx, sy))
@@ -242,6 +240,8 @@ proc stroke(img: Image, ctx: Ctx, path: Path) {.inline.} =
     ctx.stroke,
     ctx.transform,
     ctx.strokeWidth,
+    ctx.strokeLineCap,
+    ctx.strokeLineJoin,
     miterLimit = ctx.strokeMiterLimit,
     dashes = ctx.strokeDashArray
   )
@@ -330,8 +330,11 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
       ctx = decodeCtx(ctxStack[^1], node)
       x = parseFloat(node.attrOrDefault("x", "0"))
       y = parseFloat(node.attrOrDefault("y", "0"))
-      width = parseFloat(node.attr("width"))
-      height = parseFloat(node.attr("height"))
+      width = parseFloat(node.attrOrDefault("width", "0"))
+      height = parseFloat(node.attrOrDefault("height", "0"))
+
+    if width == 0 or height == 0:
+      return
 
     var
       rx = max(parseFloat(node.attrOrDefault("rx", "0")), 0)

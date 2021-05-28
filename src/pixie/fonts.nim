@@ -25,11 +25,11 @@ type
     font*: Font
 
   Arrangement* = ref object
-    spans*: seq[(int, int)]
-    fonts*: seq[Font]
-    runes*: seq[Rune]
-    positions*: seq[Vec2]
-    selectionRects*: seq[Rect]
+    spans*: seq[(int, int)] ## The (start, stop) of the spans in the text.
+    fonts*: seq[Font] ## The font for each span.
+    runes*: seq[Rune] ## The runes of the text.
+    positions*: seq[Vec2] ## The positions of the glyphs for each rune.
+    selectionRects*: seq[Rect] ## The selection rects for each glyph.
 
   HAlignMode* = enum
     haLeft
@@ -110,6 +110,7 @@ proc defaultLineHeight*(font: Font): float32 {.inline.} =
   round(fontUnits * font.scale)
 
 proc newSpan*(text: string, font: Font): Span =
+  ## Creates a span, associating a font with the text.
   result = Span()
   result.text = text
   result.font = font
@@ -369,6 +370,7 @@ proc typeset*(
   typeset(@[newSpan(text, font)], bounds, hAlign, vAlign, wrap)
 
 proc computeBounds*(arrangement: Arrangement): Vec2 =
+  ## Computes the width and height of the arrangement in pixels.
   if arrangement.runes.len > 0:
     for i in 0 ..< arrangement.runes.len:
       if arrangement.runes[i] != LF:
@@ -382,6 +384,7 @@ proc computeBounds*(font: Font, text: string): Vec2 {.inline.} =
   font.typeset(text).computeBounds()
 
 proc computeBounds*(spans: seq[Span]): Vec2 {.inline.} =
+  ## Computes the width and height of the spans in pixels.
   typeset(spans).computeBounds()
 
 proc parseOtf*(buf: string): Font =
