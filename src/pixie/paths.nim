@@ -1086,7 +1086,7 @@ template computeCoverages(
     for (segment, winding) in partitions[partition]:
       if segment.at.y <= scanline.a.y and segment.to.y >= scanline.a.y:
         var at: Vec2
-        if scanline.intersects(segment, at): # and segment.to != at:
+        if scanline.intersects(segment, at) and segment.to != at:
           if numHits == hits.len:
             hits.setLen(hits.len * 2)
           hits[numHits] = (min(at.x, size.x), winding)
