@@ -36,6 +36,10 @@ type
 
   SomePath* = Path | string
 
+  Partitioning = object
+    partitions: seq[seq[(Segment, int16)]]
+    startY, partitionHeight: uint32
+
 const
   epsilon = 0.0001 * PI ## Tiny value used for some computations.
   defaultMiterLimit*: float32 = 4
@@ -1013,39 +1017,38 @@ proc computeBounds*(path: Path): Rect =
 
 proc partitionSegments(
   segments: seq[(Segment, int16)], top, height: int
-): (seq[seq[(Segment, int16)]], uint32, uint32) =
+): Partitioning =
   ## Puts segments into the height partitions they intersect with.
-  ## Returns (partitions, startY, partitionHeight)
   let
     maxPartitions = max(1, height div 10).uint32
     numPartitions = min(maxPartitions, max(1, segments.len div 10).uint32)
-    partitionHeight = height.uint32 div numPartitions
 
-  result[0].setLen(numPartitions)
-  result[1] = top.uint32
-  result[2] = partitionHeight
+  result.partitions.setLen(numPartitions)
+  result.startY = top.uint32
+  result.partitionHeight = height.uint32 div numPartitions
 
   for (segment, winding) in segments:
-    if partitionHeight == 0:
-      result[0][0].add((segment, winding))
+    if result.partitionHeight == 0:
+      result.partitions[0].add((segment, winding))
     else:
       var
-        atPartition = max(0, segment.at.y - top.float32).uint32
-        toPartition = max(0, ceil(segment.to.y - top.float32)).uint32
-      atPartition = atPartition div partitionHeight
-      toPartition = toPartition div partitionHeight
-      atPartition = clamp(atPartition, 0, result[0].high.uint32)
-      toPartition = clamp(toPartition, 0, result[0].high.uint32)
+        atPartition = max(0, segment.at.y - result.startY.float32).uint32
+        toPartition = max(0, ceil(segment.to.y - result.startY.float32)).uint32
+      atPartition = atPartition div result.partitionHeight
+      toPartition = toPartition div result.partitionHeight
+      atPartition = clamp(atPartition, 0, result.partitions.high.uint32)
+      toPartition = clamp(toPartition, 0, result.partitions.high.uint32)
       for i in atPartition .. toPartition:
-        result[0][i].add((segment, winding))
+        result.partitions[i].add((segment, winding))
 
-proc getIndexForY(
-  partitions: (seq[seq[(Segment, int16)]], uint32, uint32), y: int
-): uint32 {.inline.} =
-  if partitions[2] == 0 or partitions[0].len == 1:
+proc getIndexForY(partitioning: Partitioning, y: int): uint32 {.inline.} =
+  if partitioning.partitionHeight == 0 or partitioning.partitions.len == 1:
     0.uint32
   else:
-    min((y.uint32 - partitions[1]) div partitions[2], partitions[0].high.uint32)
+    min(
+      (y.uint32 - partitioning.startY) div partitioning.partitionHeight,
+      partitioning.partitions.high.uint32
+    )
 
 proc quickSort(a: var seq[(float32, int16)], inl, inr: int) =
   ## Sorts in place + faster than standard lib sort.
@@ -1081,7 +1084,7 @@ template computeCoverages(
   hits: var seq[(float32, int16)],
   size: Vec2,
   y: int,
-  partitions: (seq[seq[(Segment, int16)]], uint32, uint32),
+  partitioning: Partitioning,
   windingRule: WindingRule
 ) =
   const
@@ -1093,7 +1096,7 @@ template computeCoverages(
   zeroMem(coverages[0].addr, coverages.len)
 
   # Do scanlines for this row
-  let partition = getIndexForY(partitions, y)
+  let partition = getIndexForY(partitioning, y)
   var
     yLine = y.float32 + initialOffset - offset
     numHits: int
@@ -1101,7 +1104,7 @@ template computeCoverages(
     yLine += offset
     let scanline = line(vec2(0, yLine), vec2(size.x, yLine))
     numHits = 0
-    for (segment, winding) in partitions[0][partition]:
+    for (segment, winding) in partitioning.partitions[partition]:
       if segment.at.y <= scanline.a.y and segment.to.y >= scanline.a.y:
         var at: Vec2
         if scanline.intersects(segment, at) and segment.to != at:
