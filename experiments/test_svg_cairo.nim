@@ -14,10 +14,5 @@ const files = [
 ]
 
 for file in files:
-  let
-    original = readFile(&"tests/images/svg/{file}.svg")
-    image = decodeSvg(original)
-    gold = readImage(&"tests/images/svg/{file}.png")
-
-  # doAssert image.data == gold.data
+  let image = decodeSvg(readFile(&"tests/images/svg/{file}.svg"))
   image.writeFile(&"tests/images/svg/{file}.png")
