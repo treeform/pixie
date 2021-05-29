@@ -985,7 +985,7 @@ proc shapesToSegments(shapes: seq[seq[Vec2]]): seq[(Segment, int16)] =
 
       result.add((segment, winding))
 
-proc computeBounds(segments: seq[(Segment, int16)]): Rect =
+proc computePixelBounds(segments: seq[(Segment, int16)]): Rect =
   ## Compute the bounds of the segments.
   var
     xMin = float32.high
@@ -1011,9 +1011,9 @@ proc computeBounds(segments: seq[(Segment, int16)]): Rect =
     result.w = xMax - xMin
     result.h = yMax - yMin
 
-proc computeBounds*(path: Path): Rect =
+proc computePixelBounds*(path: Path): Rect =
   ## Compute the bounds of the path.
-  path.commandsToShapes().shapesToSegments().computeBounds()
+  path.commandsToShapes().shapesToSegments().computePixelBounds()
 
 proc partitionSegments(
   segments: seq[(Segment, int16)], top, height: int
@@ -1177,7 +1177,7 @@ proc fillShapes(
     rgbx = color.asRgbx()
     blender = blendMode.blender()
     segments = shapes.shapesToSegments()
-    bounds = computeBounds(segments)
+    bounds = computePixelBounds(segments)
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
     stopY = min(image.height, (bounds.y + bounds.h).int)
@@ -1287,7 +1287,7 @@ proc fillShapes(
   # rasterize only within the total bounds
   let
     segments = shapes.shapesToSegments()
-    bounds = computeBounds(segments)
+    bounds = computePixelBounds(segments)
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
     stopY = min(mask.height, (bounds.y + bounds.h).int)
