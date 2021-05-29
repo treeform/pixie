@@ -1164,6 +1164,10 @@ template computeCoverages(
 
       count += winding
 
+    when defined(pixieLeakCheck):
+      if prevAt != size.x and count != 0:
+        echo "Leak detected: ", count, " @ ", prevAt, " ", y
+
 proc fillShapes(
   image: Image,
   shapes: seq[seq[Vec2]],
@@ -1359,7 +1363,7 @@ proc strokeShapes(
   miterLimit: float32,
   dashes: seq[float32]
 ): seq[seq[Vec2]] =
-  if strokeWidth == 0:
+  if strokeWidth <= 0:
     return
 
   let miterAngleLimit = miterLimitToAngle(miterLimit)
