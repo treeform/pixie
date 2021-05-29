@@ -1425,7 +1425,7 @@ proc strokeShapes(
         return @[a + pos, b + pos, pos, a + pos]
 
       of ljRound:
-        return makeCircle(prevPos)
+        return makeCircle(pos)
 
   for shape in shapes:
     var shapeStroke: seq[seq[Vec2]]
