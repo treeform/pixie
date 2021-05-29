@@ -36,6 +36,10 @@ type
 
   SomePath* = Path | string
 
+  Partitioning = object
+    partitions: seq[seq[(Segment, int16)]]
+    startY, partitionHeight: uint32
+
 const
   epsilon = 0.0001 * PI ## Tiny value used for some computations.
   defaultMiterLimit*: float32 = 4
@@ -604,8 +608,8 @@ proc polygon*(path: var Path, pos: Vec2, size: float32, sides: int) {.inline.} =
   ## Adds a n-sided regular polygon at (x, y) with the parameter size.
   path.polygon(pos.x, pos.y, size, sides)
 
-proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
-  ## Converts SVG-like commands to line segments.
+proc commandsToShapes(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
+  ## Converts SVG-like commands to sequences of vectors.
   var
     start, at: Vec2
     shape: seq[Vec2]
@@ -962,6 +966,90 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
   if shape.len > 0:
     result.add(shape)
 
+proc shapesToSegments(shapes: seq[seq[Vec2]]): seq[(Segment, int16)] =
+  ## Converts the shapes into a set of filtered segments with winding value.
+  var segmentCount: int
+  for shape in shapes:
+    segmentCount += shape.len - 1
+
+  for shape in shapes:
+    for segment in shape.segments:
+      if segment.at.y == segment.to.y: # Skip horizontal
+        continue
+      var
+        segment = segment
+        winding = 1.int16
+      if segment.at.y > segment.to.y:
+        swap(segment.at, segment.to)
+        winding = -1
+
+      result.add((segment, winding))
+
+proc computePixelBounds(segments: seq[(Segment, int16)]): Rect =
+  ## Compute the bounds of the segments.
+  var
+    xMin = float32.high
+    xMax = float32.low
+    yMin = float32.high
+    yMax = float32.low
+  for (segment, _) in segments:
+    xMin = min(xMin, min(segment.at.x, segment.to.x))
+    xMax = max(xMax, max(segment.at.x, segment.to.x))
+    yMin = min(yMin, min(segment.at.y, segment.to.y))
+    yMax = max(yMax, max(segment.at.y, segment.to.y))
+
+  xMin = floor(xMin)
+  xMax = ceil(xMax)
+  yMin = floor(yMin)
+  yMax = ceil(yMax)
+
+  if xMin.isNaN() or xMax.isNaN() or yMin.isNaN() or yMax.isNaN():
+    discard
+  else:
+    result.x = xMin
+    result.y = yMin
+    result.w = xMax - xMin
+    result.h = yMax - yMin
+
+proc computePixelBounds*(path: Path): Rect =
+  ## Compute the bounds of the path.
+  path.commandsToShapes().shapesToSegments().computePixelBounds()
+
+proc partitionSegments(
+  segments: seq[(Segment, int16)], top, height: int
+): Partitioning =
+  ## Puts segments into the height partitions they intersect with.
+  let
+    maxPartitions = max(1, height div 10).uint32
+    numPartitions = min(maxPartitions, max(1, segments.len div 10).uint32)
+
+  result.partitions.setLen(numPartitions)
+  result.startY = top.uint32
+  result.partitionHeight = height.uint32 div numPartitions
+
+  for (segment, winding) in segments:
+    if result.partitionHeight == 0:
+      result.partitions[0].add((segment, winding))
+    else:
+      var
+        atPartition = max(0, segment.at.y - result.startY.float32).uint32
+        toPartition = max(0, ceil(segment.to.y - result.startY.float32)).uint32
+      atPartition = atPartition div result.partitionHeight
+      toPartition = toPartition div result.partitionHeight
+      atPartition = clamp(atPartition, 0, result.partitions.high.uint32)
+      toPartition = clamp(toPartition, 0, result.partitions.high.uint32)
+      for i in atPartition .. toPartition:
+        result.partitions[i].add((segment, winding))
+
+proc getIndexForY(partitioning: Partitioning, y: int): uint32 {.inline.} =
+  if partitioning.partitionHeight == 0 or partitioning.partitions.len == 1:
+    0.uint32
+  else:
+    min(
+      (y.uint32 - partitioning.startY) div partitioning.partitionHeight,
+      partitioning.partitions.high.uint32
+    )
+
 proc quickSort(a: var seq[(float32, int16)], inl, inr: int) =
   ## Sorts in place + faster than standard lib sort.
   var
@@ -983,30 +1071,6 @@ proc quickSort(a: var seq[(float32, int16)], inl, inr: int) =
   quickSort(a, inl, r)
   quickSort(a, l, inr)
 
-proc computeBounds(partitions: seq[seq[(Segment, int16)]]): Rect =
-  ## Compute bounds of a shape segments with windings.
-  var
-    xMin = float32.high
-    xMax = float32.low
-    yMin = float32.high
-    yMax = float32.low
-  for partition in partitions:
-    for (segment, _) in partition:
-      xMin = min(xMin, min(segment.at.x, segment.to.x))
-      xMax = max(xMax, max(segment.at.x, segment.to.x))
-      yMin = min(yMin, min(segment.at.y, segment.to.y))
-      yMax = max(yMax, max(segment.at.y, segment.to.y))
-
-  xMin = floor(xMin)
-  xMax = ceil(xMax)
-  yMin = floor(yMin)
-  yMax = ceil(yMax)
-
-  result.x = xMin
-  result.y = yMin
-  result.w = xMax - xMin
-  result.h = yMax - yMin
-
 proc shouldFill(windingRule: WindingRule, count: int): bool {.inline.} =
   ## Should we fill based on the current winding rule and count?
   case windingRule:
@@ -1015,49 +1079,12 @@ proc shouldFill(windingRule: WindingRule, count: int): bool {.inline.} =
   of wrEvenOdd:
     count mod 2 != 0
 
-proc partitionSegments(
-  shapes: seq[seq[Vec2]], height: int
-): seq[seq[(Segment, int16)]] =
-  ## Puts segments into the height partitions they intersect with.
-  var segmentCount: int
-  for shape in shapes:
-    segmentCount += shape.len - 1
-
-  let
-    maxPartitions = max(1, height div 10).uint32
-    numPartitions = min(maxPartitions, max(1, segmentCount div 10).uint32)
-    partitionHeight = (height.uint32 div numPartitions)
-
-  result.setLen(numPartitions)
-  for shape in shapes:
-    for segment in shape.segments:
-      if segment.at.y == segment.to.y: # Skip horizontal
-        continue
-      var
-        segment = segment
-        winding = 1.int16
-      if segment.at.y > segment.to.y:
-        swap(segment.at, segment.to)
-        winding = -1
-
-      if partitionHeight == 0:
-        result[0].add((segment, winding))
-      else:
-        var
-          atPartition = max(0, segment.at.y).uint32 div partitionHeight
-          toPartition = max(0, ceil(segment.to.y)).uint32 div partitionHeight
-        atPartition = clamp(atPartition, 0, result.high.uint32)
-        toPartition = clamp(toPartition, 0, result.high.uint32)
-        for i in atPartition .. toPartition:
-          result[i].add((segment, winding))
-
 template computeCoverages(
   coverages: var seq[uint8],
   hits: var seq[(float32, int16)],
   size: Vec2,
   y: int,
-  partitions: seq[seq[(Segment, int16)]],
-  partitionHeight: uint32,
+  partitioning: Partitioning,
   windingRule: WindingRule
 ) =
   const
@@ -1066,16 +1093,10 @@ template computeCoverages(
     offset = 1 / quality.float32
     initialOffset = offset / 2 + epsilon
 
-  let
-    partition =
-      if partitionHeight == 0 or partitions.len == 1:
-        0.uint32
-      else:
-        min(y.uint32 div partitionHeight, partitions.high.uint32)
-
   zeroMem(coverages[0].addr, coverages.len)
 
   # Do scanlines for this row
+  let partition = getIndexForY(partitioning, y)
   var
     yLine = y.float32 + initialOffset - offset
     numHits: int
@@ -1083,10 +1104,10 @@ template computeCoverages(
     yLine += offset
     let scanline = line(vec2(0, yLine), vec2(size.x, yLine))
     numHits = 0
-    for (segment, winding) in partitions[partition]:
+    for (segment, winding) in partitioning.partitions[partition]:
       if segment.at.y <= scanline.a.y and segment.to.y >= scanline.a.y:
         var at: Vec2
-        if scanline.intersects(segment, at): # and segment.to != at:
+        if scanline.intersects(segment, at) and segment.to != at:
           if numHits == hits.len:
             hits.setLen(hits.len * 2)
           hits[numHits] = (min(at.x, size.x), winding)
@@ -1150,19 +1171,18 @@ proc fillShapes(
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
-  let
-    rgbx = color.asRgbx()
-    partitions = partitionSegments(shapes, image.height)
-    partitionHeight = image.height.uint32 div partitions.len.uint32
-
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
   let
-    bounds = computeBounds(partitions)
+    rgbx = color.asRgbx()
+    blender = blendMode.blender()
+    segments = shapes.shapesToSegments()
+    bounds = computePixelBounds(segments)
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
     stopY = min(image.height, (bounds.y + bounds.h).int)
-    blender = blendMode.blender()
+    pathHeight = stopY - startY
+    partitions = partitionSegments(segments, startY, pathHeight)
 
   var
     coverages = newSeq[uint8](image.width)
@@ -1175,7 +1195,6 @@ proc fillShapes(
       image.wh,
       y,
       partitions,
-      partitionHeight,
       windingRule
     )
 
@@ -1264,17 +1283,16 @@ proc fillShapes(
   shapes: seq[seq[Vec2]],
   windingRule: WindingRule
 ) =
-  let
-    partitions = partitionSegments(shapes, mask.height)
-    partitionHeight = mask.height.uint32 div partitions.len.uint32
-
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
   let
-    bounds = computeBounds(partitions)
+    segments = shapes.shapesToSegments()
+    bounds = computePixelBounds(segments)
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
     stopY = min(mask.height, (bounds.y + bounds.h).int)
+    pathHeight = stopY - startY
+    partitions = partitionSegments(segments, startY, pathHeight)
 
   when defined(amd64) and not defined(pixieNoSimd):
     let maskerSimd = bmNormal.maskerSimd()
@@ -1290,7 +1308,6 @@ proc fillShapes(
       mask.wh,
       y,
       partitions,
-      partitionHeight,
       windingRule
     )
 
@@ -1488,7 +1505,7 @@ proc parseSomePath(
 
 proc transform(shapes: var seq[seq[Vec2]], transform: Vec2 | Mat3) =
   when type(transform) is Vec2:
-    if transform != vec2(0, 0):
+    if transform != vec2():
       for shape in shapes.mitems:
         for segment in shape.mitems:
           segment += transform
@@ -1590,8 +1607,7 @@ proc strokePath*(
       dashes
     )
     strokeShapes.transform(transform)
-    image.fillShapes(
-      strokeShapes, paint.color, wrNonZero, blendMode = paint.blendMode)
+    image.fillShapes(strokeShapes, paint.color, wrNonZero, paint.blendMode)
     return
 
   let
