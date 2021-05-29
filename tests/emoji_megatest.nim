@@ -6,6 +6,12 @@ import cligen, os, pixie, pixie/fileformats/svg, strformat
 # Clone https://github.com/hfg-gmuend/openmoji
 # Check out commit c1f14ae0be29b20c7eed215d1e03df23b1c9a5d5
 
+# Clone https://github.com/EmojiTwo/emojitwo
+# Check out commit d79b4477eb8f9110fc3ce7bed2cc66030a77933e
+
+# Clone https://github.com/googlefonts/noto-emoji
+# Check out commit 948b1a7f1ed4ec7e27930ad8e027a740db3fe25e
+
 type EmojiSet = object
   name: string
   path: string
@@ -13,7 +19,9 @@ type EmojiSet = object
 const
   emojiSets = [
     EmojiSet(name: "twemoji", path: "../twemoji/assets/svg/*"),
-    EmojiSet(name: "openmoji", path: "../openmoji/color/svg/*")
+    EmojiSet(name: "openmoji", path: "../openmoji/color/svg/*"),
+    EmojiSet(name: "emojitwo", path: "../emojitwo/svg/*"),
+    EmojiSet(name: "noto-emoji", path: "../noto-emoji/svg/*")
   ]
   width = 32
   height = 32
