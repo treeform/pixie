@@ -1488,7 +1488,7 @@ proc parseSomePath(
 
 proc transform(shapes: var seq[seq[Vec2]], transform: Vec2 | Mat3) =
   when type(transform) is Vec2:
-    if transform != vec2(0, 0):
+    if transform != vec2():
       for shape in shapes.mitems:
         for segment in shape.mitems:
           segment += transform
@@ -1590,8 +1590,7 @@ proc strokePath*(
       dashes
     )
     strokeShapes.transform(transform)
-    image.fillShapes(
-      strokeShapes, paint.color, wrNonZero, blendMode = paint.blendMode)
+    image.fillShapes(strokeShapes, paint.color, wrNonZero, paint.blendMode)
     return
 
   let
