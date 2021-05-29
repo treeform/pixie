@@ -608,7 +608,7 @@ proc polygon*(path: var Path, pos: Vec2, size: float32, sides: int) {.inline.} =
   ## Adds a n-sided regular polygon at (x, y) with the parameter size.
   path.polygon(pos.x, pos.y, size, sides)
 
-proc commandsToShapes(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
+proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
   ## Converts SVG-like commands to sequences of vectors.
   var
     start, at: Vec2
