@@ -1179,7 +1179,7 @@ template computeCoverages(
 
     when defined(pixieLeakCheck):
       if prevAt != size.x and count != 0:
-        echo "Leak detected: ", count, " @ ", prevAt, " ", y
+        echo "Leak detected: ", count, " @ (", prevAt, ", ", y, ")"
 
 proc fillShapes(
   image: Image,
