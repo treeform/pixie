@@ -807,7 +807,7 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
     of Move:
       if shape.len > 0:
         result.add(shape)
-        shape.setLen(0)
+        shape = newSeq[Vec2]()
       at.x = command.numbers[0]
       at.y = command.numbers[1]
       start = at
@@ -881,7 +881,7 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
     of RMove:
       if shape.len > 0:
         result.add(shape)
-        shape.setLen(0)
+        shape = newSeq[Vec2]()
       at.x += command.numbers[0]
       at.y += command.numbers[1]
       start = at
@@ -959,7 +959,7 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
         at = start
       if shape.len > 0:
         result.add(shape)
-        shape.setLen(0)
+        shape = newSeq[Vec2]()
 
     prevCommandKind = command.kind
 
@@ -995,8 +995,8 @@ proc computePixelBounds(segments: seq[(Segment, int16)]): Rect =
   for (segment, _) in segments:
     xMin = min(xMin, min(segment.at.x, segment.to.x))
     xMax = max(xMax, max(segment.at.x, segment.to.x))
-    yMin = min(yMin, min(segment.at.y, segment.to.y))
-    yMax = max(yMax, max(segment.at.y, segment.to.y))
+    yMin = min(yMin, segment.at.y)
+    yMax = max(yMax, segment.to.y)
 
   xMin = floor(xMin)
   xMax = ceil(xMax)
@@ -1071,6 +1071,16 @@ proc quickSort(a: var seq[(float32, int16)], inl, inr: int) =
   quickSort(a, inl, r)
   quickSort(a, l, inr)
 
+proc insertionSort(s: var seq[(float32, int16)], hi: int) {.inline.} =
+  for i in 1 .. hi:
+    var
+      j = i - 1
+      k = i
+    while j >= 0 and s[j][0] > s[k][0]:
+      swap(s[j + 1], s[j])
+      dec j
+      dec k
+
 proc shouldFill(windingRule: WindingRule, count: int): bool {.inline.} =
   ## Should we fill based on the current winding rule and count?
   case windingRule:
@@ -1113,7 +1123,10 @@ template computeCoverages(
           hits[numHits] = (min(at.x, size.x), winding)
           inc numHits
 
-    quickSort(hits, 0, numHits - 1)
+    if hits.len > 32:
+      quickSort(hits, 0, numHits - 1)
+    else:
+      insertionSort(hits, numHits - 1)
 
     var
       prevAt: float32
