@@ -1197,15 +1197,14 @@ proc fillShapes(
     bounds = computePixelBounds(segments)
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
-    stopY = min(image.height, (bounds.y + bounds.h).int)
-    pathHeight = stopY - startY
-    partitions = partitionSegments(segments, startY, pathHeight)
+    pathHeight = min(image.height, (bounds.y + bounds.h).int)
+    partitions = partitionSegments(segments, startY, pathHeight - startY)
 
   var
     coverages = newSeq[uint8](image.width)
     hits = newSeq[(float32, int16)](4)
 
-  for y in startY ..< stopY:
+  for y in startY ..< pathHeight:
     computeCoverages(
       coverages,
       hits,
