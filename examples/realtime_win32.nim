@@ -108,16 +108,26 @@ proc main() =
 
   # Figure out the right size of the window we want.
   var rect: lean.RECT
-  rect.left   = 0
-  rect.top    = 0
-  rect.right  = w
+  rect.left = 0
+  rect.top = 0
+  rect.right = w
   rect.bottom = h
   AdjustWindowRectEx(cast[LPRECT](rect.addr), WS_OVERLAPPEDWINDOW, 0, 0)
 
   # Open the window.
-  hwnd = CreateWindow(appName, "Win32/Pixie", WS_OVERLAPPEDWINDOW,
-    CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top,
-    0, 0, hInstance, nil)
+  hwnd = CreateWindow(
+    appName,
+    "Win32/Pixie",
+    WS_OVERLAPPEDWINDOW,
+    CW_USEDEFAULT,
+    CW_USEDEFAULT,
+    rect.right - rect.left,
+    rect.bottom - rect.top,
+    0,
+    0,
+    hInstance,
+    nil
+  )
 
   ShowWindow(hwnd, SW_SHOW)
   UpdateWindow(hwnd)

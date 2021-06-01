@@ -18,6 +18,8 @@ type
     lineHeight*: float32 ## The line height in pixels or AutoLineHeight for the font's default line height.
     paint*: Paint
     textCase*: TextCase
+    underline*: bool            ## Apply an underline.
+    strikethrough*: bool        ## Apply a strikethrough.
     noKerningAdjustments*: bool ## Optionally disable kerning pair adjustments
 
   Span* = ref object
@@ -25,10 +27,11 @@ type
     font*: Font
 
   Arrangement* = ref object
-    spans*: seq[(int, int)] ## The (start, stop) of the spans in the text.
-    fonts*: seq[Font] ## The font for each span.
-    runes*: seq[Rune] ## The runes of the text.
-    positions*: seq[Vec2] ## The positions of the glyphs for each rune.
+    lines*: seq[(int, int)]    ## The (start, stop) of the lines of text.
+    spans*: seq[(int, int)]    ## The (start, stop) of the spans in the text.
+    fonts*: seq[Font]          ## The font for each span.
+    runes*: seq[Rune]          ## The runes of the text.
+    positions*: seq[Vec2]      ## The positions of the glyphs for each rune.
     selectionRects*: seq[Rect] ## The selection rects for each glyph.
 
   HAlignMode* = enum
@@ -71,6 +74,22 @@ proc lineGap*(typeface: Typeface): float32 {.inline.} =
 proc lineHeight*(typeface: Typeface): float32 {.inline.} =
   ## The default line height in font units.
   typeface.ascent - typeface.descent + typeface.lineGap
+
+proc underlinePosition(typeface: Typeface): float32 {.inline.} =
+  if typeface.opentype != nil:
+    result = typeface.opentype.post.underlinePosition.float32
+
+proc underlineThickness(typeface: Typeface): float32 {.inline.} =
+  if typeface.opentype != nil:
+    result = typeface.opentype.post.underlineThickness.float32
+
+proc strikeoutPosition(typeface: Typeface): float32 {.inline.} =
+  if typeface.opentype != nil:
+    result = typeface.opentype.os2.yStrikeoutPosition.float32
+
+proc strikeoutThickness(typeface: Typeface): float32 {.inline.} =
+  if typeface.opentype != nil:
+    result = typeface.opentype.os2.yStrikeoutSize.float32
 
 proc getGlyphPath*(typeface: Typeface, rune: Rune): Path {.inline.} =
   ## The glyph path for the rune.
@@ -177,7 +196,7 @@ proc typeset*(
   result.positions.setLen(result.runes.len)
   result.selectionRects.setLen(result.runes.len)
 
-  var lines = @[(0, 0)] # (start, stop)
+  result.lines = @[(0, 0)] # (start, stop)
 
   block: # Arrange the glyphs horizontally first (handling line breaks)
     proc advance(font: Font, runes: seq[Rune], i: int): float32 {.inline.} =
@@ -200,10 +219,10 @@ proc typeset*(
           at.x = 0
           at.y += 1
           prevCanWrap = 0
-          lines[^1][1] = runeIndex
+          result.lines[^1][1] = runeIndex
           # Start a new line if we are not at the end
           if runeIndex + 1 < result.runes.len:
-            lines.add((runeIndex + 1, 0))
+            result.lines.add((runeIndex + 1, 0))
         else:
           let advance = advance(font, result.runes, runeIndex)
           if wrap and rune != SP and bounds.x > 0 and at.x + advance > bounds.x:
@@ -221,8 +240,8 @@ proc typeset*(
                 at.x += advance(font, result.runes, i)
                 dec lineStart
 
-            lines[^1][1] = lineStart - 1
-            lines.add((lineStart, 0))
+            result.lines[^1][1] = lineStart - 1
+            result.lines.add((lineStart, 0))
 
           if rune.canWrap():
             prevCanWrap = runeIndex
@@ -231,12 +250,12 @@ proc typeset*(
           result.selectionRects[runeIndex] = rect(at.x, at.y, advance, 0)
           at.x += advance
 
-    lines[^1][1] = result.runes.len - 1
+    result.lines[^1][1] = result.runes.len - 1
 
     if hAlign != haLeft:
       # Since horizontal alignment adjustments are different for each line,
       # find the start and stop of each line of text.
-      for (start, stop) in lines:
+      for (start, stop) in result.lines:
         var furthestX: float32
         for i in countdown(stop, start):
           if result.runes[i] != SP and result.runes[i] != LF:
@@ -289,11 +308,11 @@ proc typeset*(
             ) / 2
           maxInitialY = max(maxInitialY, round(fontUnitInitialY * font.scale))
           for runeIndex in start .. stop:
-            if runeIndex == lines[0][1]:
+            if runeIndex == result.lines[0][1]:
               break outer
       maxInitialY
 
-    var lineHeights = newSeq[float32](lines.len)
+    var lineHeights = newSeq[float32](result.lines.len)
     block: # Compute each line's line height
       var line: int
       for spanIndex, (start, stop) in result.spans:
@@ -306,11 +325,12 @@ proc typeset*(
               font.defaultLineHeight
         lineHeights[line] = max(lineHeights[line], fontLineHeight)
         for runeIndex in start .. stop:
-          if line + 1 < lines.len and runeIndex == lines[line + 1][0]:
+          if line + 1 < result.lines.len and
+            runeIndex == result.lines[line + 1][0]:
             inc line
             lineHeights[line] = max(lineHeights[line], fontLineHeight)
         # Handle when span and line endings coincide
-        if line + 1 < lines.len and stop == lines[line][1]:
+        if line + 1 < result.lines.len and stop == result.lines[line][1]:
           inc line
 
     block: # Vertically position the glyphs
@@ -326,7 +346,8 @@ proc typeset*(
             else:
               font.defaultLineHeight
         for runeIndex in start .. stop:
-          if line + 1 < lines.len and runeIndex == lines[line + 1][0]:
+          if line + 1 < result.lines.len and
+            runeIndex == result.lines[line + 1][0]:
             inc line
             baseline += lineHeights[line]
           result.positions[runeIndex].y = baseline
@@ -404,24 +425,96 @@ proc parseSvgFont*(buf: string): Font =
   result.lineHeight = AutoLineHeight
   result.paint = Paint(kind: pkSolid, color: rgbx(0, 0, 0, 255))
 
+proc textUber(
+  target: Image | Mask,
+  arrangement: Arrangement,
+  transform: Vec2 | Mat3 = vec2(0, 0),
+  strokeWidth = 1.0,
+  lineCap = lcButt,
+  lineJoin = ljMiter,
+  miterLimit = defaultMiterLimit,
+  dashes: seq[float32] = @[],
+  stroke: static[bool] = false
+) =
+  var line: int
+  for spanIndex, (start, stop) in arrangement.spans:
+    let
+      font = arrangement.fonts[spanIndex]
+      underlineThickness = font.typeface.underlineThickness * font.scale
+      underlinePosition = font.typeface.underlinePosition * font.scale
+      strikeoutThickness = font.typeface.strikeoutThickness * font.scale
+      strikeoutPosition = font.typeface.strikeoutPosition * font.scale
+    for runeIndex in start .. stop:
+      let position = arrangement.positions[runeIndex]
+
+      var path = font.typeface.getGlyphPath(arrangement.runes[runeIndex])
+      path.transform(
+        translate(position) *
+        scale(vec2(font.scale))
+      )
+
+      var applyDecoration = true
+      if runeIndex == arrangement.lines[line][1]:
+        inc line
+        if arrangement.runes[runeIndex] == SP:
+          # Do not apply decoration to the space at end of lines
+          applyDecoration = false
+
+      if applyDecoration:
+        if font.underline:
+          path.rect(
+            arrangement.selectionRects[runeIndex].x,
+            position.y - underlinePosition + underlineThickness / 2,
+            arrangement.selectionRects[runeIndex].w,
+            underlineThickness
+          )
+        if font.strikethrough:
+          path.rect(
+            arrangement.selectionRects[runeIndex].x,
+            position.y - strikeoutPosition,
+            arrangement.selectionRects[runeIndex].w,
+            strikeoutThickness
+          )
+
+      when stroke:
+        when type(target) is Image:
+          target.strokePath(
+            path,
+            font.paint,
+            transform,
+            strokeWidth,
+            lineCap,
+            lineJoin,
+            miterLimit,
+            dashes
+          )
+        else: # target is Mask
+          target.strokePath(
+            path,
+            transform,
+            strokeWidth,
+            lineCap,
+            lineJoin,
+            miterLimit,
+            dashes
+          )
+      else:
+        when type(target) is Image:
+          target.fillPath(path, font.paint, transform)
+        else: # target is Mask
+          target.fillPath(path, transform)
+
 proc fillText*(
   target: Image | Mask,
   arrangement: Arrangement,
   transform: Vec2 | Mat3 = vec2(0, 0)
-) =
+) {.inline.} =
   ## Fills the text arrangement.
-  for spanIndex, (start, stop) in arrangement.spans:
-    let font = arrangement.fonts[spanIndex]
-    for runeIndex in start .. stop:
-      var path = font.typeface.getGlyphPath(arrangement.runes[runeIndex])
-      path.transform(
-        translate(arrangement.positions[runeIndex]) *
-        scale(vec2(font.scale))
-      )
-      when type(target) is Image:
-        target.fillPath(path, font.paint, transform)
-      else: # target is Mask
-        target.fillPath(path, transform)
+  textUber(
+    target,
+    arrangement,
+    transform
+  )
 
 proc fillText*(
   target: Image | Mask,
@@ -448,37 +541,19 @@ proc strokeText*(
   lineJoin = ljMiter,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[]
-) =
+) {.inline.} =
   ## Strokes the text arrangement.
-  for spanIndex, (start, stop) in arrangement.spans:
-    let font = arrangement.fonts[spanIndex]
-    for runeIndex in start .. stop:
-      var path = font.typeface.getGlyphPath(arrangement.runes[runeIndex])
-      path.transform(
-        translate(arrangement.positions[runeIndex]) *
-        scale(vec2(font.scale))
-      )
-      when type(target) is Image:
-        target.strokePath(
-          path,
-          font.paint,
-          transform,
-          strokeWidth,
-          lineCap,
-          lineJoin,
-          miterLimit,
-          dashes
-        )
-      else: # target is Mask
-        target.strokePath(
-          path,
-          transform,
-          strokeWidth,
-          lineCap,
-          lineJoin,
-          miterLimit,
-          dashes
-        )
+  textUber(
+    target,
+    arrangement,
+    transform,
+    strokeWidth,
+    lineCap,
+    lineJoin,
+    miterLimit,
+    dashes,
+    true
+  )
 
 proc strokeText*(
   target: Image | Mask,

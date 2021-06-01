@@ -304,11 +304,11 @@ type
     lookupList: LookupList
 
   PostTable = ref object
-    version: float32
-    italicAngle: float32
-    underlinePosition: int16
-    underlineThickness: int16
-    isFixedPitch: uint32
+    version*: float32
+    italicAngle*: float32
+    underlinePosition*: int16
+    underlineThickness*: int16
+    isFixedPitch*: uint32
 
   OpenType* = ref object
     buf*: string

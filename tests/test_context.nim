@@ -499,20 +499,20 @@ block:
   var y = 15.float32
 
   proc drawDashedLine(pattern: seq[float32]) =
-    ctx.beginPath();
-    ctx.setLineDash(pattern);
-    ctx.moveTo(0, y);
-    ctx.lineTo(300, y);
-    ctx.stroke();
-    y += 20;
+    ctx.beginPath()
+    ctx.setLineDash(pattern)
+    ctx.moveTo(0, y)
+    ctx.lineTo(300, y)
+    ctx.stroke()
+    y += 20
 
-  drawDashedLine(@[]);
-  drawDashedLine(@[1.float32, 1]);
-  drawDashedLine(@[10.float32, 10]);
-  drawDashedLine(@[20.float32, 5]);
-  drawDashedLine(@[15.float32, 3, 3, 3]);
-  drawDashedLine(@[20.float32, 3, 3, 3, 3, 3, 3, 3]);
-  drawDashedLine(@[12.float32, 3, 3]);
+  drawDashedLine(@[])
+  drawDashedLine(@[1.float32, 1])
+  drawDashedLine(@[10.float32, 10])
+  drawDashedLine(@[20.float32, 5])
+  drawDashedLine(@[15.float32, 3, 3, 3])
+  drawDashedLine(@[20.float32, 3, 3, 3, 3, 3, 3, 3])
+  drawDashedLine(@[12.float32, 3, 3])
 
   image.writeFile("tests/images/context/setLineDash_1.png")
 
@@ -531,3 +531,20 @@ block:
   ctx.fillRect(10, 10, 100, 100)
 
   image.writeFile("tests/images/context/blendmode_1.png")
+
+block:
+  let
+    image = newImage(300, 150)
+    ctx = newContext(image)
+
+  image.fill(rgba(255, 255, 255, 255))
+
+  ctx.globalAlpha = 0.5
+
+  ctx.fillStyle = "blue"
+  ctx.fillRect(10, 10, 100, 100)
+
+  ctx.fillStyle = "red"
+  ctx.fillRect(50, 50, 100, 100)
+
+  image.writeFile("tests/images/context/globalAlpha_1.png")

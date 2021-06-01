@@ -10,6 +10,7 @@ type
   Context* = ref object
     image*: Image
     fillStyle*, strokeStyle*: Paint
+    globalAlpha*: float32
     lineWidth*: float32
     miterLimit*: float32
     lineCap*: LineCap
@@ -25,6 +26,7 @@ type
 
   ContextState = object
     fillStyle, strokeStyle: Paint
+    globalAlpha: float32
     lineWidth: float32
     miterLimit: float32
     lineCap: LineCap
@@ -44,6 +46,7 @@ proc newContext*(image: Image): Context =
   result = Context()
   result.image = image
   result.mat = mat3()
+  result.globalAlpha = 1
   result.lineWidth = 1
   result.miterLimit = 10
   result.fillStyle = Paint(kind: pkSolid, color: rgbx(0, 0, 0, 255))
@@ -56,6 +59,7 @@ proc newContext*(width, height: int): Context {.inline.} =
 proc state(ctx: Context): ContextState =
   result.fillStyle = ctx.fillStyle
   result.strokeStyle = ctx.strokeStyle
+  result.globalAlpha = ctx.globalAlpha
   result.lineWidth = ctx.lineWidth
   result.miterLimit = ctx.miterLimit
   result.lineCap = ctx.lineCap
@@ -94,6 +98,7 @@ proc restore*(ctx: Context) =
   let state = ctx.stateStack.pop()
   ctx.fillStyle = state.fillStyle
   ctx.strokeStyle = state.strokeStyle
+  ctx.globalAlpha = state.globalAlpha
   ctx.lineWidth = state.lineWidth
   ctx.miterLimit = state.miterLimit
   ctx.lineCap = state.lineCap
@@ -113,9 +118,13 @@ proc restore*(ctx: Context) =
     else: # Otherwise draw to the root image
       ctx.image.draw(poppedLayer)
 
-proc fill(
-  ctx: Context, image: Image, path: Path, windingRule: WindingRule
-) {.inline.} =
+proc fill(ctx: Context, image: Image, path: Path, windingRule: WindingRule) =
+  var image = image
+
+  if ctx.globalAlpha != 1:
+    ctx.saveLayer()
+    image = ctx.layer
+
   image.fillPath(
     path,
     ctx.fillStyle,
@@ -123,7 +132,17 @@ proc fill(
     windingRule
   )
 
-proc stroke(ctx: Context, image: Image, path: Path) {.inline.} =
+  if ctx.globalAlpha != 1:
+    ctx.layer.applyOpacity(ctx.globalAlpha)
+    ctx.restore()
+
+proc stroke(ctx: Context, image: Image, path: Path) =
+  var image = image
+
+  if ctx.globalAlpha != 1:
+    ctx.saveLayer()
+    image = ctx.layer
+
   image.strokePath(
     path,
     ctx.strokeStyle,
@@ -135,6 +154,10 @@ proc stroke(ctx: Context, image: Image, path: Path) {.inline.} =
     ctx.lineDash
   )
 
+  if ctx.globalAlpha != 1:
+    ctx.layer.applyOpacity(ctx.globalAlpha)
+    ctx.restore()
+
 proc fillText(ctx: Context, image: Image, text: string, at: Vec2) {.inline.} =
   if ctx.font.typeface == nil:
     raise newException(PixieError, "No font has been set on this Context")
@@ -145,12 +168,22 @@ proc fillText(ctx: Context, image: Image, text: string, at: Vec2) {.inline.} =
 
   ctx.font.paint = ctx.fillStyle
 
+  var image = image
+
+  if ctx.globalAlpha != 1:
+    ctx.saveLayer()
+    image = ctx.layer
+
   image.fillText(
     ctx.font,
     text,
     ctx.mat * translate(at),
     hAlign = ctx.textAlign
   )
+
+  if ctx.globalAlpha != 1:
+    ctx.layer.applyOpacity(ctx.globalAlpha)
+    ctx.restore()
 
 proc strokeText(ctx: Context, image: Image, text: string, at: Vec2) {.inline.} =
   if ctx.font.typeface == nil:
@@ -161,6 +194,12 @@ proc strokeText(ctx: Context, image: Image, text: string, at: Vec2) {.inline.} =
   at.y -= round(ctx.font.typeface.ascent * ctx.font.scale)
 
   ctx.font.paint = ctx.strokeStyle
+
+  var image = image
+
+  if ctx.globalAlpha != 1:
+    ctx.saveLayer()
+    image = ctx.layer
 
   image.strokeText(
     ctx.font,
@@ -173,6 +212,10 @@ proc strokeText(ctx: Context, image: Image, text: string, at: Vec2) {.inline.} =
     miterLimit = ctx.miterLimit,
     dashes = ctx.lineDash
   )
+
+  if ctx.globalAlpha != 1:
+    ctx.layer.applyOpacity(ctx.globalAlpha)
+    ctx.restore()
 
 proc beginPath*(ctx: Context) {.inline.} =
   ## Starts a new path by emptying the list of sub-paths.
