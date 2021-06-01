@@ -463,7 +463,7 @@ proc fillText*(
             arrangement.selectionRects[runeIndex].w,
             underlineThickness
           )
-        elif font.strikethrough:
+        if font.strikethrough:
           path.rect(
             arrangement.selectionRects[runeIndex].x,
             position.y - strikeoutPosition,
@@ -535,7 +535,7 @@ proc strokeText*(
             arrangement.selectionRects[runeIndex].w,
             underlineThickness
           )
-        elif font.strikethrough:
+        if font.strikethrough:
           path.rect(
             arrangement.selectionRects[runeIndex].x,
             position.y - strikeoutPosition,
