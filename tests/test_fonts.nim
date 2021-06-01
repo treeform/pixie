@@ -781,18 +781,18 @@ block:
 
   var font1 = ubuntu
   font1.size = 15
-  font1.paint.color = parseHtmlColor("#CACACA").rgba()
+  font1.paint = "#CACACA"
 
   var font2 = ubuntu
   font2.size = 84
 
   var font3 = ubuntu
   font3.size = 18
-  font3.paint.color = parseHtmlColor("#007FF4").rgba()
+  font3.paint = "#007FF4"
 
   var font4 = ubuntu
   font4.size = 20
-  font4.paint.color = parseHtmlColor("#4F4F4F").rgba()
+  font4.paint = "#4F4F4F"
 
   let spans = @[
     newSpan("verb [with object] ", font1),
@@ -809,3 +809,142 @@ block:
   image.fillText(arrangement, vec2(20, 20))
 
   doDiff(image, "spans5")
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 24
+  font.underline = true
+
+  let image = newImage(200, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(
+    font,
+    "Wrapping text to new line",
+    bounds = vec2(200, 0)
+  )
+
+  doDiff(image, "underline1")
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 24
+  font.underline = true
+  font.paint = rgba(0, 0, 0, 127)
+
+  let image = newImage(200, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(
+    font,
+    "Wrapping text to new line",
+    bounds = vec2(200, 0)
+  )
+
+  doDiff(image, "underline2")
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 24
+  font.underline = true
+
+  let image = newImage(200, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.strokeText(
+    font,
+    "Wrapping text to new line",
+    bounds = vec2(200, 0)
+  )
+
+  doDiff(image, "underline3")
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 24
+  font.strikethrough = true
+
+  let image = newImage(200, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(
+    font,
+    "Wrapping text to new line",
+    bounds = vec2(200, 0)
+  )
+
+  doDiff(image, "strikethrough1")
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 24
+  font.strikethrough = true
+  font.paint = rgba(0, 0, 0, 127)
+
+  let image = newImage(200, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(
+    font,
+    "Wrapping text to new line",
+    bounds = vec2(200, 0)
+  )
+
+  doDiff(image, "strikethrough2")
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 24
+  font.strikethrough = true
+
+  let image = newImage(200, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.strokeText(
+    font,
+    "Wrapping text to new line",
+    bounds = vec2(200, 0)
+  )
+
+  doDiff(image, "strikethrough3")
+
+block:
+  let ubuntu = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
+
+  var font1 = ubuntu
+  font1.size = 15
+  font1.paint = "#CACACA"
+
+  var font2 = ubuntu
+  font2.size = 84
+
+  var font3 = ubuntu
+  font3.size = 18
+  font3.paint = "#007FF4"
+
+  var font4 = ubuntu
+  font4.size = 20
+  font4.paint = "#4F4F4F"
+
+  var font5 = ubuntu
+  font5.size = 20
+  font5.paint = "#4F4F4F"
+  font5.underline = true
+
+  var font6 = ubuntu
+  font6.size = 20
+  font6.paint = "#4F4F4F"
+  font6.strikethrough = true
+
+  let spans = @[
+    newSpan("verb [with object] ", font1),
+    newSpan("strallow\n", font2),
+    newSpan("\nstral·low\n", font3),
+    newSpan("\n1. free (something) from ", font4),
+    newSpan("restrictive restrictions", font5),
+    newSpan(" ", font4),
+    newSpan("\"the regulations are intended to strallow changes in public policy\" ", font6)
+  ]
+
+  let image = newImage(400, 400)
+  image.fill(rgba(255, 255, 255, 255))
+
+  let arrangement = typeset(spans, bounds = vec2(360, 360))
+
+  image.fillText(arrangement, vec2(20, 20))
+
+  doDiff(image, "spans6")
