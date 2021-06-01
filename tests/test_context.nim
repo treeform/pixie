@@ -531,3 +531,20 @@ block:
   ctx.fillRect(10, 10, 100, 100)
 
   image.writeFile("tests/images/context/blendmode_1.png")
+
+block:
+  let
+    image = newImage(300, 150)
+    ctx = newContext(image)
+
+  image.fill(rgba(255, 255, 255, 255))
+
+  ctx.globalAlpha = 0.5
+
+  ctx.fillStyle = "blue"
+  ctx.fillRect(10, 10, 100, 100)
+
+  ctx.fillStyle = "red"
+  ctx.fillRect(50, 50, 100, 100)
+
+  image.writeFile("tests/images/context/globalAlpha_1.png")
