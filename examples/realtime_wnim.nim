@@ -1,4 +1,4 @@
-import pixie, wNim/wApp, wNim/wFrame, wNim/wPaintDC, wNim/wImage
+import pixie, wNim/wApp, wNim/wFrame, wNim/wImage, wNim/wPaintDC
 
 let
   w = 256
