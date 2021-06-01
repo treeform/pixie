@@ -425,12 +425,17 @@ proc parseSvgFont*(buf: string): Font =
   result.lineHeight = AutoLineHeight
   result.paint = Paint(kind: pkSolid, color: rgbx(0, 0, 0, 255))
 
-proc fillText*(
+proc textUber(
   target: Image | Mask,
   arrangement: Arrangement,
-  transform: Vec2 | Mat3 = vec2(0, 0)
+  transform: Vec2 | Mat3 = vec2(0, 0),
+  strokeWidth = 1.0,
+  lineCap = lcButt,
+  lineJoin = ljMiter,
+  miterLimit = defaultMiterLimit,
+  dashes: seq[float32] = @[],
+  stroke: static[bool] = false
 ) =
-  ## Fills the text arrangement.
   var line: int
   for spanIndex, (start, stop) in arrangement.spans:
     let
@@ -471,10 +476,45 @@ proc fillText*(
             strikeoutThickness
           )
 
-      when type(target) is Image:
-        target.fillPath(path, font.paint, transform)
-      else: # target is Mask
-        target.fillPath(path, transform)
+      when stroke:
+        when type(target) is Image:
+          target.strokePath(
+            path,
+            font.paint,
+            transform,
+            strokeWidth,
+            lineCap,
+            lineJoin,
+            miterLimit,
+            dashes
+          )
+        else: # target is Mask
+          target.strokePath(
+            path,
+            transform,
+            strokeWidth,
+            lineCap,
+            lineJoin,
+            miterLimit,
+            dashes
+          )
+      else:
+        when type(target) is Image:
+          target.fillPath(path, font.paint, transform)
+        else: # target is Mask
+          target.fillPath(path, transform)
+
+proc fillText*(
+  target: Image | Mask,
+  arrangement: Arrangement,
+  transform: Vec2 | Mat3 = vec2(0, 0)
+) {.inline.} =
+  ## Fills the text arrangement.
+  textUber(
+    target,
+    arrangement,
+    transform
+  )
 
 proc fillText*(
   target: Image | Mask,
@@ -501,69 +541,19 @@ proc strokeText*(
   lineJoin = ljMiter,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[]
-) =
+) {.inline.} =
   ## Strokes the text arrangement.
-  var line: int
-  for spanIndex, (start, stop) in arrangement.spans:
-    let
-      font = arrangement.fonts[spanIndex]
-      underlineThickness = font.typeface.underlineThickness * font.scale
-      underlinePosition = font.typeface.underlinePosition * font.scale
-      strikeoutThickness = font.typeface.strikeoutThickness * font.scale
-      strikeoutPosition = font.typeface.strikeoutPosition * font.scale
-    for runeIndex in start .. stop:
-      let position = arrangement.positions[runeIndex]
-
-      var path = font.typeface.getGlyphPath(arrangement.runes[runeIndex])
-      path.transform(
-        translate(position) *
-        scale(vec2(font.scale))
-      )
-
-      var applyDecoration = true
-      if runeIndex == arrangement.lines[line][1]:
-        inc line
-        if arrangement.runes[runeIndex] == SP:
-          # Do not apply decoration to the space at end of lines
-          applyDecoration = false
-
-      if applyDecoration:
-        if font.underline:
-          path.rect(
-            arrangement.selectionRects[runeIndex].x,
-            position.y - underlinePosition + underlineThickness / 2,
-            arrangement.selectionRects[runeIndex].w,
-            underlineThickness
-          )
-        if font.strikethrough:
-          path.rect(
-            arrangement.selectionRects[runeIndex].x,
-            position.y - strikeoutPosition,
-            arrangement.selectionRects[runeIndex].w,
-            strikeoutThickness
-          )
-
-      when type(target) is Image:
-        target.strokePath(
-          path,
-          font.paint,
-          transform,
-          strokeWidth,
-          lineCap,
-          lineJoin,
-          miterLimit,
-          dashes
-        )
-      else: # target is Mask
-        target.strokePath(
-          path,
-          transform,
-          strokeWidth,
-          lineCap,
-          lineJoin,
-          miterLimit,
-          dashes
-        )
+  textUber(
+    target,
+    arrangement,
+    transform,
+    strokeWidth,
+    lineCap,
+    lineJoin,
+    miterLimit,
+    dashes,
+    true
+  )
 
 proc strokeText*(
   target: Image | Mask,
