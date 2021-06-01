@@ -18,8 +18,8 @@ type
     lineHeight*: float32 ## The line height in pixels or AutoLineHeight for the font's default line height.
     paint*: Paint
     textCase*: TextCase
-    underline*: bool ## Apply an underline.
-    strikethrough*: bool ## Apply a strikethrough.
+    underline*: bool            ## Apply an underline.
+    strikethrough*: bool        ## Apply a strikethrough.
     noKerningAdjustments*: bool ## Optionally disable kerning pair adjustments
 
   Span* = ref object
@@ -27,11 +27,11 @@ type
     font*: Font
 
   Arrangement* = ref object
-    lines*: seq[(int, int)] ## The (start, stop) of the lines of text.
-    spans*: seq[(int, int)] ## The (start, stop) of the spans in the text.
-    fonts*: seq[Font] ## The font for each span.
-    runes*: seq[Rune] ## The runes of the text.
-    positions*: seq[Vec2] ## The positions of the glyphs for each rune.
+    lines*: seq[(int, int)]    ## The (start, stop) of the lines of text.
+    spans*: seq[(int, int)]    ## The (start, stop) of the spans in the text.
+    fonts*: seq[Font]          ## The font for each span.
+    runes*: seq[Rune]          ## The runes of the text.
+    positions*: seq[Vec2]      ## The positions of the glyphs for each rune.
     selectionRects*: seq[Rect] ## The selection rects for each glyph.
 
   HAlignMode* = enum

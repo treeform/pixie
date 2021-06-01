@@ -1,4 +1,4 @@
-import pixie, random, os
+import os, pixie, random
 
 when not defined(pixieLeakCheck):
   quit("Requires -d:pixieLeakCheck")

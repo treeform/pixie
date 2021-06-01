@@ -499,20 +499,20 @@ block:
   var y = 15.float32
 
   proc drawDashedLine(pattern: seq[float32]) =
-    ctx.beginPath();
-    ctx.setLineDash(pattern);
-    ctx.moveTo(0, y);
-    ctx.lineTo(300, y);
-    ctx.stroke();
-    y += 20;
+    ctx.beginPath()
+    ctx.setLineDash(pattern)
+    ctx.moveTo(0, y)
+    ctx.lineTo(300, y)
+    ctx.stroke()
+    y += 20
 
-  drawDashedLine(@[]);
-  drawDashedLine(@[1.float32, 1]);
-  drawDashedLine(@[10.float32, 10]);
-  drawDashedLine(@[20.float32, 5]);
-  drawDashedLine(@[15.float32, 3, 3, 3]);
-  drawDashedLine(@[20.float32, 3, 3, 3, 3, 3, 3, 3]);
-  drawDashedLine(@[12.float32, 3, 3]);
+  drawDashedLine(@[])
+  drawDashedLine(@[1.float32, 1])
+  drawDashedLine(@[10.float32, 10])
+  drawDashedLine(@[20.float32, 5])
+  drawDashedLine(@[15.float32, 3, 3, 3])
+  drawDashedLine(@[20.float32, 3, 3, 3, 3, 3, 3, 3])
+  drawDashedLine(@[12.float32, 3, 3])
 
   image.writeFile("tests/images/context/setLineDash_1.png")
 

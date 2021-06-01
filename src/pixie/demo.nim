@@ -1,10 +1,6 @@
-import opengl, pixie, pixie/context
+import opengl, pixie, pixie/context, staticglfw except Image
 
-export pixie
-
-import staticglfw except Image
-
-export staticglfw except Image
+export pixie, staticglfw except Image
 
 var
   dpi: float32 = 1.0
