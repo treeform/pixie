@@ -1,4 +1,4 @@
-import bitops, flatty/binny, math, pixie/common, pixie/paths, sets, tables,
+import flatty/binny, math, pixie/common, pixie/paths, sets, tables,
     unicode, vmath
 
 ## See https://docs.microsoft.com/en-us/typography/opentype/spec/
@@ -867,8 +867,15 @@ proc parseCoverage(buf: string, offset: int): Coverage =
     else:
       failUnsupported()
 
-proc valueFormatSize(valueFormat: uint16): int {.inline.} =
-  countSetBits(valueFormat) * 2
+proc valueFormatSize(valueFormat: uint16): int =
+  # countSetBits(valueFormat) * 2
+  var
+    n = valueFormat
+    bitsSet: int
+  while n > 0:
+    n = (n and (n - 1))
+    inc bitsSet
+  bitsSet * 2
 
 proc parseValueRecord(
   buf: string, offset: int, valueFormat: uint16

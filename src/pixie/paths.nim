@@ -500,6 +500,11 @@ proc roundedRect*(
   ## Adds a rounded rectangle.
   ## Clockwise param can be used to subtract a rect from a path when using
   ## even-odd winding rule.
+
+  if nw == 0 and ne == 0 and se == 0 and sw == 0:
+    path.rect(x, y, w, h, clockwise)
+    return
+
   let
     s = splineCircleK
 
@@ -992,7 +997,8 @@ proc computePixelBounds(segments: seq[(Segment, int16)]): Rect =
     xMax = float32.low
     yMin = float32.high
     yMax = float32.low
-  for (segment, _) in segments:
+  for i in 0 ..< segments.len: # For arc
+    let segment = segments[i][0]
     xMin = min(xMin, min(segment.at.x, segment.to.x))
     xMax = max(xMax, max(segment.at.x, segment.to.x))
     yMin = min(yMin, segment.at.y)
@@ -1089,14 +1095,14 @@ proc shouldFill(windingRule: WindingRule, count: int): bool {.inline.} =
   of wrEvenOdd:
     count mod 2 != 0
 
-template computeCoverages(
+proc computeCoverages(
   coverages: var seq[uint8],
   hits: var seq[(float32, int16)],
   size: Vec2,
   y: int,
   partitioning: Partitioning,
   windingRule: WindingRule
-) =
+) {.inline.} =
   const
     quality = 5 # Must divide 255 cleanly (1, 3, 5, 15, 17, 51, 85)
     sampleCoverage = (255 div quality).uint8
@@ -1106,15 +1112,20 @@ template computeCoverages(
   zeroMem(coverages[0].addr, coverages.len)
 
   # Do scanlines for this row
-  let partition = getIndexForY(partitioning, y)
+  let partitionIndex = partitioning.getIndexForY(y)
   var
     yLine = y.float32 + initialOffset - offset
+    scanline = line(vec2(0, yLine), vec2(size.x, yLine))
     numHits: int
   for m in 0 ..< quality:
     yLine += offset
-    let scanline = line(vec2(0, yLine), vec2(size.x, yLine))
+    scanline.a.y = yLine
+    scanline.b.y = yLine
     numHits = 0
-    for (segment, winding) in partitioning.partitions[partition]:
+    for i in 0 ..< partitioning.partitions[partitionIndex].len: # For arc
+      let
+        segment = partitioning.partitions[partitionIndex][i][0]
+        winding = partitioning.partitions[partitionIndex][i][1]
       if segment.at.y <= scanline.a.y and segment.to.y >= scanline.a.y:
         var at: Vec2
         if scanline.intersects(segment, at) and segment.to != at:
@@ -1198,7 +1209,7 @@ proc fillShapes(
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
     pathHeight = min(image.height, (bounds.y + bounds.h).int)
-    partitions = partitionSegments(segments, startY, pathHeight - startY)
+    partitioning = partitionSegments(segments, startY, pathHeight - startY)
 
   var
     coverages = newSeq[uint8](image.width)
@@ -1210,7 +1221,7 @@ proc fillShapes(
       hits,
       image.wh,
       y,
-      partitions,
+      partitioning,
       windingRule
     )
 
@@ -1308,7 +1319,7 @@ proc fillShapes(
     startY = max(0, bounds.y.int)
     stopY = min(mask.height, (bounds.y + bounds.h).int)
     pathHeight = stopY - startY
-    partitions = partitionSegments(segments, startY, pathHeight)
+    partitioning = partitionSegments(segments, startY, pathHeight)
 
   when defined(amd64) and not defined(pixieNoSimd):
     let maskerSimd = bmNormal.maskerSimd()
@@ -1323,7 +1334,7 @@ proc fillShapes(
       hits,
       mask.wh,
       y,
-      partitions,
+      partitioning,
       windingRule
     )
 
@@ -1551,9 +1562,10 @@ proc fillPath*(
 ) =
   ## Fills a path.
   if paint.kind == pkSolid:
-    var shapes = parseSomePath(path, transform.pixelScale())
-    shapes.transform(transform)
-    image.fillShapes(shapes, paint.color, windingRule, paint.blendMode)
+    if paint.color.a > 0:
+      var shapes = parseSomePath(path, transform.pixelScale())
+      shapes.transform(transform)
+      image.fillShapes(shapes, paint.color, windingRule, paint.blendMode)
     return
 
   let
@@ -1614,16 +1626,17 @@ proc strokePath*(
 ) =
   ## Strokes a path.
   if paint.kind == pkSolid:
-    var strokeShapes = strokeShapes(
-      parseSomePath(path, transform.pixelScale()),
-      strokeWidth,
-      lineCap,
-      lineJoin,
-      miterLimit,
-      dashes
-    )
-    strokeShapes.transform(transform)
-    image.fillShapes(strokeShapes, paint.color, wrNonZero, paint.blendMode)
+    if paint.color.a > 0:
+      var strokeShapes = strokeShapes(
+        parseSomePath(path, transform.pixelScale()),
+        strokeWidth,
+        lineCap,
+        lineJoin,
+        miterLimit,
+        dashes
+      )
+      strokeShapes.transform(transform)
+      image.fillShapes(strokeShapes, paint.color, wrNonZero, paint.blendMode)
     return
 
   let

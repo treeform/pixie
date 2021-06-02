@@ -413,7 +413,7 @@ proc parseOtf*(buf: string): Font =
   result.typeface.opentype = parseOpenType(buf)
   result.size = 12
   result.lineHeight = AutoLineHeight
-  result.paint = Paint(kind: pkSolid, color: rgbx(0, 0, 0, 255))
+  result.paint = rgbx(0, 0, 0, 255)
 
 proc parseTtf*(buf: string): Font =
   parseOtf(buf)
