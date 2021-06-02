@@ -500,6 +500,11 @@ proc roundedRect*(
   ## Adds a rounded rectangle.
   ## Clockwise param can be used to subtract a rect from a path when using
   ## even-odd winding rule.
+
+  if nw == 0 and ne == 0 and se == 0 and sw == 0:
+    path.rect(x, y, w, h, clockwise)
+    return
+
   let
     s = splineCircleK
 
@@ -1551,9 +1556,10 @@ proc fillPath*(
 ) =
   ## Fills a path.
   if paint.kind == pkSolid:
-    var shapes = parseSomePath(path, transform.pixelScale())
-    shapes.transform(transform)
-    image.fillShapes(shapes, paint.color, windingRule, paint.blendMode)
+    if paint.color.a > 0:
+      var shapes = parseSomePath(path, transform.pixelScale())
+      shapes.transform(transform)
+      image.fillShapes(shapes, paint.color, windingRule, paint.blendMode)
     return
 
   let
@@ -1614,16 +1620,17 @@ proc strokePath*(
 ) =
   ## Strokes a path.
   if paint.kind == pkSolid:
-    var strokeShapes = strokeShapes(
-      parseSomePath(path, transform.pixelScale()),
-      strokeWidth,
-      lineCap,
-      lineJoin,
-      miterLimit,
-      dashes
-    )
-    strokeShapes.transform(transform)
-    image.fillShapes(strokeShapes, paint.color, wrNonZero, paint.blendMode)
+    if paint.color.a > 0:
+      var strokeShapes = strokeShapes(
+        parseSomePath(path, transform.pixelScale()),
+        strokeWidth,
+        lineCap,
+        lineJoin,
+        miterLimit,
+        dashes
+      )
+      strokeShapes.transform(transform)
+      image.fillShapes(strokeShapes, paint.color, wrNonZero, paint.blendMode)
     return
 
   let
