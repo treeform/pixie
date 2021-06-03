@@ -1562,7 +1562,7 @@ proc fillPath*(
 ) =
   ## Fills a path.
   if paint.kind == pkSolid:
-    if paint.color.a > 0:
+    if paint.color.a > 0 or paint.blendMode == bmOverwrite:
       var shapes = parseSomePath(path, transform.pixelScale())
       shapes.transform(transform)
       image.fillShapes(shapes, paint.color, windingRule, paint.blendMode)
@@ -1626,7 +1626,7 @@ proc strokePath*(
 ) =
   ## Strokes a path.
   if paint.kind == pkSolid:
-    if paint.color.a > 0:
+    if paint.color.a > 0 or paint.blendMode == bmOverwrite:
       var strokeShapes = strokeShapes(
         parseSomePath(path, transform.pixelScale()),
         strokeWidth,
