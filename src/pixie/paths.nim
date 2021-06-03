@@ -1,5 +1,5 @@
 import blends, bumpy, chroma, common, images, masks, paints, pixie/internal,
-    strutils, vmath
+    strutils, system/memory, vmath
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -990,6 +990,21 @@ proc shapesToSegments(shapes: seq[seq[Vec2]]): seq[(Segment, int16)] =
 
       result.add((segment, winding))
 
+proc requiresAntiAliasing(segments: seq[(Segment, int16)]): bool =
+  ## Returns true if the fill requires antialiasing.
+
+  template hasFractional(v: float32): bool =
+    v - trunc(v) != 0
+
+  for i in 0 ..< segments.len: # For arc
+    let segment = segments[i][0]
+    if segment.at.x != segment.to.x or
+      segment.at.x.hasFractional() or # at.x and to.x are the same
+      segment.at.y.hasFractional() or
+      segment.to.y.hasFractional():
+      # AA is required if all segments are not vertical or have fractional > 0
+      return true
+
 proc computePixelBounds(segments: seq[(Segment, int16)]): Rect =
   ## Compute the bounds of the segments.
   var
@@ -1100,11 +1115,12 @@ proc computeCoverages(
   hits: var seq[(float32, int16)],
   size: Vec2,
   y: int,
+  aa: bool,
   partitioning: Partitioning,
   windingRule: WindingRule
 ) {.inline.} =
-  const
-    quality = 5 # Must divide 255 cleanly (1, 3, 5, 15, 17, 51, 85)
+  let
+    quality = if aa: 5 else: 1 # Must divide 255 cleanly (1, 3, 5, 15, 17, 51, 85)
     sampleCoverage = (255 div quality).uint8
     offset = 1 / quality.float32
     initialOffset = offset / 2 + epsilon
@@ -1174,15 +1190,18 @@ proc computeCoverages(
           let fillLen = at.int - fillStart
           if fillLen > 0:
             var i = fillStart
-            when defined(amd64) and not defined(pixieNoSimd):
-              let vSampleCoverage = mm_set1_epi8(cast[int8](sampleCoverage))
-              for j in countup(i, fillStart + fillLen - 16, 16):
-                var coverage = mm_loadu_si128(coverages[j].addr)
-                coverage = mm_add_epi8(coverage, vSampleCoverage)
-                mm_storeu_si128(coverages[j].addr, coverage)
-                i += 16
-            for j in i ..< fillStart + fillLen:
-              coverages[j] += sampleCoverage
+            if aa:
+              when defined(amd64) and not defined(pixieNoSimd):
+                let vSampleCoverage = mm_set1_epi8(cast[int8](sampleCoverage))
+                for j in countup(i, fillStart + fillLen - 16, 16):
+                  var coverage = mm_loadu_si128(coverages[j].addr)
+                  coverage = mm_add_epi8(coverage, vSampleCoverage)
+                  mm_storeu_si128(coverages[j].addr, coverage)
+                  i += 16
+              for j in i ..< fillStart + fillLen:
+                coverages[j] += sampleCoverage
+            else:
+              nimSetMem(coverages[fillStart].addr, sampleCoverage.cint, fillLen)
 
         prevAt = at
 
@@ -1205,6 +1224,7 @@ proc fillShapes(
     rgbx = color.asRgbx()
     blender = blendMode.blender()
     segments = shapes.shapesToSegments()
+    aa = segments.requiresAntiAliasing()
     bounds = computePixelBounds(segments)
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
@@ -1221,6 +1241,7 @@ proc fillShapes(
       hits,
       image.wh,
       y,
+      aa,
       partitioning,
       windingRule
     )
@@ -1247,7 +1268,7 @@ proc fillShapes(
             # If the coverages are not all zero
             if mm_movemask_epi8(mm_cmpeq_epi32(coverage, first32)) == 0xffff:
               # Coverages are all 255
-              if rgbx.a == 255 and blendMode == bmNormal:
+              if blendMode == bmNormal and rgbx.a == 255:
                 mm_storeu_si128(image.data[index].addr, vColor)
               else:
                 let backdrop = mm_loadu_si128(image.data[index].addr)
@@ -1282,25 +1303,18 @@ proc fillShapes(
           x += 4
 
     while x < image.width:
-      if x + 8 <= coverages.len:
-        let peeked = cast[ptr uint64](coverages[x].addr)[]
-        if peeked == 0:
-          x += 8
-          continue
-
       let coverage = coverages[x]
       if coverage != 0:
-        var source = rgbx
-        if coverage != 255:
-          source.r = ((source.r.uint32 * coverage) div 255).uint8
-          source.g = ((source.g.uint32 * coverage) div 255).uint8
-          source.b = ((source.b.uint32 * coverage) div 255).uint8
-          source.a = ((source.a.uint32 * coverage) div 255).uint8
-
-        if source.a == 255 and blendMode == bmNormal:
+        if blendMode == bmNormal and coverage == 255 and rgbx.a == 255:
           # Skip blending
-          image.setRgbaUnsafe(x, y, source)
+          image.setRgbaUnsafe(x, y, rgbx)
         else:
+          var source = rgbx
+          if coverage != 255:
+            source.r = ((source.r.uint32 * coverage) div 255).uint8
+            source.g = ((source.g.uint32 * coverage) div 255).uint8
+            source.b = ((source.b.uint32 * coverage) div 255).uint8
+            source.a = ((source.a.uint32 * coverage) div 255).uint8
           let backdrop = image.getRgbaUnsafe(x, y)
           image.setRgbaUnsafe(x, y, blender(backdrop, source))
       inc x
@@ -1314,6 +1328,7 @@ proc fillShapes(
   # rasterize only within the total bounds
   let
     segments = shapes.shapesToSegments()
+    aa = segments.requiresAntiAliasing()
     bounds = computePixelBounds(segments)
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
@@ -1334,6 +1349,7 @@ proc fillShapes(
       hits,
       mask.wh,
       y,
+      aa,
       partitioning,
       windingRule
     )
@@ -1356,18 +1372,10 @@ proc fillShapes(
         x += 16
 
     while x < mask.width:
-      if x + 8 <= coverages.len:
-        let peeked = cast[ptr uint64](coverages[x].addr)[]
-        if peeked == 0:
-          x += 8
-          continue
-
       let coverage = coverages[x]
       if coverage != 0:
-        let
-          backdrop = mask.getValueUnsafe(x, y)
-          blended = blendAlpha(backdrop, coverage)
-        mask.setValueUnsafe(x, y, blended)
+        let backdrop = mask.getValueUnsafe(x, y)
+        mask.setValueUnsafe(x, y, blendAlpha(backdrop, coverage))
       inc x
 
 proc miterLimitToAngle*(limit: float32): float32 =
