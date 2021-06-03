@@ -8,6 +8,8 @@ This library is being actively developed and we'd be happy for you to use it.
 
 `nimble install pixie`
 
+![Github Actions](https://github.com/treeform/pixie/workflows/Github%20Actions/badge.svg)
+
 Features:
 * Typesetting and rasterizing text, including styled rich text via spans.
 * Drawing paths, shapes and curves with even-odd and non-zero windings.

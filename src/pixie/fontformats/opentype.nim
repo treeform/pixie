@@ -1,5 +1,4 @@
-import flatty/binny, math, pixie/common, pixie/paths, sets, tables,
-    unicode, vmath
+import flatty/binny, math, pixie/common, pixie/paths, sets, tables, unicode, vmath
 
 ## See https://docs.microsoft.com/en-us/typography/opentype/spec/
 
