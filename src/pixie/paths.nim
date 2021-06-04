@@ -1,5 +1,5 @@
 import blends, bumpy, chroma, common, images, masks, paints, pixie/internal,
-    strutils, system/memory, vmath
+    strutils, vmath
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -1430,11 +1430,7 @@ proc fillShapes(
         blendMode
       )
 
-proc fillShapes(
-  mask: Mask,
-  shapes: seq[seq[Vec2]],
-  windingRule: WindingRule
-) =
+proc fillShapes(mask: Mask, shapes: seq[seq[Vec2]], windingRule: WindingRule) =
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
   let
