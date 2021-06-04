@@ -12,6 +12,7 @@ timeIt "roundedRect":
   const radius = 20
 
   var path: Path
-  path.roundedRect(0, 0, 500, 300, radius, radius, radius, radius)
+  path.roundedRect(0.5, 0.5, 499, 299, radius, radius, radius, radius)
+  # path.roundedRect(0, 0, 500, 300, radius, radius, radius, radius)
 
   image.fillPath(path, rgba(0, 0, 0, 255))

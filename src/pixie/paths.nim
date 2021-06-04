@@ -25,7 +25,7 @@ type
     RMove, RLine, RHLine, RVLine, RCubic, RSCubic, RQuad, RTQuad, RArc
 
   PathCommand* = object
-    ## Binary version of an SVG command
+    ## Binary version of an SVG command.
     kind*: PathCommandKind
     numbers*: seq[float32]
 
@@ -501,18 +501,24 @@ proc roundedRect*(
   ## Clockwise param can be used to subtract a rect from a path when using
   ## even-odd winding rule.
 
+  var
+    nw = nw
+    ne = ne
+    se = se
+    sw = sw
+    maxRadius = min(w / 2, h / 2)
+
+  nw = max(0, min(nw, maxRadius))
+  ne = max(0, min(ne, maxRadius))
+  se = max(0, min(se, maxRadius))
+  sw = max(0, min(sw, maxRadius))
+
   if nw == 0 and ne == 0 and se == 0 and sw == 0:
     path.rect(x, y, w, h, clockwise)
     return
 
   let
     s = splineCircleK
-
-    maxRadius = min(w / 2, h / 2)
-    nw = min(nw, maxRadius)
-    ne = min(ne, maxRadius)
-    se = min(se, maxRadius)
-    sw = min(sw, maxRadius)
 
     t1 = vec2(x + nw, y)
     t2 = vec2(x + w - ne, y)
