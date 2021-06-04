@@ -1110,6 +1110,35 @@ proc shouldFill(windingRule: WindingRule, count: int): bool {.inline.} =
   of wrEvenOdd:
     count mod 2 != 0
 
+iterator walk(
+  hits: seq[(float32, int16)],
+  numHits: int,
+  windingRule: WindingRule,
+  y: int,
+  size: Vec2
+): (float32, float32, int32) =
+  var
+    prevAt: float32
+    count: int32
+  for i in 0 ..< numHits:
+    let (at, winding) = hits[i]
+    if windingRule == wrNonZero and
+      (count != 0) == (count + winding != 0) and
+      i < numHits - 1:
+      # Shortcut: if nonzero rule, we only care about when the count changes
+      # between zero and nonzero (or the last hit)
+      count += winding
+      continue
+    if at > 0:
+      if shouldFill(windingRule, count):
+        yield (prevAt, at, count)
+      prevAt = at
+    count += winding
+
+  when defined(pixieLeakCheck):
+    if prevAt != size.x and count != 0:
+      echo "Leak detected: ", count, " @ (", prevAt, ", ", y, ")"
+
 proc computeCoverages(
   coverages: var seq[uint8],
   hits: var seq[(float32, int16)],
@@ -1155,61 +1184,40 @@ proc computeCoverages(
     else:
       insertionSort(hits, numHits - 1)
 
-    var
-      prevAt: float32
-      count: int
-    for i in 0 ..< numHits:
-      let (at, winding) = hits[i]
-      if windingRule == wrNonZero and
-        (count != 0) == (count + winding != 0) and
-        i < numHits - 1:
-        # Shortcut: if nonzero rule, we only care about when the count changes
-        # between zero and nonzero (or the last hit)
-        count += winding
-        continue
-      if at > 0:
-        if shouldFill(windingRule, count):
-          var fillStart = prevAt.int
+    for (prevAt, at, count) in hits.walk(numHits, windingRule, y, size):
+      var fillStart = prevAt.int
 
-          let
-            pixelCrossed = at.int - prevAt.int > 0
-            leftCover =
-              if pixelCrossed:
-                trunc(prevAt) + 1 - prevAt
-              else:
-                at - prevAt
-          if leftCover != 0:
-            inc fillStart
-            coverages[prevAt.int] += (leftCover * sampleCoverage.float32).uint8
-
+      let
+        pixelCrossed = at.int - prevAt.int > 0
+        leftCover =
           if pixelCrossed:
-            let rightCover = at - trunc(at)
-            if rightCover > 0:
-              coverages[at.int] += (rightCover * sampleCoverage.float32).uint8
+            trunc(prevAt) + 1 - prevAt
+          else:
+            at - prevAt
+      if leftCover != 0:
+        inc fillStart
+        coverages[prevAt.int] += (leftCover * sampleCoverage.float32).uint8
 
-          let fillLen = at.int - fillStart
-          if fillLen > 0:
-            var i = fillStart
-            if aa:
-              when defined(amd64) and not defined(pixieNoSimd):
-                let vSampleCoverage = mm_set1_epi8(cast[int8](sampleCoverage))
-                for j in countup(i, fillStart + fillLen - 16, 16):
-                  var coverage = mm_loadu_si128(coverages[j].addr)
-                  coverage = mm_add_epi8(coverage, vSampleCoverage)
-                  mm_storeu_si128(coverages[j].addr, coverage)
-                  i += 16
-              for j in i ..< fillStart + fillLen:
-                coverages[j] += sampleCoverage
-            else:
-              nimSetMem(coverages[fillStart].addr, sampleCoverage.cint, fillLen)
+      if pixelCrossed:
+        let rightCover = at - trunc(at)
+        if rightCover > 0:
+          coverages[at.int] += (rightCover * sampleCoverage.float32).uint8
 
-        prevAt = at
-
-      count += winding
-
-    when defined(pixieLeakCheck):
-      if prevAt != size.x and count != 0:
-        echo "Leak detected: ", count, " @ (", prevAt, ", ", y, ")"
+      let fillLen = at.int - fillStart
+      if fillLen > 0:
+        var i = fillStart
+        if aa:
+          when defined(amd64) and not defined(pixieNoSimd):
+            let vSampleCoverage = mm_set1_epi8(cast[int8](sampleCoverage))
+            for j in countup(i, fillStart + fillLen - 16, 16):
+              var coverage = mm_loadu_si128(coverages[j].addr)
+              coverage = mm_add_epi8(coverage, vSampleCoverage)
+              mm_storeu_si128(coverages[j].addr, coverage)
+              i += 16
+          for j in i ..< fillStart + fillLen:
+            coverages[j] += sampleCoverage
+        else:
+          nimSetMem(coverages[fillStart].addr, sampleCoverage.cint, fillLen)
 
 proc fillShapes(
   image: Image,
@@ -1397,9 +1405,9 @@ proc strokeShapes(
   if strokeWidth <= 0:
     return
 
-  let miterAngleLimit = miterLimitToAngle(miterLimit)
-
-  let halfStroke = strokeWidth / 2
+  let
+    halfStroke = strokeWidth / 2
+    miterAngleLimit = miterLimitToAngle(miterLimit)
 
   proc makeCircle(at: Vec2): seq[Vec2] =
     var path: Path
