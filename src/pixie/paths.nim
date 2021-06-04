@@ -31,7 +31,7 @@ type
 
   Path* = object
     ## Used to hold paths and create paths.
-    commands*: seq[PathCommand]
+    commands: seq[PathCommand]
     start, at: Vec2 # Maintained by moveTo, lineTo, etc. Used by arcTo.
 
   SomePath* = Path | string
