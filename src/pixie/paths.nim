@@ -1142,6 +1142,7 @@ iterator walk(
 proc computeCoverages(
   coverages: var seq[uint8],
   hits: var seq[(float32, int16)],
+  numHits: var int,
   size: Vec2,
   y: int,
   aa: bool,
@@ -1154,14 +1155,14 @@ proc computeCoverages(
     offset = 1 / quality.float32
     initialOffset = offset / 2 + epsilon
 
-  zeroMem(coverages[0].addr, coverages.len)
+  if aa: # Coverage is only used for anti-aliasing
+    zeroMem(coverages[0].addr, coverages.len)
 
   # Do scanlines for this row
   let partitionIndex = partitioning.getIndexForY(y)
   var
     yLine = y.float32 + initialOffset - offset
     scanline = line(vec2(0, yLine), vec2(size.x, yLine))
-    numHits: int
   for m in 0 ..< quality:
     yLine += offset
     scanline.a.y = yLine
@@ -1184,29 +1185,29 @@ proc computeCoverages(
     else:
       insertionSort(hits, numHits - 1)
 
-    for (prevAt, at, count) in hits.walk(numHits, windingRule, y, size):
-      var fillStart = prevAt.int
+    if aa:
+      for (prevAt, at, count) in hits.walk(numHits, windingRule, y, size):
+        var fillStart = prevAt.int
 
-      let
-        pixelCrossed = at.int - prevAt.int > 0
-        leftCover =
-          if pixelCrossed:
-            trunc(prevAt) + 1 - prevAt
-          else:
-            at - prevAt
-      if leftCover != 0:
-        inc fillStart
-        coverages[prevAt.int] += (leftCover * sampleCoverage.float32).uint8
+        let
+          pixelCrossed = at.int - prevAt.int > 0
+          leftCover =
+            if pixelCrossed:
+              trunc(prevAt) + 1 - prevAt
+            else:
+              at - prevAt
+        if leftCover != 0:
+          inc fillStart
+          coverages[prevAt.int] += (leftCover * sampleCoverage.float32).uint8
 
-      if pixelCrossed:
-        let rightCover = at - trunc(at)
-        if rightCover > 0:
-          coverages[at.int] += (rightCover * sampleCoverage.float32).uint8
+        if pixelCrossed:
+          let rightCover = at - trunc(at)
+          if rightCover > 0:
+            coverages[at.int] += (rightCover * sampleCoverage.float32).uint8
 
-      let fillLen = at.int - fillStart
-      if fillLen > 0:
-        var i = fillStart
-        if aa:
+        let fillLen = at.int - fillStart
+        if fillLen > 0:
+          var i = fillStart
           when defined(amd64) and not defined(pixieNoSimd):
             let vSampleCoverage = mm_set1_epi8(cast[int8](sampleCoverage))
             for j in countup(i, fillStart + fillLen - 16, 16):
@@ -1216,8 +1217,164 @@ proc computeCoverages(
               i += 16
           for j in i ..< fillStart + fillLen:
             coverages[j] += sampleCoverage
-        else:
-          nimSetMem(coverages[fillStart].addr, sampleCoverage.cint, fillLen)
+
+proc fillCoverage(
+  image: Image,
+  rgbx: ColorRGBX,
+  startX, y: int,
+  coverages: seq[uint8],
+  blendMode: BlendMode
+) =
+  var x = startX
+  when defined(amd64) and not defined(pixieNoSimd):
+    if blendMode.hasSimdBlender():
+      # When supported, SIMD blend as much as possible
+      let
+        blenderSimd = blendMode.blenderSimd()
+        first32 = cast[M128i]([uint32.high, 0, 0, 0]) # First 32 bits
+        oddMask = mm_set1_epi16(cast[int16](0xff00))
+        div255 = mm_set1_epi16(cast[int16](0x8081))
+        vColor = mm_set1_epi32(cast[int32](rgbx))
+      for _ in countup(x, image.width - 16, 4):
+        var coverage = mm_loadu_si128(coverages[x].unsafeAddr)
+        coverage = mm_and_si128(coverage, first32)
+
+        let
+          index = image.dataIndex(x, y)
+          eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
+        if mm_movemask_epi8(eqZero) != 0xffff:
+          # If the coverages are not all zero
+          if mm_movemask_epi8(mm_cmpeq_epi32(coverage, first32)) == 0xffff:
+            # Coverages are all 255
+            if blendMode == bmNormal and rgbx.a == 255:
+              mm_storeu_si128(image.data[index].addr, vColor)
+            else:
+              let backdrop = mm_loadu_si128(image.data[index].addr)
+              mm_storeu_si128(
+                image.data[index].addr,
+                blenderSimd(backdrop, vColor)
+              )
+          else:
+            # Coverages are not all 255
+            coverage = unpackAlphaValues(coverage)
+            # Shift the coverages from `a` to `g` and `a` for multiplying
+            coverage = mm_or_si128(coverage, mm_srli_epi32(coverage, 16))
+
+            var
+              source = vColor
+              sourceEven = mm_slli_epi16(source, 8)
+              sourceOdd = mm_and_si128(source, oddMask)
+
+            sourceEven = mm_mulhi_epu16(sourceEven, coverage)
+            sourceOdd = mm_mulhi_epu16(sourceOdd, coverage)
+
+            sourceEven = mm_srli_epi16(mm_mulhi_epu16(sourceEven, div255), 7)
+            sourceOdd = mm_srli_epi16(mm_mulhi_epu16(sourceOdd, div255), 7)
+
+            source = mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
+
+            let backdrop = mm_loadu_si128(image.data[index].addr)
+            mm_storeu_si128(
+              image.data[index].addr,
+              blenderSimd(backdrop, source)
+            )
+        x += 4
+
+  let blender = blendMode.blender()
+  while x < image.width:
+    let coverage = coverages[x]
+    if coverage != 0:
+      if blendMode == bmNormal and coverage == 255 and rgbx.a == 255:
+        # Skip blending
+        image.setRgbaUnsafe(x, y, rgbx)
+      else:
+        var source = rgbx
+        if coverage != 255:
+          source.r = ((source.r.uint32 * coverage) div 255).uint8
+          source.g = ((source.g.uint32 * coverage) div 255).uint8
+          source.b = ((source.b.uint32 * coverage) div 255).uint8
+          source.a = ((source.a.uint32 * coverage) div 255).uint8
+        let backdrop = image.getRgbaUnsafe(x, y)
+        image.setRgbaUnsafe(x, y, blender(backdrop, source))
+    inc x
+
+proc fillCoverage(mask: Mask, startX, y: int, coverages: seq[uint8]) =
+  var x = startX
+  when defined(amd64) and not defined(pixieNoSimd):
+    # When supported, SIMD blend as much as possible
+    let maskerSimd = bmNormal.maskerSimd()
+    for _ in countup(x, coverages.len - 16, 16):
+      let
+        coverage = mm_loadu_si128(coverages[x].unsafeAddr)
+        eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
+      if mm_movemask_epi8(eqZero) != 0xffff:
+        # If the coverages are not all zero
+        let backdrop = mm_loadu_si128(mask.data[mask.dataIndex(x, y)].addr)
+        mm_storeu_si128(
+          mask.data[mask.dataIndex(x, y)].addr,
+          maskerSimd(backdrop, coverage)
+        )
+      x += 16
+
+  while x < mask.width:
+    let coverage = coverages[x]
+    if coverage != 0:
+      let backdrop = mask.getValueUnsafe(x, y)
+      mask.setValueUnsafe(x, y, blendAlpha(backdrop, coverage))
+    inc x
+
+proc fillHits(
+  image: Image,
+  rgbx: ColorRGBX,
+  startX, y: int,
+  hits: seq[(float32, int16)],
+  numHits: int,
+  windingRule: WindingRule,
+  blendMode: BlendMode
+) =
+  let blender = blendMode.blender()
+  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, image.wh):
+    let
+      fillStart = prevAt.int
+      fillLen = at.int - fillStart
+    if fillLen > 0:
+      if blendMode == bmNormal and rgbx.a == 255:
+        fillUnsafe(image.data, rgbx, image.dataIndex(fillStart, y), fillLen)
+      else:
+        var x = fillStart
+        when defined(amd64) and not defined(pixieNoSimd):
+          if blendMode.hasSimdBlender():
+            # When supported, SIMD blend as much as possible
+            let
+              blenderSimd = blendMode.blenderSimd()
+              vColor = mm_set1_epi32(cast[int32](rgbx))
+            for _ in countup(fillStart, fillLen - 16, 4):
+              let
+                index = image.dataIndex(x, y)
+                backdrop = mm_loadu_si128(image.data[index].addr)
+              mm_storeu_si128(
+                image.data[index].addr,
+                blenderSimd(backdrop, vColor)
+              )
+              x += 4
+        while x < fillStart + fillLen:
+          let backdrop = image.getRgbaUnsafe(x, y)
+          image.setRgbaUnsafe(x, y, blender(backdrop, rgbx))
+          inc x
+
+proc fillHits(
+  mask: Mask,
+  startX, y: int,
+  hits: seq[(float32, int16)],
+  numHits: int,
+  windingRule: WindingRule
+) =
+  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, mask.wh):
+    let
+      fillStart = prevAt.int
+      fillLen = at.int - fillStart
+    if fillLen > 0:
+      fillUnsafe(mask.data, 255, mask.dataIndex(fillStart, y), fillLen)
 
 proc fillShapes(
   image: Image,
@@ -1230,7 +1387,6 @@ proc fillShapes(
   # rasterize only within the total bounds
   let
     rgbx = color.asRgbx()
-    blender = blendMode.blender()
     segments = shapes.shapesToSegments()
     aa = segments.requiresAntiAliasing()
     bounds = computePixelBounds(segments)
@@ -1242,90 +1398,37 @@ proc fillShapes(
   var
     coverages = newSeq[uint8](image.width)
     hits = newSeq[(float32, int16)](4)
+    numHits: int
 
   for y in startY ..< pathHeight:
     computeCoverages(
       coverages,
       hits,
+      numHits,
       image.wh,
       y,
       aa,
       partitioning,
       windingRule
     )
-
-    # Apply the coverage and blend
-    var x = startX
-    when defined(amd64) and not defined(pixieNoSimd):
-      if blendMode.hasSimdBlender():
-        # When supported, SIMD blend as much as possible
-        let
-          blenderSimd = blendMode.blenderSimd()
-          first32 = cast[M128i]([uint32.high, 0, 0, 0]) # First 32 bits
-          oddMask = mm_set1_epi16(cast[int16](0xff00))
-          div255 = mm_set1_epi16(cast[int16](0x8081))
-          vColor = mm_set1_epi32(cast[int32](rgbx))
-        for _ in countup(x, image.width - 16, 4):
-          var coverage = mm_loadu_si128(coverages[x].addr)
-          coverage = mm_and_si128(coverage, first32)
-
-          let
-            index = image.dataIndex(x, y)
-            eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
-          if mm_movemask_epi8(eqZero) != 0xffff:
-            # If the coverages are not all zero
-            if mm_movemask_epi8(mm_cmpeq_epi32(coverage, first32)) == 0xffff:
-              # Coverages are all 255
-              if blendMode == bmNormal and rgbx.a == 255:
-                mm_storeu_si128(image.data[index].addr, vColor)
-              else:
-                let backdrop = mm_loadu_si128(image.data[index].addr)
-                mm_storeu_si128(
-                  image.data[index].addr,
-                  blenderSimd(backdrop, vColor)
-                )
-            else:
-              # Coverages are not all 255
-              coverage = unpackAlphaValues(coverage)
-              # Shift the coverages from `a` to `g` and `a` for multiplying
-              coverage = mm_or_si128(coverage, mm_srli_epi32(coverage, 16))
-
-              var
-                source = vColor
-                sourceEven = mm_slli_epi16(source, 8)
-                sourceOdd = mm_and_si128(source, oddMask)
-
-              sourceEven = mm_mulhi_epu16(sourceEven, coverage)
-              sourceOdd = mm_mulhi_epu16(sourceOdd, coverage)
-
-              sourceEven = mm_srli_epi16(mm_mulhi_epu16(sourceEven, div255), 7)
-              sourceOdd = mm_srli_epi16(mm_mulhi_epu16(sourceOdd, div255), 7)
-
-              source = mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
-
-              let backdrop = mm_loadu_si128(image.data[index].addr)
-              mm_storeu_si128(
-                image.data[index].addr,
-                blenderSimd(backdrop, source)
-              )
-          x += 4
-
-    while x < image.width:
-      let coverage = coverages[x]
-      if coverage != 0:
-        if blendMode == bmNormal and coverage == 255 and rgbx.a == 255:
-          # Skip blending
-          image.setRgbaUnsafe(x, y, rgbx)
-        else:
-          var source = rgbx
-          if coverage != 255:
-            source.r = ((source.r.uint32 * coverage) div 255).uint8
-            source.g = ((source.g.uint32 * coverage) div 255).uint8
-            source.b = ((source.b.uint32 * coverage) div 255).uint8
-            source.a = ((source.a.uint32 * coverage) div 255).uint8
-          let backdrop = image.getRgbaUnsafe(x, y)
-          image.setRgbaUnsafe(x, y, blender(backdrop, source))
-      inc x
+    if aa:
+      image.fillCoverage(
+        rgbx,
+        startX,
+        y,
+        coverages,
+        blendMode
+      )
+    else:
+      image.fillHits(
+        rgbx,
+        startX,
+        y,
+        hits,
+        numHits,
+        windingRule,
+        blendMode
+      )
 
 proc fillShapes(
   mask: Mask,
@@ -1344,47 +1447,26 @@ proc fillShapes(
     pathHeight = stopY - startY
     partitioning = partitionSegments(segments, startY, pathHeight)
 
-  when defined(amd64) and not defined(pixieNoSimd):
-    let maskerSimd = bmNormal.maskerSimd()
-
   var
     coverages = newSeq[uint8](mask.width)
     hits = newSeq[(float32, int16)](4)
+    numHits: int
 
   for y in startY ..< stopY:
     computeCoverages(
       coverages,
       hits,
+      numHits,
       mask.wh,
       y,
       aa,
       partitioning,
       windingRule
     )
-
-    # Apply the coverage and blend
-    var x = startX
-    when defined(amd64) and not defined(pixieNoSimd):
-      # When supported, SIMD blend as much as possible
-      for _ in countup(x, coverages.len - 16, 16):
-        let
-          coverage = mm_loadu_si128(coverages[x].addr)
-          eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
-        if mm_movemask_epi8(eqZero) != 0xffff:
-          # If the coverages are not all zero
-          let backdrop = mm_loadu_si128(mask.data[mask.dataIndex(x, y)].addr)
-          mm_storeu_si128(
-            mask.data[mask.dataIndex(x, y)].addr,
-            maskerSimd(backdrop, coverage)
-          )
-        x += 16
-
-    while x < mask.width:
-      let coverage = coverages[x]
-      if coverage != 0:
-        let backdrop = mask.getValueUnsafe(x, y)
-        mask.setValueUnsafe(x, y, blendAlpha(backdrop, coverage))
-      inc x
+    if aa:
+      mask.fillCoverage(startX, y, coverages)
+    else:
+      mask.fillHits(startX, y, hits, numHits, windingRule)
 
 proc miterLimitToAngle*(limit: float32): float32 =
   ## Converts miter-limit-ratio to miter-limit-angle.
