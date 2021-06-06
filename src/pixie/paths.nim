@@ -1,5 +1,5 @@
 import blends, bumpy, chroma, common, images, masks, paints, pixie/internal,
-    strutils, system/memory, vmath
+    strutils, vmath
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -25,13 +25,13 @@ type
     RMove, RLine, RHLine, RVLine, RCubic, RSCubic, RQuad, RTQuad, RArc
 
   PathCommand* = object
-    ## Binary version of an SVG command
+    ## Binary version of an SVG command.
     kind*: PathCommandKind
     numbers*: seq[float32]
 
   Path* = object
     ## Used to hold paths and create paths.
-    commands*: seq[PathCommand]
+    commands: seq[PathCommand]
     start, at: Vec2 # Maintained by moveTo, lineTo, etc. Used by arcTo.
 
   SomePath* = Path | string
@@ -501,18 +501,24 @@ proc roundedRect*(
   ## Clockwise param can be used to subtract a rect from a path when using
   ## even-odd winding rule.
 
+  var
+    nw = nw
+    ne = ne
+    se = se
+    sw = sw
+    maxRadius = min(w / 2, h / 2)
+
+  nw = max(0, min(nw, maxRadius))
+  ne = max(0, min(ne, maxRadius))
+  se = max(0, min(se, maxRadius))
+  sw = max(0, min(sw, maxRadius))
+
   if nw == 0 and ne == 0 and se == 0 and sw == 0:
     path.rect(x, y, w, h, clockwise)
     return
 
   let
     s = splineCircleK
-
-    maxRadius = min(w / 2, h / 2)
-    nw = min(nw, maxRadius)
-    ne = min(ne, maxRadius)
-    se = min(se, maxRadius)
-    sw = min(sw, maxRadius)
 
     t1 = vec2(x + nw, y)
     t2 = vec2(x + w - ne, y)
@@ -1174,7 +1180,7 @@ proc computeCoverages(
         winding = partitioning.partitions[partitionIndex][i][1]
       if segment.at.y <= scanline.a.y and segment.to.y >= scanline.a.y:
         var at: Vec2
-        if scanline.intersects(segment, at) and segment.to != at:
+        if segment.to != at and scanline.intersects(segment, at):
           if numHits == hits.len:
             hits.setLen(hits.len * 2)
           hits[numHits] = (min(at.x, size.x), winding)
@@ -1430,11 +1436,7 @@ proc fillShapes(
         blendMode
       )
 
-proc fillShapes(
-  mask: Mask,
-  shapes: seq[seq[Vec2]],
-  windingRule: WindingRule
-) =
+proc fillShapes(mask: Mask, shapes: seq[seq[Vec2]], windingRule: WindingRule) =
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
   let

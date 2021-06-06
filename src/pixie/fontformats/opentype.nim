@@ -1445,7 +1445,7 @@ proc parseCompositeGlyph(opentype: OpenType, offset: int): Path =
       component.dx, component.dy, 1.0
     ))
 
-    result.commands.add(subPath.commands)
+    result.addPath(subPath)
 
     moreComponents = (flags and 0b100000) != 0
 
