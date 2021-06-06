@@ -325,6 +325,15 @@ block:
   miterTest(145, 3.32)
   miterTest(145, 3.33)
 
+block:
+  # Test self closing subpaths on fill
+  let
+    image = newImage(60, 60)
+    path = parsePath("M0 0 L0 0 L60 0 L60 60 L0 60")
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillPath(path, rgba(127, 127, 127, 255))
+  image.writeFile("tests/images/paths/selfclosing.png")
+
 # Potential error cases, ensure they do not crash
 
 block:

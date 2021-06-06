@@ -619,7 +619,9 @@ proc polygon*(path: var Path, pos: Vec2, size: float32, sides: int) {.inline.} =
   ## Adds a n-sided regular polygon at (x, y) with the parameter size.
   path.polygon(pos.x, pos.y, size, sides)
 
-proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
+proc commandsToShapes*(
+  path: Path, closeSubpaths = false, pixelScale: float32 = 1.0
+): seq[seq[Vec2]] =
   ## Converts SVG-like commands to sequences of vectors.
   var
     start, at: Vec2
@@ -817,6 +819,8 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
     case command.kind:
     of Move:
       if shape.len > 0:
+        if closeSubpaths:
+          shape.addSegment(at, start)
         result.add(shape)
         shape = newSeq[Vec2]()
       at.x = command.numbers[0]
@@ -975,14 +979,12 @@ proc commandsToShapes*(path: Path, pixelScale: float32 = 1.0): seq[seq[Vec2]] =
     prevCommandKind = command.kind
 
   if shape.len > 0:
+    if closeSubpaths:
+      shape.addSegment(at, start)
     result.add(shape)
 
 proc shapesToSegments(shapes: seq[seq[Vec2]]): seq[(Segment, int16)] =
   ## Converts the shapes into a set of filtered segments with winding value.
-  var segmentCount: int
-  for shape in shapes:
-    segmentCount += shape.len - 1
-
   for shape in shapes:
     for segment in shape.segments:
       if segment.at.y == segment.to.y: # Skip horizontal
@@ -1620,15 +1622,13 @@ proc strokeShapes(
     result.add(shapeStroke)
 
 proc parseSomePath(
-  path: SomePath, pixelScale: float32 = 1.0
+  path: SomePath, closeSubpaths: bool, pixelScale: float32 = 1.0
 ): seq[seq[Vec2]] {.inline.} =
   ## Given SomePath, parse it in different ways.
   when type(path) is string:
-    parsePath(path).commandsToShapes(pixelScale)
+    parsePath(path).commandsToShapes(closeSubpaths, pixelScale)
   elif type(path) is Path:
-    path.commandsToShapes(pixelScale)
-  elif type(path) is seq[seq[Vec2]]:
-    path
+    path.commandsToShapes(closeSubpaths, pixelScale)
 
 proc transform(shapes: var seq[seq[Vec2]], transform: Vec2 | Mat3) =
   when type(transform) is Vec2:
@@ -1649,7 +1649,7 @@ proc fillPath*(
   windingRule = wrNonZero
 ) =
   ## Fills a path.
-  var shapes = parseSomePath(path, transform.pixelScale())
+  var shapes = parseSomePath(path, true, transform.pixelScale())
   shapes.transform(transform)
   mask.fillShapes(shapes, windingRule)
 
@@ -1663,7 +1663,7 @@ proc fillPath*(
   ## Fills a path.
   if paint.kind == pkSolid:
     if paint.color.a > 0 or paint.blendMode == bmOverwrite:
-      var shapes = parseSomePath(path, transform.pixelScale())
+      var shapes = parseSomePath(path, true, transform.pixelScale())
       shapes.transform(transform)
       image.fillShapes(shapes, paint.color, windingRule, paint.blendMode)
     return
@@ -1703,7 +1703,7 @@ proc strokePath*(
 ) =
   ## Strokes a path.
   var strokeShapes = strokeShapes(
-    parseSomePath(path, transform.pixelScale()),
+    parseSomePath(path, false, transform.pixelScale()),
     strokeWidth,
     lineCap,
     lineJoin,
@@ -1728,7 +1728,7 @@ proc strokePath*(
   if paint.kind == pkSolid:
     if paint.color.a > 0 or paint.blendMode == bmOverwrite:
       var strokeShapes = strokeShapes(
-        parseSomePath(path, transform.pixelScale()),
+        parseSomePath(path, false, transform.pixelScale()),
         strokeWidth,
         lineCap,
         lineJoin,
