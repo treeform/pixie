@@ -113,7 +113,7 @@ proc decodeGif*(data: string): Image =
         if bs.pos + bitSize.int > bs.data.len * 8: failInvalid()
         var
           # Read variable bits out of the table.
-          codeId = bs.readBits(bitSize.int).int
+          codeId = bs.readBits(bitSize).int
           # Some time we need to carry over table information.
           carryOver: seq[int]
 
