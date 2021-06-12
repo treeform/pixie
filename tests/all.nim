@@ -1,6 +1,6 @@
 import
   test_bmp,
-  test_context,
+  test_contexts,
   test_fonts,
   test_gif,
   test_images,

@@ -8,6 +8,7 @@ const
   svgSignature* = "<svg"
 
 type Ctx = object
+  display: bool
   fillRule: WindingRule
   fill, stroke: ColorRGBX
   strokeWidth: float32
@@ -27,6 +28,7 @@ proc attrOrDefault(node: XmlNode, name, default: string): string =
     result = default
 
 proc initCtx(): Ctx =
+  result.display = true
   result.fill = parseHtmlColor("black").rgbx
   result.stroke = parseHtmlColor("black").rgbx
   result.strokeWidth = 1
@@ -54,6 +56,23 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
     strokeDashArray = node.attr("stroke-dasharray")
     transform = node.attr("transform")
     style = node.attr("style")
+    display = node.attr("display")
+
+  when defined(pixieDebugSvg):
+    proc maybeLogPair(k, v: string) =
+      if k notin [ # Handled, never need to log
+          "fill-rule", "fill", "stroke", "stroke-width", "stroke-linecap",
+          "stroke-linejoin", "stroke-miterlimit", "stroke-dasharray",
+          "transform", "style", "version", "viewBox", "width", "height",
+          "xmlns", "x", "y", "x1", "x2", "y1", "y2", "id", "d", "cx", "cy",
+          "r", "points", "rx", "ry", "enable-background", "xml:space",
+          "xmlns:xlink", "data-name", "role", "class"
+        ]:
+          echo k, ": ", v
+
+    if node.attrs() != nil:
+      for k, v in node.attrs():
+        maybeLogPair(k, v)
 
   let pairs = style.split(';')
   for pair in pairs:
@@ -61,6 +80,9 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
     if parts.len == 2:
       # Do not override element properties
       case parts[0].strip():
+      of "fill-rule":
+        if fillRule.len == 0:
+          fillRule = parts[1].strip()
       of "fill":
         if fill.len == 0:
           fill = parts[1].strip()
@@ -82,6 +104,18 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
       of "stroke-dasharray":
         if strokeDashArray.len == 0:
           strokeDashArray = parts[1].strip()
+      of "display":
+        if display.len == 0:
+          display = parts[1].strip()
+      else:
+        when defined(pixieDebugSvg):
+          maybeLogPair(parts[0], parts[1])
+    elif pair.len > 0:
+      when defined(pixieDebugSvg):
+        echo "Invalid style pair: ", pair
+
+  if display.len > 0:
+    result.display = display.strip() != "none"
 
   if fillRule == "":
     discard # Inherit
@@ -232,19 +266,21 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
         failInvalidTransform(transform)
 
 proc fill(img: Image, ctx: Ctx, path: Path) {.inline.} =
-  img.fillPath(path, ctx.fill, ctx.transform, ctx.fillRule)
+  if ctx.display:
+    img.fillPath(path, ctx.fill, ctx.transform, ctx.fillRule)
 
 proc stroke(img: Image, ctx: Ctx, path: Path) {.inline.} =
-  img.strokePath(
-    path,
-    ctx.stroke,
-    ctx.transform,
-    ctx.strokeWidth,
-    ctx.strokeLineCap,
-    ctx.strokeLineJoin,
-    miterLimit = ctx.strokeMiterLimit,
-    dashes = ctx.strokeDashArray
-  )
+  if ctx.display:
+    img.strokePath(
+      path,
+      ctx.stroke,
+      ctx.transform,
+      ctx.strokeWidth,
+      ctx.strokeLineCap,
+      ctx.strokeLineJoin,
+      miterLimit = ctx.strokeMiterLimit,
+      dashes = ctx.strokeDashArray
+    )
 
 proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
   if node.kind != xnElement:
@@ -252,8 +288,12 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     return
 
   case node.tag:
-  of "title", "desc", "defs":
+  of "title", "desc":
     discard
+
+  of "defs":
+    when defined(pixieDebugSvg):
+      echo node
 
   of "g":
     let ctx = decodeCtx(ctxStack[^1], node)
