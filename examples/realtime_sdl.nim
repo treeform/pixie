@@ -12,7 +12,7 @@ var
   frameCount = 0
   window: WindowPtr
   render: RendererPtr
-  mainSerface: SurfacePtr
+  mainSurface: SurfacePtr
   mainTexture: TexturePtr
   evt = sdl2.defaultEvent
 
@@ -44,8 +44,8 @@ proc display() =
   inc frameCount
 
   var dataPtr = ctx.image.data[0].addr
-  mainSerface.pixels = dataPtr
-  mainTexture = render.createTextureFromSurface(mainSerface)
+  mainSurface.pixels = dataPtr
+  mainTexture = render.createTextureFromSurface(mainSurface)
   render.copy(mainTexture, nil, nil)
   render.present()
 
@@ -56,7 +56,7 @@ const
   gmask = uint32 0x0000ff00
   bmask = uint32 0x00ff0000
   amask = uint32 0xff000000
-mainSerface = createRGBSurface(0, cint w, cint h, 32, rmask, gmask, bmask, amask)
+mainSurface = createRGBSurface(0, cint w, cint h, 32, rmask, gmask, bmask, amask)
 
 render = createRenderer(window, -1, 0)
 
