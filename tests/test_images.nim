@@ -95,9 +95,21 @@ block:
 
 block:
   let
+    a = readImage("tests/images/minifiedBy2.png")
+    b = a.magnifyBy2()
+  b.writeFile("tests/images/magnifiedBy2.png")
+
+block:
+  let
     a = readImage("tests/images/flipped1.png")
     b = a.minifyBy2(2)
   b.writeFile("tests/images/minifiedBy4.png")
+
+block:
+  let
+    a = readImage("tests/images/minifiedBy4.png")
+    b = a.magnifyBy2(2)
+  b.writeFile("tests/images/magnifiedBy4.png")
 
 block:
   let a = newImage(100, 100)
