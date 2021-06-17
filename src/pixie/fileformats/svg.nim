@@ -60,7 +60,7 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
 
   when defined(pixieDebugSvg):
     proc maybeLogPair(k, v: string) =
-      if k notin [ # Handled, never need to log
+      if k notin [
           "fill-rule", "fill", "stroke", "stroke-width", "stroke-linecap",
           "stroke-linejoin", "stroke-miterlimit", "stroke-dasharray",
           "transform", "style", "version", "viewBox", "width", "height",
