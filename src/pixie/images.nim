@@ -239,9 +239,13 @@ proc magnifyBy2*(image: Image, power = 1): Image =
   let scale = 2 ^ power
   result = newImage(image.width * scale, image.height * scale)
   for y in 0 ..< result.height:
-    for x in 0 ..< result.width:
-      var rgba = image.getRgbaUnsafe(x div scale, y div scale)
-      result.setRgbaUnsafe(x, y, rgba)
+    for x in 0 ..< image.width:
+      let
+        rgba = image.getRgbaUnsafe(x, y div scale)
+        scaledX = x * scale
+        idx = result.dataIndex(scaledX, y)
+      for i in 0 ..< scale:
+        result.data[idx + i] = rgba
 
 proc applyOpacity*(target: Image | Mask, opacity: float32) =
   ## Multiplies alpha of the image by opacity.
