@@ -33,6 +33,8 @@ timeIt "minifyBy2":
   let minified = image.minifyBy2()
   doAssert minified[0, 0] == rgba(63, 127, 191, 191)
 
+reset()
+
 timeIt "magnifyBy2":
   let minified = image.magnifyBy2()
   doAssert minified[0, 0] == rgba(63, 127, 191, 191)

@@ -506,7 +506,7 @@ proc drawCorrect(
       dy = matInv * vec2(0 + h, 1 + h) - p
       minFilterBy2 = max(dx.length, dy.length)
 
-    while minFilterBy2 > 2:
+    while minFilterBy2 >= 2:
       b = b.minifyBy2()
       dx /= 2
       dy /= 2
@@ -563,7 +563,7 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
     minFilterBy2 = max(dx.length, dy.length)
     b = b
 
-  while minFilterBy2 > 2.0:
+  while minFilterBy2 >= 2.0:
     b = b.minifyBy2()
     p /= 2
     dx /= 2
