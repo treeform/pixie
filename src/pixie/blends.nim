@@ -440,9 +440,9 @@ proc blendIntersectMask(backdrop, source: ColorRGBX): ColorRGBX =
 
 proc blendExcludeMask(backdrop, source: ColorRGBX): ColorRGBX =
   let a = max(backdrop.a, source.a).uint32 - min(backdrop.a, source.a)
-  result.r = ((backdrop.r * a) div 255).uint8
-  result.g = ((backdrop.g * a) div 255).uint8
-  result.b = ((backdrop.b * a) div 255).uint8
+  result.r = ((source.r * a) div 255).uint8
+  result.g = ((source.g * a) div 255).uint8
+  result.b = ((source.b * a) div 255).uint8
   result.a = a.uint8
 
 proc blendOverwrite(backdrop, source: ColorRGBX): ColorRGBX =

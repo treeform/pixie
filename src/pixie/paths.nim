@@ -1226,6 +1226,14 @@ proc computeCoverages(
           for j in i ..< fillStart + fillLen:
             coverages[j] += sampleCoverage
 
+proc clearUnsafe(image: Image, startX, startY, toX, toY: int) =
+  ## From startXY to toXY, exclusive, toXY is not cleared.
+  image.data.fillUnsafe(
+    rgbx(0, 0, 0, 0),
+    image.dataIndex(startX, startY),
+    image.dataIndex(toX, toY) - image.dataIndex(startX, startY)
+  )
+
 proc fillCoverage(
   image: Image,
   rgbx: ColorRGBX,
@@ -1291,7 +1299,7 @@ proc fillCoverage(
   let blender = blendMode.blender()
   while x < image.width:
     let coverage = coverages[x]
-    if coverage != 0:
+    if coverage != 0 or blendMode == bmExcludeMask:
       if blendMode == bmNormal and coverage == 255 and rgbx.a == 255:
         # Skip blending
         image.setRgbaUnsafe(x, y, rgbx)
@@ -1309,17 +1317,7 @@ proc fillCoverage(
     inc x
 
   if blendMode == bmMask:
-    image.data.fillUnsafe(
-      rgbx(0, 0, 0, 0),
-      image.dataIndex(0, y),
-      image.dataIndex(startX, y) - image.dataIndex(0, y)
-    )
-    # if x < image.width:
-    #   image.data.fillUnsafe(
-    #     rgbx(0, 0, 0, 0),
-    #     image.dataIndex(x, y),
-    #     image.dataIndex(image.width, y)
-    #   )
+    image.clearUnsafe(0, y, startX, y)
 
 proc fillCoverage(mask: Mask, startX, y: int, coverages: seq[uint8]) =
   var x = startX
@@ -1356,6 +1354,7 @@ proc fillHits(
   blendMode: BlendMode
 ) =
   let blender = blendMode.blender()
+  var x = 0
   for (prevAt, at, count) in hits.walk(numHits, windingRule, y, image.wh):
     let
       fillStart = prevAt.int
@@ -1364,7 +1363,7 @@ proc fillHits(
       if blendMode == bmNormal and rgbx.a == 255:
         fillUnsafe(image.data, rgbx, image.dataIndex(fillStart, y), fillLen)
       else:
-        var x = fillStart
+        x = fillStart
         when defined(amd64) and not defined(pixieNoSimd):
           if blendMode.hasSimdBlender():
             # When supported, SIMD blend as much as possible
@@ -1384,6 +1383,10 @@ proc fillHits(
           let backdrop = image.getRgbaUnsafe(x, y)
           image.setRgbaUnsafe(x, y, blender(backdrop, rgbx))
           inc x
+
+  if blendMode == bmMask:
+    image.clearUnsafe(0, y, startX, y)
+    image.clearUnsafe(x, y, image.width, y)
 
 proc fillHits(
   mask: Mask,
@@ -1454,16 +1457,8 @@ proc fillShapes(
       )
 
   if blendMode == bmMask:
-    image.data.fillUnsafe(
-      rgbx(0, 0, 0, 0),
-      image.dataIndex(0, 0),
-      image.dataIndex(0, startY)
-    )
-    image.data.fillUnsafe(
-      rgbx(0, 0, 0, 0),
-      image.dataIndex(0, pathHeight),
-      image.dataIndex(0, image.height)
-    )
+    image.clearUnsafe(0, 0, 0, startY)
+    image.clearUnsafe(0, pathHeight, 0, image.height)
 
 proc fillShapes(mask: Mask, shapes: seq[seq[Vec2]], windingRule: WindingRule) =
   # Figure out the total bounds of all the shapes,
