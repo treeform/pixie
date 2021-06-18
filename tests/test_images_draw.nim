@@ -117,3 +117,13 @@ block:
   ctx.image.fill(rgba(0, 255, 255, 255))
   ctx.strokePolygon(vec2(50, 50), 30, 6)
   ctx.image.writeFile("tests/images/strokePolygon.png")
+
+block:
+  let
+    a = newImage(1000, 1000)
+    b = newImage(500, 500)
+  a.fill(rgba(255, 0, 0, 255))
+  b.fill(rgba(0, 255, 0, 255))
+
+  a.draw(b, translate(vec2(250, 250)) * scale(vec2(0.5, 0.5)))
+  a.writeFile("tests/images/scaleHalf.png")
