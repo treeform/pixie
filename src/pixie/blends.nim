@@ -32,7 +32,6 @@ type
     bmMask         ## Special blend mode that is used for masking
     bmOverwrite    ## Special blend mode that just copies pixels
     bmSubtractMask ## Inverse mask
-    bmIntersectMask
     bmExcludeMask
 
   Blender* = proc(backdrop, source: ColorRGBX): ColorRGBX
@@ -477,7 +476,6 @@ proc blender*(blendMode: BlendMode): Blender =
   of bmMask: blendMask
   of bmOverwrite: blendOverwrite
   of bmSubtractMask: blendSubtractMask
-  of bmIntersectMask: blendIntersectMask
   of bmExcludeMask: blendExcludeMask
 
 proc maskNormal(backdrop, source: uint8): uint8 =
@@ -507,7 +505,6 @@ proc masker*(blendMode: BlendMode): Masker =
   of bmMask: maskMask
   of bmOverwrite: maskOverwrite
   of bmSubtractMask: maskSubtract
-  of bmIntersectMask: maskIntersect
   of bmExcludeMask: maskExclude
   else:
     raise newException(PixieError, "No masker for " & $blendMode)
