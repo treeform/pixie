@@ -73,16 +73,79 @@ proc minifyBy2*(mask: Mask, power = 1): Mask =
   if power == 0:
     return mask.copy()
 
+  var src = mask
   for i in 1 .. power:
     result = newMask(mask.width div 2, mask.height div 2)
     for y in 0 ..< result.height:
-      for x in 0 ..< result.width:
+      var x: int
+      when defined(amd64) and not defined(pixieNoSimd):
+        let
+          oddMask = mm_set1_epi16(cast[int16](0xff00))
+          first8 = cast[M128i]([uint8.high, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        for _ in countup(0, result.width - 16, 8):
+          let
+            top = mm_loadu_si128(src.data[src.dataIndex(x * 2, y * 2 + 0)].addr)
+            btm = mm_loadu_si128(src.data[src.dataIndex(x * 2, y * 2 + 1)].addr)
+            topShifted = mm_srli_si128(top, 1)
+            btmShifted = mm_srli_si128(btm, 1)
+
+            topEven = mm_andnot_si128(oddMask, top)
+            topOdd = mm_srli_epi16(mm_and_si128(top, oddMask), 8)
+            btmEven = mm_andnot_si128(oddMask, btm)
+            btmOdd = mm_srli_epi16(mm_and_si128(btm, oddMask), 8)
+
+            topShiftedEven = mm_andnot_si128(oddMask, topShifted)
+            topShiftedOdd = mm_srli_epi16(mm_and_si128(topShifted, oddMask), 8)
+            btmShiftedEven = mm_andnot_si128(oddMask, btmShifted)
+            btmShiftedOdd = mm_srli_epi16(mm_and_si128(btmShifted, oddMask), 8)
+
+            topAddedEven = mm_add_epi16(topEven, topShiftedEven)
+            btmAddedEven = mm_add_epi16(btmEven, btmShiftedEven)
+            topAddedOdd = mm_add_epi16(topOdd, topShiftedOdd)
+            bottomAddedOdd = mm_add_epi16(btmOdd, btmShiftedOdd)
+
+            addedEven = mm_add_epi16(topAddedEven, btmAddedEven)
+            addedOdd = mm_add_epi16(topAddedOdd, bottomAddedOdd)
+
+            addedEvenDiv4 = mm_srli_epi16(addedEven, 2)
+            addedOddDiv4 = mm_srli_epi16(addedOdd, 2)
+
+            merged = mm_or_si128(addedEvenDiv4, mm_slli_epi16(addedOddDiv4, 8))
+
+            # merged has the correct values in the even indices
+
+            a = mm_and_si128(merged, first8)
+            b = mm_and_si128(mm_srli_si128(merged, 2), first8)
+            c = mm_and_si128(mm_srli_si128(merged, 4), first8)
+            d = mm_and_si128(mm_srli_si128(merged, 6), first8)
+            e = mm_and_si128(mm_srli_si128(merged, 8), first8)
+            f = mm_and_si128(mm_srli_si128(merged, 10), first8)
+            g = mm_and_si128(mm_srli_si128(merged, 12), first8)
+            h = mm_and_si128(mm_srli_si128(merged, 14), first8)
+
+            ab = mm_or_si128(a, mm_slli_si128(b, 1))
+            cd = mm_or_si128(c, mm_slli_si128(d, 1))
+            ef = mm_or_si128(e, mm_slli_si128(f, 1))
+            gh = mm_or_si128(g, mm_slli_si128(h, 1))
+
+            abcd = mm_or_si128(ab, mm_slli_si128(cd, 2))
+            efgh = mm_or_si128(ef, mm_slli_si128(gh, 2))
+
+            abcdefgh = mm_or_si128(abcd, mm_slli_si128(efgh, 4))
+
+          mm_storeu_si128(result.data[result.dataIndex(x, y)].addr, abcdefgh)
+          x += 8
+
+      for x in x ..< result.width:
         let value =
-          mask.getValueUnsafe(x * 2 + 0, y * 2 + 0).uint32 +
-          mask.getValueUnsafe(x * 2 + 1, y * 2 + 0) +
-          mask.getValueUnsafe(x * 2 + 1, y * 2 + 1) +
-          mask.getValueUnsafe(x * 2 + 0, y * 2 + 1)
+          src.getValueUnsafe(x * 2 + 0, y * 2 + 0).uint32 +
+          src.getValueUnsafe(x * 2 + 1, y * 2 + 0) +
+          src.getValueUnsafe(x * 2 + 1, y * 2 + 1) +
+          src.getValueUnsafe(x * 2 + 0, y * 2 + 1)
         result.setValueUnsafe(x, y, (value div 4).uint8)
+
+    # Set src as this result for if we do another power
+    src = result
 
 proc fillUnsafe*(data: var seq[uint8], value: uint8, start, len: int) =
   ## Fills the mask data with the parameter value starting at index start and

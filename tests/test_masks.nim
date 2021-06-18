@@ -13,27 +13,28 @@ block:
   mask.invert()
   doAssert mask[0, 0] == 55
 
-# block:
-#   let
-#     mask = newMask(100, 100)
-#     r = 10.0
-#     x = 10.0
-#     y = 10.0
-#     h = 80.0
-#     w = 80.0
-#   var path: Path
-#   path.moveTo(x + r, y)
+block:
+  let
+    mask = newMask(100, 100)
+    r = 10.0
+    x = 10.0
+    y = 10.0
+    h = 80.0
+    w = 80.0
+  var path: Path
+  path.moveTo(x + r, y)
 #   path.arcTo(x + w, y, x + w, y + h, r)
 #   path.arcTo(x + w, y + h, x, y + h, r)
 #   path.arcTo(x, y + h, x, y, r)
 #   path.arcTo(x, y, x + w, y, r)
-#   mask.fillPath(path)
+  path.roundedRect(x, y, w, h, r, r, r, r)
+  mask.fillPath(path)
 
-#   let minified = mask.minifyBy2()
+  let minified = mask.minifyBy2()
 
-#   doAssert minified.width == 50 and minified.height == 50
+  doAssert minified.width == 50 and minified.height == 50
 
-#   writeFile("tests/images/masks/maskMinified.png", minified.encodePng())
+  writeFile("tests/images/masks/maskMinified.png", minified.encodePng())
 
 block:
   let image = newImage(100, 100)
@@ -155,3 +156,11 @@ block:
   mask.fillRect(rect(25, 25, 50, 50))
   mask.blur(20)
   writeFile("tests/images/maskblur20.png", mask.encodePng())
+
+block:
+  let mask = newMask(200, 200)
+  mask.fillRect(rect(25, 25, 150, 150))
+  mask.blur(25)
+
+  let minified = mask.minifyBy2()
+  writeFile("tests/images/masks/minifiedBlur.png", minified.encodePng())

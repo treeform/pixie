@@ -753,71 +753,72 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
                 )
                 x += 16
 
-      for _ in x ..< xMax:
-        let
-          srcPos = p + dx * x.float32 + dy * y.float32
-          xFloat = srcPos.x - h
-          yFloat = srcPos.y - h
+      var srcPos = p + dx * x.float32 + dy * y.float32
+      srcPos = vec2(max(0, srcPos.x), max(0, srcPos.y))
+
+      for x in x ..< xMax:
+        let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
 
         when type(a) is Image:
           let backdrop = a.getRgbaUnsafe(x, y)
           when type(b) is Image:
             let
-              sample = b.getRgbaUnsafe(xFloat.int, yFloat.int)
+              sample = b.getRgbaUnsafe(samplePos.x, samplePos.y)
               blended = blender(backdrop, sample)
           else: # b is a Mask
             let
-              sample = b.getValueUnsafe(xFloat.int, yFloat.int)
+              sample = b.getValueUnsafe(samplePos.x, samplePos.y)
               blended = blender(backdrop, rgbx(0, 0, 0, sample))
           a.setRgbaUnsafe(x, y, blended)
         else: # a is a Mask
           let backdrop = a.getValueUnsafe(x, y)
           when type(b) is Image:
-            let sample = b.getRgbaUnsafe(xFloat.int, yFloat.int).a
+            let sample = b.getRgbaUnsafe(samplePos.x, samplePos.y).a
           else: # b is a Mask
-            let sample = b.getValueUnsafe(xFloat.int, yFloat.int)
+            let sample = b.getValueUnsafe(samplePos.x, samplePos.y)
           a.setValueUnsafe(x, y, masker(backdrop, sample))
-        inc x
+
+        srcPos += dx
 
     if blendMode == bmIntersectMask:
       if a.width - xMax > 0:
         zeroMem(a.data[a.dataIndex(xMax, y)].addr, 4 * (a.width - xMax))
 
-proc draw*(a, b: Image, mat: Mat3, blendMode = bmNormal) {.inline.} =
+proc draw*(
+  a, b: Image, transform: Vec2 | Mat3 = vec2(), blendMode = bmNormal
+) {.inline.} =
   ## Draws one image onto another using matrix with color blending.
-  a.drawUber(b, mat, blendMode)
-
-proc draw*(a, b: Image, pos = vec2(0, 0), blendMode = bmNormal) {.inline.} =
-  ## Draws one image onto another using a position offset with color blending.
-  a.draw(b, translate(pos), blendMode)
-
-proc draw*(image: Image, mask: Mask, mat: Mat3, blendMode = bmMask) {.inline.} =
-  ## Draws a mask onto an image using a matrix with color blending.
-  image.drawUber(mask, mat, blendMode)
+  when type(transform) is Vec2:
+    a.drawUber(b, translate(transform), blendMode)
+  else:
+    a.drawUber(b, transform, blendMode)
 
 proc draw*(
-  image: Image, mask: Mask, pos = vec2(0, 0), blendMode = bmMask
+  a, b: Mask, transform: Vec2 | Mat3 = vec2(), blendMode = bmMask
 ) {.inline.} =
-  ## Draws a mask onto an image using a position offset with color blending.
-  image.drawUber(mask, translate(pos), blendMode)
-
-proc draw*(a, b: Mask, mat: Mat3, blendMode = bmMask) {.inline.} =
   ## Draws a mask onto a mask using a matrix with color blending.
-  a.drawUber(b, mat, blendMode)
-
-proc draw*(a, b: Mask, pos = vec2(0, 0), blendMode = bmMask) {.inline.} =
-  ## Draws a mask onto a mask using a position offset with color blending.
-  a.draw(b, translate(pos), blendMode)
-
-proc draw*(mask: Mask, image: Image, mat: Mat3, blendMode = bmMask) {.inline.} =
-  ## Draws a image onto a mask using a matrix with color blending.
-  mask.drawUber(image, mat, blendMode)
+  when type(transform) is Vec2:
+    a.drawUber(b, translate(transform), blendMode)
+  else:
+    a.drawUber(b, transform, blendMode)
 
 proc draw*(
-  mask: Mask, image: Image, pos = vec2(0, 0), blendMode = bmMask
+  image: Image, mask: Mask, transform: Vec2 | Mat3 = vec2(), blendMode = bmMask
 ) {.inline.} =
-  ## Draws a image onto a mask using a position offset with color blending.
-  mask.draw(image, translate(pos), blendMode)
+  ## Draws a mask onto an image using a matrix with color blending.
+  when type(transform) is Vec2:
+    image.drawUber(mask, translate(transform), blendMode)
+  else:
+    image.drawUber(mask, transform, blendMode)
+
+proc draw*(
+  mask: Mask, image: Image, transform: Vec2 | Mat3 = vec2(), blendMode = bmMask
+) {.inline.} =
+  ## Draws a image onto a mask using a matrix with color blending.
+  when type(transform) is Vec2:
+    mask.drawUber(image, translate(transform), blendMode)
+  else:
+    mask.drawUber(image, transform, blendMode)
 
 proc drawTiled*(dest, src: Image, mat: Mat3, blendMode = bmNormal) =
   dest.drawCorrect(src, mat, true, blendMode)
