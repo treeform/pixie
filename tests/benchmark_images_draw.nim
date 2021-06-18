@@ -46,6 +46,17 @@ block:
 
 block:
   let
+    a = newImage(1000, 1000)
+    b = newImage(500, 500)
+  a.fill(rgba(255, 0, 0, 255))
+  b.fill(rgba(0, 255, 0, 255))
+
+  timeIt "draw big-on-bigger bmNormal scale(0.5)":
+    a.draw(b, translate(vec2(25, 25)) * scale(vec2(0.5, 0.5)), bmNormal)
+    keep(b)
+
+block:
+  let
     a = newImage(100, 100)
     b = newImage(50, 50)
 
