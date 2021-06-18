@@ -209,7 +209,7 @@ proc minifyBy2*(image: Image, power = 1): Image =
     return image.copy()
 
   var src = image
-  for i in 1 .. power:
+  for _ in 1 .. power:
     result = newImage(src.width div 2, src.height div 2)
     for y in 0 ..< result.height:
       for x in 0 ..< result.width:
