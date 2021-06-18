@@ -1304,7 +1304,22 @@ proc fillCoverage(
           source.a = ((source.a.uint32 * coverage) div 255).uint8
         let backdrop = image.getRgbaUnsafe(x, y)
         image.setRgbaUnsafe(x, y, blender(backdrop, source))
+    elif blendMode == bmMask:
+      image.setRgbaUnsafe(x, y, rgbx(0, 0, 0, 0))
     inc x
+
+  if blendMode == bmMask:
+    image.data.fillUnsafe(
+      rgbx(0, 0, 0, 0),
+      image.dataIndex(0, y),
+      image.dataIndex(startX, y) - image.dataIndex(0, y)
+    )
+    # if x < image.width:
+    #   image.data.fillUnsafe(
+    #     rgbx(0, 0, 0, 0),
+    #     image.dataIndex(x, y),
+    #     image.dataIndex(image.width, y)
+    #   )
 
 proc fillCoverage(mask: Mask, startX, y: int, coverages: seq[uint8]) =
   var x = startX
@@ -1437,6 +1452,18 @@ proc fillShapes(
         windingRule,
         blendMode
       )
+
+  if blendMode == bmMask:
+    image.data.fillUnsafe(
+      rgbx(0, 0, 0, 0),
+      image.dataIndex(0, 0),
+      image.dataIndex(0, startY)
+    )
+    image.data.fillUnsafe(
+      rgbx(0, 0, 0, 0),
+      image.dataIndex(0, pathHeight),
+      image.dataIndex(0, image.height)
+    )
 
 proc fillShapes(mask: Mask, shapes: seq[seq[Vec2]], windingRule: WindingRule) =
   # Figure out the total bounds of all the shapes,
