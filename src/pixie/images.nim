@@ -360,6 +360,8 @@ proc blur*(
   let radius = round(radius).int
   if radius == 0:
     return
+  if radius < 0:
+    raise newException(PixieError, "Cannot apply negative blur")
 
   let
     kernel = gaussianKernel(radius)
@@ -776,7 +778,7 @@ proc drawTiled*(dest, src: Image, mat: Mat3, blendMode = bmNormal) =
   dest.drawCorrect(src, mat, true, blendMode)
 
 proc resize*(srcImage: Image, width, height: int): Image =
-  ## Resize an image to a given hight and width.
+  ## Resize an image to a given height and width.
   if width == srcImage.width and height == srcImage.height:
     result = srcImage.copy()
   else:
@@ -808,12 +810,9 @@ proc shadow*(
 ): Image =
   ## Create a shadow of the image with the offset, spread and blur.
   let mask = image.newMask()
-  if offset != vec2(0, 0):
-    mask.shift(offset)
-  if spread > 0:
-    mask.spread(spread)
-  if blur > 0:
-    mask.blur(blur)
+  mask.shift(offset)
+  mask.spread(spread)
+  mask.blur(blur)
   result = newImage(mask.width, mask.height)
   result.fill(color)
   result.draw(mask, blendMode = bmMask)
