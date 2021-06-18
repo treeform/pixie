@@ -13,5 +13,6 @@ jobs:
     - uses: actions/checkout@v2
     - uses: jiro4989/setup-nim-action@v1
     - run: nimble test -d:release -y
+    - run: nimble test -d:release -d:pixieNoSimd -y
     - run: nimble test --gc:orc -d:release -y
     - run: nim cpp -d:release -r tests/all.nim
