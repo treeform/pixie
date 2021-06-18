@@ -112,6 +112,12 @@ block:
   b.writeFile("tests/images/magnifiedBy4.png")
 
 block:
+  let
+    a = readImage("tests/images/png/baboon.png")
+    b = a.minifyBy2()
+  b.writeFile("tests/images/minifiedBaboon.png")
+
+block:
   let a = newImage(100, 100)
   a.fill(rgbx(50, 100, 150, 200))
   a.invert()
