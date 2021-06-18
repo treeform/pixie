@@ -212,7 +212,52 @@ proc minifyBy2*(image: Image, power = 1): Image =
   for _ in 1 .. power:
     result = newImage(src.width div 2, src.height div 2)
     for y in 0 ..< result.height:
-      for x in 0 ..< result.width:
+      var x: int
+      when defined(amd64) and not defined(pixieNoSimd):
+        let
+          oddMask = mm_set1_epi16(cast[int16](0xff00))
+          first32 = cast[M128i]([uint32.high, 0, 0, 0])
+        for _ in countup(0, result.width - 4, 2):
+          let
+            top = mm_loadu_si128(src.data[src.dataIndex(x * 2, y * 2 + 0)].addr)
+            btm = mm_loadu_si128(src.data[src.dataIndex(x * 2, y * 2 + 1)].addr)
+            topShifted = mm_srli_si128(top, 4)
+            btmShifted = mm_srli_si128(btm, 4)
+
+            topEven = mm_andnot_si128(oddMask, top)
+            topOdd = mm_srli_epi16(mm_and_si128(top, oddMask), 8)
+            btmEven = mm_andnot_si128(oddMask, btm)
+            btmOdd = mm_srli_epi16(mm_and_si128(btm, oddMask), 8)
+
+            topShiftedEven = mm_andnot_si128(oddMask, topShifted)
+            topShiftedOdd = mm_srli_epi16(mm_and_si128(topShifted, oddMask), 8)
+            btmShiftedEven = mm_andnot_si128(oddMask, btmShifted)
+            btmShiftedOdd = mm_srli_epi16(mm_and_si128(btmShifted, oddMask), 8)
+
+            topAddedEven = mm_add_epi16(topEven, topShiftedEven)
+            btmAddedEven = mm_add_epi16(btmEven, btmShiftedEven)
+            topAddedOdd = mm_add_epi16(topOdd, topShiftedOdd)
+            bottomAddedOdd = mm_add_epi16(btmOdd, btmShiftedOdd)
+
+            addedEven = mm_add_epi16(topAddedEven, btmAddedEven)
+            addedOdd = mm_add_epi16(topAddedOdd, bottomAddedOdd)
+
+            addedEvenDiv4 = mm_srli_epi16(addedEven, 2)
+            addedOddDiv4 = mm_srli_epi16(addedOdd, 2)
+
+            merged = mm_or_si128(addedEvenDiv4, mm_slli_epi16(addedOddDiv4, 8))
+
+            # merged [0, 1, 2, 3] has the correct values for the next two pixels
+            # at index 0 and 2 so shift those into position and store
+
+            zero = mm_and_si128(merged, first32)
+            two = mm_and_si128(mm_srli_si128(merged, 8), first32)
+            zeroTwo = mm_or_si128(zero, mm_slli_si128(two, 4))
+
+          mm_storeu_si128(result.data[result.dataIndex(x, y)].addr, zeroTwo)
+          x += 2
+
+      for x in x ..< result.width:
         let
           a = src.getRgbaUnsafe(x * 2 + 0, y * 2 + 0)
           b = src.getRgbaUnsafe(x * 2 + 1, y * 2 + 0)
