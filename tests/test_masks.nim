@@ -156,3 +156,11 @@ block:
   mask.fillRect(rect(25, 25, 50, 50))
   mask.blur(20)
   writeFile("tests/images/maskblur20.png", mask.encodePng())
+
+block:
+  let mask = newMask(200, 200)
+  mask.fillRect(rect(25, 25, 150, 150))
+  mask.blur(25)
+
+  let minified = mask.minifyBy2()
+  writeFile("tests/images/masks/minifiedBlur.png", minified.encodePng())
