@@ -363,3 +363,51 @@ block:
     path = parsePath("L 0 0")
   image.fill(rgba(255, 255, 255, 255))
   image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcSquare, ljMiter)
+
+block:
+  let image = newImage(100, 100)
+  image.fillPath(
+    "M 10 10 H 60 V 60 H 10 z",
+    Paint(kind: pkSolid, color: rgbx(255, 0, 0, 255), blendMode: bmNormal)
+  )
+  image.fillPath(
+    "M 30 30 H 80 V 80 H 30 z",
+    Paint(kind: pkSolid, color: rgbx(0, 255, 0, 255), blendMode: bmExcludeMask)
+  )
+  image.writeFile("tests/images/paths/rectExcludeMask.png")
+
+block:
+  let image = newImage(100, 100)
+  image.fillPath(
+    "M 10.1 10.1 H 60.1 V 60.1 H 10.1 z",
+    Paint(kind: pkSolid, color: rgbx(255, 0, 0, 255), blendMode: bmNormal)
+  )
+  image.fillPath(
+    "M 30.1 30.1 H 80.1 V 80.1 H 30.1 z",
+    Paint(kind: pkSolid, color: rgbx(0, 255, 0, 255), blendMode: bmExcludeMask)
+  )
+  image.writeFile("tests/images/paths/rectExcludeMaskAA.png")
+
+block:
+  let image = newImage(100, 100)
+  image.fillPath(
+    "M 10 10 H 60 V 60 H 10 z",
+    Paint(kind: pkSolid, color: rgbx(255, 0, 0, 255), blendMode: bmNormal)
+  )
+  image.fillPath(
+    "M 30 30 H 80 V 80 H 30 z",
+    Paint(kind: pkSolid, color: rgbx(0, 255, 0, 255), blendMode: bmMask)
+  )
+  image.writeFile("tests/images/paths/rectMask.png")
+
+block:
+  let image = newImage(100, 100)
+  image.fillPath(
+    "M 10.1 10.1 H 60.1 V 60.1 H 10.1 z",
+    Paint(kind: pkSolid, color: rgbx(255, 0, 0, 255), blendMode: bmNormal)
+  )
+  image.fillPath(
+    "M 30.1 30.1 H 80.1 V 80.1 H 30.1 z",
+    Paint(kind: pkSolid, color: rgbx(0, 255, 0, 255), blendMode: bmMask)
+  )
+  image.writeFile("tests/images/paths/rectMaskAA.png")

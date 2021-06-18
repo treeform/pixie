@@ -630,7 +630,7 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
 
   # Determine where we should start and stop drawing in the y dimension
   var yMin, yMax: int
-  if blendMode == bmIntersectMask:
+  if blendMode == bmMask:
     yMin = 0
     yMax = a.height
   else:
@@ -662,7 +662,7 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
     xMin = xMin.clamp(0, a.width)
     xMax = xMax.clamp(0, a.width)
 
-    if blendMode == bmIntersectMask:
+    if blendMode == bmMask:
       if xMin > 0:
         zeroMem(a.data[a.dataIndex(0, y)].addr, 4 * xMin)
 
@@ -780,7 +780,7 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
 
         srcPos += dx
 
-    if blendMode == bmIntersectMask:
+    if blendMode == bmMask:
       if a.width - xMax > 0:
         zeroMem(a.data[a.dataIndex(xMax, y)].addr, 4 * (a.width - xMax))
 
