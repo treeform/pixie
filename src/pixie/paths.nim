@@ -1137,10 +1137,12 @@ iterator walk(
       # between zero and nonzero (or the last hit)
       count += winding
       continue
-    if at > 0:
-      if shouldFill(windingRule, count):
-        yield (prevAt, at, count)
-      prevAt = at
+    if at <= 0:
+      count += winding
+      continue
+    if shouldFill(windingRule, count):
+      yield (prevAt, at, count)
+    prevAt = at
     count += winding
 
   when defined(pixieLeakCheck):
@@ -1226,13 +1228,15 @@ proc computeCoverages(
           for j in i ..< fillStart + fillLen:
             coverages[j] += sampleCoverage
 
-proc clearUnsafe(image: Image, startX, startY, toX, toY: int) =
-  ## From startXY to toXY, exclusive, toXY is not cleared.
-  image.data.fillUnsafe(
-    rgbx(0, 0, 0, 0),
-    image.dataIndex(startX, startY),
-    image.dataIndex(toX, toY) - image.dataIndex(startX, startY)
-  )
+proc clearUnsafe(target: Image | Mask, startX, startY, toX, toY: int) =
+  ## Clears data from [start, to).
+  let
+    start = target.dataIndex(startX, startY)
+    len = target.dataIndex(toX, toY) - start
+  when type(target) is Image:
+    target.data.fillUnsafe(rgbx(0, 0, 0, 0), start, len)
+  else: # target is Mask
+    target.data.fillUnsafe(0, start, len)
 
 proc fillCoverage(
   image: Image,
@@ -1258,7 +1262,7 @@ proc fillCoverage(
         let
           index = image.dataIndex(x, y)
           eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
-        if mm_movemask_epi8(eqZero) != 0xffff:
+        if mm_movemask_epi8(eqZero) != 0xffff: # or blendMode == bmExcludeMask:
           # If the coverages are not all zero
           if mm_movemask_epi8(mm_cmpeq_epi32(coverage, first32)) == 0xffff:
             # Coverages are all 255
@@ -1294,6 +1298,8 @@ proc fillCoverage(
               image.data[index].addr,
               blenderSimd(backdrop, source)
             )
+        elif blendMode == bmMask:
+          mm_storeu_si128(image.data[index].addr, mm_setzero_si128())
         x += 4
 
   let blender = blendMode.blender()
@@ -1319,30 +1325,44 @@ proc fillCoverage(
   if blendMode == bmMask:
     image.clearUnsafe(0, y, startX, y)
 
-proc fillCoverage(mask: Mask, startX, y: int, coverages: seq[uint8]) =
+proc fillCoverage(
+  mask: Mask,
+  startX, y: int,
+  coverages: seq[uint8],
+  blendMode: BlendMode
+) =
   var x = startX
   when defined(amd64) and not defined(pixieNoSimd):
-    # When supported, SIMD blend as much as possible
-    let maskerSimd = bmNormal.maskerSimd()
-    for _ in countup(x, coverages.len - 16, 16):
-      let
-        coverage = mm_loadu_si128(coverages[x].unsafeAddr)
-        eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
-      if mm_movemask_epi8(eqZero) != 0xffff:
-        # If the coverages are not all zero
-        let backdrop = mm_loadu_si128(mask.data[mask.dataIndex(x, y)].addr)
-        mm_storeu_si128(
-          mask.data[mask.dataIndex(x, y)].addr,
-          maskerSimd(backdrop, coverage)
-        )
-      x += 16
+    if blendMode.hasSimdMasker():
+      let maskerSimd = blendMode.maskerSimd()
+      for _ in countup(x, coverages.len - 16, 16):
+        let
+          index = mask.dataIndex(x, y)
+          coverage = mm_loadu_si128(coverages[x].unsafeAddr)
+          eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
+        if mm_movemask_epi8(eqZero) != 0xffff: # or blendMode == bmExcludeMask:
+          # If the coverages are not all zero
+          let backdrop = mm_loadu_si128(mask.data[index].addr)
+          mm_storeu_si128(
+            mask.data[index].addr,
+            maskerSimd(backdrop, coverage)
+          )
+        elif blendMode == bmMask:
+          mm_storeu_si128(mask.data[index].addr, mm_setzero_si128())
+        x += 16
 
+  let masker = blendMode.masker()
   while x < mask.width:
     let coverage = coverages[x]
-    if coverage != 0:
+    if coverage != 0 or blendMode == bmExcludeMask:
       let backdrop = mask.getValueUnsafe(x, y)
-      mask.setValueUnsafe(x, y, blendAlpha(backdrop, coverage))
+      mask.setValueUnsafe(x, y, masker(backdrop, coverage))
+    elif blendMode == bmMask:
+      mask.setValueUnsafe(x, y, 0)
     inc x
+
+  if blendMode == bmMask:
+    mask.clearUnsafe(0, y, startX, y)
 
 proc fillHits(
   image: Image,
@@ -1354,53 +1374,89 @@ proc fillHits(
   blendMode: BlendMode
 ) =
   let blender = blendMode.blender()
-  var x = 0
+  var filledTo: int
   for (prevAt, at, count) in hits.walk(numHits, windingRule, y, image.wh):
     let
       fillStart = prevAt.int
       fillLen = at.int - fillStart
-    if fillLen > 0:
-      if blendMode == bmNormal and rgbx.a == 255:
-        fillUnsafe(image.data, rgbx, image.dataIndex(fillStart, y), fillLen)
-      else:
-        x = fillStart
-        when defined(amd64) and not defined(pixieNoSimd):
-          if blendMode.hasSimdBlender():
-            # When supported, SIMD blend as much as possible
-            let
-              blenderSimd = blendMode.blenderSimd()
-              vColor = mm_set1_epi32(cast[int32](rgbx))
-            for _ in countup(fillStart, fillLen - 16, 4):
-              let
-                index = image.dataIndex(x, y)
-                backdrop = mm_loadu_si128(image.data[index].addr)
-              mm_storeu_si128(
-                image.data[index].addr,
-                blenderSimd(backdrop, vColor)
-              )
-              x += 4
-        while x < fillStart + fillLen:
-          let backdrop = image.getRgbaUnsafe(x, y)
-          image.setRgbaUnsafe(x, y, blender(backdrop, rgbx))
-          inc x
+    if fillLen <= 0:
+      continue
+
+    filledTo = fillStart + fillLen
+
+    if blendMode == bmNormal and rgbx.a == 255:
+      fillUnsafe(image.data, rgbx, image.dataIndex(fillStart, y), fillLen)
+      continue
+
+    var x = fillStart
+    when defined(amd64) and not defined(pixieNoSimd):
+      if blendMode.hasSimdBlender():
+        # When supported, SIMD blend as much as possible
+        let
+          blenderSimd = blendMode.blenderSimd()
+          vColor = mm_set1_epi32(cast[int32](rgbx))
+        for _ in countup(fillStart, fillLen - 16, 4):
+          let
+            index = image.dataIndex(x, y)
+            backdrop = mm_loadu_si128(image.data[index].addr)
+          mm_storeu_si128(
+            image.data[index].addr,
+            blenderSimd(backdrop, vColor)
+          )
+          x += 4
+
+    for x in x ..< fillStart + fillLen:
+      let backdrop = image.getRgbaUnsafe(x, y)
+      image.setRgbaUnsafe(x, y, blender(backdrop, rgbx))
 
   if blendMode == bmMask:
     image.clearUnsafe(0, y, startX, y)
-    image.clearUnsafe(x, y, image.width, y)
+    image.clearUnsafe(filledTo, y, image.width, y)
 
 proc fillHits(
   mask: Mask,
   startX, y: int,
   hits: seq[(float32, int16)],
   numHits: int,
-  windingRule: WindingRule
+  windingRule: WindingRule,
+  blendMode: BlendMode
 ) =
+  let masker = blendMode.masker()
+  var filledTo: int
   for (prevAt, at, count) in hits.walk(numHits, windingRule, y, mask.wh):
     let
       fillStart = prevAt.int
       fillLen = at.int - fillStart
-    if fillLen > 0:
+    if fillLen <= 0:
+      continue
+
+    filledTo = fillStart + fillLen
+
+    if blendMode == bmNormal:
       fillUnsafe(mask.data, 255, mask.dataIndex(fillStart, y), fillLen)
+      continue
+
+    var x = fillStart
+    when defined(amd64) and not defined(pixieNoSimd):
+      if blendMode.hasSimdMasker():
+        let
+          maskerSimd = blendMode.maskerSimd()
+          vValue = mm_set1_epi8(cast[int8](255))
+        for _ in countup(fillStart, fillLen - 16, 16):
+          let backdrop = mm_loadu_si128(mask.data[mask.dataIndex(x, y)].addr)
+          mm_storeu_si128(
+            mask.data[mask.dataIndex(x, y)].addr,
+            maskerSimd(backdrop, vValue)
+          )
+          x += 16
+
+    for x in x ..< fillStart + fillLen:
+      let backdrop = mask.getValueUnsafe(x, y)
+      mask.setValueUnsafe(x, y, masker(backdrop, 255))
+
+  if blendMode == bmMask:
+    mask.clearUnsafe(0, y, startX, y)
+    mask.clearUnsafe(filledTo, y, mask.width, y)
 
 proc fillShapes(
   image: Image,
@@ -1460,7 +1516,12 @@ proc fillShapes(
     image.clearUnsafe(0, 0, 0, startY)
     image.clearUnsafe(0, pathHeight, 0, image.height)
 
-proc fillShapes(mask: Mask, shapes: seq[seq[Vec2]], windingRule: WindingRule) =
+proc fillShapes(
+  mask: Mask,
+  shapes: seq[seq[Vec2]],
+  windingRule: WindingRule,
+  blendMode: BlendMode
+) =
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
   let
@@ -1469,8 +1530,7 @@ proc fillShapes(mask: Mask, shapes: seq[seq[Vec2]], windingRule: WindingRule) =
     bounds = computePixelBounds(segments)
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
-    stopY = min(mask.height, (bounds.y + bounds.h).int)
-    pathHeight = stopY - startY
+    pathHeight = min(mask.height, (bounds.y + bounds.h).int)
     partitioning = partitionSegments(segments, startY, pathHeight)
 
   var
@@ -1478,7 +1538,7 @@ proc fillShapes(mask: Mask, shapes: seq[seq[Vec2]], windingRule: WindingRule) =
     hits = newSeq[(float32, int16)](4)
     numHits: int
 
-  for y in startY ..< stopY:
+  for y in startY ..< pathHeight:
     computeCoverages(
       coverages,
       hits,
@@ -1490,9 +1550,13 @@ proc fillShapes(mask: Mask, shapes: seq[seq[Vec2]], windingRule: WindingRule) =
       windingRule
     )
     if aa:
-      mask.fillCoverage(startX, y, coverages)
+      mask.fillCoverage(startX, y, coverages, blendMode)
     else:
-      mask.fillHits(startX, y, hits, numHits, windingRule)
+      mask.fillHits(startX, y, hits, numHits, windingRule, blendMode)
+
+  if blendMode == bmMask:
+    mask.clearUnsafe(0, 0, 0, startY)
+    mask.clearUnsafe(0, pathHeight, 0, mask.height)
 
 proc miterLimitToAngle*(limit: float32): float32 =
   ## Converts miter-limit-ratio to miter-limit-angle.
@@ -1668,12 +1732,13 @@ proc fillPath*(
   mask: Mask,
   path: SomePath,
   transform: Vec2 | Mat3 = vec2(),
-  windingRule = wrNonZero
+  windingRule = wrNonZero,
+  blendMode = bmNormal
 ) =
   ## Fills a path.
   var shapes = parseSomePath(path, true, transform.pixelScale())
   shapes.transform(transform)
-  mask.fillShapes(shapes, windingRule)
+  mask.fillShapes(shapes, windingRule, blendMode)
 
 proc fillPath*(
   image: Image,
@@ -1721,7 +1786,8 @@ proc strokePath*(
   lineCap = lcButt,
   lineJoin = ljMiter,
   miterLimit = defaultMiterLimit,
-  dashes: seq[float32] = @[]
+  dashes: seq[float32] = @[],
+  blendMode = bmNormal
 ) =
   ## Strokes a path.
   var strokeShapes = strokeShapes(
@@ -1733,7 +1799,7 @@ proc strokePath*(
     dashes
   )
   strokeShapes.transform(transform)
-  mask.fillShapes(strokeShapes, wrNonZero)
+  mask.fillShapes(strokeShapes, wrNonZero, blendMode)
 
 proc strokePath*(
   image: Image,
