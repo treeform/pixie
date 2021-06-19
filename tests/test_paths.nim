@@ -411,3 +411,27 @@ block:
     Paint(kind: pkSolid, color: rgbx(0, 255, 0, 255), blendMode: bmMask)
   )
   image.writeFile("tests/images/paths/rectMaskAA.png")
+
+block:
+  let mask = newMask(100, 100)
+  mask.fillPath("M 10 10 H 60 V 60 H 10 z")
+  mask.fillPath("M 30 30 H 80 V 80 H 30 z")#, blendMode = bmExcludeMask)
+  writeFile("tests/images/paths/maskRectExcludeMask.png", mask.encodePng())
+
+block:
+  let mask = newMask(100, 100)
+  mask.fillPath("M 10.1 10.1 H 60.1 V 60.1 H 10.1 z")
+  mask.fillPath("M 30.1 30.1 H 80.1 V 80.1 H 30.1 z")#, blendMode = bmExcludeMask)
+  writeFile("tests/images/paths/maskRectExcludeMaskAA.png", mask.encodePng())
+
+block:
+  let mask = newMask(100, 100)
+  mask.fillPath("M 10 10 H 60 V 60 H 10 z")
+  mask.fillPath("M 30 30 H 80 V 80 H 30 z")#, blendMode = bmMask)
+  writeFile("tests/images/paths/maskRectMask.png", mask.encodePng())
+
+block:
+  let mask = newMask(100, 100)
+  mask.fillPath("M 10.1 10.1 H 60.1 V 60.1 H 10.1 z")
+  mask.fillPath("M 30.1 30.1 H 80.1 V 80.1 H 30.1 z")#, blendMode = bmMask)
+  writeFile("tests/images/paths/maskRectMaskAA.png", mask.encodePng())
