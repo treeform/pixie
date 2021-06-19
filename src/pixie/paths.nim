@@ -1137,12 +1137,10 @@ iterator walk(
       # between zero and nonzero (or the last hit)
       count += winding
       continue
-    if at <= 0:
-      count += winding
-      continue
-    if shouldFill(windingRule, count):
-      yield (prevAt, at, count)
-    prevAt = at
+    if at > 0:
+      if shouldFill(windingRule, count):
+        yield (prevAt, at, count)
+      prevAt = at
     count += winding
 
   when defined(pixieLeakCheck):
