@@ -178,25 +178,35 @@ proc getValueSmooth*(mask: Mask, x, y: float32): uint8 =
 
 proc spread*(mask: Mask, spread: float32) =
   ## Grows the mask by spread.
+  let spread = round(spread).int
   if spread == 0:
     return
   if spread < 0:
     raise newException(PixieError, "Cannot apply negative spread")
 
-  let
-    copy = mask.copy()
-    spread = round(spread).int
+  # Spread in the X direction. Store with dimensions swapped for reading later.
+  let spreadX = newMask(mask.height, mask.width)
   for y in 0 ..< mask.height:
     for x in 0 ..< mask.width:
       var maxValue: uint8
-      block blurBox:
-        for by in max(y - spread, 0) .. min(y + spread, mask.height - 1):
-          for bx in max(x - spread, 0) .. min(x + spread, mask.width - 1):
-            let value = copy.getValueUnsafe(bx, by)
-            if value > maxValue:
-              maxValue = value
-            if maxValue == 255:
-              break blurBox
+      for xx in max(x - spread, 0) .. min(x + spread, mask.width - 1):
+        let value = mask.getValueUnsafe(xx, y)
+        if value > maxValue:
+          maxValue = value
+        if maxValue == 255:
+          break
+      spreadX.setValueUnsafe(y, x, maxValue)
+
+  # Spread in the Y direction and modify mask.
+  for y in 0 ..< mask.height:
+    for x in 0 ..< mask.width:
+      var maxValue: uint8
+      for yy in max(y - spread, 0) .. min(y + spread, mask.height - 1):
+        let value = spreadX.getValueUnsafe(yy, x)
+        if value > maxValue:
+          maxValue = value
+        if maxValue == 255:
+          break
       mask.setValueUnsafe(x, y, maxValue)
 
 proc ceil*(mask: Mask) =
