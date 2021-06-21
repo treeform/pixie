@@ -1,4 +1,4 @@
-import chroma, flatty/binny, pixie/common, pixie/images
+import chroma, flatty/binny, pixie/common, pixie/images, pixie/masks
 
 # See: https://en.wikipedia.org/wiki/BMP_file_format
 
@@ -91,3 +91,7 @@ proc encodeBmp*(image: Image): string =
       result.addUint8(rgba.a)
 
   result.writeUInt32(2, result.len.uint32)
+
+proc encodeBmp*(mask: Mask): string =
+  ## Encodes a mask into the BMP file format.
+  newImage(mask).encodeBmp()

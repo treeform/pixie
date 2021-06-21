@@ -863,5 +863,11 @@ proc shadow*(
   result.fill(color)
   result.draw(mask, blendMode = bmMask)
 
+proc newImage*(mask: Mask): Image =
+  ## Creates a new image from as mask.
+  result = newImage(mask.width, mask.height)
+  for i, v in mask.data:
+    result.data[i] = rgbx(v, v, v, 255)
+
 when defined(release):
   {.pop.}

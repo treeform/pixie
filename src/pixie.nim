@@ -52,7 +52,7 @@ proc readImage*(filePath: string): Image =
   ## Loads an image from a file.
   decodeImage(readFile(filePath))
 
-proc encodeImage*(image: Image, fileFormat: FileFormat): string =
+proc encodeImage*(image: Image | Mask, fileFormat: FileFormat): string =
   ## Encodes an image into memory.
   case fileFormat:
   of ffPng:
@@ -64,11 +64,11 @@ proc encodeImage*(image: Image, fileFormat: FileFormat): string =
   of ffGif:
     raise newException(PixieError, "Unsupported image format")
 
-proc writeFile*(image: Image, filePath: string, fileFormat: FileFormat) =
+proc writeFile*(image: Image | Mask, filePath: string, fileFormat: FileFormat) =
   ## Writes an image to a file.
   writeFile(filePath, image.encodeImage(fileFormat))
 
-proc writeFile*(image: Image, filePath: string) =
+proc writeFile*(image: Image | Mask, filePath: string) =
   ## Writes an image to a file.
   let fileFormat = case splitFile(filePath).ext.toLowerAscii():
     of ".png": ffPng
@@ -76,7 +76,7 @@ proc writeFile*(image: Image, filePath: string) =
     of ".jpg", ".jpeg": ffJpg
     else:
       raise newException(PixieError, "Unsupported image file extension")
-  image.writeFile(filePath, fileformat)
+  image.writeFile(filePath, fileFormat)
 
 proc fillRect*(
   mask: Mask,

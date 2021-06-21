@@ -1,4 +1,4 @@
-import pixie/common, pixie/images
+import pixie/common, pixie/images, pixie/masks
 
 when defined(pixieUseStb):
   import pixie/fileformats/stb_image/stb_image
@@ -23,6 +23,6 @@ proc decodeJpg*(data: string): Image {.inline.} =
   ## Decodes the JPEG data into an Image.
   decodeJpg(cast[seq[uint8]](data))
 
-proc encodeJpg*(image: Image): string =
+proc encodeJpg*(image: Image | Mask): string =
   ## Encodes Image into a JPEG data string.
   raise newException(PixieError, "Encoding JPG not supported yet")

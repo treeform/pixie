@@ -35,3 +35,6 @@ block:
     let image =
       decodeBmp(readFile("tests/images/bmp/knight." & $bits & ".master.bmp"))
     writeFile("tests/images/bmp/knight." & $bits & ".bmp", encodeBmp(image))
+
+    newMask(image).writeFile("tests/images/bmp/knight." & $bits & "mask.png")
+    newMask(image).writeFile("tests/images/bmp/knight." & $bits & "mask.bmp")
