@@ -79,7 +79,7 @@ proc writeFile*(image: Image, filePath: string) =
   image.writeFile(filePath, fileFormat)
 
 proc decodeMask*(data: string | seq[uint8]): Mask =
-  ## Loads an image from a memory.
+  ## Loads an mask from a memory.
   if data.len > 8 and data.readUint64(0) == cast[uint64](pngSignature):
     newMaskMonochrome(decodePng(data))
   elif data.len > 2 and data.readStr(0, 2) == bmpSignature:
@@ -88,11 +88,11 @@ proc decodeMask*(data: string | seq[uint8]): Mask =
     raise newException(PixieError, "Unsupported image file format")
 
 proc readMask*(filePath: string): Mask =
-  ## Loads an image from a file.
+  ## Loads an mask from a file.
   decodeMask(readFile(filePath))
 
 proc encodeMask*(mask: Mask, fileFormat: FileFormat): string =
-  ## Encodes an image into memory.
+  ## Encodes an mask into memory.
   case fileFormat:
   of ffPng:
     mask.encodePng()
@@ -102,11 +102,11 @@ proc encodeMask*(mask: Mask, fileFormat: FileFormat): string =
     raise newException(PixieError, "Unsupported image format")
 
 proc writeFile*(mask: Mask, filePath: string, fileFormat: FileFormat) =
-  ## Writes an image to a file.
+  ## Writes an mask to a file.
   writeFile(filePath, mask.encodeMask(fileFormat))
 
 proc writeFile*(mask: Mask, filePath: string) =
-  ## Writes an image to a file.
+  ## Writes an mask to a file.
   let fileFormat = case splitFile(filePath).ext.toLowerAscii():
     of ".png": ffPng
     of ".bmp": ffBmp
