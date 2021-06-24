@@ -870,13 +870,15 @@ proc newImage*(mask: Mask): Image =
     result.data[i] = rgbx(v, v, v, v)
 
 proc newImageMonochrome*(mask: Mask): Image =
-  ## Creates a new image from mask but without alpha.
+  ## Creates a new monochrome image (no alpha channel) from mask.
+  ## Duplicates mask into red, green, blue channel, leaving alpha set to full.
   result = newImage(mask.width, mask.height)
   for i, v in mask.data:
     result.data[i] = rgbx(v, v, v, 255)
 
 proc newMaskMonochrome*(image: Image): Mask =
-  ## Returns a new mask using the red (not alpha) values of the parameter image.
+  ## Returns a new mask from monochrome image (no alpha channel).
+  ## Just reads the first channel (red) as mask.
   result = newMask(image.width, image.height)
   var i: int
   for j in i ..< image.data.len:
