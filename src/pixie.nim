@@ -52,7 +52,7 @@ proc readImage*(filePath: string): Image =
   ## Loads an image from a file.
   decodeImage(readFile(filePath))
 
-proc encodeImage*(image: Image | Mask, fileFormat: FileFormat): string =
+proc encodeImage*(image: Image, fileFormat: FileFormat): string =
   ## Encodes an image into memory.
   case fileFormat:
   of ffPng:
@@ -64,11 +64,11 @@ proc encodeImage*(image: Image | Mask, fileFormat: FileFormat): string =
   of ffGif:
     raise newException(PixieError, "Unsupported image format")
 
-proc writeFile*(image: Image | Mask, filePath: string, fileFormat: FileFormat) =
+proc writeFile*(image: Image, filePath: string, fileFormat: FileFormat) =
   ## Writes an image to a file.
   writeFile(filePath, image.encodeImage(fileFormat))
 
-proc writeFile*(image: Image | Mask, filePath: string) =
+proc writeFile*(image: Image, filePath: string) =
   ## Writes an image to a file.
   let fileFormat = case splitFile(filePath).ext.toLowerAscii():
     of ".png": ffPng
@@ -77,6 +77,42 @@ proc writeFile*(image: Image | Mask, filePath: string) =
     else:
       raise newException(PixieError, "Unsupported image file extension")
   image.writeFile(filePath, fileFormat)
+
+proc decodeMask*(data: string | seq[uint8]): Mask =
+  ## Loads an image from a memory.
+  if data.len > 8 and data.readUint64(0) == cast[uint64](pngSignature):
+    newMaskMonochrome(decodePng(data))
+  elif data.len > 2 and data.readStr(0, 2) == bmpSignature:
+    newMaskMonochrome(decodeBmp(data))
+  else:
+    raise newException(PixieError, "Unsupported image file format")
+
+proc readMask*(filePath: string): Mask =
+  ## Loads an image from a file.
+  decodeMask(readFile(filePath))
+
+proc encodeMask*(mask: Mask, fileFormat: FileFormat): string =
+  ## Encodes an image into memory.
+  case fileFormat:
+  of ffPng:
+    mask.encodePng()
+  of ffBmp:
+    mask.encodeBmp()
+  else:
+    raise newException(PixieError, "Unsupported image format")
+
+proc writeFile*(mask: Mask, filePath: string, fileFormat: FileFormat) =
+  ## Writes an image to a file.
+  writeFile(filePath, mask.encodeMask(fileFormat))
+
+proc writeFile*(mask: Mask, filePath: string) =
+  ## Writes an image to a file.
+  let fileFormat = case splitFile(filePath).ext.toLowerAscii():
+    of ".png": ffPng
+    of ".bmp": ffBmp
+    else:
+      raise newException(PixieError, "Unsupported image file extension")
+  mask.writeFile(filePath, fileFormat)
 
 proc fillRect*(
   mask: Mask,

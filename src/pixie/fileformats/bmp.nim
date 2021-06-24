@@ -94,4 +94,4 @@ proc encodeBmp*(image: Image): string =
 
 proc encodeBmp*(mask: Mask): string =
   ## Encodes a mask into the BMP file format.
-  newImage(mask).encodeBmp()
+  newImageMonochrome(mask).encodeBmp()

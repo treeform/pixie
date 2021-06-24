@@ -867,7 +867,21 @@ proc newImage*(mask: Mask): Image =
   ## Creates a new image from as mask.
   result = newImage(mask.width, mask.height)
   for i, v in mask.data:
+    result.data[i] = rgbx(v, v, v, v)
+
+proc newImageMonochrome*(mask: Mask): Image =
+  ## Creates a new image from mask but without alpha.
+  result = newImage(mask.width, mask.height)
+  for i, v in mask.data:
     result.data[i] = rgbx(v, v, v, 255)
+
+proc newMaskMonochrome*(image: Image): Mask =
+  ## Returns a new mask using the red (not alpha) values of the parameter image.
+  result = newMask(image.width, image.height)
+  var i: int
+  # TODO: SIMD here
+  for j in i ..< image.data.len:
+    result.data[j] = image.data[j].r
 
 when defined(release):
   {.pop.}

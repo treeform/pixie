@@ -36,5 +36,15 @@ block:
       decodeBmp(readFile("tests/images/bmp/knight." & $bits & ".master.bmp"))
     writeFile("tests/images/bmp/knight." & $bits & ".bmp", encodeBmp(image))
 
-    newMask(image).writeFile("tests/images/bmp/knight." & $bits & "mask.png")
-    newMask(image).writeFile("tests/images/bmp/knight." & $bits & "mask.bmp")
+block:
+  var knight = readImage("tests/images/bmp/knight.32.master.bmp")
+  newMask(knight).writeFile("tests/images/bmp/knight.32.mask.bmp")
+  newMask(knight).writeFile("tests/images/bmp/knight.32.mask.png")
+
+  block:
+    var knightMask = readMask("tests/images/bmp/knight.32.mask.bmp")
+    assert knight.newMask().data == knightMask.data
+
+  block:
+    var knightMask = readMask("tests/images/bmp/knight.32.mask.png")
+    assert knight.newMask().data == knightMask.data
