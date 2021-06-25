@@ -517,16 +517,12 @@ proc getRgbaSmooth*(image: Image, x, y: float32, wrapped = false): ColorRGBX =
   ## Gets a interpolated color with float point coordinates.
   ## Pixes outside the image are transparent.
   let
-    minX = floor(x)
-    minY = floor(y)
-    diffX = x - minX
-    diffY = y - minY
-    x = minX.int
-    y = minY.int
-    x0 = (x + 0)
-    y0 = (y + 0)
-    x1 = (x + 1)
-    y1 = (y + 1)
+    x0 = x.int
+    y0 = y.int
+    x1 = x0 + 1
+    y1 = y0 + 1
+    xFractional = x.fractional
+    yFractional = y.fractional
 
   var x0y0, x1y0, x0y1, x1y1: ColorRGBX
   if wrapped:
@@ -541,10 +537,10 @@ proc getRgbaSmooth*(image: Image, x, y: float32, wrapped = false): ColorRGBX =
     x1y1 = image[x1, y1]
 
   let
-    bottomMix = lerp(x0y0, x1y0, diffX)
-    topMix = lerp(x0y1, x1y1, diffX)
+    bottomMix = lerp(x0y0, x1y0, xFractional)
+    topMix = lerp(x0y1, x1y1, xFractional)
 
-  lerp(bottomMix, topMix, diffY)
+  lerp(bottomMix, topMix, yFractional)
 
 proc drawCorrect(
   a, b: Image | Mask, mat = mat3(), tiled = false, blendMode = bmNormal

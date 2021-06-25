@@ -159,22 +159,22 @@ proc fill*(mask: Mask, value: uint8) {.inline.} =
 proc getValueSmooth*(mask: Mask, x, y: float32): uint8 =
   ## Gets a interpolated value with float point coordinates.
   let
-    minX = floor(x)
-    minY = floor(y)
-    diffX = x - minX
-    diffY = y - minY
-    x = minX.int
-    y = minY.int
+    x0 = x.int
+    y0 = y.int
+    x1 = x0 + 1
+    y1 = y0 + 1
+    xFractional = x.fractional
+    yFractional = y.fractional
 
-    x0y0 = mask[x + 0, y + 0]
-    x1y0 = mask[x + 1, y + 0]
-    x0y1 = mask[x + 0, y + 1]
-    x1y1 = mask[x + 1, y + 1]
+    x0y0 = mask[x0, y0]
+    x1y0 = mask[x1, y0]
+    x0y1 = mask[x0, y1]
+    x1y1 = mask[x1, y1]
 
-    bottomMix = lerp(x0y0, x1y0, diffX)
-    topMix = lerp(x0y1, x1y1, diffX)
+    bottomMix = lerp(x0y0, x1y0, xFractional)
+    topMix = lerp(x0y1, x1y1, xFractional)
 
-  lerp(bottomMix, topMix, diffY)
+  lerp(bottomMix, topMix, yFractional)
 
 proc spread*(mask: Mask, spread: float32) =
   ## Grows the mask by spread.
