@@ -709,7 +709,7 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
     else:
       var x = xMin
       when defined(amd64) and not defined(pixieNoSimd):
-        if dx.x == 1 and dx.y == 0 and dy.x == 0 and dy.y == 1:
+        if dx == vec2(1, 0) and dy == vec2(0, 1):
           # Check we are not rotated before using SIMD blends
           when type(a) is Image:
             if blendMode.hasSimdBlender():
@@ -732,7 +732,6 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
                   blenderSimd(backdrop, source)
                 )
                 x += 4
-
           else: # is a Mask
             if blendMode.hasSimdMasker():
               let maskerSimd = blendMode.maskerSimd()

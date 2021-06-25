@@ -1,7 +1,7 @@
 import benchy, cairo, chroma, math, pixie
 
 block:
-  var
+  let
     surface = imageSurfaceCreate(FORMAT_ARGB32, 1920, 1080)
     ctx = surface.create()
 
@@ -19,7 +19,7 @@ block:
 
   # discard surface.writeToPng("cairo1.png")
 
-  var a = newImage(1920, 1080)
+  let a = newImage(1920, 1080)
   a.fill(rgba(255, 255, 255, 255))
 
   timeIt "pixie1":
@@ -34,7 +34,7 @@ block:
   # a.writeFile("pixie1.png")
 
 block:
-  var
+  let
     surface = imageSurfaceCreate(FORMAT_ARGB32, 1920, 1080)
     ctx = surface.create()
 
@@ -52,7 +52,7 @@ block:
 
   # discard surface.writeToPng("cairo2.png")
 
-  var a = newImage(1920, 1080)
+  let a = newImage(1920, 1080)
   a.fill(rgba(255, 255, 255, 255))
 
   timeIt "pixie2":
