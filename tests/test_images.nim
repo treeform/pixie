@@ -138,3 +138,29 @@ block:
   ctx.fillRect(rect(25, 25, 50, 50))
   ctx.image.blur(20, rgba(0, 0, 0, 255))
   ctx.image.writeFile("tests/images/imageblur20oob.png")
+
+block: # Test conversion between image and mask
+  let
+    originalImage = newImage(100, 100)
+    originalMask = newMask(100, 100)
+
+  var p: Path
+  p.rect(10, 10, 80, 80)
+
+  originalImage.fillPath(p, rgba(255, 0, 0, 255))
+  originalMask.fillPath(p)
+
+  # Converting an image to a mask == a mask of the same fill
+  doAssert newMask(originalImage).data == originalMask.data
+
+  # Converting a mask to an image == converting an image to a mask as an image
+  doAssert newImage(newMask(originalImage)).data == newImage(originalMask).data
+
+block:
+  var p: Path
+  p.roundedRect(10, 10, 80, 80, 10, 10, 10, 10)
+
+  let image = newImage(100, 100)
+  image.fillPath(p, rgba(255, 0, 0, 255))
+
+  newImage(newMask(image)).writeFile("tests/images/mask2image.png")

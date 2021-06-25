@@ -33,7 +33,7 @@ converter autoPremultipliedAlpha*(c: ColorRGBA): ColorRGBX {.inline.} =
   c.rgbx()
 
 proc decodeImage*(data: string | seq[uint8]): Image =
-  ## Loads an image from a memory.
+  ## Loads an image from memory.
   if data.len > 8 and data.readUint64(0) == cast[uint64](pngSignature):
     decodePng(data)
   elif data.len > 2 and data.readUint16(0) == cast[uint16](jpgStartOfImage):
@@ -48,9 +48,20 @@ proc decodeImage*(data: string | seq[uint8]): Image =
   else:
     raise newException(PixieError, "Unsupported image file format")
 
+proc decodeMask*(data: string | seq[uint8]): Mask =
+  ## Loads a mask from memory.
+  if data.len > 8 and data.readUint64(0) == cast[uint64](pngSignature):
+    newMask(decodePng(data))
+  else:
+    raise newException(PixieError, "Unsupported mask file format")
+
 proc readImage*(filePath: string): Image =
   ## Loads an image from a file.
   decodeImage(readFile(filePath))
+
+proc readMask*(filePath: string): Mask =
+  ## Loads a mask from a file.
+  decodeMask(readFile(filePath))
 
 proc encodeImage*(image: Image, fileFormat: FileFormat): string =
   ## Encodes an image into memory.
@@ -62,7 +73,15 @@ proc encodeImage*(image: Image, fileFormat: FileFormat): string =
   of ffBmp:
     image.encodeBmp()
   of ffGif:
-    raise newException(PixieError, "Unsupported image format")
+    raise newException(PixieError, "Unsupported file format")
+
+proc encodeMask*(mask: Mask, fileFormat: FileFormat): string =
+  ## Encodes a mask into memory.
+  case fileFormat:
+  of ffPng:
+    mask.encodePng()
+  else:
+    raise newException(PixieError, "Unsupported file format")
 
 proc writeFile*(image: Image, filePath: string, fileFormat: FileFormat) =
   ## Writes an image to a file.
@@ -75,8 +94,22 @@ proc writeFile*(image: Image, filePath: string) =
     of ".bmp": ffBmp
     of ".jpg", ".jpeg": ffJpg
     else:
-      raise newException(PixieError, "Unsupported image file extension")
+      raise newException(PixieError, "Unsupported file extension")
   image.writeFile(filePath, fileformat)
+
+proc writeFile*(mask: Mask, filePath: string, fileFormat: FileFormat) =
+  ## Writes an mask to a file.
+  writeFile(filePath, mask.encodeMask(fileFormat))
+
+proc writeFile*(mask: Mask, filePath: string) =
+  ## Writes a mask to a file.
+  let fileFormat = case splitFile(filePath).ext.toLowerAscii():
+    of ".png": ffPng
+    of ".bmp": ffBmp
+    of ".jpg", ".jpeg": ffJpg
+    else:
+      raise newException(PixieError, "Unsupported file extension")
+  mask.writeFile(filePath, fileformat)
 
 proc fillRect*(
   mask: Mask,
