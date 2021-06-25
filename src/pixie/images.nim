@@ -24,6 +24,22 @@ proc newImage*(width, height: int): Image =
   result.height = height
   result.data = newSeq[ColorRGBX](width * height)
 
+proc newImage*(mask: Mask): Image =
+  result = newImage(mask.width, mask.height)
+  var i: int
+  when defined(amd64) and not defined(pixieNoSimd):
+    for _ in countup(0, mask.data.len - 16, 4):
+      let values = mm_loadu_si128(mask.data[i].addr)
+      var alphas = unpackAlphaValues(values)
+      alphas = mm_or_si128(alphas, mm_srli_epi32(alphas, 8))
+      alphas = mm_or_si128(alphas, mm_srli_epi32(alphas, 16))
+      mm_storeu_si128(result.data[i].addr, alphas)
+      i += 4
+
+  for i in i ..< mask.data.len:
+    let v = mask.data[i]
+    result.data[i] = rgbx(v, v, v, v)
+
 proc wh*(image: Image): Vec2 {.inline.} =
   ## Return with and height as a size vector.
   vec2(image.width.float32, image.height.float32)

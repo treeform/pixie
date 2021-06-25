@@ -73,11 +73,20 @@ block:
 
 reset()
 
-timeIt "newMask":
+timeIt "newMask(image)":
   let mask = image.newMask()
   doAssert mask[0, 0] == image[0, 0].a
 
 reset()
+
+block:
+  let mask = image.newMask()
+
+  timeIt "newImage(mask)":
+    let image = newImage(mask)
+    doAssert mask[0, 0] == image[0, 0].a
+
+  reset()
 
 timeIt "blur":
   image.blur(40)
