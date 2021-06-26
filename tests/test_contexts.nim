@@ -594,3 +594,11 @@ block:
     rhino = readImage("tests/images/rhino.png")
   ctx.drawImage(rhino, 33, 71, 104, 124, 21, 20, 87, 104);
   image.writeFile("tests/images/context/draw_image_rhino.png")
+
+block:
+  let
+    image = newImage(300, 227)
+    ctx = newContext(image)
+    rhino = readImage("tests/images/rhino.png")
+  ctx.drawImage(rhino, rect(33, 71, 104, 124), rect(21, 20, 87, 104));
+  image.writeFile("tests/images/context/draw_image_rhino2.png")
