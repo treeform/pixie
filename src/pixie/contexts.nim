@@ -589,3 +589,26 @@ proc strokePolygon*(ctx: Context, pos: Vec2, size: float32, sides: int) =
   var path: Path
   path.polygon(pos, size, sides)
   ctx.stroke(path)
+
+# proc drawImage*(ctx: Context, image: Image, dx, dy, dWidth, dHeight: float32) =
+#   ## Draws an image onto the canvas.
+#   var path: Path
+#   var imageMat = ctx.mat * translate(vec2(dx, dy)) * scale(vec2(
+#     image.width.float32 / dWidth,
+#     image.height.float32 / dHeight
+#   ))
+#   ctx.fillStyle = Paint(kind: pkImage, image: image, imageMat: imageMat)
+#   path.rect(rect(dx, dy, image.width.float32, image.height.float32))
+#   ctx.fill(path)
+
+proc drawImage*(ctx: Context, image: Image, dx, dy: float32) =
+  ## Draws an image onto the canvas.
+  var path: Path
+  var imageMat = ctx.mat * translate(vec2(dx, dy))
+  ctx.fillStyle = Paint(kind: pkImage, image: image, imageMat: imageMat)
+  path.rect(rect(dx, dy, image.width.float32, image.height.float32))
+  ctx.fill(path)
+
+proc drawImage*(ctx: Context, image: Image, pos: Vec2) =
+  ## Draws an image onto the canvas.
+  ctx.drawImage(image, pos.x, pos.y)
