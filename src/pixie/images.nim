@@ -29,8 +29,7 @@ proc newImage*(mask: Mask): Image =
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
     for _ in countup(0, mask.data.len - 16, 4):
-      let values = mm_loadu_si128(mask.data[i].addr)
-      var alphas = unpackAlphaValues(values)
+      var alphas = unpackAlphaValues(mm_loadu_si128(mask.data[i].addr))
       alphas = mm_or_si128(alphas, mm_srli_epi32(alphas, 8))
       alphas = mm_or_si128(alphas, mm_srli_epi32(alphas, 16))
       mm_storeu_si128(result.data[i].addr, alphas)
