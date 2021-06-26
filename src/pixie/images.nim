@@ -537,10 +537,10 @@ proc getRgbaSmooth*(image: Image, x, y: float32, wrapped = false): ColorRGBX =
     x1y1 = image[x1, y1]
 
   let
-    bottomMix = lerp(x0y0, x1y0, xFractional)
-    topMix = lerp(x0y1, x1y1, xFractional)
+    topMix = lerp(x0y0, x1y0, xFractional)
+    bottomMix = lerp(x0y1, x1y1, xFractional)
 
-  lerp(bottomMix, topMix, yFractional)
+  lerp(topMix, bottomMix, yFractional)
 
 proc drawCorrect(
   a, b: Image | Mask, mat = mat3(), tiled = false, blendMode = bmNormal
