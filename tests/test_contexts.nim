@@ -584,5 +584,13 @@ block:
     image = newImage(100, 100)
     ctx = newContext(image)
   var testImage = readImage("tests/images/pip1.png")
-  ctx.drawImage(testImage, 0, 0, 10, 10)
+  ctx.drawImage(testImage, 30, 30, 20, 20)
   image.writeFile("tests/images/context/draw_image_self_scaled.png")
+
+block:
+  let
+    image = newImage(300, 227)
+    ctx = newContext(image)
+    rhino = readImage("tests/images/rhino.png")
+  ctx.drawImage(rhino, 33, 71, 104, 124, 21, 20, 87, 104);
+  image.writeFile("tests/images/context/draw_image_rhino.png")
