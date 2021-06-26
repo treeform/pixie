@@ -65,3 +65,32 @@ block:
     a.fillPath(p, rgba(0, 0, 255, 255))
 
   # a.writeFile("pixie2.png")
+
+block:
+  let
+    a = imageSurfaceCreate(FORMAT_ARGB32, 1000, 1000)
+    b = imageSurfaceCreate(FORMAT_ARGB32, 500, 500)
+    ac = a.create()
+    bc = b.create()
+
+  ac.setSourceRgba(1, 0, 0, 1)
+  ac.newPath()
+  ac.rectangle(0, 0, 1000, 1000)
+  ac.fill()
+
+  bc.setSourceRgba(0, 1, 0, 1)
+  bc.newPath()
+  bc.rectangle(0, 0, 500, 500)
+  bc.fill()
+
+  let pattern = patternCreateForSurface(b)
+
+  timeIt "a":
+    ac.setSource(pattern)
+    ac.save()
+    ac.translate(25.2, 25.2)
+    ac.rectangle(0, 0, 500, 500)
+    ac.fill()
+    ac.restore()
+
+  discard a.writeToPng("a.png")
