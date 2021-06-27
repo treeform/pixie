@@ -1206,12 +1206,14 @@ proc computeCoverages(
               at - prevAt
         if leftCover != 0:
           inc fillStart
-          coverages[prevAt.int - startX] += (leftCover * sampleCoverage.float32).uint8
+          coverages[prevAt.int - startX] +=
+            (leftCover * sampleCoverage.float32).uint8
 
         if pixelCrossed:
           let rightCover = at - trunc(at)
           if rightCover > 0:
-            coverages[at.int - startX] += (rightCover * sampleCoverage.float32).uint8
+            coverages[at.int - startX] +=
+              (rightCover * sampleCoverage.float32).uint8
 
         let fillLen = at.int - fillStart
         if fillLen > 0:

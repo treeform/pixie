@@ -46,7 +46,8 @@ timeIt "cairo decode":
 timeIt "cairo encode":
   let decoded = imageSurfaceCreateFromPng(filePath)
 
-  var write: WriteFunc = proc(closure: pointer, data: cstring, len: int32): Status {.cdecl.} =
-    StatusSuccess
+  var write: WriteFunc =
+    proc(closure: pointer, data: cstring, len: int32): Status {.cdecl.} =
+      StatusSuccess
 
   discard decoded.writeToPng(write, nil)

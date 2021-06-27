@@ -81,7 +81,9 @@ proc minifyBy2*(mask: Mask, power = 1): Mask =
       when defined(amd64) and not defined(pixieNoSimd):
         let
           oddMask = mm_set1_epi16(cast[int16](0xff00))
-          first8 = cast[M128i]([uint8.high, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+          firstByte = cast[M128i](
+            [uint8.high, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+          )
         for _ in countup(0, result.width - 16, 8):
           let
             top = mm_loadu_si128(src.data[src.dataIndex(x * 2, y * 2 + 0)].addr)
@@ -114,14 +116,14 @@ proc minifyBy2*(mask: Mask, power = 1): Mask =
 
             # merged has the correct values in the even indices
 
-            a = mm_and_si128(merged, first8)
-            b = mm_and_si128(mm_srli_si128(merged, 2), first8)
-            c = mm_and_si128(mm_srli_si128(merged, 4), first8)
-            d = mm_and_si128(mm_srli_si128(merged, 6), first8)
-            e = mm_and_si128(mm_srli_si128(merged, 8), first8)
-            f = mm_and_si128(mm_srli_si128(merged, 10), first8)
-            g = mm_and_si128(mm_srli_si128(merged, 12), first8)
-            h = mm_and_si128(mm_srli_si128(merged, 14), first8)
+            a = mm_and_si128(merged, firstByte)
+            b = mm_and_si128(mm_srli_si128(merged, 2), firstByte)
+            c = mm_and_si128(mm_srli_si128(merged, 4), firstByte)
+            d = mm_and_si128(mm_srli_si128(merged, 6), firstByte)
+            e = mm_and_si128(mm_srli_si128(merged, 8), firstByte)
+            f = mm_and_si128(mm_srli_si128(merged, 10), firstByte)
+            g = mm_and_si128(mm_srli_si128(merged, 12), firstByte)
+            h = mm_and_si128(mm_srli_si128(merged, 14), firstByte)
 
             ab = mm_or_si128(a, mm_slli_si128(b, 1))
             cd = mm_or_si128(c, mm_slli_si128(d, 1))
