@@ -1,11 +1,13 @@
 ## Load and Save SVG files.
 
-import cairo, chroma, pixie/common, pixie/images, pixie/paths, strutils, vmath,
+import cairo, chroma, pixie/common, pixie/images, strutils, vmath,
     xmlparser, xmltree
 
-type Path = paths.Path
+include pixie/paths
 
-proc processCommands(c: ptr Context, path: paths.Path) =
+# type Path = paths.Path
+
+proc processCommands(c: ptr Context, path: Path) =
   c.newPath()
   c.moveTo(0, 0)
   for i, command in path.commands:
@@ -99,8 +101,8 @@ type Ctx = object
   fillRule: WindingRule
   fill, stroke: ColorRGBA
   strokeWidth: float32
-  strokeLineCap: paths.LineCap
-  strokeLineJoin: paths.LineJoin
+  strokeLineCap: LineCap
+  strokeLineJoin: LineJoin
   strokeMiterLimit: float32
   strokeDashArray: seq[float32]
   transform: Mat3
@@ -319,7 +321,7 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
       else:
         failInvalidTransform(transform)
 
-proc cairoLineCap(lineCap: paths.LineCap): cairo.LineCap =
+proc cairoLineCap(lineCap: LineCap): cairo.LineCap =
   case lineCap:
   of lcButt:
     LineCapButt
@@ -328,7 +330,7 @@ proc cairoLineCap(lineCap: paths.LineCap): cairo.LineCap =
   of lcSquare:
     LineCapSquare
 
-proc cairoLineJoin(lineJoin: paths.LineJoin): cairo.LineJoin =
+proc cairoLineJoin(lineJoin: LineJoin): cairo.LineJoin =
   case lineJoin:
   of ljMiter:
     LineJoinMiter
