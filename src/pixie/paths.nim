@@ -26,8 +26,8 @@ type
 
   PathCommand* = object
     ## Binary version of an SVG command.
-    kind*: PathCommandKind
-    numbers*: seq[float32]
+    kind: PathCommandKind
+    numbers: seq[float32]
 
   Path* = object
     ## Used to hold paths and create paths.
