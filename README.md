@@ -1,5 +1,7 @@
 <img src="docs/banner.png">
 
+👏 👏 👏 Check out video about the library: [A full-featured 2D graphics library for Nim (NimConf 2021)](https://www.youtube.com/watch?v=8acDfUIwLnk) 👏 👏 👏
+
 # Pixie - A full-featured 2D graphics library for Nim
 
 Pixie is a 2D graphics library similar to [Cairo](https://www.cairographics.org/) and [Skia](https://skia.org) written (almost) entirely in Nim.
