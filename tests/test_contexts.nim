@@ -548,3 +548,57 @@ block:
   ctx.fillRect(50, 50, 100, 100)
 
   image.writeFile("tests/images/context/globalAlpha_1.png")
+
+block:
+  let
+    image = newImage(100, 100)
+    ctx = newContext(image)
+    testImage = readImage("tests/images/pip1.png")
+  ctx.drawImage(testImage, 0, 0)
+  ctx.drawImage(testImage, 30, 30)
+  image.writeFile("tests/images/context/draw_image.png")
+
+block:
+  let
+    image = newImage(100, 100)
+    ctx = newContext(image)
+    testImage = readImage("tests/images/pip1.png")
+  ctx.translate(30, 30)
+  ctx.drawImage(testImage, -30, -30)
+  ctx.drawImage(testImage, 0, 0)
+  image.writeFile("tests/images/context/draw_image_translated.png")
+
+block:
+  let
+    image = newImage(100, 100)
+    ctx = newContext(image)
+    testImage = readImage("tests/images/pip1.png")
+  ctx.scale(2, 2)
+  ctx.drawImage(testImage, 0, 0)
+  ctx.scale(0.25, 0.25)
+  ctx.drawImage(testImage, 0, 0)
+  image.writeFile("tests/images/context/draw_image_scaled.png")
+
+block:
+  let
+    image = newImage(100, 100)
+    ctx = newContext(image)
+    testImage = readImage("tests/images/pip1.png")
+  ctx.drawImage(testImage, 30, 30, 20, 20)
+  image.writeFile("tests/images/context/draw_image_self_scaled.png")
+
+block:
+  let
+    image = newImage(300, 227)
+    ctx = newContext(image)
+    rhino = readImage("tests/images/rhino.png")
+  ctx.drawImage(rhino, 33, 71, 104, 124, 21, 20, 87, 104);
+  image.writeFile("tests/images/context/draw_image_rhino.png")
+
+block:
+  let
+    image = newImage(300, 227)
+    ctx = newContext(image)
+    rhino = readImage("tests/images/rhino.png")
+  ctx.drawImage(rhino, rect(33, 71, 104, 124), rect(21, 20, 87, 104));
+  image.writeFile("tests/images/context/draw_image_rhino2.png")
