@@ -1,4 +1,4 @@
-import opengl, pixie, pixie/context
+import opengl, pixie, pixie/contexts
 
 export pixie
 
