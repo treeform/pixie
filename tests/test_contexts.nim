@@ -553,7 +553,7 @@ block:
   let
     image = newImage(100, 100)
     ctx = newContext(image)
-  var testImage = readImage("tests/images/pip1.png")
+    testImage = readImage("tests/images/pip1.png")
   ctx.drawImage(testImage, 0, 0)
   ctx.drawImage(testImage, 30, 30)
   image.writeFile("tests/images/context/draw_image.png")
@@ -562,7 +562,7 @@ block:
   let
     image = newImage(100, 100)
     ctx = newContext(image)
-  var testImage = readImage("tests/images/pip1.png")
+    testImage = readImage("tests/images/pip1.png")
   ctx.translate(30, 30)
   ctx.drawImage(testImage, -30, -30)
   ctx.drawImage(testImage, 0, 0)
@@ -572,7 +572,7 @@ block:
   let
     image = newImage(100, 100)
     ctx = newContext(image)
-  var testImage = readImage("tests/images/pip1.png")
+    testImage = readImage("tests/images/pip1.png")
   ctx.scale(2, 2)
   ctx.drawImage(testImage, 0, 0)
   ctx.scale(0.25, 0.25)
@@ -583,7 +583,7 @@ block:
   let
     image = newImage(100, 100)
     ctx = newContext(image)
-  var testImage = readImage("tests/images/pip1.png")
+    testImage = readImage("tests/images/pip1.png")
   ctx.drawImage(testImage, 30, 30, 20, 20)
   image.writeFile("tests/images/context/draw_image_self_scaled.png")
 
