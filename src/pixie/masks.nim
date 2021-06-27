@@ -81,7 +81,9 @@ proc minifyBy2*(mask: Mask, power = 1): Mask =
       when defined(amd64) and not defined(pixieNoSimd):
         let
           oddMask = mm_set1_epi16(cast[int16](0xff00))
-          first8 = cast[M128i]([uint8.high, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+          firstByte = cast[M128i](
+            [uint8.high, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+          )
         for _ in countup(0, result.width - 16, 8):
           let
             top = mm_loadu_si128(src.data[src.dataIndex(x * 2, y * 2 + 0)].addr)
@@ -114,14 +116,14 @@ proc minifyBy2*(mask: Mask, power = 1): Mask =
 
             # merged has the correct values in the even indices
 
-            a = mm_and_si128(merged, first8)
-            b = mm_and_si128(mm_srli_si128(merged, 2), first8)
-            c = mm_and_si128(mm_srli_si128(merged, 4), first8)
-            d = mm_and_si128(mm_srli_si128(merged, 6), first8)
-            e = mm_and_si128(mm_srli_si128(merged, 8), first8)
-            f = mm_and_si128(mm_srli_si128(merged, 10), first8)
-            g = mm_and_si128(mm_srli_si128(merged, 12), first8)
-            h = mm_and_si128(mm_srli_si128(merged, 14), first8)
+            a = mm_and_si128(merged, firstByte)
+            b = mm_and_si128(mm_srli_si128(merged, 2), firstByte)
+            c = mm_and_si128(mm_srli_si128(merged, 4), firstByte)
+            d = mm_and_si128(mm_srli_si128(merged, 6), firstByte)
+            e = mm_and_si128(mm_srli_si128(merged, 8), firstByte)
+            f = mm_and_si128(mm_srli_si128(merged, 10), firstByte)
+            g = mm_and_si128(mm_srli_si128(merged, 12), firstByte)
+            h = mm_and_si128(mm_srli_si128(merged, 14), firstByte)
 
             ab = mm_or_si128(a, mm_slli_si128(b, 1))
             cd = mm_or_si128(c, mm_slli_si128(d, 1))
@@ -159,22 +161,22 @@ proc fill*(mask: Mask, value: uint8) {.inline.} =
 proc getValueSmooth*(mask: Mask, x, y: float32): uint8 =
   ## Gets a interpolated value with float point coordinates.
   let
-    minX = floor(x)
-    minY = floor(y)
-    diffX = x - minX
-    diffY = y - minY
-    x = minX.int
-    y = minY.int
+    x0 = x.int
+    y0 = y.int
+    x1 = x0 + 1
+    y1 = y0 + 1
+    xFractional = x.fractional
+    yFractional = y.fractional
 
-    x0y0 = mask[x + 0, y + 0]
-    x1y0 = mask[x + 1, y + 0]
-    x0y1 = mask[x + 0, y + 1]
-    x1y1 = mask[x + 1, y + 1]
+    x0y0 = mask[x0, y0]
+    x1y0 = mask[x1, y0]
+    x0y1 = mask[x0, y1]
+    x1y1 = mask[x1, y1]
 
-    bottomMix = lerp(x0y0, x1y0, diffX)
-    topMix = lerp(x0y1, x1y1, diffX)
+    topMix = lerp(x0y0, x1y0, xFractional)
+    bottomMix = lerp(x0y1, x1y1, xFractional)
 
-  lerp(bottomMix, topMix, diffY)
+  lerp(topMix, bottomMix, yFractional)
 
 proc spread*(mask: Mask, spread: float32) =
   ## Grows the mask by spread.

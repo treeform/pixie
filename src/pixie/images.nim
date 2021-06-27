@@ -29,8 +29,7 @@ proc newImage*(mask: Mask): Image =
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
     for _ in countup(0, mask.data.len - 16, 4):
-      let values = mm_loadu_si128(mask.data[i].addr)
-      var alphas = unpackAlphaValues(values)
+      var alphas = unpackAlphaValues(mm_loadu_si128(mask.data[i].addr))
       alphas = mm_or_si128(alphas, mm_srli_epi32(alphas, 8))
       alphas = mm_or_si128(alphas, mm_srli_epi32(alphas, 16))
       mm_storeu_si128(result.data[i].addr, alphas)
@@ -517,16 +516,12 @@ proc getRgbaSmooth*(image: Image, x, y: float32, wrapped = false): ColorRGBX =
   ## Gets a interpolated color with float point coordinates.
   ## Pixes outside the image are transparent.
   let
-    minX = floor(x)
-    minY = floor(y)
-    diffX = x - minX
-    diffY = y - minY
-    x = minX.int
-    y = minY.int
-    x0 = (x + 0)
-    y0 = (y + 0)
-    x1 = (x + 1)
-    y1 = (y + 1)
+    x0 = x.int
+    y0 = y.int
+    x1 = x0 + 1
+    y1 = y0 + 1
+    xFractional = x.fractional
+    yFractional = y.fractional
 
   var x0y0, x1y0, x0y1, x1y1: ColorRGBX
   if wrapped:
@@ -541,10 +536,10 @@ proc getRgbaSmooth*(image: Image, x, y: float32, wrapped = false): ColorRGBX =
     x1y1 = image[x1, y1]
 
   let
-    bottomMix = lerp(x0y0, x1y0, diffX)
-    topMix = lerp(x0y1, x1y1, diffX)
+    topMix = lerp(x0y0, x1y0, xFractional)
+    bottomMix = lerp(x0y1, x1y1, xFractional)
 
-  lerp(bottomMix, topMix, diffY)
+  lerp(topMix, bottomMix, yFractional)
 
 proc drawCorrect(
   a, b: Image | Mask, mat = mat3(), tiled = false, blendMode = bmNormal
@@ -709,7 +704,7 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
     else:
       var x = xMin
       when defined(amd64) and not defined(pixieNoSimd):
-        if dx.x == 1 and dx.y == 0 and dy.x == 0 and dy.y == 1:
+        if dx == vec2(1, 0) and dy == vec2(0, 1):
           # Check we are not rotated before using SIMD blends
           when type(a) is Image:
             if blendMode.hasSimdBlender():
@@ -732,7 +727,6 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
                   blenderSimd(backdrop, source)
                 )
                 x += 4
-
           else: # is a Mask
             if blendMode.hasSimdMasker():
               let maskerSimd = blendMode.maskerSimd()

@@ -1,7 +1,9 @@
-import benchy, nimPNG, pixie/fileformats/png, stb_image/read as stbi,
+import benchy, cairo, nimPNG, pixie/fileformats/png, stb_image/read as stbi,
     stb_image/write as stbr
 
-let data = readFile("tests/images/png/lenna.png")
+let
+  filePath = "tests/images/png/lenna.png"
+  data = readFile(filePath)
 
 timeIt "pixie decode":
   keep decodePng(cast[seq[uint8]](data))
@@ -37,3 +39,15 @@ timeIt "stb_image encode":
     stbi.RGBA
   )
   keep writePNG(width, height, channels, decoded).len
+
+timeIt "cairo decode":
+  keep imageSurfaceCreateFromPng(filePath)
+
+timeIt "cairo encode":
+  let decoded = imageSurfaceCreateFromPng(filePath)
+
+  var write: WriteFunc =
+    proc(closure: pointer, data: cstring, len: int32): Status {.cdecl.} =
+      StatusSuccess
+
+  discard decoded.writeToPng(write, nil)

@@ -158,7 +158,7 @@ proc stroke(ctx: Context, image: Image, path: Path) =
     ctx.layer.applyOpacity(ctx.globalAlpha)
     ctx.restore()
 
-proc fillText(ctx: Context, image: Image, text: string, at: Vec2) {.inline.} =
+proc fillText(ctx: Context, image: Image, text: string, at: Vec2) =
   if ctx.font.typeface == nil:
     raise newException(PixieError, "No font has been set on this Context")
 
@@ -185,7 +185,7 @@ proc fillText(ctx: Context, image: Image, text: string, at: Vec2) {.inline.} =
     ctx.layer.applyOpacity(ctx.globalAlpha)
     ctx.restore()
 
-proc strokeText(ctx: Context, image: Image, text: string, at: Vec2) {.inline.} =
+proc strokeText(ctx: Context, image: Image, text: string, at: Vec2) =
   if ctx.font.typeface == nil:
     raise newException(PixieError, "No font has been set on this Context")
 
@@ -293,7 +293,7 @@ proc ellipse*(ctx: Context, x, y, rx, ry: float32) {.inline.} =
   ## Adds an ellipse to the current sub-path.
   ctx.path.ellipse(x, y, rx, ry)
 
-proc fill*(ctx: Context, path: Path, windingRule = wrNonZero) {.inline.} =
+proc fill*(ctx: Context, path: Path, windingRule = wrNonZero) =
   ## Fills the path with the current fillStyle.
   if ctx.mask != nil and ctx.layer == nil:
     ctx.saveLayer()
@@ -308,7 +308,7 @@ proc fill*(ctx: Context, windingRule = wrNonZero) {.inline.} =
   ## Fills the current path with the current fillStyle.
   ctx.fill(ctx.path, windingRule)
 
-proc clip*(ctx: Context, path: Path, windingRule = wrNonZero) {.inline.} =
+proc clip*(ctx: Context, path: Path, windingRule = wrNonZero) =
   ## Turns the path into the current clipping region. The previous clipping
   ## region, if any, is intersected with the current or given path to create
   ## the new clipping region.
@@ -326,7 +326,7 @@ proc clip*(ctx: Context, windingRule = wrNonZero) {.inline.} =
   ## to create the new clipping region.
   ctx.clip(ctx.path, windingRule)
 
-proc stroke*(ctx: Context, path: Path) {.inline.} =
+proc stroke*(ctx: Context, path: Path) =
   ## Strokes (outlines) the current or given path with the current strokeStyle.
   if ctx.mask != nil and ctx.layer == nil:
     ctx.saveLayer()
