@@ -1230,6 +1230,8 @@ proc computeCoverages(
 
 proc clearUnsafe(target: Image | Mask, startX, startY, toX, toY: int) =
   ## Clears data from [start, to).
+  if startX == target.width or startY == target.height:
+    return
   let
     start = target.dataIndex(startX, startY)
     len = target.dataIndex(toX, toY) - start
