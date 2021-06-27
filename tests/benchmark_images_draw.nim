@@ -40,7 +40,40 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   b.fill(rgba(0, 255, 0, 255))
 
-  timeIt "draw big-on-bigger Smooth bmNormal":
+  timeIt "draw [scale 0.5]":
+    a.draw(b, translate(vec2(25, 25)) * scale(vec2(0.5, 0.5)), bmNormal)
+    keep(b)
+
+block:
+  let
+    a = newImage(1000, 1000)
+    b = newImage(500, 500)
+  a.fill(rgba(255, 0, 0, 255))
+  b.fill(rgba(0, 255, 0, 255))
+
+  timeIt "draw Smooth [x translate]":
+    a.draw(b, translate(vec2(25.2, 0)), bmNormal)
+    keep(b)
+
+block:
+  let
+    a = newImage(1000, 1000)
+    b = newImage(500, 500)
+  a.fill(rgba(255, 0, 0, 255))
+  b.fill(rgba(0, 255, 0, 255))
+
+  timeIt "draw Smooth [y translate]":
+    a.draw(b, translate(vec2(0, 25.2)), bmNormal)
+    keep(b)
+
+block:
+  let
+    a = newImage(1000, 1000)
+    b = newImage(500, 500)
+  a.fill(rgba(255, 0, 0, 255))
+  b.fill(rgba(0, 255, 0, 255))
+
+  timeIt "draw Smooth [x + y translate]":
     a.draw(b, translate(vec2(25.2, 25.2)), bmNormal)
     keep(b)
 
@@ -51,8 +84,8 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   b.fill(rgba(0, 255, 0, 255))
 
-  timeIt "draw big-on-bigger bmNormal scale(0.5)":
-    a.draw(b, translate(vec2(25, 25)) * scale(vec2(0.5, 0.5)), bmNormal)
+  timeIt "draw Smooth [rotate 45 deg]":
+    a.draw(b, translate(vec2(0, 500)) * rotate(toRadians(45)), bmNormal)
     keep(b)
 
 block:

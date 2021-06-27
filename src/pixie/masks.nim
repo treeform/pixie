@@ -173,10 +173,18 @@ proc getValueSmooth*(mask: Mask, x, y: float32): uint8 =
     x0y1 = mask[x0, y1]
     x1y1 = mask[x1, y1]
 
+  var topMix = x0y0
+  if xFractional > 0 and x0y0 != x1y0:
     topMix = lerp(x0y0, x1y0, xFractional)
+
+  var bottomMix = x0y1
+  if xFractional > 0 and x0y1 != x1y1:
     bottomMix = lerp(x0y1, x1y1, xFractional)
 
-  lerp(topMix, bottomMix, yFractional)
+  if yFractional != 0 and topMix != bottomMix:
+    lerp(topMix, bottomMix, yFractional)
+  else:
+    topMix
 
 proc spread*(mask: Mask, spread: float32) =
   ## Grows the mask by spread.
