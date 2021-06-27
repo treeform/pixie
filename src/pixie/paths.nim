@@ -1152,7 +1152,7 @@ proc computeCoverages(
   hits: var seq[(float32, int16)],
   numHits: var int,
   size: Vec2,
-  y: int,
+  y, startX: int,
   aa: bool,
   partitioning: Partitioning,
   windingRule: WindingRule
@@ -1206,12 +1206,12 @@ proc computeCoverages(
               at - prevAt
         if leftCover != 0:
           inc fillStart
-          coverages[prevAt.int] += (leftCover * sampleCoverage.float32).uint8
+          coverages[prevAt.int - startX] += (leftCover * sampleCoverage.float32).uint8
 
         if pixelCrossed:
           let rightCover = at - trunc(at)
           if rightCover > 0:
-            coverages[at.int] += (rightCover * sampleCoverage.float32).uint8
+            coverages[at.int - startX] += (rightCover * sampleCoverage.float32).uint8
 
         let fillLen = at.int - fillStart
         if fillLen > 0:
@@ -1219,12 +1219,12 @@ proc computeCoverages(
           when defined(amd64) and not defined(pixieNoSimd):
             let vSampleCoverage = mm_set1_epi8(cast[int8](sampleCoverage))
             for j in countup(i, fillStart + fillLen - 16, 16):
-              var coverage = mm_loadu_si128(coverages[j].addr)
+              var coverage = mm_loadu_si128(coverages[j - startX].addr)
               coverage = mm_add_epi8(coverage, vSampleCoverage)
-              mm_storeu_si128(coverages[j].addr, coverage)
+              mm_storeu_si128(coverages[j - startX].addr, coverage)
               i += 16
           for j in i ..< fillStart + fillLen:
-            coverages[j] += sampleCoverage
+            coverages[j - startX] += sampleCoverage
 
 proc clearUnsafe(target: Image | Mask, startX, startY, toX, toY: int) =
   ## Clears data from [start, to).
@@ -1253,8 +1253,8 @@ proc fillCoverage(
         oddMask = mm_set1_epi16(cast[int16](0xff00))
         div255 = mm_set1_epi16(cast[int16](0x8081))
         vColor = mm_set1_epi32(cast[int32](rgbx))
-      for _ in countup(x, image.width - 16, 4):
-        var coverage = mm_loadu_si128(coverages[x].unsafeAddr)
+      for _ in countup(x, startX + coverages.len - 16, 4):
+        var coverage = mm_loadu_si128(coverages[x - startX].unsafeAddr)
         coverage = mm_and_si128(coverage, first32)
 
         let
@@ -1301,8 +1301,8 @@ proc fillCoverage(
         x += 4
 
   let blender = blendMode.blender()
-  while x < image.width:
-    let coverage = coverages[x]
+  while x < startX + coverages.len:
+    let coverage = coverages[x - startX]
     if coverage != 0 or blendMode == bmExcludeMask:
       if blendMode == bmNormal and coverage == 255 and rgbx.a == 255:
         # Skip blending
@@ -1322,6 +1322,7 @@ proc fillCoverage(
 
   if blendMode == bmMask:
     image.clearUnsafe(0, y, startX, y)
+    image.clearUnsafe(startX + coverages.len, y, image.width, y)
 
 proc fillCoverage(
   mask: Mask,
@@ -1333,10 +1334,10 @@ proc fillCoverage(
   when defined(amd64) and not defined(pixieNoSimd):
     if blendMode.hasSimdMasker():
       let maskerSimd = blendMode.maskerSimd()
-      for _ in countup(x, coverages.len - 16, 16):
+      for _ in countup(x, startX + coverages.len - 16, 16):
         let
           index = mask.dataIndex(x, y)
-          coverage = mm_loadu_si128(coverages[x].unsafeAddr)
+          coverage = mm_loadu_si128(coverages[x - startX].unsafeAddr)
           eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
         if mm_movemask_epi8(eqZero) != 0xffff: # or blendMode == bmExcludeMask:
           # If the coverages are not all zero
@@ -1350,8 +1351,8 @@ proc fillCoverage(
         x += 16
 
   let masker = blendMode.masker()
-  while x < mask.width:
-    let coverage = coverages[x]
+  while x < startX + coverages.len:
+    let coverage = coverages[x - startX]
     if coverage != 0 or blendMode == bmExcludeMask:
       let backdrop = mask.getValueUnsafe(x, y)
       mask.setValueUnsafe(x, y, masker(backdrop, coverage))
@@ -1361,6 +1362,7 @@ proc fillCoverage(
 
   if blendMode == bmMask:
     mask.clearUnsafe(0, y, startX, y)
+    mask.clearUnsafe(startX + coverages.len, y, mask.width, y)
 
 proc fillHits(
   image: Image,
@@ -1476,7 +1478,7 @@ proc fillShapes(
     partitioning = partitionSegments(segments, startY, pathHeight - startY)
 
   var
-    coverages = newSeq[uint8](image.width)
+    coverages = newSeq[uint8](bounds.w.int)
     hits = newSeq[(float32, int16)](4)
     numHits: int
 
@@ -1487,6 +1489,7 @@ proc fillShapes(
       numHits,
       image.wh,
       y,
+      startX,
       aa,
       partitioning,
       windingRule
@@ -1532,7 +1535,7 @@ proc fillShapes(
     partitioning = partitionSegments(segments, startY, pathHeight)
 
   var
-    coverages = newSeq[uint8](mask.width)
+    coverages = newSeq[uint8](bounds.w.int)
     hits = newSeq[(float32, int16)](4)
     numHits: int
 
@@ -1543,6 +1546,7 @@ proc fillShapes(
       numHits,
       mask.wh,
       y,
+      startX,
       aa,
       partitioning,
       windingRule
