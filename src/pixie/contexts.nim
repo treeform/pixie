@@ -597,12 +597,12 @@ proc drawImage*(ctx: Context, image: Image, dx, dy, dWidth, dHeight: float32) =
       dWidth / image.width.float32,
       dHeight / image.height.float32
     ))
-    saveStyle = ctx.fillStyle
+    savedStyle = ctx.fillStyle
   ctx.fillStyle = Paint(kind: pkImage, image: image, imageMat: imageMat)
   var path: Path
   path.rect(rect(dx, dy, dWidth, dHeight))
   ctx.fill(path)
-  ctx.fillStyle = saveStyle
+  ctx.fillStyle = savedStyle
 
 proc drawImage*(ctx: Context, image: Image, dx, dy: float32) =
   ## Draws a source image onto the destination image.
