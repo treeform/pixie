@@ -45,9 +45,8 @@ block:
   doAssert $path == "M1 2 L3 4 H5 V6 C0 0 0 0 0 0 Q1 1 1 1 T2 2 A7 7 7 7 7 7 7 Z"
 
 block:
-  let
-    pathStr = "M 0.1E-10 0.1e10 L2+2 L3-3 L0.1E+10-1"
-    path = parsePath(pathStr)
+  let pathStr = "M 0.1E-10 0.1e10 L2+2 L3-3 L0.1E+10-1"
+  discard parsePath(pathStr)
 
 block:
   let
