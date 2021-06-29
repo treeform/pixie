@@ -21,7 +21,8 @@ block:
   let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, "fill")
-  image.writeFile("tests/fonts/image_fill.png")
+
+  doDiff(image, "image_fill")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -29,56 +30,61 @@ block:
   let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
   image.strokeText(font, "stroke")
-  image.writeFile("tests/fonts/image_stroke.png")
+
+  doDiff(image, "image_stroke")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 64
   let mask = newMask(200, 100)
   mask.fillText(font, "fill")
-  writeFile("tests/fonts/mask_fill.png", mask.encodePng())
+
+  doDiff(newImage(mask), "mask_fill")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 64
   let mask = newMask(200, 100)
   mask.strokeText(font, "stroke")
-  writeFile("tests/fonts/mask_stroke.png", mask.encodePng())
+
+  doDiff(newImage(mask), "mask_stroke")
 
 block:
-  var font = readFont("tests/fonts/Changa-Bold.svg")
-  font.size = 48
-  let mask = newMask(200, 100)
-  mask.fillText(font, "Changa")
-  writeFile("tests/fonts/svg_changa.png", mask.encodePng())
+  # SVG Fonts have no masters
+  block:
+    var font = readFont("tests/fonts/Changa-Bold.svg")
+    font.size = 48
+    let mask = newMask(200, 100)
+    mask.fillText(font, "Changa")
+    writeFile("tests/fonts/svg_changa.png", mask.encodePng())
 
-block:
-  var font = readFont("tests/fonts/DejaVuSans.svg")
-  font.size = 48
-  let mask = newMask(200, 100)
-  mask.fillText(font, "Deja vu ")
-  writeFile("tests/fonts/svg_dejavu.png", mask.encodePng())
+  block:
+    var font = readFont("tests/fonts/DejaVuSans.svg")
+    font.size = 48
+    let mask = newMask(200, 100)
+    mask.fillText(font, "Deja vu ")
+    writeFile("tests/fonts/svg_dejavu.png", mask.encodePng())
 
-block:
-  var font = readFont("tests/fonts/IBMPlexSans-Regular.svg")
-  font.size = 48
-  let mask = newMask(200, 100)
-  mask.fillText(font, "IBM ")
-  writeFile("tests/fonts/svg_ibm.png", mask.encodePng())
+  block:
+    var font = readFont("tests/fonts/IBMPlexSans-Regular.svg")
+    font.size = 48
+    let mask = newMask(200, 100)
+    mask.fillText(font, "IBM ")
+    writeFile("tests/fonts/svg_ibm.png", mask.encodePng())
 
-block:
-  var font = readFont("tests/fonts/Moon-Bold.svg")
-  font.size = 48
-  let mask = newMask(200, 100)
-  mask.fillText(font, "Moon ")
-  writeFile("tests/fonts/svg_moon.png", mask.encodePng())
+  block:
+    var font = readFont("tests/fonts/Moon-Bold.svg")
+    font.size = 48
+    let mask = newMask(200, 100)
+    mask.fillText(font, "Moon ")
+    writeFile("tests/fonts/svg_moon.png", mask.encodePng())
 
-block:
-  var font = readFont("tests/fonts/Ubuntu.svg")
-  font.size = 48
-  let mask = newMask(200, 100)
-  mask.fillText(font, "Ubuntu ")
-  writeFile("tests/fonts/svg_ubuntu.png", mask.encodePng())
+  block:
+    var font = readFont("tests/fonts/Ubuntu.svg")
+    font.size = 48
+    let mask = newMask(200, 100)
+    mask.fillText(font, "Ubuntu ")
+    writeFile("tests/fonts/svg_ubuntu.png", mask.encodePng())
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -179,6 +185,21 @@ block:
   )
 
   doDiff(image, "basic9")
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 24
+
+  let image = newImage(200, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(
+    font,
+    "a b c d e f g h i j k l m n o p",
+    bounds = vec2(200, 0),
+    hAlign = haRight
+  )
+
+  doDiff(image, "basic10")
 
 const
   paragraph = "ShehadcometotheconclusionthatyoucouldtellalotaboutapersonbytheirearsThewaytheystuckoutandthesizeoftheearlobescouldgiveyou"
@@ -363,9 +384,9 @@ block:
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
-  font.size = 200
+  font.size = 100
 
-  let image = newImage(2800, 400)
+  let image = newImage(1400, 200)
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(
     font,
@@ -377,10 +398,10 @@ block:
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
-  font.size = 200
+  font.size = 100
   font.noKerningAdjustments = true
 
-  let image = newImage(2800, 400)
+  let image = newImage(1400, 200)
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(
     font,
@@ -392,9 +413,9 @@ block:
 
 block:
   var font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
-  font.size = 200
+  font.size = 100
 
-  let image = newImage(2800, 400)
+  let image = newImage(1400, 200)
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(
     font,
@@ -406,10 +427,10 @@ block:
 
 block:
   var font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
-  font.size = 200
+  font.size = 100
   font.noKerningAdjustments = true
 
-  let image = newImage(2800, 400)
+  let image = newImage(1400, 200)
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(
     font,
@@ -421,9 +442,9 @@ block:
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
-  font.size = 200
+  font.size = 100
 
-  let image = newImage(2800, 400)
+  let image = newImage(1400, 200)
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(
     font,
@@ -435,10 +456,10 @@ block:
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
-  font.size = 200
+  font.size = 100
   font.noKerningAdjustments = true
 
-  let image = newImage(2800, 400)
+  let image = newImage(1400, 200)
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(
     font,
@@ -450,9 +471,9 @@ block:
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
-  font.size = 100
+  font.size = 50
 
-  let image = newImage(2800, 200)
+  let image = newImage(1400, 100)
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(
     font,
@@ -464,9 +485,9 @@ block:
 
 block:
   var font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
-  font.size = 100
+  font.size = 50
 
-  let image = newImage(2800, 200)
+  let image = newImage(1400, 100)
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(
     font,
@@ -478,9 +499,9 @@ block:
 
 block:
   var font = readFont("tests/fonts/IBMPlexSans-Regular_2.ttf")
-  font.size = 100
+  font.size = 50
 
-  let image = newImage(2800, 200)
+  let image = newImage(1400, 100)
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(
     font,
@@ -621,14 +642,15 @@ block:
     ],
     gradientStops: @[
       ColorStop(color: rgba(255, 0, 0, 255), position: 0),
-      ColorStop(color: rgba(255, 0, 0, 40), position: 1.0),
+      ColorStop(color: rgba(255, 0, 0, 127), position: 1.0),
     ]
   )
 
   let image = newImage(100, 100)
+  image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, "Text")
 
-  image.writeFile("tests/fonts/image_paint_fill.png")
+  doDiff(image, "image_paint_fill")
 
 block:
   var font1 = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -656,7 +678,7 @@ block:
   doDiff(image, "spans1")
 
   let ctx = newContext(image)
-  ctx.fillStyle = rgba(128, 128, 128, 128)
+  ctx.fillStyle = rgba(127, 127, 127, 127)
   for i, rect in arrangement.selectionRects:
     ctx.fillRect(rect)
 
@@ -688,7 +710,7 @@ block:
   doDiff(image, "spans2")
 
   let ctx = newContext(image)
-  ctx.fillStyle = rgba(128, 128, 128, 128)
+  ctx.fillStyle = rgba(127, 127, 127, 127)
   for i, rect in arrangement.selectionRects:
     ctx.fillRect(rect)
 
@@ -702,13 +724,13 @@ block:
   image.fill(rgba(255, 255, 255, 255))
 
   let arrangement = typeset(
-    font, "Wrapping text to new line", bounds = image.wh
+    font, "Wrapping text to the next line", bounds = image.wh
   )
 
   image.fillText(arrangement)
 
   let ctx = newContext(image)
-  ctx.fillStyle = rgba(128, 128, 128, 128)
+  ctx.fillStyle = rgba(127, 127, 127, 127)
   for i, rect in arrangement.selectionRects:
     ctx.fillRect(rect)
 

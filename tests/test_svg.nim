@@ -16,12 +16,13 @@ const files = [
   "dashes"
 ]
 
-for file in files:
+proc doDiff(rendered: Image, name: string) =
+  rendered.writeFile(&"tests/images/svg/rendered/{name}.png")
   let
-    original = readFile(&"tests/images/svg/{file}.svg")
-    image = decodeSvg(original)
-    gold = readImage(&"tests/images/svg/{file}.png")
+    master = readImage(&"tests/images/svg/masters/{name}.png")
+    (diffScore, diffImage) = diff(master, rendered)
+  echo &"{name} score: {diffScore}"
+  diffImage.writeFile(&"tests/images/svg/diffs/{name}.png")
 
-  let (score, _) = diff(image, gold)
-  doAssert score < 1
-  image.writeFile(&"tests/images/svg/{file}.png")
+for file in files:
+  doDiff(decodeSvg(readFile(&"tests/images/svg/{file}.svg")), file)

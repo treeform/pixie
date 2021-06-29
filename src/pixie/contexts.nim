@@ -312,13 +312,11 @@ proc clip*(ctx: Context, path: Path, windingRule = wrNonZero) =
   ## Turns the path into the current clipping region. The previous clipping
   ## region, if any, is intersected with the current or given path to create
   ## the new clipping region.
-  let mask = newMask(ctx.image.width, ctx.image.height)
-  mask.fillPath(path, ctx.mat, windingRule)
-
   if ctx.mask == nil:
-    ctx.mask = mask
+    ctx.mask = newMask(ctx.image.width, ctx.image.height)
+    ctx.mask.fillPath(path, windingRule = windingRule)
   else:
-    ctx.mask.draw(mask, blendMode = bmMask)
+    ctx.mask.fillPath(path, windingRule = windingRule, blendMode = bmMask)
 
 proc clip*(ctx: Context, windingRule = wrNonZero) {.inline.} =
   ## Turns the current path into the current clipping region. The previous

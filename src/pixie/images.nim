@@ -535,11 +535,18 @@ proc getRgbaSmooth*(image: Image, x, y: float32, wrapped = false): ColorRGBX =
     x0y1 = image[x0, y1]
     x1y1 = image[x1, y1]
 
-  let
+  var topMix = x0y0
+  if xFractional > 0 and x0y0 != x1y0:
     topMix = lerp(x0y0, x1y0, xFractional)
+
+  var bottomMix = x0y1
+  if xFractional > 0 and x0y1 != x1y1:
     bottomMix = lerp(x0y1, x1y1, xFractional)
 
-  lerp(topMix, bottomMix, yFractional)
+  if yFractional != 0 and topMix != bottomMix:
+    lerp(topMix, bottomMix, yFractional)
+  else:
+    topMix
 
 proc drawCorrect(
   a, b: Image | Mask, mat = mat3(), tiled = false, blendMode = bmNormal
@@ -678,9 +685,11 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
         zeroMem(a.data[a.dataIndex(0, y)].addr, 4 * xMin)
 
     if smooth:
+      var srcPos = p + dx * xMin.float32 + dy * y.float32
+      srcPos = vec2(max(0, srcPos.x), max(0, srcPos.y))
+
       for x in xMin ..< xMax:
         let
-          srcPos = p + dx * x.float32 + dy * y.float32
           xFloat = srcPos.x - h
           yFloat = srcPos.y - h
         when type(a) is Image:
@@ -701,6 +710,9 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
           else: # b is a Mask
             let sample = b.getValueSmooth(xFloat, yFloat)
           a.setValueUnsafe(x, y, masker(backdrop, sample))
+
+        srcPos += dx
+
     else:
       var x = xMin
       when defined(amd64) and not defined(pixieNoSimd):
