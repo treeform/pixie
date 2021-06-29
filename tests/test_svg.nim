@@ -20,8 +20,5 @@ for file in files:
   let
     original = readFile(&"tests/images/svg/{file}.svg")
     image = decodeSvg(original)
-    gold = readImage(&"tests/images/svg/{file}.png")
 
-  let (score, _) = diff(image, gold)
-  doAssert score < 1
-  image.writeFile(&"tests/images/svg/{file}.png")
+  image.writeFile(&"tests/images/svg/rendered/{file}.png")
