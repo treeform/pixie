@@ -6,10 +6,10 @@ let
   data = readFile(filePath)
 
 timeIt "pixie decode":
-  keep decodePng(cast[seq[uint8]](data))
+  keep decodePng(data)
 
 timeIt "pixie encode":
-  let decoded = decodePng(cast[seq[uint8]](data))
+  let decoded = decodePng(data)
   keep encodePng(decoded).len
 
 timeIt "nimPNG decode":
