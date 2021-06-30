@@ -101,7 +101,7 @@ proc decodeGif*(data: string): Image =
 
       # Turn full lzw data into bit stream.
       var
-        bs = initBitStream(cast[seq[uint8]](lzwData))
+        bs = initBitStream(lzwData)
         bitSize = lzwMinBitSize + 1
         currentCodeTableMax = (1 shl (bitSize)) - 1
         codeLast: int = -1
