@@ -120,7 +120,7 @@ proc parsePath*(path: string): Path =
       try:
         numbers.add(parseFloat(path[numberStart ..< p]))
       except ValueError:
-        raise newException(PixieError, "Invalid path, parsing paramter failed")
+        raise newException(PixieError, "Invalid path, parsing parameter failed")
     numberStart = 0
     hitDecimal = false
 
@@ -131,7 +131,7 @@ proc parsePath*(path: string): Path =
       let paramCount = parameterCount(kind)
       if paramCount == 0:
         if numbers.len != 0:
-          raise newException(PixieError, "Invalid path, unexpected paramters")
+          raise newException(PixieError, "Invalid path, unexpected parameters")
         result.commands.add(PathCommand(kind: kind))
       else:
         if numbers.len mod paramCount != 0:
@@ -383,67 +383,6 @@ proc quadraticCurveTo*(path: var Path, ctrl, to: Vec2) {.inline.} =
   ## Bézier curve.
   path.quadraticCurveTo(ctrl.x, ctrl.y, to.x, to.y)
 
-# proc arcTo*(path: var Path, ctrl1, ctrl2: Vec2, radius: float32) {.inline.} =
-#   ## Adds a circular arc to the current sub-path, using the given control
-#   ## points and radius.
-
-#   const epsilon = 1e-6.float32
-
-#   var radius = radius
-#   if radius < 0:
-#     radius = -radius
-
-#   if path.commands.len == 0:
-#     path.moveTo(ctrl1)
-
-#   let
-#     a = path.at - ctrl1
-#     b = ctrl2 - ctrl1
-
-#   if a.lengthSq() < epsilon:
-#     # If the control point is coincident with at, do nothing
-#     discard
-#   elif abs(a.y * b.x - a.x * b.y) < epsilon or radius == 0:
-#     # If ctrl1, a and b are colinear or coincident or radius is zero
-#     path.lineTo(ctrl1)
-#   else:
-#     let
-#       c = ctrl2 - path.at
-#       als = a.lengthSq()
-#       bls = b.lengthSq()
-#       cls = c.lengthSq()
-#       al = a.length()
-#       bl = b.length()
-#       l = radius * tan((PI - arccos((als + bls - cls) / 2 * al * bl)) / 2)
-#       ta = l / al
-#       tb = l / bl
-
-#     if abs(ta - 1) > epsilon:
-#       # If the start tangent is not coincident with path.at
-#       path.lineTo(ctrl1 + a * ta)
-
-#     echo "INSIDE ", (als + bls - cls) / 2 * al * bl, " ", arccos((als + bls - cls) / 2 * al * bl)
-
-#     let to = ctrl1 + b * tb
-#     path.commands.add(PathCommand(
-#       kind: Arc,
-#       numbers: @[
-#         radius,
-#         radius,
-#         0,
-#         0,
-#         if a.y * c.x > a.x * c.y: 1 else: 0,
-#         to.x,
-#         to.y
-#       ]
-#     ))
-#     path.at = to
-
-# proc arcTo*(path: var Path, x1, y1, x2, y2, radius: float32) {.inline.} =
-#   ## Adds a circular arc to the current sub-path, using the given control
-#   ## points and radius.
-#   path.arcTo(vec2(x1, y1), vec2(x2, y2), radius)
-
 proc ellipticalArcTo*(
   path: var Path,
   rx, ry: float32,
@@ -460,6 +399,84 @@ proc ellipticalArcTo*(
     ]
   ))
   path.at = vec2(x, y)
+
+proc arc*(path: var Path, x, y, r, a0, a1: float32, ccw: bool) =
+  ## Adds a circular arc to the current sub-path.
+  if r == 0: # When radius is zero, do nothing.
+    return
+  if r < 0: # When radius is negative, error.
+    raise newException(PixieError, "Invalid arc, negative radius: " & $r)
+
+  let
+    dx = r * cos(a0)
+    dy = r * sin(a0)
+    x0 = x + dx
+    y0 = y + dy
+    cw = not ccw
+
+  if path.commands.len == 0: # Is this path empty? Move to (x0, y0).
+    path.moveTo(x0, y0)
+  elif abs(path.at.x - x0) > epsilon or abs(path.at.y - y0) > epsilon:
+    path.lineTo(x0, y0)
+
+  var angle =
+    if ccw: a0 - a1
+    else: a1 - a0
+  if angle < 0:
+    # When the angle goes the wrong way, flip the direction.
+    angle = angle mod TAU + TAU
+
+  if angle > TAU - epsilon:
+    # Angle describes a complete circle. Draw it in two arcs.
+    path.ellipticalArcTo(r, r, 0, true, cw, x - dx, y - dy)
+    path.at.x = x0
+    path.at.y = y0
+    path.ellipticalArcTo(r, r, 0, true, cw, path.at.x, path.at.y)
+  elif angle > epsilon:
+    path.at.x = x + r * cos(a1)
+    path.at.y = y + r * sin(a1)
+    path.ellipticalArcTo(r, r, 0, angle >= PI, cw, path.at.x, path.at.y)
+
+proc arcTo*(path: var Path, x1, y1, x2, y2, r: float32) =
+  ## Adds a circular arc using the given control points and radius.
+  ## Commonly used for making rounded corners.
+  if r < 0: # When radius is negative, error.
+    raise newException(PixieError, "Invalid arc, negative radius: " & $r)
+
+  let
+    x0 = path.at.x
+    y0 = path.at.y
+    x21 = x2 - x1
+    y21 = y2 - y1
+    x01 = x0 - x1
+    y01 = y0 - y1
+    l01_2 = x01 * x01 + y01 * y01
+
+  if path.commands.len == 0: # Is this path empty? Move to (x0, y0).
+    path.moveTo(x0, y0)
+  elif not(l01_2 > epsilon): # Is (x1, y1) coincident with (x0, y0)? Do nothing.
+    discard
+  elif not(abs(y01 * x21 - y21 * x01) > epsilon) or r == 0: # Just a line?
+    path.lineTo(x1, y1)
+  else:
+    let
+      x20 = x2 - x0
+      y20 = y2 - y0
+      l21_2 = x21 * x21 + y21 * y21
+      l20_2 = x20 * x20 + y20 * y20
+      l21 = sqrt(l21_2)
+      l01 = sqrt(l01_2)
+      l = r * tan((PI - arccos((l21_2 + l01_2 - l20_2) / (2 * l21 * l01))) / 2)
+      t01 = l / l01
+      t21 = l / l21
+
+    # If the start tangent is not coincident with (x0, y0), line to.
+    if abs(t01 - 1) > epsilon:
+      path.lineTo(x1 + t01 * x01, y1 + t01 * y01)
+
+    path.at.x = x1 + t21 * x21
+    path.at.y = y1 + t21 * y21
+    path.ellipticalArcTo(r, r, 0, false, y01 * x20 > x01 * y20, path.at.x, path.at.y)
 
 proc rect*(path: var Path, x, y, w, h: float32, clockwise = true) =
   ## Adds a rectangle.

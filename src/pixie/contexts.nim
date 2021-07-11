@@ -631,3 +631,11 @@ proc drawImage*(ctx: Context, image: Image, src, dest: Rect) =
     src.x, src.y, src.w, src.h,
     dest.x, dest.y, dest.w, dest.h
   )
+
+proc arc*(ctx: Context, x, y, r, a0, a1: float32, ccw: bool = false) =
+  ## Draws a circular arc.
+  ctx.path.arc(x, y, r, a0, a1, ccw)
+
+proc arcTo*(ctx: Context, x1, y1, x2, y2, radius: float32) =
+  ## Draws a circular arc using the given control points and radius.
+  ctx.path.arcTo(x1, y1, x2, y2, radius)
