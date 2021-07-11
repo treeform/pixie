@@ -437,6 +437,10 @@ proc arc*(path: var Path, x, y, r, a0, a1: float32, ccw: bool) =
     path.at.y = y + r * sin(a1)
     path.ellipticalArcTo(r, r, 0, angle >= PI, cw, path.at.x, path.at.y)
 
+proc arc*(path: var Path, pos: Vec2, r: float32, a: Vec2, ccw: bool = false) =
+  ## Adds a circular arc to the current sub-path.
+  path.arc(pos.x, pos.y, r, a.x, a.y, ccw)
+
 proc arcTo*(path: var Path, x1, y1, x2, y2, r: float32) =
   ## Adds a circular arc using the given control points and radius.
   ## Commonly used for making rounded corners.
@@ -477,6 +481,10 @@ proc arcTo*(path: var Path, x1, y1, x2, y2, r: float32) =
     path.at.x = x1 + t21 * x21
     path.at.y = y1 + t21 * y21
     path.ellipticalArcTo(r, r, 0, false, y01 * x20 > x01 * y20, path.at.x, path.at.y)
+
+proc arcTo*(path: var Path, a, b: Vec2, r: float32) =
+  ## Adds a circular arc using the given control points and radius.
+  path.arcTo(a.x, a.y, b.x, b.y, r)
 
 proc rect*(path: var Path, x, y, w, h: float32, clockwise = true) =
   ## Adds a rectangle.

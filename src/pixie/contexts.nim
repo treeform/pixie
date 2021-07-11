@@ -636,6 +636,14 @@ proc arc*(ctx: Context, x, y, r, a0, a1: float32, ccw: bool = false) =
   ## Draws a circular arc.
   ctx.path.arc(x, y, r, a0, a1, ccw)
 
+proc arc*(ctx: Context, pos: Vec2, r: float32, a: Vec2, ccw: bool = false) =
+  ## Adds a circular arc to the current sub-path.
+  ctx.path.arc(pos, r, a, ccw)
+
 proc arcTo*(ctx: Context, x1, y1, x2, y2, radius: float32) =
   ## Draws a circular arc using the given control points and radius.
   ctx.path.arcTo(x1, y1, x2, y2, radius)
+
+proc arcTo*(ctx: Context, a, b: Vec2, r: float32) =
+  ## Adds a circular arc using the given control points and radius.
+  ctx.path.arcTo(a, b, r)
