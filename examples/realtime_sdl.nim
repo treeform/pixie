@@ -2,6 +2,13 @@
 
 import math, pixie, sdl2, sdl2/gfx
 
+
+const
+  rmask = uint32 0x000000ff
+  gmask = uint32 0x0000ff00
+  bmask = uint32 0x00ff0000
+  amask = uint32 0xff000000
+
 let
   w: int32 = 256
   h: int32 = 256
@@ -15,6 +22,7 @@ var
   mainSurface: SurfacePtr
   mainTexture: TexturePtr
   evt = sdl2.defaultEvent
+
 
 proc display() =
   ## Called every frame by main while loop
@@ -44,20 +52,19 @@ proc display() =
   inc frameCount
 
   var dataPtr = ctx.image.data[0].addr
-  mainSurface.pixels = dataPtr
+  mainSurface = createRGBSurfaceFrom(dataPtr, cint w, cint h, cint 32, cint 4*w, rmask, gmask, bmask, amask)
   mainTexture = render.createTextureFromSurface(mainSurface)
+  destroy(mainSurface)
+
+  render.clear()
   render.copy(mainTexture, nil, nil)
+  destroy(mainTexture)
+
   render.present()
+
 
 discard sdl2.init(INIT_EVERYTHING)
 window = createWindow("SDL/Pixie", 100, 100, cint w, cint h, SDL_WINDOW_SHOWN)
-const
-  rmask = uint32 0x000000ff
-  gmask = uint32 0x0000ff00
-  bmask = uint32 0x00ff0000
-  amask = uint32 0xff000000
-mainSurface = createRGBSurface(0, cint w, cint h, 32, rmask, gmask, bmask, amask)
-
 render = createRenderer(window, -1, 0)
 
 while true:
