@@ -1207,11 +1207,12 @@ proc computeCoverages(
         winding = partitioning.partitions[partitionIndex][i][1]
       if segment.at.y <= scanline.a.y and segment.to.y >= scanline.a.y:
         var at: Vec2
-        if scanline.intersects(segment, at) and segment.to != at:
-          if numHits == hits.len:
-            hits.setLen(hits.len * 2)
-          hits[numHits] = (min(at.x, size.x), winding)
-          inc numHits
+        if scanline.intersects(segment, at):
+          if segment.to != at:
+            if numHits == hits.len:
+              hits.setLen(hits.len * 2)
+            hits[numHits] = (min(at.x, size.x), winding)
+            inc numHits
 
     if hits.len > 32:
       quickSort(hits, 0, numHits - 1)
@@ -1905,8 +1906,9 @@ proc overlaps(
       winding = segments[i][1]
     if segment.at.y <= scanline.a.y and segment.to.y >= scanline.a.y:
       var at: Vec2
-      if scanline.intersects(segment, at) and segment.to != at:
-        hits.add((at.x, winding))
+      if scanline.intersects(segment, at):
+        if segment.to != at:
+          hits.add((at.x, winding))
 
   if hits.len > 32:
     quickSort(hits, 0, hits.high)
