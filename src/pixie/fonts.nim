@@ -16,7 +16,7 @@ type
     typeface*: Typeface
     size*: float32              ## Font size in pixels.
     lineHeight*: float32 ## The line height in pixels or AutoLineHeight for the font's default line height.
-    paint*: Paint
+    paints*: seq[Paint]
     textCase*: TextCase
     underline*: bool            ## Apply an underline.
     strikethrough*: bool        ## Apply a strikethrough.
@@ -127,6 +127,15 @@ proc defaultLineHeight*(font: Font): float32 {.inline.} =
   let fontUnits =
     font.typeface.ascent - font.typeface.descent + font.typeface.lineGap
   round(fontUnits * font.scale)
+
+proc paint*(font: var Font): var Paint =
+  font.paints[0]
+
+proc paint*(font: Font): lent Paint =
+  font.paints[0]
+
+proc `paint=`*(font: var Font, paint: Paint) =
+  font.paints = @[paint]
 
 proc newSpan*(text: string, font: Font): Span =
   ## Creates a span, associating a font with the text.
@@ -478,16 +487,17 @@ proc textUber(
 
       when stroke:
         when type(target) is Image:
-          target.strokePath(
-            path,
-            font.paint,
-            transform,
-            strokeWidth,
-            lineCap,
-            lineJoin,
-            miterLimit,
-            dashes
-          )
+          for paint in font.paints:
+            target.strokePath(
+              path,
+              paint,
+              transform,
+              strokeWidth,
+              lineCap,
+              lineJoin,
+              miterLimit,
+              dashes
+            )
         else: # target is Mask
           target.strokePath(
             path,
@@ -500,7 +510,8 @@ proc textUber(
           )
       else:
         when type(target) is Image:
-          target.fillPath(path, font.paint, transform)
+          for paint in font.paints:
+            target.fillPath(path, paint, transform)
         else: # target is Mask
           target.fillPath(path, transform)
 
