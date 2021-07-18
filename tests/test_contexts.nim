@@ -602,3 +602,32 @@ block:
     rhino = readImage("tests/images/rhino.png")
   ctx.drawImage(rhino, rect(33, 71, 104, 124), rect(21, 20, 87, 104));
   image.writeFile("tests/images/context/draw_image_rhino2.png")
+
+block:
+  let
+    image = newImage(100, 100)
+    ctx = newContext(image)
+  ctx.rect(10, 10, 100, 100)
+  doAssert ctx.isPointInPath(30, 70)
+
+block:
+  let
+    image = newImage(300, 150)
+    ctx = newContext(image)
+  ctx.arc(150, 75, 50, 0, 2 * PI)
+  doAssert ctx.isPointInPath(150, 50)
+
+block:
+  let
+    image = newImage(100, 100)
+    ctx = newContext(image)
+  ctx.rect(10, 10, 100, 100)
+  doAssert ctx.isPointInStroke(50, 10)
+
+block:
+  let
+    image = newImage(300, 150)
+    ctx = newContext(image)
+  ctx.ellipse(150, 75, 40, 60)
+  ctx.lineWidth = 25
+  doAssert ctx.isPointInStroke(110, 75)

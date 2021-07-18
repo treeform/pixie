@@ -1029,7 +1029,7 @@ proc requiresAntiAliasing(segments: seq[(Segment, int16)]): bool =
   template hasFractional(v: float32): bool =
     v - trunc(v) != 0
 
-  for i in 0 ..< segments.len: # For arc
+  for i in 0 ..< segments.len: # For gc:arc
     let segment = segments[i][0]
     if segment.at.x != segment.to.x or
       segment.at.x.hasFractional() or # at.x and to.x are the same
@@ -1045,7 +1045,7 @@ proc computePixelBounds(segments: seq[(Segment, int16)]): Rect =
     xMax = float32.low
     yMin = float32.high
     yMax = float32.low
-  for i in 0 ..< segments.len: # For arc
+  for i in 0 ..< segments.len: # For gc:arc
     let segment = segments[i][0]
     xMin = min(xMin, min(segment.at.x, segment.to.x))
     xMax = max(xMax, max(segment.at.x, segment.to.x))
@@ -1153,7 +1153,7 @@ iterator walk(
   var
     prevAt: float32
     count: int32
-  for i in 0 ..< numHits:
+  for i in 0 ..< numHits: # For gc:arc
     let (at, winding) = hits[i]
     if windingRule == wrNonZero and
       (count != 0) == (count + winding != 0) and
@@ -1201,13 +1201,13 @@ proc computeCoverages(
     scanline.a.y = yLine
     scanline.b.y = yLine
     numHits = 0
-    for i in 0 ..< partitioning.partitions[partitionIndex].len: # For arc
+    for i in 0 ..< partitioning.partitions[partitionIndex].len: # For gc:arc
       let
         segment = partitioning.partitions[partitionIndex][i][0]
         winding = partitioning.partitions[partitionIndex][i][1]
       if segment.at.y <= scanline.a.y and segment.to.y >= scanline.a.y:
         var at: Vec2
-        if segment.to != at and scanline.intersects(segment, at):
+        if scanline.intersects(segment, at) and segment.to != at:
           if numHits == hits.len:
             hits.setLen(hits.len * 2)
           hits[numHits] = (min(at.x, size.x), winding)
@@ -1888,6 +1888,72 @@ proc strokePath*(
 
   fill.draw(mask)
   image.draw(fill, blendMode = paint.blendMode)
+
+proc overlaps(
+  shapes: seq[seq[Vec2]],
+  test: Vec2,
+  windingRule: WindingRule
+): bool =
+  var hits: seq[(float32, int16)]
+
+  let
+    scanline = line(vec2(0, test.y), vec2(1000, test.y))
+    segments = shapes.shapesToSegments()
+  for i in 0 ..< segments.len: # For gc:arc
+    let
+      segment = segments[i][0]
+      winding = segments[i][1]
+    if segment.at.y <= scanline.a.y and segment.to.y >= scanline.a.y:
+      var at: Vec2
+      if scanline.intersects(segment, at) and segment.to != at:
+        hits.add((at.x, winding))
+
+  if hits.len > 32:
+    quickSort(hits, 0, hits.high)
+  else:
+    insertionSort(hits, hits.high)
+
+  var count: int
+  for i in 0 ..< hits.len: # For gc:arc
+    let (at, winding) = hits[i]
+    if at > test.x:
+      result = shouldFill(windingRule, count)
+      break
+    count += winding
+
+proc fillOverlaps*(
+  path: Path,
+  test: Vec2,
+  transform: Vec2 | Mat3 = vec2(), ## Applied to the path, not the test point.
+  windingRule = wrNonZero
+): bool =
+  ## Returns whether or not the specified point is contained in the current path.
+  var shapes = parseSomePath(path, true, transform.pixelScale())
+  shapes.transform(transform)
+  shapes.overlaps(test, windingRule)
+
+proc strokeOverlaps*(
+  path: Path,
+  test: Vec2,
+  transform: Vec2 | Mat3 = vec2(), ## Applied to the path, not the test point.
+  strokeWidth = 1.0,
+  lineCap = lcButt,
+  lineJoin = ljMiter,
+  miterLimit = defaultMiterLimit,
+  dashes: seq[float32] = @[],
+): bool =
+  ## Returns whether or not the specified point is inside the area contained
+  ## by the stroking of a path.
+  var strokeShapes = strokeShapes(
+    parseSomePath(path, false, transform.pixelScale()),
+    strokeWidth,
+    lineCap,
+    lineJoin,
+    miterLimit,
+    dashes
+  )
+  strokeShapes.transform(transform)
+  strokeShapes.overlaps(test, wrNonZero)
 
 when defined(release):
   {.pop.}

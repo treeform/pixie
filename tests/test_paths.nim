@@ -530,3 +530,41 @@ block:
   ctx.stroke();
 
   surface.writeFile("tests/images/paths/arcTo3.png")
+
+block:
+  var path: Path
+  path.rect(0, 0, 10, 10)
+
+  doAssert path.fillOverlaps(vec2(5, 5))
+  doAssert path.fillOverlaps(vec2(0, 0))
+  doAssert path.fillOverlaps(vec2(9, 0))
+  doAssert path.fillOverlaps(vec2(0, 9))
+  doAssert not path.fillOverlaps(vec2(10, 10))
+
+block:
+  var path: Path
+  path.ellipse(20, 20, 20, 10)
+
+  doAssert not path.fillOverlaps(vec2(0, 0))
+  doAssert path.fillOverlaps(vec2(20, 20))
+  doAssert path.fillOverlaps(vec2(10, 20))
+  doAssert path.fillOverlaps(vec2(30, 20))
+
+block:
+  var path: Path
+  path.rect(10, 10, 10, 10)
+
+  doAssert path.strokeOverlaps(vec2(10, 10))
+  doAssert path.strokeOverlaps(vec2(20.1, 20.1))
+  doAssert not path.strokeOverlaps(vec2(5, 5))
+
+block:
+  var path: Path
+  path.ellipse(20, 20, 20, 10)
+
+  doAssert not path.strokeOverlaps(vec2(0, 0))
+  doAssert not path.strokeOverlaps(vec2(20, 20))
+  doAssert path.strokeOverlaps(vec2(0, 20))
+  doAssert path.strokeOverlaps(vec2(40, 20))
+  doAssert path.strokeOverlaps(vec2(19.8, 30.2))
+  doAssert not path.strokeOverlaps(vec2(19.4, 30.6))

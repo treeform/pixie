@@ -647,3 +647,55 @@ proc arcTo*(ctx: Context, x1, y1, x2, y2, radius: float32) =
 proc arcTo*(ctx: Context, a, b: Vec2, r: float32) =
   ## Adds a circular arc using the given control points and radius.
   ctx.path.arcTo(a, b, r)
+
+proc isPointInPath*(
+  ctx: Context, path: Path, pos: Vec2, windingRule = wrNonZero
+): bool =
+  ## Returns whether or not the specified point is contained in the current path.
+  path.fillOverlaps(pos, ctx.mat, windingRule)
+
+proc isPointInPath*(
+  ctx: Context, path: Path, x, y: float32, windingRule = wrNonZero
+): bool {.inline.} =
+  ## Returns whether or not the specified point is contained in the current path.
+  ctx.isPointInPath(path, vec2(x, y), windingRule)
+
+proc isPointInPath*(
+  ctx: Context, pos: Vec2, windingRule = wrNonZero
+): bool {.inline.} =
+  ## Returns whether or not the specified point is contained in the current path.
+  ctx.isPointInPath(ctx.path, pos, windingRule)
+
+proc isPointInPath*(
+  ctx: Context, x, y: float32, windingRule = wrNonZero
+): bool {.inline.} =
+  ## Returns whether or not the specified point is contained in the current path.
+  ctx.isPointInPath(ctx.path, vec2(x, y), windingRule)
+
+proc isPointInStroke*(ctx: Context, path: Path, pos: Vec2): bool =
+  ## Returns whether or not the specified point is inside the area contained
+  ## by the stroking of a path.
+  path.strokeOverlaps(
+    pos,
+    ctx.mat,
+    ctx.lineWidth,
+    ctx.lineCap,
+    ctx.lineJoin,
+    ctx.miterLimit,
+    ctx.lineDash
+  )
+
+proc isPointInStroke*(ctx: Context, path: Path, x, y: float32): bool {.inline.} =
+  ## Returns whether or not the specified point is inside the area contained
+  ## by the stroking of a path.
+  ctx.isPointInStroke(path, vec2(x, y))
+
+proc isPointInStroke*(ctx: Context, pos: Vec2): bool {.inline.} =
+  ## Returns whether or not the specified point is inside the area contained
+  ## by the stroking of a path.
+  ctx.isPointInStroke(ctx.path, pos)
+
+proc isPointInStroke*(ctx: Context, x, y: float32): bool {.inline.} =
+  ## Returns whether or not the specified point is inside the area contained
+  ## by the stroking of a path.
+  ctx.isPointInStroke(ctx.path, vec2(x, y))
