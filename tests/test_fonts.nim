@@ -970,3 +970,23 @@ block:
   image.fillText(arrangement, vec2(20, 20))
 
   doDiff(image, "spans6")
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 36
+
+  var paints: seq[Paint]
+  paints.add(rgba(0, 0, 255, 127))
+  paints.add(rgba(255, 0, 0, 127))
+
+  font.paints = paints
+
+  let image = newImage(200, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(
+    font,
+    "Multiple fills",
+    bounds = vec2(200, 0)
+  )
+
+  doDiff(image, "paints1")
