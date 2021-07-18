@@ -568,3 +568,27 @@ block:
   doAssert path.strokeOverlaps(vec2(40, 20))
   doAssert path.strokeOverlaps(vec2(19.8, 30.2))
   doAssert not path.strokeOverlaps(vec2(19.4, 30.6))
+
+block:
+  var path: Path
+  path.circle(50, 50, 30)
+
+  var paint = Paint(kind: pkSolid, color: rgba(255, 0, 255, 255))
+  paint.opacity = 0.5
+
+  let image = newImage(100, 100)
+  image.fillPath(path, paint)
+
+  image.writeFile("tests/images/paths/opacityFill.png")
+
+block:
+  var path: Path
+  path.circle(50, 50, 30)
+
+  var paint = Paint(kind: pkSolid, color: rgba(255, 0, 255, 255))
+  paint.opacity = 0.5
+
+  let image = newImage(100, 100)
+  image.strokePath(path, paint, strokeWidth = 10)
+
+  image.writeFile("tests/images/paths/opacityStroke.png")
