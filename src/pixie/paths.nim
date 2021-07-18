@@ -1919,8 +1919,7 @@ proc overlaps(
   for i in 0 ..< hits.len: # For gc:arc
     let (at, winding) = hits[i]
     if at > test.x:
-      result = shouldFill(windingRule, count)
-      break
+      return shouldFill(windingRule, count)
     count += winding
 
 proc fillOverlaps*(
