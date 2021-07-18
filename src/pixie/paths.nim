@@ -1,4 +1,4 @@
-import blends, bumpy, chroma, common, images, masks, paints, internal, strutils, vmath
+import blends, bumpy, chroma, common, images, internal, masks, paints, strutils, vmath
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2

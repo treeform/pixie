@@ -445,20 +445,20 @@ block:
   # Draw shapes
   for i in 0 .. 3:
     for j in 0 .. 2:
-      ctx.beginPath();
-      let x             = 25f + j.float32 * 50f;                 # x coordinate
-      let y             = 25f + i.float32 * 50f;                 # y coordinate
-      let radius        = 20f;                          # Arc radius
-      let startAngle    = 0f;                           # Starting point on circle
-      let endAngle      = PI + (PI * j.float32) / 2; # End point on circle
-      let counterclockwise = i mod 2 == 1;                  # Draw counterclockwise
+      ctx.beginPath()
+      let x = 25f + j.float32 * 50f # x coordinate
+      let y = 25f + i.float32 * 50f # y coordinate
+      let radius = 20f # Arc radius
+      let startAngle = 0f # Starting point on circle
+      let endAngle = PI + (PI * j.float32) / 2 # End point on circle
+      let counterclockwise = i mod 2 == 1 # Draw counterclockwise
 
-      ctx.arc(x, y, radius, startAngle, endAngle, counterclockwise);
+      ctx.arc(x, y, radius, startAngle, endAngle, counterclockwise)
 
       if i > 1:
-        ctx.fill();
+        ctx.fill()
       else:
-        ctx.stroke();
+        ctx.stroke()
 
   surface.writeFile("tests/images/paths/arc.png")
 
@@ -469,14 +469,14 @@ block:
   surface.fill(rgba(255, 255, 255, 255))
 
   let
-    p0 = vec2(230, 20 )
-    p1 = vec2(90,  130)
-    p2 = vec2(20,  20 )
+    p0 = vec2(230, 20)
+    p1 = vec2(90, 130)
+    p2 = vec2(20, 20)
 
-  ctx.beginPath();
-  ctx.moveTo(p0.x, p0.y);
-  ctx.arcTo(p1.x, p1.y, p2.x, p2.y, 50);
-  ctx.lineTo(p2.x, p2.y);
+  ctx.beginPath()
+  ctx.moveTo(p0.x, p0.y)
+  ctx.arcTo(p1.x, p1.y, p2.x, p2.y, 50)
+  ctx.lineTo(p2.x, p2.y)
   ctx.stroke()
 
   surface.writeFile("tests/images/paths/arcTo1.png")
@@ -487,33 +487,33 @@ block:
     ctx = newContext(surface)
   surface.fill(rgba(255, 255, 255, 255))
   # Tangential lines
-  ctx.beginPath();
-  ctx.strokeStyle = "gray";
-  ctx.moveTo(200, 20);
-  ctx.lineTo(200, 130);
-  ctx.lineTo(50, 20);
-  ctx.stroke();
+  ctx.beginPath()
+  ctx.strokeStyle = "gray"
+  ctx.moveTo(200, 20)
+  ctx.lineTo(200, 130)
+  ctx.lineTo(50, 20)
+  ctx.stroke()
 
   # Arc
-  ctx.beginPath();
-  ctx.strokeStyle = "black";
-  ctx.lineWidth = 5;
-  ctx.moveTo(200, 20);
-  ctx.arcTo(200,130, 50,20, 40);
-  ctx.stroke();
+  ctx.beginPath()
+  ctx.strokeStyle = "black"
+  ctx.lineWidth = 5
+  ctx.moveTo(200, 20)
+  ctx.arcTo(200, 130, 50, 20, 40)
+  ctx.stroke()
 
   # Start point
-  ctx.beginPath();
-  ctx.fillStyle = "blue";
-  ctx.arc(200, 20, 5, 0, 2 * PI);
-  ctx.fill();
+  ctx.beginPath()
+  ctx.fillStyle = "blue"
+  ctx.arc(200, 20, 5, 0, 2 * PI)
+  ctx.fill()
 
   # Control points
-  ctx.beginPath();
-  ctx.fillStyle = "red";
-  ctx.arc(200, 130, 5, 0, 2 * PI); # Control point one
-  ctx.arc(50, 20, 5, 0, 2 * PI);   # Control point two
-  ctx.fill();
+  ctx.beginPath()
+  ctx.fillStyle = "red"
+  ctx.arc(200, 130, 5, 0, 2 * PI) # Control point one
+  ctx.arc(50, 20, 5, 0, 2 * PI) # Control point two
+  ctx.fill()
 
   surface.writeFile("tests/images/paths/arcTo2.png")
 
@@ -523,11 +523,11 @@ block:
     ctx = newContext(surface)
   surface.fill(rgba(255, 255, 255, 255))
 
-  ctx.beginPath();
-  ctx.moveTo(180, 90);
-  ctx.arcTo(180,130, 110,130, 130);
-  ctx.lineTo(110, 130);
-  ctx.stroke();
+  ctx.beginPath()
+  ctx.moveTo(180, 90)
+  ctx.arcTo(180, 130, 110, 130, 130)
+  ctx.lineTo(110, 130)
+  ctx.stroke()
 
   surface.writeFile("tests/images/paths/arcTo3.png")
 
