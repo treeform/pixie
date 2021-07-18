@@ -89,7 +89,7 @@ proc gradientPut(
       gs2.color,
       (t - gs1.position) / (gs2.position - gs1.position)
     )
-  if paint.opacity != 0:
+  if paint.opacity != 1:
     color = color.applyOpacity(paint.opacity)
   image.setRgbaUnsafe(x, y, color.rgba.rgbx())
 

@@ -1798,6 +1798,9 @@ proc fillPath*(
 
   mask.fillPath(path, transform, windingRule)
 
+  # Draw the image (maybe tiled) or gradients. Do this with opaque paint and
+  # and then apply the paint's opacity to the mask.
+
   var paintOpaque = paint
   paintOpaque.opacity = 1
 
@@ -1889,6 +1892,9 @@ proc strokePath*(
     miterLimit,
     dashes
   )
+
+  # Draw the image (maybe tiled) or gradients. Do this with opaque paint and
+  # and then apply the paint's opacity to the mask.
 
   var paintOpaque = paint
   paintOpaque.opacity = 1
