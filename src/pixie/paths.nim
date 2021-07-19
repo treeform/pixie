@@ -1103,15 +1103,26 @@ proc getIndexForY(partitioning: Partitioning, y: int): uint32 {.inline.} =
       partitioning.partitions.high.uint32
     )
 
-proc quickSort(a: var seq[(float32, int16)], inl, inr: int) =
-  ## Sorts in place + faster than standard lib sort.
-  var
-    r = inr
-    l = inl
-  let n = r - l + 1
-  if n < 2:
+proc insertionSort(a: var seq[(float32, int16)], lo, hi: int) {.inline.} =
+  for i in lo + 1 .. hi:
+    var
+      j = i - 1
+      k = i
+    while j >= 0 and a[j][0] > a[k][0]:
+      swap(a[j + 1], a[j])
+      dec j
+      dec k
+
+proc sort(a: var seq[(float32, int16)], inl, inr: int) =
+  ## Quicksort + insertion sort, in-place and faster than standard lib sort.
+  let n = inr - inl + 1
+  if n < 32:
+    insertionSort(a, inl, inr)
     return
-  let p = a[l + 3 * n div 4][0]
+  var
+    l = inl
+    r = inr
+  let p = a[l + n div 2][0]
   while l <= r:
     if a[l][0] < p:
       inc l
@@ -1121,18 +1132,8 @@ proc quickSort(a: var seq[(float32, int16)], inl, inr: int) =
       swap(a[l], a[r])
       inc l
       dec r
-  quickSort(a, inl, r)
-  quickSort(a, l, inr)
-
-proc insertionSort(s: var seq[(float32, int16)], hi: int) {.inline.} =
-  for i in 1 .. hi:
-    var
-      j = i - 1
-      k = i
-    while j >= 0 and s[j][0] > s[k][0]:
-      swap(s[j + 1], s[j])
-      dec j
-      dec k
+  sort(a, inl, r)
+  sort(a, l, inr)
 
 proc shouldFill(windingRule: WindingRule, count: int): bool {.inline.} =
   ## Should we fill based on the current winding rule and count?
@@ -1213,10 +1214,7 @@ proc computeCoverages(
             hits[numHits] = (min(at.x, size.x), winding)
             inc numHits
 
-    if hits.len > 32:
-      quickSort(hits, 0, numHits - 1)
-    else:
-      insertionSort(hits, numHits - 1)
+    sort(hits, 0, numHits - 1)
 
     if aa:
       for (prevAt, at, count) in hits.walk(numHits, windingRule, y, size):
@@ -1939,10 +1937,7 @@ proc overlaps(
         if segment.to != at:
           hits.add((at.x, winding))
 
-  if hits.len > 32:
-    quickSort(hits, 0, hits.high)
-  else:
-    insertionSort(hits, hits.high)
+  sort(hits, 0, hits.high)
 
   var count: int
   for i in 0 ..< hits.len: # For gc:arc
