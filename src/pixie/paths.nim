@@ -1,5 +1,4 @@
-import blends, bumpy, chroma, common, images, masks, paints, pixie/internal,
-    strutils, vmath
+import blends, bumpy, chroma, common, images, internal, masks, paints, strutils, vmath
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -1780,11 +1779,17 @@ proc fillPath*(
   windingRule = wrNonZero
 ) =
   ## Fills a path.
+  if paint.opacity == 0:
+    return
+
   if paint.kind == pkSolid:
     if paint.color.a > 0 or paint.blendMode == bmOverwrite:
       var shapes = parseSomePath(path, true, transform.pixelScale())
       shapes.transform(transform)
-      image.fillShapes(shapes, paint.color, windingRule, paint.blendMode)
+      var color = paint.color
+      if paint.opacity != 1:
+        color = color.applyOpacity(paint.opacity)
+      image.fillShapes(shapes, color, windingRule, paint.blendMode)
     return
 
   let
@@ -1793,19 +1798,28 @@ proc fillPath*(
 
   mask.fillPath(path, transform, windingRule)
 
+  # Draw the image (maybe tiled) or gradients. Do this with opaque paint and
+  # and then apply the paint's opacity to the mask.
+
+  var paintOpaque = paint
+  paintOpaque.opacity = 1
+
   case paint.kind:
     of pkSolid:
       discard # Handled above
     of pkImage:
-      fill.draw(paint.image, paint.imageMat)
+      fill.draw(paintOpaque.image, paintOpaque.imageMat)
     of pkImageTiled:
-      fill.drawTiled(paint.image, paint.imageMat)
+      fill.drawTiled(paintOpaque.image, paintOpaque.imageMat)
     of pkGradientLinear:
-      fill.fillGradientLinear(paint)
+      fill.fillGradientLinear(paintOpaque)
     of pkGradientRadial:
-      fill.fillGradientRadial(paint)
+      fill.fillGradientRadial(paintOpaque)
     of pkGradientAngular:
-      fill.fillGradientAngular(paint)
+      fill.fillGradientAngular(paintOpaque)
+
+  if paint.opacity != 1:
+    mask.applyOpacity(paint.opacity)
 
   fill.draw(mask)
   image.draw(fill, blendMode = paint.blendMode)
@@ -1845,6 +1859,9 @@ proc strokePath*(
   dashes: seq[float32] = @[]
 ) =
   ## Strokes a path.
+  if paint.opacity == 0:
+    return
+
   if paint.kind == pkSolid:
     if paint.color.a > 0 or paint.blendMode == bmOverwrite:
       var strokeShapes = strokeShapes(
@@ -1856,7 +1873,10 @@ proc strokePath*(
         dashes
       )
       strokeShapes.transform(transform)
-      image.fillShapes(strokeShapes, paint.color, wrNonZero, paint.blendMode)
+      var color = paint.color
+      if paint.opacity != 1:
+        color = color.applyOpacity(paint.opacity)
+      image.fillShapes(strokeShapes, color, wrNonZero, paint.blendMode)
     return
 
   let
@@ -1873,19 +1893,28 @@ proc strokePath*(
     dashes
   )
 
+  # Draw the image (maybe tiled) or gradients. Do this with opaque paint and
+  # and then apply the paint's opacity to the mask.
+
+  var paintOpaque = paint
+  paintOpaque.opacity = 1
+
   case paint.kind:
     of pkSolid:
       discard # Handled above
     of pkImage:
-      fill.draw(paint.image, paint.imageMat)
+      fill.draw(paintOpaque.image, paintOpaque.imageMat)
     of pkImageTiled:
-      fill.drawTiled(paint.image, paint.imageMat)
+      fill.drawTiled(paintOpaque.image, paintOpaque.imageMat)
     of pkGradientLinear:
-      fill.fillGradientLinear(paint)
+      fill.fillGradientLinear(paintOpaque)
     of pkGradientRadial:
-      fill.fillGradientRadial(paint)
+      fill.fillGradientRadial(paintOpaque)
     of pkGradientAngular:
-      fill.fillGradientAngular(paint)
+      fill.fillGradientAngular(paintOpaque)
+
+  if paint.opacity != 1:
+    mask.applyOpacity(paint.opacity)
 
   fill.draw(mask)
   image.draw(fill, blendMode = paint.blendMode)

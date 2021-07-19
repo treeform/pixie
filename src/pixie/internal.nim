@@ -23,6 +23,18 @@ proc gaussianKernel*(radius: int): seq[uint32] =
   for i, f in floats:
     result[i] = round(f * 255 * 1024).uint32
 
+proc applyOpacity*(color: ColorRGBX, opacity: float32): ColorRGBX =
+  if opacity == 0:
+    rgbx(0, 0, 0, 0)
+  else:
+    let
+      x = round(opacity * 255).uint32
+      r = ((color.r * x) div 255).uint8
+      g = ((color.g * x) div 255).uint8
+      b = ((color.b * x) div 255).uint8
+      a = ((color.a * x) div 255).uint8
+    rgbx(r, g, b, a)
+
 proc toStraightAlpha*(data: var seq[ColorRGBA | ColorRGBX]) =
   ## Converts an image from premultiplied alpha to straight alpha.
   ## This is expensive for large images.
