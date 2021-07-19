@@ -1,23 +1,34 @@
 ## Load SVG files.
 
-import chroma, pixie/common, pixie/images, pixie/paints, pixie/paths, strutils,
-    vmath, xmlparser, xmltree
+import chroma, pixie/common, pixie/images, pixie/internal, pixie/paints,
+    pixie/paths, strutils, tables, vmath, xmlparser, xmltree
+
+when defined(pixieDebugSvg):
+  import strtabs
 
 const
   xmlSignature* = "<?xml"
   svgSignature* = "<svg"
 
-type Ctx = object
-  display: bool
-  fillRule: WindingRule
-  fill, stroke: ColorRGBX
-  strokeWidth: float32
-  strokeLineCap: LineCap
-  strokeLineJoin: LineJoin
-  strokeMiterLimit: float32
-  strokeDashArray: seq[float32]
-  transform: Mat3
-  shouldStroke: bool
+type
+  LinearGradient = object
+    x1, y1, x2, y2: float32
+    stops: seq[ColorStop]
+
+  Ctx = object
+    display: bool
+    fillRule: WindingRule
+    fill: Paint
+    stroke: ColorRGBX
+    strokeWidth: float32
+    strokeLineCap: LineCap
+    strokeLineJoin: LineJoin
+    strokeMiterLimit: float32
+    strokeDashArray: seq[float32]
+    transform: Mat3
+    shouldStroke: bool
+    opacity, strokeOpacity: float32
+    linearGradients: TableRef[string, LinearGradient]
 
 template failInvalid() =
   raise newException(PixieError, "Invalid SVG data")
@@ -34,6 +45,9 @@ proc initCtx(): Ctx =
   result.strokeWidth = 1
   result.transform = mat3()
   result.strokeMiterLimit = defaultMiterLimit
+  result.opacity = 1
+  result.strokeOpacity = 1
+  result.linearGradients = newTable[string, LinearGradient]()
 
 proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
   result = inherited
@@ -57,6 +71,9 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
     transform = node.attr("transform")
     style = node.attr("style")
     display = node.attr("display")
+    opacity = node.attr("opacity")
+    fillOpacity = node.attr("fill-opacity")
+    strokeOpacity = node.attr("stroke-opacity")
 
   when defined(pixieDebugSvg):
     proc maybeLogPair(k, v: string) =
@@ -66,7 +83,8 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
           "transform", "style", "version", "viewBox", "width", "height",
           "xmlns", "x", "y", "x1", "x2", "y1", "y2", "id", "d", "cx", "cy",
           "r", "points", "rx", "ry", "enable-background", "xml:space",
-          "xmlns:xlink", "data-name", "role", "class"
+          "xmlns:xlink", "data-name", "role", "class", "opacity",
+          "fill-opacity", "stroke-opacity"
         ]:
           echo k, ": ", v
 
@@ -107,6 +125,15 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
       of "display":
         if display.len == 0:
           display = parts[1].strip()
+      of "opacity":
+        if opacity.len == 0:
+          opacity = parts[1].strip()
+      of "fillOpacity":
+        if fillOpacity.len == 0:
+          fillOpacity = parts[1].strip()
+      of "strokeOpacity":
+        if strokeOpacity.len == 0:
+          strokeOpacity = parts[1].strip()
       else:
         when defined(pixieDebugSvg):
           maybeLogPair(parts[0], parts[1])
@@ -116,6 +143,15 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
 
   if display.len > 0:
     result.display = display.strip() != "none"
+
+  if opacity.len > 0:
+    result.opacity = clamp(parseFloat(opacity), 0, 1)
+
+  if fillOpacity.len > 0:
+    result.fill.opacity = clamp(parseFloat(fillOpacity), 0, 1)
+
+  if strokeOpacity.len > 0:
+    result.strokeOpacity = clamp(parseFloat(strokeOpacity), 0, 1)
 
   if fillRule == "":
     discard # Inherit
@@ -132,6 +168,20 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
     discard # Inherit
   elif fill == "none":
     result.fill = ColorRGBX()
+  elif fill.startsWith("url("):
+    let id = fill[5 .. ^2]
+    if id in result.linearGradients:
+      let linearGradient = result.linearGradients[id]
+      result.fill = Paint(
+        kind: pkGradientLinear,
+        gradientHandlePositions: @[
+          result.transform * vec2(linearGradient.x1, linearGradient.y1),
+          result.transform * vec2(linearGradient.x2, linearGradient.y2)
+        ],
+        gradientStops: linearGradient.stops,
+      )
+    else:
+      raise newException(PixieError, "Missing SVG resource " & id)
   else:
     result.fill = parseHtmlColor(fill).rgbx
 
@@ -207,7 +257,7 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
   else:
     template failInvalidTransform(transform: string) =
       raise newException(
-          PixieError, "Unsupported SVG transform: " & transform & "."
+          PixieError, "Unsupported SVG transform: " & transform
         )
 
     var remaining = transform
@@ -266,14 +316,20 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
         failInvalidTransform(transform)
 
 proc fill(img: Image, ctx: Ctx, path: Path) {.inline.} =
-  if ctx.display:
-    img.fillPath(path, ctx.fill, ctx.transform, ctx.fillRule)
+  if ctx.display and ctx.opacity > 0:
+    var paint = ctx.fill
+    if ctx.opacity != 1:
+      paint.opacity = paint.opacity * ctx.opacity
+    img.fillPath(path, paint, ctx.transform, ctx.fillRule)
 
 proc stroke(img: Image, ctx: Ctx, path: Path) {.inline.} =
-  if ctx.display:
+  if ctx.display and ctx.opacity > 0:
+    var color = ctx.stroke
+    if ctx.opacity != 1:
+      color = color.applyOpacity(ctx.opacity * ctx.strokeOpacity)
     img.strokePath(
       path,
-      ctx.stroke,
+      color,
       ctx.transform,
       ctx.strokeWidth,
       ctx.strokeLineCap,
@@ -307,8 +363,8 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
       d = node.attr("d")
       ctx = decodeCtx(ctxStack[^1], node)
       path = parsePath(d)
-    if ctx.fill != ColorRGBX():
-      img.fill(ctx, path)
+
+    img.fill(ctx, path)
     if ctx.shouldStroke:
       img.stroke(ctx, path)
 
@@ -358,9 +414,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     # and fill or not
     if node.tag == "polygon":
       path.closePath()
-
-      if ctx.fill != ColorRGBX():
-        img.fill(ctx, path)
+      img.fill(ctx, path)
 
     if ctx.shouldStroke:
       img.stroke(ctx, path)
@@ -401,8 +455,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     else:
       path.rect(x, y, width, height)
 
-    if ctx.fill != ColorRGBX():
-      img.fill(ctx, path)
+    img.fill(ctx, path)
     if ctx.shouldStroke:
       img.stroke(ctx, path)
 
@@ -423,13 +476,74 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     var path: Path
     path.ellipse(cx, cy, rx, ry)
 
-    if ctx.fill != ColorRGBX():
-      img.fill(ctx, path)
+    img.fill(ctx, path)
     if ctx.shouldStroke:
       img.stroke(ctx, path)
 
+  of "radialGradient":
+    discard
+
+  of "linearGradient":
+    let
+      ctx = decodeCtx(ctxStack[^1], node)
+      id = node.attr("id")
+      gradientUnits = node.attr("gradientUnits")
+      gradientTransform = node.attr("gradientTransform")
+
+    if gradientUnits != "userSpaceOnUse":
+      raise newException(
+        PixieError, "Unsupported gradient units: " & gradientUnits
+      )
+    if gradientTransform != "":
+      raise newException(
+        PixieError, "Unsupported gradient transform: " & gradientTransform
+      )
+
+    var linearGradient: LinearGradient
+    linearGradient.x1 = parseFloat(node.attr("x1"))
+    linearGradient.y1 = parseFloat(node.attr("y1"))
+    linearGradient.x2 = parseFloat(node.attr("x2"))
+    linearGradient.y2 = parseFloat(node.attr("y2"))
+
+    for child in node:
+      if child.tag == "stop":
+        var color = child.attr("stop-color")
+
+        if color == "":
+          let
+            style = child.attr("style")
+            pairs = style.split(';')
+          for pair in pairs:
+            let parts = pair.split(':')
+            if parts.len == 2:
+              # Do not override element properties
+              case parts[0].strip():
+              of "stop-color":
+                if color == "":
+                  color = parts[1].strip()
+              else:
+                when defined(pixieDebugSvg):
+                  maybeLogPair(parts[0], parts[1])
+            elif pair.len > 0:
+              when defined(pixieDebugSvg):
+                echo "Invalid style pair: ", pair
+
+        if color == "":
+          raise newException(
+            PixieError, "Invalid SVG gradient, missing stop-color"
+          )
+
+        linearGradient.stops.add(ColorStop(
+          color: color.parseHtmlColor().rgbx(),
+          position: parseFloat(child.attr("offset"))
+        ))
+      else:
+        raise newException(PixieError, "Unexpected SVG tag: " & child.tag)
+
+    ctx.linearGradients[id] = linearGradient
+
   else:
-    raise newException(PixieError, "Unsupported SVG tag: " & node.tag & ".")
+    raise newException(PixieError, "Unsupported SVG tag: " & node.tag)
 
 proc decodeSvg*(data: string, width = 0, height = 0): Image =
   ## Render SVG file and return the image. Defaults to the SVG's view box size.

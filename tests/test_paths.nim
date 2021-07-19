@@ -450,7 +450,7 @@ block:
       let y = 25f + i.float32 * 50f # y coordinate
       let radius = 20f # Arc radius
       let startAngle = 0f # Starting point on circle
-      let endAngle = PI + (PI * j.float32) / 2 # End point on circle
+      let endAngle = PI + (PI * j.float32) / 2           # End point on circle
       let counterclockwise = i mod 2 == 1 # Draw counterclockwise
 
       ctx.arc(x, y, radius, startAngle, endAngle, counterclockwise)
