@@ -159,14 +159,15 @@ proc stroke(ctx: Context, image: Image, path: Path) =
     ctx.restore()
 
 proc fillText(ctx: Context, image: Image, text: string, at: Vec2) =
-  if ctx.font.typeface == nil:
+  if ctx.font == nil:
     raise newException(PixieError, "No font has been set on this Context")
 
   # Canvas positions text relative to the alphabetic baseline by default
   var at = at
   at.y -= round(ctx.font.typeface.ascent * ctx.font.scale)
 
-  ctx.font.paint = ctx.fillStyle
+  let font = ctx.font.copy()
+  font.paint = ctx.fillStyle
 
   var image = image
 
@@ -175,7 +176,7 @@ proc fillText(ctx: Context, image: Image, text: string, at: Vec2) =
     image = ctx.layer
 
   image.fillText(
-    ctx.font,
+    font,
     text,
     ctx.mat * translate(at),
     hAlign = ctx.textAlign
@@ -186,7 +187,7 @@ proc fillText(ctx: Context, image: Image, text: string, at: Vec2) =
     ctx.restore()
 
 proc strokeText(ctx: Context, image: Image, text: string, at: Vec2) =
-  if ctx.font.typeface == nil:
+  if ctx.font == nil:
     raise newException(PixieError, "No font has been set on this Context")
 
   # Canvas positions text relative to the alphabetic baseline by default
@@ -419,7 +420,7 @@ proc strokeText*(ctx: Context, text: string, x, y: float32) {.inline.} =
 proc measureText*(ctx: Context, text: string): TextMetrics =
   ## Returns a TextMetrics object that contains information about the measured
   ## text (such as its width, for example).
-  if ctx.font.typeface == nil:
+  if ctx.font == nil:
     raise newException(PixieError, "No font has been set on this Context")
 
   let bounds = typeset(ctx.font, text).computeBounds()

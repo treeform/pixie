@@ -12,7 +12,7 @@ type
     svgFont: SvgFont
     filePath*: string
 
-  Font* = object
+  Font* = ref object
     typeface*: Typeface
     size*: float32              ## Font size in pixels.
     lineHeight*: float32 ## The line height in pixels or AutoLineHeight for the font's default line height.
@@ -128,13 +128,21 @@ proc defaultLineHeight*(font: Font): float32 {.inline.} =
     font.typeface.ascent - font.typeface.descent + font.typeface.lineGap
   round(fontUnits * font.scale)
 
-proc paint*(font: var Font): var Paint =
+proc copy*(font: Font): Font =
+  result = Font()
+  result.typeface = font.typeface
+  result.size = font.size
+  result.lineHeight = font.lineHeight
+  result.paints = font.paints
+  result.textCase = font.textCase
+  result.underline = font.underline
+  result.strikethrough = font.strikethrough
+  result.noKerningAdjustments = font.noKerningAdjustments
+
+proc paint*(font: Font): var Paint =
   font.paints[0]
 
-proc paint*(font: Font): lent Paint =
-  font.paints[0]
-
-proc `paint=`*(font: var Font, paint: Paint) =
+proc `paint=`*(font: Font, paint: Paint) =
   font.paints = @[paint]
 
 proc newSpan*(text: string, font: Font): Span =
@@ -306,8 +314,8 @@ proc typeset*(
           let
             font = result.fonts[spanIndex]
             lineHeight =
-              if font.lineheight >= 0:
-                font.lineheight
+              if font.lineHeight >= 0:
+                font.lineHeight
               else:
                 font.defaultLineHeight
           var fontUnitInitialY = font.typeface.ascent + font.typeface.lineGap / 2
@@ -350,8 +358,8 @@ proc typeset*(
         let
           font = result.fonts[spanIndex]
           lineHeight =
-            if font.lineheight >= 0:
-              font.lineheight
+            if font.lineHeight >= 0:
+              font.lineHeight
             else:
               font.defaultLineHeight
         for runeIndex in start .. stop:
@@ -418,6 +426,7 @@ proc computeBounds*(spans: seq[Span]): Vec2 {.inline.} =
   typeset(spans).computeBounds()
 
 proc parseOtf*(buf: string): Font =
+  result = Font()
   result.typeface = Typeface()
   result.typeface.opentype = parseOpenType(buf)
   result.size = 12
@@ -428,7 +437,7 @@ proc parseTtf*(buf: string): Font =
   parseOtf(buf)
 
 proc parseSvgFont*(buf: string): Font =
-  result.typeface = Typeface()
+  result = Font()
   result.typeface.svgFont = svgfont.parseSvgFont(buf)
   result.size = 12
   result.lineHeight = AutoLineHeight

@@ -744,35 +744,35 @@ block:
     ibm = readFont("tests/fonts/IBMPlexSans-Regular_2.ttf")
     noto = readFont("tests/fonts/NotoSans-Regular_4.ttf")
 
-  var font1 = roboto
+  var font1 = roboto.copy()
   font1.size = 64
 
-  var font2 = aclonica
+  var font2 = aclonica.copy()
   font2.size = 80
 
-  var font3 = ibm
+  var font3 = ibm.copy()
   font3.size = 40
 
-  var font4 = ubuntu
+  var font4 = ubuntu.copy()
   font4.size = 56
 
-  var font5 = noto
+  var font5 = noto.copy()
   font5.size = 72
 
-  var font6 = roboto
+  var font6 = roboto.copy()
   font6.size = 48
 
-  var font7 = noto
+  var font7 = noto.copy()
   font7.size = 64
 
-  var font8 = ubuntu
+  var font8 = ubuntu.copy()
   font8.size = 54
   font8.paint.color = rgba(255, 0, 0, 255)
 
-  var font9 = roboto
+  var font9 = roboto.copy()
   font9.size = 48
 
-  var font10 = aclonica
+  var font10 = aclonica.copy()
   font10.size = 48
   font10.lineHeight = 120
 
@@ -801,18 +801,18 @@ block:
 block:
   let ubuntu = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
 
-  var font1 = ubuntu
+  var font1 = ubuntu.copy()
   font1.size = 15
   font1.paint = "#CACACA"
 
-  var font2 = ubuntu
+  var font2 = ubuntu.copy()
   font2.size = 84
 
-  var font3 = ubuntu
+  var font3 = ubuntu.copy()
   font3.size = 18
   font3.paint = "#007FF4"
 
-  var font4 = ubuntu
+  var font4 = ubuntu.copy()
   font4.size = 20
   font4.paint = "#4F4F4F"
 
@@ -927,27 +927,27 @@ block:
 block:
   let ubuntu = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
 
-  var font1 = ubuntu
+  var font1 = ubuntu.copy()
   font1.size = 15
   font1.paint = "#CACACA"
 
-  var font2 = ubuntu
+  var font2 = ubuntu.copy()
   font2.size = 84
 
-  var font3 = ubuntu
+  var font3 = ubuntu.copy()
   font3.size = 18
   font3.paint = "#007FF4"
 
-  var font4 = ubuntu
+  var font4 = ubuntu.copy()
   font4.size = 20
   font4.paint = "#4F4F4F"
 
-  var font5 = ubuntu
+  var font5 = ubuntu.copy()
   font5.size = 20
   font5.paint = "#4F4F4F"
   font5.underline = true
 
-  var font6 = ubuntu
+  var font6 = ubuntu.copy()
   font6.size = 20
   font6.paint = "#4F4F4F"
   font6.strikethrough = true
