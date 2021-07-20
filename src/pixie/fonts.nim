@@ -306,8 +306,8 @@ proc typeset*(
           let
             font = result.fonts[spanIndex]
             lineHeight =
-              if font.lineheight >= 0:
-                font.lineheight
+              if font.lineHeight >= 0:
+                font.lineHeight
               else:
                 font.defaultLineHeight
           var fontUnitInitialY = font.typeface.ascent + font.typeface.lineGap / 2
@@ -328,8 +328,8 @@ proc typeset*(
         let
           font = result.fonts[spanIndex]
           fontLineHeight =
-            if font.lineheight >= 0:
-              font.lineheight
+            if font.lineHeight >= 0:
+              font.lineHeight
             else:
               font.defaultLineHeight
         lineHeights[line] = max(lineHeights[line], fontLineHeight)
