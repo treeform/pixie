@@ -98,7 +98,7 @@ block:
   image.writeFile("tests/images/paths/pathYellowRectangle.png")
 
 block:
-  var path: Path
+  let path = newPath()
   path.moveTo(10, 10)
   path.lineTo(10, 90)
   path.lineTo(90, 90)
@@ -163,7 +163,7 @@ block:
 #     y = 10.0
 #     h = 80.0
 #     w = 80.0
-#   var path: Path
+#   let path = newPath()
 #   path.moveTo(x + r, y)
 #   path.arcTo(x + w, y, x + w, y + h, r)
 #   path.arcTo(x + w, y + h, x, y + h, r)
@@ -187,7 +187,7 @@ block:
 #     y = 10.0
 #     h = 80.0
 #     w = 80.0
-#   var path: Path
+#   let path = newPath()
 #   path.moveTo(x + r, y)
 #   path.arcTo(x + w, y, x + w, y + h, r)
 #   path.arcTo(x + w, y + h, x, y + h, r)
@@ -304,7 +304,7 @@ block:
     let
       image = newImage(60, 60)
     image.fill(rgba(255, 255, 255, 255))
-    var path: Path
+    let path = newPath()
     path.moveTo(-20, 0)
     path.lineTo(0, 0)
     let th = angle.float32.degToRad() + PI/2
@@ -532,7 +532,7 @@ block:
   surface.writeFile("tests/images/paths/arcTo3.png")
 
 block:
-  var path: Path
+  let path = newPath()
   path.rect(0, 0, 10, 10)
 
   doAssert path.fillOverlaps(vec2(5, 5))
@@ -542,7 +542,7 @@ block:
   doAssert not path.fillOverlaps(vec2(10, 10))
 
 block:
-  var path: Path
+  let path = newPath()
   path.ellipse(20, 20, 20, 10)
 
   doAssert not path.fillOverlaps(vec2(0, 0))
@@ -551,7 +551,7 @@ block:
   doAssert path.fillOverlaps(vec2(30, 20))
 
 block:
-  var path: Path
+  let path = newPath()
   path.rect(10, 10, 10, 10)
 
   doAssert path.strokeOverlaps(vec2(10, 10))
@@ -559,7 +559,7 @@ block:
   doAssert not path.strokeOverlaps(vec2(5, 5))
 
 block:
-  var path: Path
+  let path = newPath()
   path.ellipse(20, 20, 20, 10)
 
   doAssert not path.strokeOverlaps(vec2(0, 0))
@@ -570,7 +570,7 @@ block:
   doAssert not path.strokeOverlaps(vec2(19.4, 30.6))
 
 block:
-  var path: Path
+  let path = newPath()
   path.circle(50, 50, 30)
 
   var paint = Paint(kind: pkSolid, color: rgba(255, 0, 255, 255))
@@ -582,7 +582,7 @@ block:
   image.writeFile("tests/images/paths/opacityFill.png")
 
 block:
-  var path: Path
+  let path = newPath()
   path.circle(50, 50, 30)
 
   var paint = Paint(kind: pkSolid, color: rgba(255, 0, 255, 255))

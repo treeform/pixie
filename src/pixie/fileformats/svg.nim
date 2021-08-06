@@ -376,7 +376,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
       x2 = parseFloat(node.attrOrDefault("x2", "0"))
       y2 = parseFloat(node.attrOrDefault("y2", "0"))
 
-    var path: Path
+    let path = newPath()
     path.moveTo(x1, y1)
     path.lineTo(x2, y2)
 
@@ -405,7 +405,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     if vecs.len == 0:
       failInvalid()
 
-    var path: Path
+    let path = newPath()
     path.moveTo(vecs[0])
     for i in 1 ..< vecs.len:
       path.lineTo(vecs[i])
@@ -434,7 +434,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
       rx = max(parseFloat(node.attrOrDefault("rx", "0")), 0)
       ry = max(parseFloat(node.attrOrDefault("ry", "0")), 0)
 
-    var path: Path
+    let path = newPath()
     if rx > 0 or ry > 0:
       if rx == 0:
         rx = ry
@@ -473,7 +473,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
       rx = parseFloat(node.attrOrDefault("rx", "0"))
       ry = parseFloat(node.attrOrDefault("ry", "0"))
 
-    var path: Path
+    let path = newPath()
     path.ellipse(cx, cy, rx, ry)
 
     img.fill(ctx, path)

@@ -21,7 +21,7 @@ block:
     y = 10.0
     h = 80.0
     w = 80.0
-  var path: Path
+  let path = newPath()
   path.moveTo(x + r, y)
 #   path.arcTo(x + w, y, x + w, y + h, r)
 #   path.arcTo(x + w, y + h, x, y + h, r)
@@ -40,7 +40,7 @@ block:
   let image = newImage(100, 100)
   image.fill(rgba(255, 100, 100, 255))
 
-  var path: Path
+  let path = newPath()
   path.ellipse(image.width / 2, image.height / 2, 25, 25)
 
   let mask = newMask(image.width, image.height)
@@ -53,7 +53,7 @@ block:
   let a = newMask(100, 100)
   a.fill(255)
 
-  var path: Path
+  let path = newPath()
   path.ellipse(a.width / 2, a.height / 2, 25, 25)
 
   let b = newMask(a.width, a.height)
@@ -66,7 +66,7 @@ block:
   let a = newMask(100, 100)
   a.fill(255)
 
-  var path: Path
+  let path = newPath()
   path.ellipse(a.width / 2, a.height / 2, 25, 25)
 
   let b = newImage(a.width, a.height)
@@ -82,7 +82,7 @@ block:
   writeFile("tests/images/masks/shifted.png", a.encodePng())
 
 block:
-  var path: Path
+  let path = newPath()
   path.rect(40, 40, 20, 20)
 
   let a = newMask(100, 100)
@@ -95,7 +95,7 @@ block:
 block:
   let mask = newMask(100, 100)
 
-  var path: Path
+  let path = newPath()
   path.ellipse(mask.width / 2, mask.height / 2, 25, 25)
 
   mask.fillPath(path)

@@ -3,7 +3,7 @@ import pixie
 let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
 
-var path: Path
+let path = newPath()
 path.polygon(
   vec2(100, 100),
   70,

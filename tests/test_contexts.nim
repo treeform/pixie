@@ -51,7 +51,7 @@ block:
 block:
   let ctx = newContext(newImage(300, 150))
 
-  var region: Path
+  let region = newPath()
   region.moveTo(30, 90)
   region.lineTo(110, 20)
   region.lineTo(240, 130)
@@ -438,7 +438,7 @@ block:
 block:
   let ctx = newContext(newImage(300, 150))
 
-  var region: Path
+  let region = newPath()
   region.rect(80, 10, 20, 130)
   region.rect(40, 50, 100, 50)
   ctx.clip(region, wrEvenOdd)
@@ -453,9 +453,9 @@ block:
 
   let ctx = newContext(image)
 
-  var circlePath: Path
+  var circlePath = newPath()
   circlePath.circle(150, 75, 75)
-  var squarePath: Path
+  var squarePath = newPath()
   squarePath.rect(85, 10, 130, 130)
 
   ctx.clip(circlePath)
@@ -476,7 +476,7 @@ block:
 
   ctx.saveLayer()
 
-  var circlePath: Path
+  var circlePath = newPath()
   circlePath.circle(150, 75, 75)
 
   ctx.clip(circlePath)

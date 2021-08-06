@@ -1229,6 +1229,9 @@ proc parseGlyph(opentype: OpenType, glyphId: uint16): Path
 proc parseGlyphPath(buf: string, offset, numberOfContours: int): Path =
   if numberOfContours < 0:
     raise newException(PixieError, "Glyph numberOfContours must be >= 0")
+
+  result = newPath()
+
   if numberOfContours == 0:
     return
 
@@ -1357,6 +1360,8 @@ proc parseGlyphPath(buf: string, offset, numberOfContours: int): Path =
     result.closePath()
 
 proc parseCompositeGlyph(opentype: OpenType, offset: int): Path =
+  result = newPath()
+
   var
     i = offset
     moreComponents = true
@@ -1458,7 +1463,7 @@ proc parseGlyph(opentype: OpenType, glyphId: uint16): Path =
   if glyphId.int + 1 < opentype.glyf.offsets.len and
     glyphOffset == opentype.glyf.offsets[glyphId + 1]:
     # Empty glyph
-    return
+    return Path()
 
   var i = glyphOffset.int
   opentype.buf.eofCheck(i + 10)

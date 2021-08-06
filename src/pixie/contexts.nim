@@ -1,5 +1,5 @@
-import bumpy, chroma, tables, pixie/blends, pixie/common, pixie/fonts,
-    pixie/images, pixie/masks, pixie/paints, pixie/paths, vmath
+import bumpy, chroma, pixie/blends, pixie/common, pixie/fonts, pixie/images,
+    pixie/masks, pixie/paints, pixie/paths, tables, vmath
 
 ## This file provides a Nim version of the Canvas 2D API commonly used on the
 ## web. The goal is to make picking up Pixie easy for developers familiar with
@@ -49,6 +49,7 @@ proc newContext*(image: Image): Context =
   result = Context()
   result.image = image
   result.mat = mat3()
+  result.path = newPath()
   result.globalAlpha = 1
   result.lineWidth = 1
   result.miterLimit = 10
@@ -164,7 +165,7 @@ proc stroke(ctx: Context, image: Image, path: Path) =
     ctx.layer.applyOpacity(ctx.globalAlpha)
     ctx.restore()
 
-proc createFont(ctx: Context): Font =
+proc newFont(ctx: Context): Font =
   if ctx.font == "":
     raise newException(PixieError, "No font has been set on this Context")
 
@@ -175,7 +176,7 @@ proc createFont(ctx: Context): Font =
   result.size = ctx.fontSize
 
 proc fillText(ctx: Context, image: Image, text: string, at: Vec2) =
-  let font = ctx.createFont()
+  let font = newFont(ctx)
 
   # Canvas positions text relative to the alphabetic baseline by default
   var at = at
@@ -201,7 +202,7 @@ proc fillText(ctx: Context, image: Image, text: string, at: Vec2) =
     ctx.restore()
 
 proc strokeText(ctx: Context, image: Image, text: string, at: Vec2) =
-  let font = ctx.createFont()
+  let font = newFont(ctx)
 
   # Canvas positions text relative to the alphabetic baseline by default
   var at = at
@@ -233,7 +234,7 @@ proc strokeText(ctx: Context, image: Image, text: string, at: Vec2) =
 
 proc beginPath*(ctx: Context) {.inline.} =
   ## Starts a new path by emptying the list of sub-paths.
-  ctx.path = Path()
+  ctx.path = newPath()
 
 proc moveTo*(ctx: Context, v: Vec2) {.inline.} =
   ## Begins a new sub-path at the point (x, y).
@@ -355,7 +356,7 @@ proc stroke*(ctx: Context) {.inline.} =
 
 proc clearRect*(ctx: Context, rect: Rect) =
   ## Erases the pixels in a rectangular area.
-  var path: Path
+  let path = newPath()
   path.rect(rect)
   if ctx.layer != nil:
     ctx.layer.fillPath(
@@ -376,7 +377,7 @@ proc clearRect*(ctx: Context, x, y, width, height: float32) {.inline.} =
 
 proc fillRect*(ctx: Context, rect: Rect) =
   ## Draws a rectangle that is filled according to the current fillStyle.
-  var path: Path
+  let path = newPath()
   path.rect(rect)
   ctx.fill(path)
 
@@ -387,7 +388,7 @@ proc fillRect*(ctx: Context, x, y, width, height: float32) {.inline.} =
 proc strokeRect*(ctx: Context, rect: Rect) =
   ## Draws a rectangle that is stroked (outlined) according to the current
   ## strokeStyle and other context settings.
-  var path: Path
+  let path = newPath()
   path.rect(rect)
   ctx.stroke(path)
 
@@ -434,7 +435,7 @@ proc measureText*(ctx: Context, text: string): TextMetrics =
   ## Returns a TextMetrics object that contains information about the measured
   ## text (such as its width, for example).
   let
-    font = ctx.createFont()
+    font = newFont(ctx)
     bounds = typeset(font, text).computeBounds()
   result.width = bounds.x
 
@@ -520,7 +521,7 @@ proc polygon*(ctx: Context, pos: Vec2, size: float32, sides: int) {.inline.} =
 
 proc fillRoundedRect*(ctx: Context, rect: Rect, nw, ne, se, sw: float32) =
   ## Draws a rounded rectangle that is filled according to the current fillStyle.
-  var path: Path
+  let path = newPath()
   path.roundedRect(rect, nw, ne, se, sw)
   ctx.fill(path)
 
@@ -531,7 +532,7 @@ proc fillRoundedRect*(ctx: Context, rect: Rect, radius: float32) {.inline.} =
 proc strokeRoundedRect*(ctx: Context, rect: Rect, nw, ne, se, sw: float32) =
   ## Draws a rounded rectangle that is stroked (outlined) according to the
   ## current strokeStyle and other context settings.
-  var path: Path
+  let path = newPath()
   path.roundedRect(rect, nw, ne, se, sw)
   ctx.stroke(path)
 
@@ -543,61 +544,61 @@ proc strokeRoundedRect*(ctx: Context, rect: Rect, radius: float32) {.inline.} =
 proc strokeSegment*(ctx: Context, segment: Segment) =
   ## Strokes a segment (draws a line from segment.at to segment.to) according
   ## to the current strokeStyle and other context settings.
-  var path: Path
+  let path = newPath()
   path.moveTo(segment.at)
   path.lineTo(segment.to)
   ctx.stroke(path)
 
 proc fillEllipse*(ctx: Context, center: Vec2, rx, ry: float32) =
   ## Draws an ellipse that is filled according to the current fillStyle.
-  var path: Path
+  let path = newPath()
   path.ellipse(center, rx, ry)
   ctx.fill(path)
 
 proc strokeEllipse*(ctx: Context, center: Vec2, rx, ry: float32) =
   ## Draws an ellipse that is stroked (outlined) according to the current
   ## strokeStyle and other context settings.
-  var path: Path
+  let path = newPath()
   path.ellipse(center, rx, ry)
   ctx.stroke(path)
 
 proc fillCircle*(ctx: Context, circle: Circle) =
   ## Draws a circle that is filled according to the current fillStyle
-  var path: Path
+  let path = newPath()
   path.circle(circle.pos, circle.radius)
   ctx.fill(path)
 
 proc fillCircle*(ctx: Context, center: Vec2, radius: float32) =
   ## Draws a circle that is filled according to the current fillStyle.
-  var path: Path
+  let path = newPath()
   path.ellipse(center, radius, radius)
   ctx.fill(path)
 
 proc strokeCircle*(ctx: Context, circle: Circle) =
   ## Draws a circle that is stroked (outlined) according to the current
   ## strokeStyle and other context settings.
-  var path: Path
+  let path = newPath()
   path.circle(circle.pos, circle.radius)
   ctx.stroke(path)
 
 proc strokeCircle*(ctx: Context, center: Vec2, radius: float32) =
   ## Draws a circle that is stroked (outlined) according to the current
   ## strokeStyle and other context settings.
-  var path: Path
+  let path = newPath()
   path.ellipse(center, radius, radius)
   ctx.stroke(path)
 
 proc fillPolygon*(ctx: Context, pos: Vec2, size: float32, sides: int) =
   ## Draws an n-sided regular polygon at (x, y) of size that is filled according
   ## to the current fillStyle.
-  var path: Path
+  let path = newPath()
   path.polygon(pos, size, sides)
   ctx.fill(path)
 
 proc strokePolygon*(ctx: Context, pos: Vec2, size: float32, sides: int) =
   ## Draws an n-sided regular polygon at (x, y) of size that is stroked
   ## (outlined) according to the current strokeStyle and other context settings.
-  var path: Path
+  let path = newPath()
   path.polygon(pos, size, sides)
   ctx.stroke(path)
 
@@ -610,7 +611,7 @@ proc drawImage*(ctx: Context, image: Image, dx, dy, dWidth, dHeight: float32) =
     ))
     savedStyle = ctx.fillStyle
   ctx.fillStyle = Paint(kind: pkImage, image: image, imageMat: imageMat)
-  var path: Path
+  let path = newPath()
   path.rect(rect(dx, dy, dWidth, dHeight))
   ctx.fill(path)
   ctx.fillStyle = savedStyle

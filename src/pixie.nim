@@ -103,7 +103,7 @@ proc fillRect*(
   transform: Vec2 | Mat3 = vec2(0, 0)
 ) =
   ## Fills a rectangle.
-  var path: Path
+  let path = newPath()
   path.rect(rect)
   mask.fillPath(path, transform)
 
@@ -114,7 +114,7 @@ proc strokeRect*(
   strokeWidth = 1.0
 ) =
   ## Strokes a rectangle.
-  var path: Path
+  let path = newPath()
   path.rect(rect)
   mask.strokePath(path, transform, strokeWidth)
 
@@ -125,7 +125,7 @@ proc fillRoundedRect*(
   transform: Vec2 | Mat3 = vec2(0, 0)
 ) =
   ## Fills a rounded rectangle.
-  var path: Path
+  let path = newPath()
   path.roundedRect(rect, nw, ne, se, sw)
   mask.fillPath(path, transform)
 
@@ -136,7 +136,7 @@ proc fillRoundedRect*(
   transform: Vec2 | Mat3 = vec2(0, 0)
 ) =
   ## Fills a rounded rectangle.
-  var path: Path
+  let path = newPath()
   path.roundedRect(rect, radius, radius, radius, radius)
   mask.fillPath(path, transform)
 
@@ -148,7 +148,7 @@ proc strokeRoundedRect*(
   strokeWidth = 1.0
 ) =
   ## Strokes a rounded rectangle.
-  var path: Path
+  let path = newPath()
   path.roundedRect(rect, nw, ne, se, sw)
   mask.strokePath(path, transform, strokeWidth)
 
@@ -160,7 +160,7 @@ proc strokeRoundedRect*(
   strokeWidth = 1.0
 ) =
   ## Strokes a rounded rectangle.
-  var path: Path
+  let path = newPath()
   path.roundedRect(rect, radius, radius, radius, radius)
   mask.strokePath(path, transform, strokeWidth)
 
@@ -171,7 +171,7 @@ proc strokeSegment*(
   strokeWidth = 1.0
 ) =
   ## Strokes a segment (draws a line from segment.at to segment.to).
-  var path: Path
+  let path = newPath()
   path.moveTo(segment.at)
   path.lineTo(segment.to)
   mask.strokePath(path, transform, strokeWidth)
@@ -183,7 +183,7 @@ proc fillEllipse*(
   transform: Vec2 | Mat3 = vec2(0, 0)
 ) =
   ## Fills an ellipse.
-  var path: Path
+  let path = newPath()
   path.ellipse(center, rx, ry)
   mask.fillPath(path, transform)
 
@@ -195,7 +195,7 @@ proc strokeEllipse*(
   strokeWidth = 1.0
 ) =
   ## Strokes an ellipse.
-  var path: Path
+  let path = newPath()
   path.ellipse(center, rx, ry)
   mask.strokePath(path, transform, strokeWidth)
 
@@ -206,7 +206,7 @@ proc fillCircle*(
   transform: Vec2 | Mat3 = vec2(0, 0)
 ) =
   ## Fills a circle.
-  var path: Path
+  let path = newPath()
   path.ellipse(center, radius, radius)
   mask.fillPath(path, transform)
 
@@ -218,7 +218,7 @@ proc strokeCircle*(
   strokeWidth = 1.0
 ) =
   ## Strokes a circle.
-  var path: Path
+  let path = newPath()
   path.ellipse(center, radius, radius)
   mask.fillPath(path, transform, strokeWidth)
 
@@ -230,7 +230,7 @@ proc fillPolygon*(
   transform: Vec2 | Mat3 = vec2(0, 0)
 ) =
   ## Fills a polygon.
-  var path: Path
+  let path = newPath()
   path.polygon(pos, size, sides)
   mask.fillPath(path, transform)
 
@@ -243,6 +243,6 @@ proc strokePolygon*(
   strokeWidth = 1.0
 ) =
   ## Strokes a polygon.
-  var path: Path
+  let path = newPath()
   path.polygon(pos, size, sides)
   mask.strokePath(path, transform, strokeWidth)
