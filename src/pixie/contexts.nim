@@ -164,7 +164,7 @@ proc stroke(ctx: Context, image: Image, path: Path) =
     ctx.layer.applyOpacity(ctx.globalAlpha)
     ctx.restore()
 
-proc createFont(ctx: Context): Font =
+proc newFont(ctx: Context): Font =
   if ctx.font == "":
     raise newException(PixieError, "No font has been set on this Context")
 
@@ -175,7 +175,7 @@ proc createFont(ctx: Context): Font =
   result.size = ctx.fontSize
 
 proc fillText(ctx: Context, image: Image, text: string, at: Vec2) =
-  let font = ctx.createFont()
+  let font = newFont(ctx)
 
   # Canvas positions text relative to the alphabetic baseline by default
   var at = at
@@ -201,7 +201,7 @@ proc fillText(ctx: Context, image: Image, text: string, at: Vec2) =
     ctx.restore()
 
 proc strokeText(ctx: Context, image: Image, text: string, at: Vec2) =
-  let font = ctx.createFont()
+  let font = newFont(ctx)
 
   # Canvas positions text relative to the alphabetic baseline by default
   var at = at
@@ -434,7 +434,7 @@ proc measureText*(ctx: Context, text: string): TextMetrics =
   ## Returns a TextMetrics object that contains information about the measured
   ## text (such as its width, for example).
   let
-    font = ctx.createFont()
+    font = newFont(ctx)
     bounds = typeset(font, text).computeBounds()
   result.width = bounds.x
 
