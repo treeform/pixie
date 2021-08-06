@@ -1,5 +1,6 @@
-import bumpy, chroma, common, os, pixie/fontformats/opentype, pixie/fontformats/svgfont,
-    pixie/images, pixie/masks, pixie/paints, pixie/paths, strutils, unicode, vmath
+import bumpy, chroma, common, os, pixie/fontformats/opentype,
+    pixie/fontformats/svgfont, pixie/images, pixie/masks, pixie/paints,
+    pixie/paths, strutils, unicode, vmath
 
 const
   AutoLineHeight* = -1.float32 ## Use default line height for the font size
