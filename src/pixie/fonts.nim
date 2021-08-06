@@ -1,5 +1,5 @@
-import bumpy, chroma, pixie/fontformats/opentype, pixie/fontformats/svgfont,
-    pixie/images, pixie/masks, pixie/paints, pixie/paths, unicode, vmath
+import bumpy, chroma, common, os, pixie/fontformats/opentype, pixie/fontformats/svgfont,
+    pixie/images, pixie/masks, pixie/paints, pixie/paths, strutils, unicode, vmath
 
 const
   AutoLineHeight* = -1.float32 ## Use default line height for the font size
@@ -12,7 +12,7 @@ type
     svgFont: SvgFont
     filePath*: string
 
-  Font* = object
+  Font* = ref object
     typeface*: Typeface
     size*: float32              ## Font size in pixels.
     lineHeight*: float32 ## The line height in pixels or AutoLineHeight for the font's default line height.
@@ -128,14 +128,18 @@ proc defaultLineHeight*(font: Font): float32 {.inline.} =
     font.typeface.ascent - font.typeface.descent + font.typeface.lineGap
   round(fontUnits * font.scale)
 
-proc paint*(font: var Font): var Paint =
+proc paint*(font: Font): var Paint =
   font.paints[0]
 
-proc paint*(font: Font): lent Paint =
-  font.paints[0]
-
-proc `paint=`*(font: var Font, paint: Paint) =
+proc `paint=`*(font: Font, paint: Paint) =
   font.paints = @[paint]
+
+proc newFont*(typeface: Typeface): Font =
+  result = Font()
+  result.typeface = typeface
+  result.size = 12
+  result.lineHeight = AutoLineHeight
+  result.paint = rgbx(0, 0, 0, 255)
 
 proc newSpan*(text: string, font: Font): Span =
   ## Creates a span, associating a font with the text.
@@ -306,8 +310,8 @@ proc typeset*(
           let
             font = result.fonts[spanIndex]
             lineHeight =
-              if font.lineheight >= 0:
-                font.lineheight
+              if font.lineHeight >= 0:
+                font.lineHeight
               else:
                 font.defaultLineHeight
           var fontUnitInitialY = font.typeface.ascent + font.typeface.lineGap / 2
@@ -328,8 +332,8 @@ proc typeset*(
         let
           font = result.fonts[spanIndex]
           fontLineHeight =
-            if font.lineheight >= 0:
-              font.lineheight
+            if font.lineHeight >= 0:
+              font.lineHeight
             else:
               font.defaultLineHeight
         lineHeights[line] = max(lineHeights[line], fontLineHeight)
@@ -417,22 +421,16 @@ proc computeBounds*(spans: seq[Span]): Vec2 {.inline.} =
   ## Computes the width and height of the spans in pixels.
   typeset(spans).computeBounds()
 
-proc parseOtf*(buf: string): Font =
-  result.typeface = Typeface()
-  result.typeface.opentype = parseOpenType(buf)
-  result.size = 12
-  result.lineHeight = AutoLineHeight
-  result.paint = rgbx(0, 0, 0, 255)
+proc parseOtf*(buf: string): Typeface =
+  result = Typeface()
+  result.opentype = parseOpenType(buf)
 
-proc parseTtf*(buf: string): Font =
+proc parseTtf*(buf: string): Typeface =
   parseOtf(buf)
 
-proc parseSvgFont*(buf: string): Font =
-  result.typeface = Typeface()
-  result.typeface.svgFont = svgfont.parseSvgFont(buf)
-  result.size = 12
-  result.lineHeight = AutoLineHeight
-  result.paint = Paint(kind: pkSolid, color: rgbx(0, 0, 0, 255))
+proc parseSvgFont*(buf: string): Typeface =
+  result = Typeface()
+  result.svgFont = svgfont.parseSvgFont(buf)
 
 proc textUber(
   target: Image | Mask,
@@ -597,3 +595,21 @@ proc strokeText*(
     miterLimit,
     dashes
   )
+
+proc readTypeface*(filePath: string): Typeface =
+  ## Loads a typeface from a file.
+  result =
+    case splitFile(filePath).ext.toLowerAscii():
+      of ".ttf":
+        parseTtf(readFile(filePath))
+      of ".otf":
+        parseOtf(readFile(filePath))
+      of ".svg":
+        parseSvgFont(readFile(filePath))
+      else:
+        raise newException(PixieError, "Unsupported font format")
+  result.filePath = filePath
+
+proc readFont*(filePath: string): Font =
+  ## Loads a font from a file.
+  newFont(readTypeface(filePath))
