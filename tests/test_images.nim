@@ -144,7 +144,7 @@ block: # Test conversion between image and mask
     originalImage = newImage(100, 100)
     originalMask = newMask(100, 100)
 
-  var p: Path
+  let p = newPath()
   p.rect(10, 10, 80, 80)
 
   originalImage.fillPath(p, rgba(255, 0, 0, 255))
@@ -157,7 +157,7 @@ block: # Test conversion between image and mask
   doAssert newImage(newMask(originalImage)).data == newImage(originalMask).data
 
 block:
-  var p: Path
+  let p = newPath()
   p.roundedRect(10, 10, 80, 80, 10, 10, 10, 10)
 
   let image = newImage(100, 100)

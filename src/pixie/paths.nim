@@ -28,7 +28,7 @@ type
     kind: PathCommandKind
     numbers: seq[float32]
 
-  Path* = object
+  Path* = ref object
     ## Used to hold paths and create paths.
     commands: seq[PathCommand]
     start, at: Vec2 # Maintained by moveTo, lineTo, etc. Used by arcTo.
@@ -45,6 +45,10 @@ const
 
 when defined(release):
   {.push checks: off.}
+
+proc newPath*(): Path =
+  ## Create a new Path.
+  Path()
 
 proc pixelScale(transform: Vec2 | Mat3): float32 =
   ## What is the largest scale factor of this transform?
@@ -104,6 +108,7 @@ proc `$`*(path: Path): string =
 
 proc parsePath*(path: string): Path =
   ## Converts a SVG style path string into seq of commands.
+  result = newPath()
 
   if path.len == 0:
     return
@@ -123,7 +128,7 @@ proc parsePath*(path: string): Path =
     numberStart = 0
     hitDecimal = false
 
-  proc finishCommand(result: var Path) =
+  proc finishCommand(result: Path) =
     finishNumber()
 
     if armed: # The first finishCommand() arms
@@ -247,7 +252,7 @@ proc parsePath*(path: string): Path =
 
   finishCommand(result)
 
-proc transform*(path: var Path, mat: Mat3) =
+proc transform*(path: Path, mat: Mat3) =
   ## Apply a matrix transform to a path.
   if mat == mat3():
     return
@@ -312,39 +317,39 @@ proc transform*(path: var Path, mat: Mat3) =
       command.numbers[5] = to.x
       command.numbers[6] = to.y
 
-proc addPath*(path: var Path, other: Path) =
+proc addPath*(path: Path, other: Path) =
   ## Adds a path to the current path.
   path.commands.add(other.commands)
 
-proc closePath*(path: var Path) =
+proc closePath*(path: Path) =
   ## Attempts to add a straight line from the current point to the start of
   ## the current sub-path. If the shape has already been closed or has only
   ## one point, this function does nothing.
   path.commands.add(PathCommand(kind: Close))
   path.at = path.start
 
-proc moveTo*(path: var Path, x, y: float32) =
+proc moveTo*(path: Path, x, y: float32) =
   ## Begins a new sub-path at the point (x, y).
   path.commands.add(PathCommand(kind: Move, numbers: @[x, y]))
   path.start = vec2(x, y)
   path.at = path.start
 
-proc moveTo*(path: var Path, v: Vec2) {.inline.} =
+proc moveTo*(path: Path, v: Vec2) {.inline.} =
   ## Begins a new sub-path at the point (x, y).
   path.moveTo(v.x, v.y)
 
-proc lineTo*(path: var Path, x, y: float32) =
+proc lineTo*(path: Path, x, y: float32) =
   ## Adds a straight line to the current sub-path by connecting the sub-path's
   ## last point to the specified (x, y) coordinates.
   path.commands.add(PathCommand(kind: Line, numbers: @[x, y]))
   path.at = vec2(x, y)
 
-proc lineTo*(path: var Path, v: Vec2) {.inline.} =
+proc lineTo*(path: Path, v: Vec2) {.inline.} =
   ## Adds a straight line to the current sub-path by connecting the sub-path's
   ## last point to the specified (x, y) coordinates.
   path.lineTo(v.x, v.y)
 
-proc bezierCurveTo*(path: var Path, x1, y1, x2, y2, x3, y3: float32) =
+proc bezierCurveTo*(path: Path, x1, y1, x2, y2, x3, y3: float32) =
   ## Adds a cubic Bézier curve to the current sub-path. It requires three
   ## points: the first two are control points and the third one is the end
   ## point. The starting point is the latest point in the current path,
@@ -355,14 +360,14 @@ proc bezierCurveTo*(path: var Path, x1, y1, x2, y2, x3, y3: float32) =
   ))
   path.at = vec2(x3, y3)
 
-proc bezierCurveTo*(path: var Path, ctrl1, ctrl2, to: Vec2) {.inline.} =
+proc bezierCurveTo*(path: Path, ctrl1, ctrl2, to: Vec2) {.inline.} =
   ## Adds a cubic Bézier curve to the current sub-path. It requires three
   ## points: the first two are control points and the third one is the end
   ## point. The starting point is the latest point in the current path,
   ## which can be changed using moveTo() before creating the Bézier curve.
   path.bezierCurveTo(ctrl1.x, ctrl1.y, ctrl2.x, ctrl2.y, to.x, to.y)
 
-proc quadraticCurveTo*(path: var Path, x1, y1, x2, y2: float32) =
+proc quadraticCurveTo*(path: Path, x1, y1, x2, y2: float32) =
   ## Adds a quadratic Bézier curve to the current sub-path. It requires two
   ## points: the first one is a control point and the second one is the end
   ## point. The starting point is the latest point in the current path,
@@ -374,7 +379,7 @@ proc quadraticCurveTo*(path: var Path, x1, y1, x2, y2: float32) =
   ))
   path.at = vec2(x2, y2)
 
-proc quadraticCurveTo*(path: var Path, ctrl, to: Vec2) {.inline.} =
+proc quadraticCurveTo*(path: Path, ctrl, to: Vec2) {.inline.} =
   ## Adds a quadratic Bézier curve to the current sub-path. It requires two
   ## points: the first one is a control point and the second one is the end
   ## point. The starting point is the latest point in the current path,
@@ -383,7 +388,7 @@ proc quadraticCurveTo*(path: var Path, ctrl, to: Vec2) {.inline.} =
   path.quadraticCurveTo(ctrl.x, ctrl.y, to.x, to.y)
 
 proc ellipticalArcTo*(
-  path: var Path,
+  path: Path,
   rx, ry: float32,
   xAxisRotation: float32,
   largeArcFlag, sweepFlag: bool,
@@ -399,7 +404,7 @@ proc ellipticalArcTo*(
   ))
   path.at = vec2(x, y)
 
-proc arc*(path: var Path, x, y, r, a0, a1: float32, ccw: bool) =
+proc arc*(path: Path, x, y, r, a0, a1: float32, ccw: bool) =
   ## Adds a circular arc to the current sub-path.
   if r == 0: # When radius is zero, do nothing.
     return
@@ -436,11 +441,11 @@ proc arc*(path: var Path, x, y, r, a0, a1: float32, ccw: bool) =
     path.at.y = y + r * sin(a1)
     path.ellipticalArcTo(r, r, 0, angle >= PI, cw, path.at.x, path.at.y)
 
-proc arc*(path: var Path, pos: Vec2, r: float32, a: Vec2, ccw: bool = false) =
+proc arc*(path: Path, pos: Vec2, r: float32, a: Vec2, ccw: bool = false) =
   ## Adds a circular arc to the current sub-path.
   path.arc(pos.x, pos.y, r, a.x, a.y, ccw)
 
-proc arcTo*(path: var Path, x1, y1, x2, y2, r: float32) =
+proc arcTo*(path: Path, x1, y1, x2, y2, r: float32) =
   ## Adds a circular arc using the given control points and radius.
   ## Commonly used for making rounded corners.
   if r < 0: # When radius is negative, error.
@@ -481,11 +486,11 @@ proc arcTo*(path: var Path, x1, y1, x2, y2, r: float32) =
     path.at.y = y1 + t21 * y21
     path.ellipticalArcTo(r, r, 0, false, y01 * x20 > x01 * y20, path.at.x, path.at.y)
 
-proc arcTo*(path: var Path, a, b: Vec2, r: float32) =
+proc arcTo*(path: Path, a, b: Vec2, r: float32) =
   ## Adds a circular arc using the given control points and radius.
   path.arcTo(a.x, a.y, b.x, b.y, r)
 
-proc rect*(path: var Path, x, y, w, h: float32, clockwise = true) =
+proc rect*(path: Path, x, y, w, h: float32, clockwise = true) =
   ## Adds a rectangle.
   ## Clockwise param can be used to subtract a rect from a path when using
   ## even-odd winding rule.
@@ -502,13 +507,13 @@ proc rect*(path: var Path, x, y, w, h: float32, clockwise = true) =
     path.lineTo(x + w, y)
     path.closePath()
 
-proc rect*(path: var Path, pos: Vec2, wh: Vec2, clockwise = true) {.inline.} =
+proc rect*(path: Path, pos: Vec2, wh: Vec2, clockwise = true) {.inline.} =
   ## Adds a rectangle.
   ## Clockwise param can be used to subtract a rect from a path when using
   ## even-odd winding rule.
   path.rect(pos.x, pos.y, wh.x, wh.y, clockwise)
 
-proc rect*(path: var Path, rect: Rect, clockwise = true) {.inline.} =
+proc rect*(path: Path, rect: Rect, clockwise = true) {.inline.} =
   ## Adds a rectangle.
   ## Clockwise param can be used to subtract a rect from a path when using
   ## even-odd winding rule.
@@ -519,7 +524,7 @@ const splineCircleK = 4.0 * (-1.0 + sqrt(2.0)) / 3
   ## https://dl3.pushbulletusercontent.com/a3fLVC8boTzRoxevD1OgCzRzERB9z2EZ/unknown.png
 
 proc roundedRect*(
-  path: var Path, x, y, w, h, nw, ne, se, sw: float32, clockwise = true
+  path: Path, x, y, w, h, nw, ne, se, sw: float32, clockwise = true
 ) =
   ## Adds a rounded rectangle.
   ## Clockwise param can be used to subtract a rect from a path when using
@@ -586,7 +591,7 @@ proc roundedRect*(
   path.closePath()
 
 proc roundedRect*(
-  path: var Path, pos, wh: Vec2, nw, ne, se, sw: float32, clockwise = true
+  path: Path, pos, wh: Vec2, nw, ne, se, sw: float32, clockwise = true
 ) {.inline.} =
   ## Adds a rounded rectangle.
   ## Clockwise param can be used to subtract a rect from a path when using
@@ -594,14 +599,14 @@ proc roundedRect*(
   path.roundedRect(pos.x, pos.y, wh.x, wh.y, nw, ne, se, sw, clockwise)
 
 proc roundedRect*(
-  path: var Path, rect: Rect, nw, ne, se, sw: float32, clockwise = true
+  path: Path, rect: Rect, nw, ne, se, sw: float32, clockwise = true
 ) {.inline.} =
   ## Adds a rounded rectangle.
   ## Clockwise param can be used to subtract a rect from a path when using
   ## even-odd winding rule.
   path.roundedRect(rect.x, rect.y, rect.w, rect.h, nw, ne, se, sw, clockwise)
 
-proc ellipse*(path: var Path, cx, cy, rx, ry: float32) =
+proc ellipse*(path: Path, cx, cy, rx, ry: float32) =
   ## Adds a ellipse.
   let
     magicX = splineCircleK * rx
@@ -614,23 +619,23 @@ proc ellipse*(path: var Path, cx, cy, rx, ry: float32) =
   path.bezierCurveTo(cx + magicX, cy - ry, cx + rx, cy - magicY, cx + rx, cy)
   path.closePath()
 
-proc ellipse*(path: var Path, center: Vec2, rx, ry: float32) {.inline.} =
+proc ellipse*(path: Path, center: Vec2, rx, ry: float32) {.inline.} =
   ## Adds a ellipse.
   path.ellipse(center.x, center.y, rx, ry)
 
-proc circle*(path: var Path, cx, cy, r: float32) {.inline.} =
+proc circle*(path: Path, cx, cy, r: float32) {.inline.} =
   ## Adds a circle.
   path.ellipse(cx, cy, r, r)
 
-proc circle*(path: var Path, center: Vec2, r: float32) {.inline.} =
+proc circle*(path: Path, center: Vec2, r: float32) {.inline.} =
   ## Adds a circle.
   path.ellipse(center.x, center.y, r, r)
 
-proc circle*(path: var Path, circle: Circle) {.inline.} =
+proc circle*(path: Path, circle: Circle) {.inline.} =
   ## Adds a circle.
   path.ellipse(circle.pos.x, circle.pos.y, circle.radius, circle.radius)
 
-proc polygon*(path: var Path, x, y, size: float32, sides: int) =
+proc polygon*(path: Path, x, y, size: float32, sides: int) =
   ## Adds an n-sided regular polygon at (x, y) with the parameter size.
   path.moveTo(x + size * cos(0.0), y + size * sin(0.0))
   for side in 0 .. sides:
@@ -639,7 +644,7 @@ proc polygon*(path: var Path, x, y, size: float32, sides: int) =
       y + size * sin(side.float32 * 2.0 * PI / sides.float32)
     )
 
-proc polygon*(path: var Path, pos: Vec2, size: float32, sides: int) {.inline.} =
+proc polygon*(path: Path, pos: Vec2, size: float32, sides: int) {.inline.} =
   ## Adds a n-sided regular polygon at (x, y) with the parameter size.
   path.polygon(pos.x, pos.y, size, sides)
 
@@ -1611,7 +1616,7 @@ proc strokeShapes(
     miterAngleLimit = miterLimitToAngle(miterLimit)
 
   proc makeCircle(at: Vec2): seq[Vec2] =
-    var path: Path
+    let path = newPath()
     path.ellipse(at, halfStroke, halfStroke)
     path.commandsToShapes()[0]
 

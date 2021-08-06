@@ -266,7 +266,7 @@ image.fillPath(
 ### Image tiled
 [examples/image_tiled.nim](examples/image_tiled.nim)
 ```nim
-var path: Path
+let path = newPath()
 path.polygon(
   vec2(100, 100),
   70,

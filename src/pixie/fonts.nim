@@ -94,11 +94,12 @@ proc strikeoutThickness(typeface: Typeface): float32 {.inline.} =
 
 proc getGlyphPath*(typeface: Typeface, rune: Rune): Path {.inline.} =
   ## The glyph path for the rune.
+  result = newPath()
   if rune.uint32 > SP.uint32: # Empty paths for control runes (not tofu)
     if typeface.opentype != nil:
-      result = typeface.opentype.getGlyphPath(rune)
+      result.addPath(typeface.opentype.getGlyphPath(rune))
     else:
-      result = typeface.svgFont.getGlyphPath(rune)
+      result.addPath(typeface.svgFont.getGlyphPath(rune))
 
 proc getAdvance*(typeface: Typeface, rune: Rune): float32 {.inline.} =
   ## The advance for the rune in pixels.
