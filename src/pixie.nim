@@ -10,20 +10,6 @@ type
   FileFormat* = enum
     ffPng, ffBmp, ffJpg, ffGif
 
-proc readFont*(filePath: string): Font =
-  ## Loads a font from a file.
-  result =
-    case splitFile(filePath).ext.toLowerAscii():
-      of ".ttf":
-        parseTtf(readFile(filePath))
-      of ".otf":
-        parseOtf(readFile(filePath))
-      of ".svg":
-        parseSvgFont(readFile(filePath))
-      else:
-        raise newException(PixieError, "Unsupported font format")
-  result.typeface.filePath = filePath
-
 converter autoStraightAlpha*(c: ColorRGBX): ColorRGBA {.inline.} =
   ## Convert a paremultiplied alpha RGBA to a straight alpha RGBA.
   c.rgba()

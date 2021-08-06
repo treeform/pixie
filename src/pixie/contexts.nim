@@ -1,5 +1,5 @@
-import bumpy, chroma, pixie/blends, pixie/common, pixie/fonts, pixie/images,
-    pixie/masks, pixie/paints, pixie/paths, vmath
+import bumpy, chroma, tables, pixie/blends, pixie/common, pixie/fonts,
+    pixie/images, pixie/masks, pixie/paints, pixie/paths, vmath
 
 ## This file provides a Nim version of the Canvas 2D API commonly used on the
 ## web. The goal is to make picking up Pixie easy for developers familiar with
@@ -15,7 +15,8 @@ type
     miterLimit*: float32
     lineCap*: LineCap
     lineJoin*: LineJoin
-    font*: Font
+    font*: string ## File path to a .ttf or .otf file.
+    fontSize*: float32
     textAlign*: HAlignMode
     path: Path
     lineDash: seq[float32]
@@ -23,6 +24,7 @@ type
     mask: Mask
     layer: Image
     stateStack: seq[ContextState]
+    typefaces: Table[string, Typeface]
 
   ContextState = object
     fillStyle, strokeStyle: Paint
@@ -31,7 +33,8 @@ type
     miterLimit: float32
     lineCap: LineCap
     lineJoin: LineJoin
-    font: Font
+    font: string
+    fontSize*: float32
     textAlign: HAlignMode
     lineDash: seq[float32]
     mat: Mat3
@@ -51,6 +54,7 @@ proc newContext*(image: Image): Context =
   result.miterLimit = 10
   result.fillStyle = Paint(kind: pkSolid, color: rgbx(0, 0, 0, 255))
   result.strokeStyle = Paint(kind: pkSolid, color: rgbx(0, 0, 0, 255))
+  result.fontSize = 12
 
 proc newContext*(width, height: int): Context {.inline.} =
   ## Create a new Context that will draw to a new image of width and height.
@@ -65,6 +69,7 @@ proc state(ctx: Context): ContextState =
   result.lineCap = ctx.lineCap
   result.lineJoin = ctx.lineJoin
   result.font = ctx.font
+  result.fontSize = ctx.fontSize
   result.textAlign = ctx.textAlign
   result.lineDash = ctx.lineDash
   result.mat = ctx.mat
@@ -104,6 +109,7 @@ proc restore*(ctx: Context) =
   ctx.lineCap = state.lineCap
   ctx.lineJoin = state.lineJoin
   ctx.font = state.font
+  ctx.fontSize = state.fontSize
   ctx.textAlign = state.textAlign
   ctx.lineDash = state.lineDash
   ctx.mat = state.mat
@@ -158,15 +164,24 @@ proc stroke(ctx: Context, image: Image, path: Path) =
     ctx.layer.applyOpacity(ctx.globalAlpha)
     ctx.restore()
 
-proc fillText(ctx: Context, image: Image, text: string, at: Vec2) =
-  if ctx.font.typeface == nil:
+proc createFont(ctx: Context): Font =
+  if ctx.font == "":
     raise newException(PixieError, "No font has been set on this Context")
+
+  if ctx.font notin ctx.typefaces:
+    ctx.typefaces[ctx.font] = readTypeface(ctx.font)
+
+  result = newFont(ctx.typefaces[ctx.font])
+  result.size = ctx.fontSize
+
+proc fillText(ctx: Context, image: Image, text: string, at: Vec2) =
+  let font = ctx.createFont()
 
   # Canvas positions text relative to the alphabetic baseline by default
   var at = at
-  at.y -= round(ctx.font.typeface.ascent * ctx.font.scale)
+  at.y -= round(font.typeface.ascent * font.scale)
 
-  ctx.font.paint = ctx.fillStyle
+  font.paint = ctx.fillStyle
 
   var image = image
 
@@ -175,7 +190,7 @@ proc fillText(ctx: Context, image: Image, text: string, at: Vec2) =
     image = ctx.layer
 
   image.fillText(
-    ctx.font,
+    font,
     text,
     ctx.mat * translate(at),
     hAlign = ctx.textAlign
@@ -186,14 +201,13 @@ proc fillText(ctx: Context, image: Image, text: string, at: Vec2) =
     ctx.restore()
 
 proc strokeText(ctx: Context, image: Image, text: string, at: Vec2) =
-  if ctx.font.typeface == nil:
-    raise newException(PixieError, "No font has been set on this Context")
+  let font = ctx.createFont()
 
   # Canvas positions text relative to the alphabetic baseline by default
   var at = at
-  at.y -= round(ctx.font.typeface.ascent * ctx.font.scale)
+  at.y -= round(font.typeface.ascent * font.scale)
 
-  ctx.font.paint = ctx.strokeStyle
+  font.paint = ctx.strokeStyle
 
   var image = image
 
@@ -202,7 +216,7 @@ proc strokeText(ctx: Context, image: Image, text: string, at: Vec2) =
     image = ctx.layer
 
   image.strokeText(
-    ctx.font,
+    font,
     text,
     ctx.mat * translate(at),
     ctx.lineWidth,
@@ -419,10 +433,9 @@ proc strokeText*(ctx: Context, text: string, x, y: float32) {.inline.} =
 proc measureText*(ctx: Context, text: string): TextMetrics =
   ## Returns a TextMetrics object that contains information about the measured
   ## text (such as its width, for example).
-  if ctx.font.typeface == nil:
-    raise newException(PixieError, "No font has been set on this Context")
-
-  let bounds = typeset(ctx.font, text).computeBounds()
+  let
+    font = ctx.createFont()
+    bounds = typeset(font, text).computeBounds()
   result.width = bounds.x
 
 proc getLineDash*(ctx: Context): seq[float32] {.inline.} =

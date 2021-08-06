@@ -280,8 +280,11 @@ block:
 block:
   let ctx = newContext(newImage(300, 150))
 
-  ctx.font = readFont("tests/fonts/Roboto-Regular_1.ttf")
-  ctx.font.size = 50
+  ctx.font = "tests/fonts/Roboto-Regular_1.ttf"
+  ctx.fontSize = 50
+  ctx.save()
+  ctx.fontSize = 30
+  ctx.restore()
 
   ctx.fillText("Hello world", 50, 90)
 
@@ -290,8 +293,8 @@ block:
 block:
   let ctx = newContext(newImage(300, 150))
 
-  ctx.font = readFont("tests/fonts/Roboto-Regular_1.ttf")
-  ctx.font.size = 50
+  ctx.font = "tests/fonts/Roboto-Regular_1.ttf"
+  ctx.fontSize = 50
 
   ctx.strokeText("Hello world", 50, 90)
 
@@ -467,8 +470,8 @@ block:
   let image = newImage(300, 150)
 
   let ctx = newContext(image)
-  ctx.font = readFont("tests/fonts/Roboto-Regular_1.ttf")
-  ctx.font.size = 50
+  ctx.font = "tests/fonts/Roboto-Regular_1.ttf"
+  ctx.fontSize = 50
   ctx.fillStyle = "blue"
 
   ctx.saveLayer()
@@ -486,7 +489,7 @@ block:
 
 block:
   let ctx = newContext(100, 100)
-  ctx.font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  ctx.font = "tests/fonts/Roboto-Regular_1.ttf"
 
   let metrics = ctx.measureText("Hello world")
   doAssert metrics.width == 61
