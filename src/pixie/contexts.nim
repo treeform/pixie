@@ -53,8 +53,8 @@ proc newContext*(image: Image): Context =
   result.globalAlpha = 1
   result.lineWidth = 1
   result.miterLimit = 10
-  result.fillStyle = Paint(kind: pkSolid, color: rgbx(0, 0, 0, 255))
-  result.strokeStyle = Paint(kind: pkSolid, color: rgbx(0, 0, 0, 255))
+  result.fillStyle = rgbx(0, 0, 0, 255)
+  result.strokeStyle = rgbx(0, 0, 0, 255)
   result.fontSize = 12
 
 proc newContext*(width, height: int): Context {.inline.} =
@@ -80,6 +80,9 @@ proc save*(ctx: Context) {.inline.} =
   ## Saves the entire state of the context by pushing the current state onto
   ## a stack.
   ctx.stateStack.add(ctx.state())
+
+  ctx.fillStyle = newPaint(ctx.fillStyle)
+  ctx.strokeStyle = newPaint(ctx.strokeStyle)
 
 proc saveLayer*(ctx: Context) =
   ## Saves the entire state of the context by pushing the current state onto
@@ -356,20 +359,15 @@ proc stroke*(ctx: Context) {.inline.} =
 
 proc clearRect*(ctx: Context, rect: Rect) =
   ## Erases the pixels in a rectangular area.
+  let paint = newPaint(pkSolid)
+  paint.blendMode = bmOverwrite
+
   let path = newPath()
   path.rect(rect)
   if ctx.layer != nil:
-    ctx.layer.fillPath(
-      path,
-      Paint(kind: pkSolid, color: rgbx(0, 0, 0, 0), blendMode: bmOverwrite),
-      ctx.mat
-    )
+    ctx.layer.fillPath( path, paint, ctx.mat)
   else:
-    ctx.image.fillPath(
-      path,
-      Paint(kind: pkSolid, color: rgbx(0, 0, 0, 0), blendMode: bmOverwrite),
-      ctx.mat
-    )
+    ctx.image.fillPath(path, paint, ctx.mat)
 
 proc clearRect*(ctx: Context, x, y, width, height: float32) {.inline.} =
   ## Erases the pixels in a rectangular area.
@@ -604,17 +602,22 @@ proc strokePolygon*(ctx: Context, pos: Vec2, size: float32, sides: int) =
 
 proc drawImage*(ctx: Context, image: Image, dx, dy, dWidth, dHeight: float32) =
   ## Draws a source image onto the destination image.
-  var
+  let
     imageMat = ctx.mat * translate(vec2(dx, dy)) * scale(vec2(
       dWidth / image.width.float32,
       dHeight / image.height.float32
     ))
-    savedStyle = ctx.fillStyle
-  ctx.fillStyle = Paint(kind: pkImage, image: image, imageMat: imageMat)
+    savedFillStyle = ctx.fillStyle
+
+  ctx.fillStyle = newPaint(pkImage)
+  ctx.fillStyle.image = image
+  ctx.fillStyle.imageMat = imageMat
+
   let path = newPath()
   path.rect(rect(dx, dy, dWidth, dHeight))
   ctx.fill(path)
-  ctx.fillStyle = savedStyle
+
+  ctx.fillStyle = savedFillStyle
 
 proc drawImage*(ctx: Context, image: Image, dx, dy: float32) =
   ## Draws a source image onto the destination image.
@@ -635,7 +638,7 @@ proc drawImage*(
   dx, dy, dWidth, dHeight: float32
 ) =
   ## Draws a source image onto the destination image.
-  var image = image.subImage(sx.int, sy.int, sWidth.int, sHeight.int)
+  let image = image.subImage(sx.int, sy.int, sWidth.int, sHeight.int)
   ctx.drawImage(image, dx, dx, image.width.float32, image.height.float32)
 
 proc drawImage*(ctx: Context, image: Image, src, dest: Rect) =

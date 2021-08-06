@@ -526,7 +526,8 @@ block:
 
   image.fill(rgba(255, 255, 255, 255))
 
-  var paint = Paint(kind: pkSolid, color: rgba(0, 0, 255, 255))
+  let paint = newPaint(pkSolid)
+  paint.color = rgba(0, 0, 255, 255)
   paint.blendMode = bmExclusion
 
   ctx.fillStyle = paint
@@ -634,3 +635,12 @@ block:
   ctx.ellipse(150, 75, 40, 60)
   ctx.lineWidth = 25
   doAssert ctx.isPointInStroke(110, 75)
+
+block:
+  let ctx = newContext(newImage(100, 100))
+  ctx.fillStyle.color = rgba(255, 0, 0, 255)
+  ctx.save()
+  ctx.fillStyle.color = rgba(0, 0, 255, 255)
+  ctx.restore()
+  ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
+  ctx.image.writeFile("tests/images/context/paintSaveRestore.png")

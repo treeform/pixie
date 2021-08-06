@@ -12,144 +12,108 @@ block:
   let image = newImage(100, 100)
   image.fillPath(
     heartShape,
-    Paint(
-      kind: pkSolid,
-      color: rgba(255, 0, 0, 255)
-    )
+    rgba(255, 0, 0, 255)
   )
   image.writeFile("tests/images/paths/paintSolid.png")
 
 block:
+  let paint = newPaint(pkImage)
+  paint.image = decodePng(readFile("tests/images/png/baboon.png"))
+  paint.imageMat = scale(vec2(0.2, 0.2))
+
   let image = newImage(100, 100)
-  image.fillPath(
-    heartShape,
-    Paint(
-      kind: pkImage,
-      image: decodePng(readFile("tests/images/png/baboon.png")),
-      imageMat: scale(vec2(0.2, 0.2))
-    )
-  )
+  image.fillPath(heartShape, paint)
   image.writeFile("tests/images/paths/paintImage.png")
 
 block:
-  var paint = Paint(
-    kind: pkImage,
-    image: decodePng(readFile("tests/images/png/baboon.png")),
-    imageMat: scale(vec2(0.2, 0.2))
-  )
+  let paint = newPaint(pkImage)
+  paint.image = decodePng(readFile("tests/images/png/baboon.png"))
+  paint.imageMat = scale(vec2(0.2, 0.2))
   paint.opacity = 0.5
 
   let image = newImage(100, 100)
-  image.fillPath(
-    heartShape,
-    paint
-  )
+  image.fillPath(heartShape, paint)
   image.writeFile("tests/images/paths/paintImageOpacity.png")
 
 block:
+  let paint = newPaint(pkImageTiled)
+  paint.image = decodePng(readFile("tests/images/png/baboon.png"))
+  paint.imageMat = scale(vec2(0.02, 0.02))
+
   let image = newImage(100, 100)
-  image.fillPath(
-    heartShape,
-    Paint(
-      kind: pkImageTiled,
-      image: decodePng(readFile("tests/images/png/baboon.png")),
-      imageMat: scale(vec2(0.02, 0.02))
-    )
-  )
+  image.fillPath(heartShape, paint)
   image.writeFile("tests/images/paths/paintImageTiled.png")
 
 block:
-  var paint = Paint(
-    kind: pkImageTiled,
-    image: decodePng(readFile("tests/images/png/baboon.png")),
-    imageMat: scale(vec2(0.02, 0.02))
-  )
+  let paint = newPaint(pkImageTiled)
+  paint.image = decodePng(readFile("tests/images/png/baboon.png"))
+  paint.imageMat = scale(vec2(0.02, 0.02))
   paint.opacity = 0.5
 
   let image = newImage(100, 100)
-  image.fillPath(
-    heartShape,
-    paint
-  )
+  image.fillPath(heartShape, paint)
   image.writeFile("tests/images/paths/paintImageTiledOpacity.png")
 
 block:
+  let paint = newPaint(pkGradientLinear)
+  paint.gradientHandlePositions = @[
+    vec2(0, 50),
+    vec2(100, 50),
+  ]
+  paint.gradientStops = @[
+    ColorStop(color: rgba(255, 0, 0, 255), position: 0),
+    ColorStop(color: rgba(255, 0, 0, 40), position: 1.0),
+  ]
+
   let image = newImage(100, 100)
-  image.fillPath(
-    heartShape,
-    Paint(
-      kind: pkGradientLinear,
-      gradientHandlePositions: @[
-        vec2(0, 50),
-        vec2(100, 50),
-    ],
-    gradientStops: @[
-      ColorStop(color: rgba(255, 0, 0, 255), position: 0),
-      ColorStop(color: rgba(255, 0, 0, 40), position: 1.0),
-    ]
-  )
-  )
+  image.fillPath(heartShape, paint)
   image.writeFile("tests/images/paths/gradientLinear.png")
 
 block:
-  let image = newImage(100, 100)
-  image.fillPath(
-    heartShape,
-    Paint(
-      kind: pkGradientRadial,
-      gradientHandlePositions: @[
-        vec2(50, 50),
-        vec2(100, 50),
-        vec2(50, 100)
-    ],
-    gradientStops: @[
-      ColorStop(color: rgba(255, 0, 0, 255), position: 0),
-      ColorStop(color: rgba(255, 0, 0, 40), position: 1.0),
-    ]
-  )
-  )
+  let paint = newPaint(pkGradientRadial)
+  paint.gradientHandlePositions = @[
+    vec2(50, 50),
+    vec2(100, 50),
+    vec2(50, 100)
+  ]
+  paint.gradientStops = @[
+    ColorStop(color: rgba(255, 0, 0, 255), position: 0),
+    ColorStop(color: rgba(255, 0, 0, 40), position: 1.0),
+  ]
 
+  let image = newImage(100, 100)
+  image.fillPath(heartShape, paint)
   image.writeFile("tests/images/paths/gradientRadial.png")
 
 block:
-  let image = newImage(100, 100)
-  image.fillPath(
-    heartShape,
-    Paint(
-      kind: pkGradientAngular,
-      gradientHandlePositions: @[
-        vec2(50, 50),
-        vec2(100, 50),
-        vec2(50, 100)
-    ],
-    gradientStops: @[
-      ColorStop(color: rgba(255, 0, 0, 255), position: 0),
-      ColorStop(color: rgba(255, 0, 0, 40), position: 1.0),
-    ]
-  )
-  )
+  let paint = newPaint(pkGradientAngular)
+  paint.gradientHandlePositions = @[
+    vec2(50, 50),
+    vec2(100, 50),
+    vec2(50, 100)
+  ]
+  paint.gradientStops = @[
+    ColorStop(color: rgba(255, 0, 0, 255), position: 0),
+    ColorStop(color: rgba(255, 0, 0, 40), position: 1.0),
+  ]
 
+  let image = newImage(100, 100)
+  image.fillPath(heartShape, paint)
   image.writeFile("tests/images/paths/gradientAngular.png")
 
 block:
-  var paint = Paint(
-    kind: pkGradientAngular,
-    gradientHandlePositions: @[
-      vec2(50, 50),
-      vec2(100, 50),
-      vec2(50, 100)
-    ],
-    gradientStops: @[
-      ColorStop(color: rgba(255, 0, 0, 255), position: 0),
-      ColorStop(color: rgba(255, 0, 0, 40), position: 1.0),
-    ]
-  )
+  let paint = newPaint(pkGradientAngular)
+  paint.gradientHandlePositions = @[
+    vec2(50, 50),
+    vec2(100, 50),
+    vec2(50, 100)
+  ]
+  paint.gradientStops = @[
+    ColorStop(color: rgba(255, 0, 0, 255), position: 0),
+    ColorStop(color: rgba(255, 0, 0, 40), position: 1.0),
+  ]
   paint.opacity = 0.5
 
   let image = newImage(100, 100)
-  image.fillPath(
-    heartShape,
-    paint
-  )
-
+  image.fillPath(heartShape, paint)
   image.writeFile("tests/images/paths/gradientAngularOpacity.png")

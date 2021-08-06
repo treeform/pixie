@@ -1803,23 +1803,24 @@ proc fillPath*(
 
   # Draw the image (maybe tiled) or gradients. Do this with opaque paint and
   # and then apply the paint's opacity to the mask.
-
-  var paintOpaque = paint
-  paintOpaque.opacity = 1
+  let savedOpacity = paint.opacity
+  paint.opacity = 1
 
   case paint.kind:
     of pkSolid:
       discard # Handled above
     of pkImage:
-      fill.draw(paintOpaque.image, paintOpaque.imageMat)
+      fill.draw(paint.image, paint.imageMat)
     of pkImageTiled:
-      fill.drawTiled(paintOpaque.image, paintOpaque.imageMat)
+      fill.drawTiled(paint.image, paint.imageMat)
     of pkGradientLinear:
-      fill.fillGradientLinear(paintOpaque)
+      fill.fillGradientLinear(paint)
     of pkGradientRadial:
-      fill.fillGradientRadial(paintOpaque)
+      fill.fillGradientRadial(paint)
     of pkGradientAngular:
-      fill.fillGradientAngular(paintOpaque)
+      fill.fillGradientAngular(paint)
+
+  paint.opacity = savedOpacity
 
   if paint.opacity != 1:
     mask.applyOpacity(paint.opacity)
@@ -1898,23 +1899,24 @@ proc strokePath*(
 
   # Draw the image (maybe tiled) or gradients. Do this with opaque paint and
   # and then apply the paint's opacity to the mask.
-
-  var paintOpaque = paint
-  paintOpaque.opacity = 1
+  let savedOpacity = paint.opacity
+  paint.opacity = 1
 
   case paint.kind:
     of pkSolid:
       discard # Handled above
     of pkImage:
-      fill.draw(paintOpaque.image, paintOpaque.imageMat)
+      fill.draw(paint.image, paint.imageMat)
     of pkImageTiled:
-      fill.drawTiled(paintOpaque.image, paintOpaque.imageMat)
+      fill.drawTiled(paint.image, paint.imageMat)
     of pkGradientLinear:
-      fill.fillGradientLinear(paintOpaque)
+      fill.fillGradientLinear(paint)
     of pkGradientRadial:
-      fill.fillGradientRadial(paintOpaque)
+      fill.fillGradientRadial(paint)
     of pkGradientAngular:
-      fill.fillGradientAngular(paintOpaque)
+      fill.fillGradientAngular(paint)
+
+  paint.opacity = savedOpacity
 
   if paint.opacity != 1:
     mask.applyOpacity(paint.opacity)

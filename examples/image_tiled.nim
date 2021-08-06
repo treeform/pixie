@@ -9,13 +9,10 @@ path.polygon(
   70,
   sides = 8
 )
-image.fillPath(
-  path,
-  Paint(
-    kind: pkImageTiled,
-    image: readImage("tests/images/png/baboon.png"),
-    imageMat: scale(vec2(0.08, 0.08))
-  )
-)
 
+let paint = newPaint(pkImageTiled)
+paint.image = readImage("tests/images/png/baboon.png")
+paint.imageMat = scale(vec2(0.08, 0.08))
+
+image.fillPath(path, paint)
 image.writeFile("examples/image_tiled.png")
