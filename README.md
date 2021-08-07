@@ -136,11 +136,11 @@ proc newFont(typeface: Typeface, size: float32, color: ColorRGBA): Font =
 
 let spans = @[
   newSpan("verb [with object] ",
-    typeface.newFont(12, rgba(200, 200, 200, 255))),
-  newSpan("strallow\n", typeface.newFont(36, rgba(0, 0, 0, 255))),
-  newSpan("\nstral·low\n", typeface.newFont(13, rgba(0, 127, 244, 255))),
+    newFont(typeface, 12, rgba(200, 200, 200, 255))),
+  newSpan("strallow\n", newFont(typeface, 36, rgba(0, 0, 0, 255))),
+  newSpan("\nstral·low\n", newFont(typeface, 13, rgba(0, 127, 244, 255))),
   newSpan("\n1. free (something) from restrictive restrictions \"the regulations are intended to strallow changes in public policy\" ",
-      typeface.newFont(14, rgba(80, 80, 80, 255)))
+      newFont(typeface, 14, rgba(80, 80, 80, 255)))
 ]
 
 image.fillText(typeset(spans, bounds = vec2(180, 180)), vec2(10, 10))
@@ -236,18 +236,16 @@ image.draw(lines)
 ### Gradient
 [examples/gradient.nim](examples/gradient.nim)
 ```nim
-let paint = Paint(
-  kind: pkGradientRadial,
-  gradientHandlePositions: @[
-    vec2(100, 100),
-    vec2(200, 100),
-    vec2(100, 200)
-  ],
-  gradientStops: @[
-    ColorStop(color: rgba(255, 0, 0, 255), position: 0),
-    ColorStop(color: rgba(255, 0, 0, 40), position: 1.0),
-  ]
-)
+let paint = newPaint(pkGradientRadial)
+paint.gradientHandlePositions = @[
+  vec2(100, 100),
+  vec2(200, 100),
+  vec2(100, 200)
+]
+paint.gradientStops = @[
+  ColorStop(color: rgba(255, 0, 0, 255), position: 0),
+  ColorStop(color: rgba(255, 0, 0, 40), position: 1.0),
+]
 
 image.fillPath(
   """
@@ -272,14 +270,12 @@ path.polygon(
   70,
   sides = 8
 )
-image.fillPath(
-  path,
-  Paint(
-    kind: pkImageTiled,
-    image: readImage("tests/images/png/baboon.png"),
-    imageMat: scale(vec2(0.08, 0.08))
-  )
-)
+
+let paint = newPaint(pkImageTiled)
+paint.image = readImage("tests/images/png/baboon.png")
+paint.imageMat = scale(vec2(0.08, 0.08))
+
+image.fillPath(path, paint)
 ```
 ![example output](examples/image_tiled.png)
 

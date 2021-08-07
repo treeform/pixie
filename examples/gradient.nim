@@ -3,18 +3,16 @@ import pixie
 let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
 
-let paint = Paint(
-  kind: pkGradientRadial,
-  gradientHandlePositions: @[
-    vec2(100, 100),
-    vec2(200, 100),
-    vec2(100, 200)
-  ],
-  gradientStops: @[
-    ColorStop(color: rgba(255, 0, 0, 255), position: 0),
-    ColorStop(color: rgba(255, 0, 0, 40), position: 1.0),
-  ]
-)
+let paint = newPaint(pkGradientRadial)
+paint.gradientHandlePositions = @[
+  vec2(100, 100),
+  vec2(200, 100),
+  vec2(100, 200)
+]
+paint.gradientStops = @[
+  ColorStop(color: rgba(255, 0, 0, 255), position: 0),
+  ColorStop(color: rgba(255, 0, 0, 40), position: 1.0),
+]
 
 image.fillPath(
   """

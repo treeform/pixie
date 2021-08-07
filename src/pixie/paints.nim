@@ -1,4 +1,4 @@
-import blends, chroma, common, images, internal, options, vmath
+import blends, chroma, common, images, internal, vmath
 
 type
   PaintKind* = enum
@@ -9,19 +9,19 @@ type
     pkGradientRadial
     pkGradientAngular
 
-  Paint* = object
+  Paint* = ref object
     ## Paint used to fill paths.
-    case kind*: PaintKind
-    of pkSolid:
-      color*: ColorRGBX                   ## Color to fill with.
-    of pkImage, pkImageTiled:
-      image*: Image                       ## Image to fill with.
-      imageMat*: Mat3                     ## Matrix of the filled image.
-    of pkGradientLinear, pkGradientRadial, pkGradientAngular:
-      gradientHandlePositions*: seq[Vec2] ## Gradient positions (image space).
-      gradientStops*: seq[ColorStop]      ## Color stops (gradient space).
-    blendMode*: BlendMode                 ## Blend mode.
-    opacityOption: Option[float32]
+    kind*: PaintKind
+    blendMode*: BlendMode               ## Blend mode.
+    opacity*: float32
+    # pkSolid
+    color*: ColorRGBX                   ## Color to fill with.
+    # pkImage, pkImageTiled:
+    image*: Image                       ## Image to fill with.
+    imageMat*: Mat3                     ## Matrix of the filled image.
+    # pkGradientLinear, pkGradientRadial, pkGradientAngular:
+    gradientHandlePositions*: seq[Vec2] ## Gradient positions (image space).
+    gradientStops*: seq[ColorStop]      ## Color stops (gradient space).
 
   ColorStop* = object
     ## Color stop on a gradient curve.
@@ -30,31 +30,34 @@ type
 
   SomePaint* = string | Paint | SomeColor
 
+proc newPaint*(kind: PaintKind): Paint =
+  ## Create a new Paint.
+  result = Paint(kind: kind, opacity: 1, imageMat: mat3())
+
+proc newPaint*(paint: Paint): Paint =
+  ## Create a new Paint with the same properties.
+  result = newPaint(paint.kind)
+  result.blendMode = paint.blendMode
+  result.opacity = paint.opacity
+  result.color = paint.color
+  result.image = paint.image
+  result.imageMat = paint.imageMat
+  result.gradientHandlePositions = paint.gradientHandlePositions
+  result.gradientStops = paint.gradientStops
+
 converter parseSomePaint*(paint: SomePaint): Paint {.inline.} =
   ## Given SomePaint, parse it in different ways.
   when type(paint) is string:
-    Paint(kind: pkSolid, color: parseHtmlColor(paint).rgbx())
+    result = newPaint(pkSolid)
+    result.color = parseHtmlColor(paint).rgbx()
   elif type(paint) is SomeColor:
+    result = newPaint(pkSolid)
     when type(paint) is ColorRGBX:
-      Paint(kind: pkSolid, color: paint)
+      result.color = paint
     else:
-      Paint(kind: pkSolid, color: paint.rgbx())
+      result.color = paint.rgbx()
   elif type(paint) is Paint:
     paint
-
-proc opacity*(paint: Paint): float32 =
-  ## Paint opacity (applies with color or image opacity).
-  if paint.opacityOption.isSome:
-    paint.opacityOption.get()
-  else:
-    1
-
-proc `opacity=`*(paint: var Paint, opacity: float32) =
-  ## Set the paint opacity (applies with color or image opacity).
-  if opacity >= 0 and opacity <= 1:
-    paint.opacityOption = some(opacity)
-  else:
-    raise newException(PixieError, "Invalid opacity: " & $opacity)
 
 proc toLineSpace(at, to, point: Vec2): float32 {.inline.} =
   ## Convert position on to where it would fall on a line between at and to.

@@ -15,7 +15,7 @@ var
 
 proc draw() =
   # draw shiny sphere on gradient background
-  var linerGradient = Paint(kind: pkGradientLinear)
+  let linerGradient = newPaint(pkGradientLinear)
   linerGradient.gradientHandlePositions.add(vec2(0, 0))
   linerGradient.gradientHandlePositions.add(vec2(0, 256))
   linerGradient.gradientStops.add(
@@ -25,7 +25,7 @@ proc draw() =
   ctx.fillStyle = linerGradient
   ctx.fillRect(0, 0, 256, 256)
 
-  var radialGradient = Paint(kind: pkGradientRadial)
+  let radialGradient = newPaint(pkGradientRadial)
   radialGradient.gradientHandlePositions.add(vec2(128, 128))
   radialGradient.gradientHandlePositions.add(vec2(256, 128))
   radialGradient.gradientHandlePositions.add(vec2(128, 256))

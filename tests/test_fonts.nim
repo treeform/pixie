@@ -634,17 +634,15 @@ block:
 block:
   var font = readFont("tests/fonts/IBMPlexSans-Regular_2.ttf")
   font.size = 48
-  font.paint = Paint(
-    kind: pkGradientLinear,
-    gradientHandlePositions: @[
-      vec2(0, 50),
-      vec2(100, 50),
-    ],
-    gradientStops: @[
-      ColorStop(color: rgba(255, 0, 0, 255), position: 0),
-      ColorStop(color: rgba(255, 0, 0, 127), position: 1.0),
-    ]
-  )
+  font.paint = newPaint(pkGradientLinear)
+  font.paint.gradientHandlePositions = @[
+    vec2(0, 50),
+    vec2(100, 50),
+  ]
+  font.paint.gradientStops = @[
+    ColorStop(color: rgba(255, 0, 0, 255), position: 0),
+    ColorStop(color: rgba(255, 0, 0, 127), position: 1.0),
+  ]
 
   let image = newImage(100, 100)
   image.fill(rgba(255, 255, 255, 255))

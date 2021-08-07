@@ -367,11 +367,16 @@ block:
   let image = newImage(100, 100)
   image.fillPath(
     "M 10 10 H 60 V 60 H 10 z",
-    Paint(kind: pkSolid, color: rgbx(255, 0, 0, 255), blendMode: bmNormal)
+    rgbx(255, 0, 0, 255)
   )
+
+  let paint = newPaint(pkSolid)
+  paint.color = rgbx(0, 255, 0, 255)
+  paint.blendMode = bmExcludeMask
+
   image.fillPath(
     "M 30 30 H 80 V 80 H 30 z",
-    Paint(kind: pkSolid, color: rgbx(0, 255, 0, 255), blendMode: bmExcludeMask)
+    paint
   )
   image.writeFile("tests/images/paths/rectExcludeMask.png")
 
@@ -379,11 +384,16 @@ block:
   let image = newImage(100, 100)
   image.fillPath(
     "M 10.1 10.1 H 60.1 V 60.1 H 10.1 z",
-    Paint(kind: pkSolid, color: rgbx(255, 0, 0, 255), blendMode: bmNormal)
+    rgbx(255, 0, 0, 255)
   )
+
+  let paint = newPaint(pkSolid)
+  paint.color = rgbx(0, 255, 0, 255)
+  paint.blendMode = bmExcludeMask
+
   image.fillPath(
     "M 30.1 30.1 H 80.1 V 80.1 H 30.1 z",
-    Paint(kind: pkSolid, color: rgbx(0, 255, 0, 255), blendMode: bmExcludeMask)
+    paint
   )
   image.writeFile("tests/images/paths/rectExcludeMaskAA.png")
 
@@ -391,11 +401,16 @@ block:
   let image = newImage(100, 100)
   image.fillPath(
     "M 10 10 H 60 V 60 H 10 z",
-    Paint(kind: pkSolid, color: rgbx(255, 0, 0, 255), blendMode: bmNormal)
+    rgbx(255, 0, 0, 255)
   )
+
+  let paint = newPaint(pkSolid)
+  paint.color = rgbx(0, 255, 0, 255)
+  paint.blendMode = bmMask
+
   image.fillPath(
     "M 30 30 H 80 V 80 H 30 z",
-    Paint(kind: pkSolid, color: rgbx(0, 255, 0, 255), blendMode: bmMask)
+    paint
   )
   image.writeFile("tests/images/paths/rectMask.png")
 
@@ -403,11 +418,16 @@ block:
   let image = newImage(100, 100)
   image.fillPath(
     "M 10.1 10.1 H 60.1 V 60.1 H 10.1 z",
-    Paint(kind: pkSolid, color: rgbx(255, 0, 0, 255), blendMode: bmNormal)
+    rgbx(255, 0, 0, 255)
   )
+
+  let paint = newPaint(pkSolid)
+  paint.color = rgbx(0, 255, 0, 255)
+  paint.blendMode = bmMask
+
   image.fillPath(
     "M 30.1 30.1 H 80.1 V 80.1 H 30.1 z",
-    Paint(kind: pkSolid, color: rgbx(0, 255, 0, 255), blendMode: bmMask)
+    paint
   )
   image.writeFile("tests/images/paths/rectMaskAA.png")
 
@@ -573,7 +593,8 @@ block:
   let path = newPath()
   path.circle(50, 50, 30)
 
-  var paint = Paint(kind: pkSolid, color: rgba(255, 0, 255, 255))
+  let paint = newPaint(pkSolid)
+  paint.color = rgba(255, 0, 255, 255)
   paint.opacity = 0.5
 
   let image = newImage(100, 100)
@@ -585,7 +606,8 @@ block:
   let path = newPath()
   path.circle(50, 50, 30)
 
-  var paint = Paint(kind: pkSolid, color: rgba(255, 0, 255, 255))
+  let paint = newPaint(pkSolid)
+  paint.color = rgba(255, 0, 255, 255)
   paint.opacity = 0.5
 
   let image = newImage(100, 100)

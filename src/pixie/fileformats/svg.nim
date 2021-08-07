@@ -172,14 +172,12 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
     let id = fill[5 .. ^2]
     if id in result.linearGradients:
       let linearGradient = result.linearGradients[id]
-      result.fill = Paint(
-        kind: pkGradientLinear,
-        gradientHandlePositions: @[
-          result.transform * vec2(linearGradient.x1, linearGradient.y1),
-          result.transform * vec2(linearGradient.x2, linearGradient.y2)
-        ],
-        gradientStops: linearGradient.stops,
-      )
+      result.fill = newPaint(pkGradientLinear)
+      result.fill.gradientHandlePositions = @[
+        result.transform * vec2(linearGradient.x1, linearGradient.y1),
+        result.transform * vec2(linearGradient.x2, linearGradient.y2)
+      ]
+      result.fill.gradientStops = linearGradient.stops
     else:
       raise newException(PixieError, "Missing SVG resource " & id)
   else:
