@@ -25,8 +25,8 @@ type
 
   ColorStop* = object
     ## Color stop on a gradient curve.
-    color*: ColorRGBX  ## Color of the stop
-    position*: float32 ## Gradient Stop position 0..1.
+    color*: ColorRGBX  ## Color of the stop.
+    position*: float32 ## Gradient stop position 0..1.
 
   SomePaint* = string | Paint | SomeColor
 
@@ -96,11 +96,8 @@ proc gradientPut(
     color = color.applyOpacity(paint.opacity)
   image.setRgbaUnsafe(x, y, color.rgba.rgbx())
 
-proc fillGradientLinear*(image: Image, paint: Paint) =
+proc fillGradientLinear(image: Image, paint: Paint) =
   ## Fills a linear gradient.
-
-  if paint.kind != pkGradientLinear:
-    raise newException(PixieError, "Paint kind must be " & $pkGradientLinear)
 
   if paint.gradientHandlePositions.len != 2:
     raise newException(PixieError, "Linear gradient requires 2 handles")
@@ -121,11 +118,8 @@ proc fillGradientLinear*(image: Image, paint: Paint) =
         t = toLineSpace(at, to, xy)
       image.gradientPut(paint, x, y, t, paint.gradientStops)
 
-proc fillGradientRadial*(image: Image, paint: Paint) =
+proc fillGradientRadial(image: Image, paint: Paint) =
   ## Fills a radial gradient.
-
-  if paint.kind != pkGradientRadial:
-    raise newException(PixieError, "Paint kind must be " & $pkGradientRadial)
 
   if paint.gradientHandlePositions.len != 3:
     raise newException(PixieError, "Radial gradient requires 3 handles")
@@ -155,11 +149,8 @@ proc fillGradientRadial*(image: Image, paint: Paint) =
         t = (mat * xy).length()
       image.gradientPut(paint, x, y, t, paint.gradientStops)
 
-proc fillGradientAngular*(image: Image, paint: Paint) =
+proc fillGradientAngular(image: Image, paint: Paint) =
   ## Fills an angular gradient.
-
-  if paint.kind != pkGradientAngular:
-    raise newException(PixieError, "Paint kind must be " & $pkGradientAngular)
 
   if paint.gradientHandlePositions.len != 3:
     raise newException(PixieError, "Angular gradient requires 2 handles")
@@ -182,3 +173,16 @@ proc fillGradientAngular*(image: Image, paint: Paint) =
         angle = normalize(xy - center).angle()
         t = (angle + gradientAngle + PI / 2).fixAngle() / 2 / PI + 0.5
       image.gradientPut(paint, x, y, t, paint.gradientStops)
+
+proc fillGradient*(image: Image, paint: Paint) =
+  ## Fills with the Paint gradient.
+
+  case paint.kind:
+  of pkGradientLinear:
+    image.fillGradientLinear(paint)
+  of pkGradientRadial:
+    image.fillGradientRadial(paint)
+  of pkGradientAngular:
+    image.fillGradientAngular(paint)
+  else:
+    raise newException(PixieError, "Paint must be a gradient")

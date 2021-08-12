@@ -1813,12 +1813,8 @@ proc fillPath*(
       fill.draw(paint.image, paint.imageMat)
     of pkImageTiled:
       fill.drawTiled(paint.image, paint.imageMat)
-    of pkGradientLinear:
-      fill.fillGradientLinear(paint)
-    of pkGradientRadial:
-      fill.fillGradientRadial(paint)
-    of pkGradientAngular:
-      fill.fillGradientAngular(paint)
+    of pkGradientLinear, pkGradientRadial, pkGradientAngular:
+      fill.fillGradient(paint)
 
   paint.opacity = savedOpacity
 
@@ -1909,12 +1905,8 @@ proc strokePath*(
       fill.draw(paint.image, paint.imageMat)
     of pkImageTiled:
       fill.drawTiled(paint.image, paint.imageMat)
-    of pkGradientLinear:
-      fill.fillGradientLinear(paint)
-    of pkGradientRadial:
-      fill.fillGradientRadial(paint)
-    of pkGradientAngular:
-      fill.fillGradientAngular(paint)
+    of pkGradientLinear, pkGradientRadial, pkGradientAngular:
+      fill.fillGradient(paint)
 
   paint.opacity = savedOpacity
 

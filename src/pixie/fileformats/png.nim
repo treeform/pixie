@@ -421,10 +421,8 @@ proc decodePng*(data: string): Image =
   var pixels = decodeImageData(header, palette, transparency, imageData)
   pixels.toPremultipliedAlpha()
 
-  result = Image()
-  result.width = header.width
-  result.height = header.height
-  result.data = cast[seq[ColorRGBX]](pixels)
+  result = newImage(header.width, header.height)
+  copyMem(result.data[0].addr, pixels[0].addr, pixels.len * 4)
 
 proc encodePng*(width, height, channels: int, data: pointer, len: int): string =
   ## Encodes the image data into the PNG file format.

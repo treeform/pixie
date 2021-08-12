@@ -76,12 +76,6 @@ block:
   writeFile("tests/images/masks/imageMaskedMask.png", a.encodePng())
 
 block:
-  let a = newMask(100, 100)
-  a.fill(255)
-  a.shift(vec2(10, 10))
-  writeFile("tests/images/masks/shifted.png", a.encodePng())
-
-block:
   let path = newPath()
   path.rect(40, 40, 20, 20)
 

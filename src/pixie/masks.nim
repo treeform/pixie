@@ -50,9 +50,13 @@ proc getValueUnsafe*(mask: Mask, x, y: int): uint8 {.inline.} =
   result = mask.data[mask.width * y + x]
 
 proc `[]`*(mask: Mask, x, y: int): uint8 {.inline.} =
-  ## Gets a pixel at (x, y) or returns transparent black if outside of bounds.
+  ## Gets a value at (x, y) or returns transparent black if outside of bounds.
   if mask.inside(x, y):
     return mask.getValueUnsafe(x, y)
+
+proc getValue*(mask: Mask, x, y: int): uint8 {.inline.} =
+  ## Gets a value at (x, y) or returns transparent black if outside of bounds.
+  mask[x, y]
 
 proc setValueUnsafe*(mask: Mask, x, y: int, value: uint8) {.inline.} =
   ## Sets a value from (x, y) coordinates.
@@ -65,6 +69,10 @@ proc `[]=`*(mask: Mask, x, y: int, value: uint8) {.inline.} =
   ## Sets a value at (x, y) or does nothing if outside of bounds.
   if mask.inside(x, y):
     mask.setValueUnsafe(x, y, value)
+
+proc setValue*(mask: Mask, x, y: int, value: uint8) {.inline.} =
+  ## Sets a value at (x, y) or does nothing if outside of bounds.
+  mask[x, y] = value
 
 proc minifyBy2*(mask: Mask, power = 1): Mask =
   ## Scales the mask down by an integer scale.
