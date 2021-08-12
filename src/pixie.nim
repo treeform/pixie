@@ -69,10 +69,6 @@ proc encodeMask*(mask: Mask, fileFormat: FileFormat): string =
   else:
     raise newException(PixieError, "Unsupported file format")
 
-proc writeFile*(image: Image, filePath: string, fileFormat: FileFormat) =
-  ## Writes an image to a file.
-  writeFile(filePath, image.encodeImage(fileFormat))
-
 proc writeFile*(image: Image, filePath: string) =
   ## Writes an image to a file.
   let fileFormat = case splitFile(filePath).ext.toLowerAscii():
@@ -81,11 +77,7 @@ proc writeFile*(image: Image, filePath: string) =
     of ".jpg", ".jpeg": ffJpg
     else:
       raise newException(PixieError, "Unsupported file extension")
-  image.writeFile(filePath, fileformat)
-
-proc writeFile*(mask: Mask, filePath: string, fileFormat: FileFormat) =
-  ## Writes an mask to a file.
-  writeFile(filePath, mask.encodeMask(fileFormat))
+  writeFile(filePath, image.encodeImage(fileFormat))
 
 proc writeFile*(mask: Mask, filePath: string) =
   ## Writes a mask to a file.
@@ -95,7 +87,7 @@ proc writeFile*(mask: Mask, filePath: string) =
     of ".jpg", ".jpeg": ffJpg
     else:
       raise newException(PixieError, "Unsupported file extension")
-  mask.writeFile(filePath, fileformat)
+  writeFile(filePath, mask.encodeMask(fileFormat))
 
 proc fillRect*(
   mask: Mask,

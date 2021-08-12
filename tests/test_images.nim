@@ -43,7 +43,7 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   b.fill(rgba(0, 255, 0, 255))
 
-  a.draw(b, vec2(0, 0))
+  a.draw(b, translate(vec2(0, 0)))
 
   a.writeFile("tests/images/flipped1.png")
   a.flipVertical()

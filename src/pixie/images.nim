@@ -71,6 +71,10 @@ proc `[]`*(image: Image, x, y: int): ColorRGBX {.inline.} =
   if image.inside(x, y):
     return image.getRgbaUnsafe(x, y)
 
+proc getColor*(image: Image, x, y: int): Color =
+  ## Gets a color at (x, y) or returns transparent black if outside of bounds.
+  image[x, y].color()
+
 proc setRgbaUnsafe*(image: Image, x, y: int, color: SomeColor) {.inline.} =
   ## Sets a color from (x, y) coordinates.
   ## * No bounds checking *
@@ -82,6 +86,10 @@ proc `[]=`*(image: Image, x, y: int, color: SomeColor) {.inline.} =
   ## Sets a pixel at (x, y) or does nothing if outside of bounds.
   if image.inside(x, y):
     image.setRgbaUnsafe(x, y, color.asRgbx())
+
+proc setColor*(image: Image, x, y: int, color: Color) =
+  ## Sets a color at (x, y) or does nothing if outside of bounds.
+  image[x, y] = color.rgbx()
 
 proc fillUnsafe*(data: var seq[ColorRGBX], color: SomeColor, start, len: int) =
   ## Fills the image data with the parameter color starting at index start and
@@ -807,7 +815,7 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
         zeroMem(a.data[a.dataIndex(xMax, y)].addr, 4 * (a.width - xMax))
 
 proc draw*(
-  a, b: Image, transform: Vec2 | Mat3 = vec2(), blendMode = bmNormal
+  a, b: Image, transform: Mat3 = mat3(), blendMode = bmNormal
 ) {.inline.} =
   ## Draws one image onto another using matrix with color blending.
   when type(transform) is Vec2:
@@ -816,7 +824,7 @@ proc draw*(
     a.drawUber(b, transform, blendMode)
 
 proc draw*(
-  a, b: Mask, transform: Vec2 | Mat3 = vec2(), blendMode = bmMask
+  a, b: Mask, transform: Mat3 = mat3(), blendMode = bmMask
 ) {.inline.} =
   ## Draws a mask onto a mask using a matrix with color blending.
   when type(transform) is Vec2:
@@ -825,7 +833,7 @@ proc draw*(
     a.drawUber(b, transform, blendMode)
 
 proc draw*(
-  image: Image, mask: Mask, transform: Vec2 | Mat3 = vec2(), blendMode = bmMask
+  image: Image, mask: Mask, transform: Mat3 = mat3(), blendMode = bmMask
 ) {.inline.} =
   ## Draws a mask onto an image using a matrix with color blending.
   when type(transform) is Vec2:
@@ -834,7 +842,7 @@ proc draw*(
     image.drawUber(mask, transform, blendMode)
 
 proc draw*(
-  mask: Mask, image: Image, transform: Vec2 | Mat3 = vec2(), blendMode = bmMask
+  mask: Mask, image: Image, transform: Mat3 = mat3(), blendMode = bmMask
 ) {.inline.} =
   ## Draws a image onto a mask using a matrix with color blending.
   when type(transform) is Vec2:
@@ -860,25 +868,14 @@ proc resize*(srcImage: Image, width, height: int): Image =
       bmOverwrite
     )
 
-proc shift*(target: Image | Mask, offset: Vec2) =
-  ## Shifts the target by offset.
-  if offset != vec2(0, 0):
-    let copy = target.copy() # Copy to read from
-
-    # Reset target for being drawn to
-    when type(target) is Image:
-      target.fill(rgbx(0, 0, 0, 0))
-    else:
-      target.fill(0)
-
-    target.draw(copy, offset, bmOverwrite) # Draw copy at offset
-
 proc shadow*(
   image: Image, offset: Vec2, spread, blur: float32, color: SomeColor
 ): Image =
   ## Create a shadow of the image with the offset, spread and blur.
-  let mask = image.newMask()
-  mask.shift(offset)
+  let
+    mask = image.newMask()
+    shifted = newMask(mask.width, mask.height)
+  shifted.draw(mask, translate(offset), bmOverwrite)
   mask.spread(spread)
   mask.blur(blur)
   result = newImage(mask.width, mask.height)
