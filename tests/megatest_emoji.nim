@@ -48,10 +48,12 @@ proc renderEmojiSet(index: int) =
 
   for i in 0 ..< rows:
     for j in 0 ..< max(images.len - i * columns, 0):
-      let (_, icon) = images[i * columns + j]
+      let
+        (_, icon) = images[i * columns + j]
+        pos = vec2(((width + 4) * j + 2).float32, ((height + 4) * i + 2).float32)
       rendered.draw(
         icon,
-        vec2(((width + 4) * j + 2).float32, ((height + 4) * i + 2).float32),
+        translate(pos),
         bmOverwrite
       )
 

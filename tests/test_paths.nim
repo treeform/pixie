@@ -371,7 +371,7 @@ block:
   )
 
   let paint = newPaint(pkSolid)
-  paint.color = rgbx(0, 255, 0, 255)
+  paint.color = color(0, 1, 0, 1)
   paint.blendMode = bmExcludeMask
 
   image.fillPath(
@@ -388,7 +388,7 @@ block:
   )
 
   let paint = newPaint(pkSolid)
-  paint.color = rgbx(0, 255, 0, 255)
+  paint.color = color(0, 1, 0, 1)
   paint.blendMode = bmExcludeMask
 
   image.fillPath(
@@ -405,7 +405,7 @@ block:
   )
 
   let paint = newPaint(pkSolid)
-  paint.color = rgbx(0, 255, 0, 255)
+  paint.color = color(0, 1, 0, 1)
   paint.blendMode = bmMask
 
   image.fillPath(
@@ -422,7 +422,7 @@ block:
   )
 
   let paint = newPaint(pkSolid)
-  paint.color = rgbx(0, 255, 0, 255)
+  paint.color = color(0, 1, 0, 1)
   paint.blendMode = bmMask
 
   image.fillPath(
@@ -594,7 +594,7 @@ block:
   path.circle(50, 50, 30)
 
   let paint = newPaint(pkSolid)
-  paint.color = rgba(255, 0, 255, 255)
+  paint.color = color(1, 0, 1, 1)
   paint.opacity = 0.5
 
   let image = newImage(100, 100)
@@ -607,7 +607,7 @@ block:
   path.circle(50, 50, 30)
 
   let paint = newPaint(pkSolid)
-  paint.color = rgba(255, 0, 255, 255)
+  paint.color = color(1, 0, 1, 1)
   paint.opacity = 0.5
 
   let image = newImage(100, 100)

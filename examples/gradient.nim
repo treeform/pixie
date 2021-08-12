@@ -10,8 +10,8 @@ paint.gradientHandlePositions = @[
   vec2(100, 200)
 ]
 paint.gradientStops = @[
-  ColorStop(color: rgba(255, 0, 0, 255), position: 0),
-  ColorStop(color: rgba(255, 0, 0, 40), position: 1.0),
+  ColorStop(color: color(1, 0, 0, 1), position: 0),
+  ColorStop(color: color(1, 0, 0, 0.15625), position: 1.0),
 ]
 
 image.fillPath(

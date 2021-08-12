@@ -1791,7 +1791,7 @@ proc fillPath*(
       shapes.transform(transform)
       var color = paint.color
       if paint.opacity != 1:
-        color = color.applyOpacity(paint.opacity)
+        color.a *= paint.opacity
       image.fillShapes(shapes, color, windingRule, paint.blendMode)
     return
 
@@ -1875,7 +1875,7 @@ proc strokePath*(
       strokeShapes.transform(transform)
       var color = paint.color
       if paint.opacity != 1:
-        color = color.applyOpacity(paint.opacity)
+        color.a *= paint.opacity
       image.fillShapes(strokeShapes, color, wrNonZero, paint.blendMode)
     return
 
