@@ -876,11 +876,11 @@ proc shadow*(
     mask = image.newMask()
     shifted = newMask(mask.width, mask.height)
   shifted.draw(mask, translate(offset), bmOverwrite)
-  mask.spread(spread)
-  mask.blur(blur)
-  result = newImage(mask.width, mask.height)
+  shifted.spread(spread)
+  shifted.blur(blur)
+  result = newImage(shifted.width, shifted.height)
   result.fill(color)
-  result.draw(mask, blendMode = bmMask)
+  result.draw(shifted, blendMode = bmMask)
 
 when defined(release):
   {.pop.}

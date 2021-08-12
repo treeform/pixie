@@ -315,19 +315,19 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
 
 proc fill(img: Image, ctx: Ctx, path: Path) {.inline.} =
   if ctx.display and ctx.opacity > 0:
-    var paint = ctx.fill
+    let paint = newPaint(ctx.fill)
     if ctx.opacity != 1:
       paint.opacity = paint.opacity * ctx.opacity
     img.fillPath(path, paint, ctx.transform, ctx.fillRule)
 
 proc stroke(img: Image, ctx: Ctx, path: Path) {.inline.} =
   if ctx.display and ctx.opacity > 0:
-    var color = ctx.stroke
+    let paint = newPaint(ctx.stroke)
     if ctx.opacity != 1:
-      color = color.applyOpacity(ctx.opacity * ctx.strokeOpacity)
+      paint.color.a *= (ctx.opacity * ctx.strokeOpacity)
     img.strokePath(
       path,
-      color,
+      paint,
       ctx.transform,
       ctx.strokeWidth,
       ctx.strokeLineCap,
@@ -532,7 +532,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
           )
 
         linearGradient.stops.add(ColorStop(
-          color: color.parseHtmlColor().rgbx(),
+          color: color.parseHtmlColor(),
           position: parseFloat(child.attr("offset"))
         ))
       else:

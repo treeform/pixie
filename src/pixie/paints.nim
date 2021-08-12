@@ -1,4 +1,4 @@
-import blends, chroma, common, images, internal, vmath
+import blends, chroma, common, images, vmath
 
 type
   PaintKind* = enum
@@ -15,7 +15,7 @@ type
     blendMode*: BlendMode               ## Blend mode.
     opacity*: float32
     # pkSolid
-    color*: ColorRGBX                   ## Color to fill with.
+    color*: Color                   ## Color to fill with.
     # pkImage, pkImageTiled:
     image*: Image                       ## Image to fill with.
     imageMat*: Mat3                     ## Matrix of the filled image.
@@ -25,7 +25,7 @@ type
 
   ColorStop* = object
     ## Color stop on a gradient curve.
-    color*: ColorRGBX  ## Color of the stop.
+    color*: Color  ## Color of the stop.
     position*: float32 ## Gradient stop position 0..1.
 
   SomePaint* = string | Paint | SomeColor
@@ -49,13 +49,13 @@ converter parseSomePaint*(paint: SomePaint): Paint {.inline.} =
   ## Given SomePaint, parse it in different ways.
   when type(paint) is string:
     result = newPaint(pkSolid)
-    result.color = parseHtmlColor(paint).rgbx()
+    result.color = parseHtmlColor(paint)
   elif type(paint) is SomeColor:
     result = newPaint(pkSolid)
-    when type(paint) is ColorRGBX:
+    when type(paint) is Color:
       result.color = paint
     else:
-      result.color = paint.rgbx()
+      result.color = paint.color()
   elif type(paint) is Paint:
     paint
 
@@ -76,7 +76,7 @@ proc gradientPut(
       index = i
     if stop.position > t:
       break
-  var color: ColorRGBX
+  var color: Color
   if index == -1:
     # first stop solid
     color = stops[0].color
@@ -92,9 +92,8 @@ proc gradientPut(
       gs2.color,
       (t - gs1.position) / (gs2.position - gs1.position)
     )
-  if paint.opacity != 1:
-    color = color.applyOpacity(paint.opacity)
-  image.setRgbaUnsafe(x, y, color.rgba.rgbx())
+  color.a *= paint.opacity
+  image.setRgbaUnsafe(x, y, color.rgbx())
 
 proc fillGradientLinear(image: Image, paint: Paint) =
   ## Fills a linear gradient.

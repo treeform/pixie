@@ -640,8 +640,8 @@ block:
     vec2(100, 50),
   ]
   font.paint.gradientStops = @[
-    ColorStop(color: rgba(255, 0, 0, 255), position: 0),
-    ColorStop(color: rgba(255, 0, 0, 127), position: 1.0),
+    ColorStop(color: color(1, 0, 0, 1), position: 0),
+    ColorStop(color: color(1, 0, 0, 0.5), position: 1.0),
   ]
 
   let image = newImage(100, 100)
@@ -765,7 +765,7 @@ block:
 
   var font8 = newFont(ubuntu)
   font8.size = 54
-  font8.paint.color = rgba(255, 0, 0, 255)
+  font8.paint.color = color(1, 0, 0, 1)
 
   var font9 = newFont(roboto)
   font9.size = 48
