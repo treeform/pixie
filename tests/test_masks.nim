@@ -98,62 +98,92 @@ block:
   writeFile("tests/images/masks/circleMaskSharpened.png", mask.encodePng())
 
 block:
+  let path = newPath()
+  path.rect(rect(vec2(10, 10), vec2(30, 30)))
+
   let mask = newMask(100, 100)
-  mask.fillRect(rect(vec2(10, 10), vec2(30, 30)))
+  mask.fillPath(path)
   writeFile("tests/images/masks/drawRect.png", mask.encodePng())
 
 block:
+  let path = newPath()
+  path.rect(rect(vec2(10, 10), vec2(30, 30)))
+
   let mask = newMask(100, 100)
-  mask.strokeRect(rect(vec2(10, 10), vec2(30, 30)), strokeWidth = 10)
+  mask.strokePath(path, strokeWidth = 10)
   writeFile("tests/images/masks/strokeRect.png", mask.encodePng())
 
 block:
+  let path = newPath()
+  path.roundedRect(rect(vec2(10, 10), vec2(30, 30)), 10, 10, 10, 10)
+
   let mask = newMask(100, 100)
-  mask.fillRoundedRect(rect(vec2(10, 10), vec2(30, 30)), 10)
+  mask.fillPath(path)
   writeFile("tests/images/masks/drawRoundedRect.png", mask.encodePng())
 
 block:
+  let path = newPath()
+  path.roundedRect(rect(vec2(10, 10), vec2(30, 30)), 10, 10, 10, 10)
   let mask = newMask(100, 100)
-  mask.strokeRoundedRect(rect(vec2(10, 10), vec2(30, 30)), 10, strokeWidth = 10)
+  mask.strokePath(path, strokeWidth = 10)
   writeFile("tests/images/masks/strokeRoundedRect.png", mask.encodePng())
 
 block:
+  let path = newPath()
+  path.moveTo(vec2(10, 10))
+  path.lineTo(vec2(90, 90))
+
   let mask = newMask(100, 100)
-  mask.strokeSegment(
-    segment(vec2(10, 10), vec2(90, 90)),
-    strokeWidth = 10
-  )
+  mask.strokePath(path, strokeWidth = 10)
   writeFile("tests/images/masks/drawSegment.png", mask.encodePng())
 
 block:
+  let path = newPath()
+  path.ellipse(vec2(50, 50), 20, 10)
+
   let mask = newMask(100, 100)
-  mask.fillEllipse(vec2(50, 50), 20, 10)
+  mask.fillPath(path)
   writeFile("tests/images/masks/drawEllipse.png", mask.encodePng())
 
 block:
+  let path = newPath()
+  path.ellipse(vec2(50, 50), 20, 10)
+
   let mask = newMask(100, 100)
-  mask.strokeEllipse(vec2(50, 50), 20, 10, strokeWidth = 10)
+  mask.strokePath(path, strokeWidth = 10)
   writeFile("tests/images/masks/strokeEllipse.png", mask.encodePng())
 
 block:
+  let path = newPath()
+  path.polygon(vec2(50, 50), 30, 6)
+
   let mask = newMask(100, 100)
-  mask.fillPolygon(vec2(50, 50), 30, 6)
+  mask.fillPath(path)
   writeFile("tests/images/masks/drawPolygon.png", mask.encodePng())
 
 block:
+  let path = newPath()
+  path.polygon(vec2(50, 50), 30, 6)
+
   let mask = newMask(100, 100)
-  mask.strokePolygon(vec2(50, 50), 30, 6, strokeWidth = 10)
+  mask.strokepath(path, strokeWidth = 10)
   writeFile("tests/images/masks/strokePolygon.png", mask.encodePng())
 
 block:
+  let path = newPath()
+  path.rect(rect(25, 25, 50, 50))
+
   let mask = newMask(100, 100)
-  mask.fillRect(rect(25, 25, 50, 50))
+  mask.fillpath(path)
   mask.blur(20)
   writeFile("tests/images/maskblur20.png", mask.encodePng())
 
 block:
+  let path = newPath()
+  path.rect(rect(25, 25, 150, 150))
+
   let mask = newMask(200, 200)
-  mask.fillRect(rect(25, 25, 150, 150))
+  mask.fillPath(path)
   mask.blur(25)
 
   let minified = mask.minifyBy2()

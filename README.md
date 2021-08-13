@@ -308,8 +308,11 @@ image.draw(polygonImage)
 ### Blur
 [examples/blur.nim](examples/blur.nim)
 ```nim
+let path = newPath()
+path.polygon(vec2(100, 100), 70, sides = 6)
+
 let mask = newMask(200, 200)
-mask.fillPolygon(vec2(100, 100), 70, sides = 6)
+mask.fillPath(path)
 
 blur.blur(20)
 blur.draw(mask, blendMode = bmMask)
