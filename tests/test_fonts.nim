@@ -154,7 +154,7 @@ block:
   let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, "First line")
-  image.fillText(font, "Second line", vec2(0, font.defaultLineHeight))
+  image.fillText(font, "Second line", translate(vec2(0, font.defaultLineHeight)))
 
   doDiff(image, "basic7")
 
@@ -826,7 +826,7 @@ block:
 
   let arrangement = typeset(spans, bounds = vec2(360, 360))
 
-  image.fillText(arrangement, vec2(20, 20))
+  image.fillText(arrangement, translate(vec2(20, 20)))
 
   doDiff(image, "spans5")
 
@@ -965,7 +965,7 @@ block:
 
   let arrangement = typeset(spans, bounds = vec2(360, 360))
 
-  image.fillText(arrangement, vec2(20, 20))
+  image.fillText(arrangement, translate(vec2(20, 20)))
 
   doDiff(image, "spans6")
 

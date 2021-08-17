@@ -815,7 +815,7 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
         zeroMem(a.data[a.dataIndex(xMax, y)].addr, 4 * (a.width - xMax))
 
 proc draw*(
-  a, b: Image, transform: Mat3 = mat3(), blendMode = bmNormal
+  a, b: Image, transform = mat3(), blendMode = bmNormal
 ) {.inline.} =
   ## Draws one image onto another using matrix with color blending.
   when type(transform) is Vec2:
@@ -824,7 +824,7 @@ proc draw*(
     a.drawUber(b, transform, blendMode)
 
 proc draw*(
-  a, b: Mask, transform: Mat3 = mat3(), blendMode = bmMask
+  a, b: Mask, transform = mat3(), blendMode = bmMask
 ) {.inline.} =
   ## Draws a mask onto a mask using a matrix with color blending.
   when type(transform) is Vec2:
@@ -833,7 +833,7 @@ proc draw*(
     a.drawUber(b, transform, blendMode)
 
 proc draw*(
-  image: Image, mask: Mask, transform: Mat3 = mat3(), blendMode = bmMask
+  image: Image, mask: Mask, transform = mat3(), blendMode = bmMask
 ) {.inline.} =
   ## Draws a mask onto an image using a matrix with color blending.
   when type(transform) is Vec2:
@@ -842,7 +842,7 @@ proc draw*(
     image.drawUber(mask, transform, blendMode)
 
 proc draw*(
-  mask: Mask, image: Image, transform: Mat3 = mat3(), blendMode = bmMask
+  mask: Mask, image: Image, transform = mat3(), blendMode = bmMask
 ) {.inline.} =
   ## Draws a image onto a mask using a matrix with color blending.
   when type(transform) is Vec2:

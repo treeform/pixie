@@ -505,9 +505,9 @@ proc circle*(ctx: Context, cx, cy, r: float32) {.inline.} =
   ## Adds a circle to the current path.
   ctx.path.circle(cx, cy, r)
 
-proc circle*(ctx: Context, center: Vec2, r: float32) {.inline.} =
+proc circle*(ctx: Context, circle: Circle) {.inline.} =
   ## Adds a circle to the current path.
-  ctx.path.circle(center, r)
+  ctx.path.circle(circle)
 
 proc polygon*(ctx: Context, x, y, size: float32, sides: int) {.inline.} =
   ## Adds an n-sided regular polygon at (x, y) of size to the current path.
@@ -563,7 +563,7 @@ proc strokeEllipse*(ctx: Context, center: Vec2, rx, ry: float32) =
 proc fillCircle*(ctx: Context, circle: Circle) =
   ## Draws a circle that is filled according to the current fillStyle
   let path = newPath()
-  path.circle(circle.pos, circle.radius)
+  path.circle(circle)
   ctx.fill(path)
 
 proc fillCircle*(ctx: Context, center: Vec2, radius: float32) =
@@ -576,7 +576,7 @@ proc strokeCircle*(ctx: Context, circle: Circle) =
   ## Draws a circle that is stroked (outlined) according to the current
   ## strokeStyle and other context settings.
   let path = newPath()
-  path.circle(circle.pos, circle.radius)
+  path.circle(circle)
   ctx.stroke(path)
 
 proc strokeCircle*(ctx: Context, center: Vec2, radius: float32) =

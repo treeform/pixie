@@ -437,7 +437,7 @@ proc parseSvgFont*(buf: string): Typeface =
 proc textUber(
   target: Image | Mask,
   arrangement: Arrangement,
-  transform: Vec2 | Mat3 = vec2(0, 0),
+  transform = mat3(),
   strokeWidth = 1.0,
   lineCap = lcButt,
   lineJoin = ljMiter,
@@ -518,7 +518,7 @@ proc textUber(
 proc fillText*(
   target: Image | Mask,
   arrangement: Arrangement,
-  transform: Vec2 | Mat3 = vec2(0, 0)
+  transform = mat3()
 ) {.inline.} =
   ## Fills the text arrangement.
   textUber(
@@ -531,7 +531,7 @@ proc fillText*(
   target: Image | Mask,
   font: Font,
   text: string,
-  transform: Vec2 | Mat3 = vec2(0, 0),
+  transform = mat3(),
   bounds = vec2(0, 0),
   hAlign = haLeft,
   vAlign = vaTop
@@ -546,7 +546,7 @@ proc fillText*(
 proc strokeText*(
   target: Image | Mask,
   arrangement: Arrangement,
-  transform: Vec2 | Mat3 = vec2(0, 0),
+  transform = mat3(),
   strokeWidth = 1.0,
   lineCap = lcButt,
   lineJoin = ljMiter,
@@ -570,7 +570,7 @@ proc strokeText*(
   target: Image | Mask,
   font: Font,
   text: string,
-  transform: Vec2 | Mat3 = vec2(0, 0),
+  transform = mat3(),
   strokeWidth = 1.0,
   bounds = vec2(0, 0),
   hAlign = haLeft,

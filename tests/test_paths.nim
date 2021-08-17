@@ -213,7 +213,9 @@ block:
     image = newImage(60, 60)
     path = parsePath("M 3 3 L 20 3 L 20 20 L 3 20 Z")
   image.fill(rgba(255, 255, 255, 255))
-  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcRound, ljRound)
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcRound, ljRound
+  )
 
   image.writeFile("tests/images/paths/boxRound.png")
 
@@ -222,7 +224,9 @@ block:
     image = newImage(60, 60)
     path = parsePath("M 3 3 L 20 3 L 20 20 L 3 20 Z")
   image.fill(rgba(255, 255, 255, 255))
-  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcRound, ljBevel)
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcRound, ljBevel
+  )
 
   image.writeFile("tests/images/paths/boxBevel.png")
 
@@ -231,7 +235,9 @@ block:
     image = newImage(60, 60)
     path = parsePath("M 3 3 L 20 3 L 20 20 L 3 20 Z")
   image.fill(rgba(255, 255, 255, 255))
-  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcRound, ljMiter)
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcRound, ljMiter
+  )
 
   image.writeFile("tests/images/paths/boxMiter.png")
 
@@ -240,7 +246,9 @@ block:
     image = newImage(60, 60)
     path = parsePath("M 3 3 L 20 3 L 20 20 L 3 20")
   image.fill(rgba(255, 255, 255, 255))
-  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcButt, ljBevel)
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcButt, ljBevel
+  )
 
   image.writeFile("tests/images/paths/lcButt.png")
 
@@ -249,7 +257,9 @@ block:
     image = newImage(60, 60)
     path = parsePath("M 3 3 L 20 3 L 20 20 L 3 20")
   image.fill(rgba(255, 255, 255, 255))
-  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcRound, ljBevel)
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcRound, ljBevel
+  )
 
   image.writeFile("tests/images/paths/lcRound.png")
 
@@ -258,7 +268,9 @@ block:
     image = newImage(60, 60)
     path = parsePath("M 3 3 L 20 3 L 20 20 L 3 20")
   image.fill(rgba(255, 255, 255, 255))
-  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcSquare, ljBevel)
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcSquare, ljBevel
+  )
 
   image.writeFile("tests/images/paths/lcSquare.png")
 
@@ -269,31 +281,31 @@ block:
   image.fill(rgba(255, 255, 255, 255))
 
   image.strokePath(
-    path, rgba(0, 0, 0, 255), vec2(5, 5), 10, lcButt, ljBevel,
+    path, rgba(0, 0, 0, 255), translate(vec2(5, 5)), 10, lcButt, ljBevel,
   )
 
   image.strokePath(
-    path, rgba(0, 0, 0, 255), vec2(5, 25), 10, lcButt, ljBevel,
+    path, rgba(0, 0, 0, 255), translate(vec2(5, 25)), 10, lcButt, ljBevel,
     dashes = @[2.float32, 2]
   )
 
   image.strokePath(
-    path, rgba(0, 0, 0, 255), vec2(5, 45), 10, lcButt, ljBevel,
+    path, rgba(0, 0, 0, 255), translate(vec2(5, 45)), 10, lcButt, ljBevel,
     dashes = @[4.float32, 4]
   )
 
   image.strokePath(
-    path, rgba(0, 0, 0, 255), vec2(5, 65), 10, lcButt, ljBevel,
+    path, rgba(0, 0, 0, 255), translate(vec2(5, 65)), 10, lcButt, ljBevel,
     dashes = @[2.float32, 4, 6, 2]
   )
 
   image.strokePath(
-    path, rgba(0, 0, 0, 255), vec2(5, 85), 10, lcButt, ljBevel,
+    path, rgba(0, 0, 0, 255), translate(vec2(5, 85)), 10, lcButt, ljBevel,
     dashes = @[1.float32]
   )
 
   image.strokePath(
-    path, rgba(0, 0, 0, 255), vec2(5, 105), 10, lcButt, ljBevel,
+    path, rgba(0, 0, 0, 255), translate(vec2(5, 105)), 10, lcButt, ljBevel,
     dashes = @[1.float32, 2, 3, 4, 5, 6, 7, 8, 9]
   )
 
@@ -311,7 +323,7 @@ block:
     path.lineTo(sin(th)*20, cos(th)*20)
 
     image.strokePath(
-      path, rgba(0, 0, 0, 255), vec2(30, 30), 8, lcButt, ljMiter,
+      path, rgba(0, 0, 0, 255), translate(vec2(30, 30)), 8, lcButt, ljMiter,
       miterLimit = limit
     )
     image.writeFile(&"tests/images/paths/miterLimit_{angle.int}deg_{limit:0.2f}num.png")
@@ -340,28 +352,36 @@ block:
     image = newImage(60, 60)
     path = parsePath("M 3 3 L 3 3 L 3 3")
   image.fill(rgba(255, 255, 255, 255))
-  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcSquare, ljMiter)
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcSquare, ljMiter
+  )
 
 block:
   let
     image = newImage(60, 60)
     path = parsePath("L 0 0 L 0 0")
   image.fill(rgba(255, 255, 255, 255))
-  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcSquare, ljMiter)
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcSquare, ljMiter
+  )
 
 block:
   let
     image = newImage(60, 60)
     path = parsePath("L 1 1")
   image.fill(rgba(255, 255, 255, 255))
-  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcSquare, ljMiter)
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcSquare, ljMiter
+  )
 
 block:
   let
     image = newImage(60, 60)
     path = parsePath("L 0 0")
   image.fill(rgba(255, 255, 255, 255))
-  image.strokePath(path, rgba(0, 0, 0, 255), vec2(10, 10), 10, lcSquare, ljMiter)
+  image.strokePath(
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcSquare, ljMiter
+  )
 
 block:
   let image = newImage(100, 100)
