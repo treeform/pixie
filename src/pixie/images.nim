@@ -170,30 +170,6 @@ proc subImage*(image: Image, x, y, w, h: int): Image =
       w * 4
     )
 
-proc superImage*(image: Image, x, y, w, h: int): Image =
-  ## Either cuts a sub image or returns a super image with padded transparency.
-  if x >= 0 and x + w <= image.width and y >= 0 and y + h <= image.height:
-    result = image.subImage(x, y, w, h)
-  elif abs(x) >= image.width or abs(y) >= image.height:
-    # Nothing to copy, just an empty new image
-    result = newImage(w, h)
-  else:
-    let
-      readOffsetX = max(x, 0)
-      readOffsetY = max(y, 0)
-      writeOffsetX = max(0 - x, 0)
-      writeOffsetY = max(0 - y, 0)
-      copyWidth = max(min(image.width, w) - abs(x), 0)
-      copyHeight = max(min(image.height, h) - abs(y), 0)
-
-    result = newImage(w, h)
-    for y2 in 0 ..< copyHeight:
-      copyMem(
-        result.data[result.dataIndex(writeOffsetX, writeOffsetY + y2)].addr,
-        image.data[image.dataIndex(readOffsetX, readOffsetY + y2)].addr,
-        copyWidth * 4
-      )
-
 proc diff*(master, image: Image): (float32, Image) =
   ## Compares the parameters and returns a score and image of the difference.
   let
@@ -881,6 +857,14 @@ proc shadow*(
   result = newImage(shifted.width, shifted.height)
   result.fill(color)
   result.draw(shifted, blendMode = bmMask)
+
+proc superImage*(image: Image, x, y, w, h: int): Image =
+  ## Either cuts a sub image or returns a super image with padded transparency.
+  if x >= 0 and x + w <= image.width and y >= 0 and y + h <= image.height:
+    result = image.subImage(x, y, w, h)
+  else:
+    result = newImage(w, h)
+    result.draw(image, translate(vec2(-x.float32, -y.float32)), bmOverwrite)
 
 when defined(release):
   {.pop.}
