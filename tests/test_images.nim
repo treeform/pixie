@@ -164,3 +164,36 @@ block:
   image.fillPath(p, rgba(255, 0, 0, 255))
 
   newImage(newMask(image)).writeFile("tests/images/mask2image.png")
+
+block:
+  let image = newImage(100, 100)
+  doAssert image.isOneColor()
+
+block:
+  let image = newImage(100, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  doAssert image.isOneColor()
+
+block:
+  let image = newImage(100, 100)
+  image.fill(rgba(1, 2, 3, 4))
+  doAssert image.isOneColor()
+
+block:
+  let image = newImage(100, 100)
+  image[99, 99] = rgba(255, 255, 255, 255)
+  doAssert not image.isOneColor()
+
+block:
+  let image = newImage(100, 100)
+  doAssert image.isTransparent()
+
+block:
+  let image = newImage(100, 100)
+  image.fill(rgba(255, 255, 255, 0))
+  doAssert image.isTransparent()
+
+block:
+  let image = newImage(100, 100)
+  image[99, 99] = rgba(255, 255, 255, 255)
+  doAssert not image.isTransparent()
