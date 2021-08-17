@@ -120,7 +120,7 @@ font.size = 20
 
 let text = "Typesetting is the arrangement and composition of text in graphic design and publishing in both digital and traditional medias."
 
-image.fillText(font.typeset(text, bounds = vec2(180, 180)), vec2(10, 10))
+image.fillText(font.typeset(text, vec2(180, 180)), translate(vec2(10, 10)))
 ```
 ![example output](examples/text.png)
 
@@ -143,7 +143,7 @@ let spans = @[
       newFont(typeface, 14, color(0.3125, 0.3125, 0.3125, 1)))
 ]
 
-image.fillText(typeset(spans, bounds = vec2(180, 180)), vec2(10, 10))
+image.fillText(typeset(spans, vec2(180, 180)), translate(vec2(10, 10)))
 ```
 ![example output](examples/text_spans.png)
 
