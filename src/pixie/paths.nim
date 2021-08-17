@@ -17,13 +17,13 @@ type
     ## Line join type for strokes.
     ljMiter, ljRound, ljBevel
 
-  PathCommandKind* = enum
+  PathCommandKind = enum
     ## Type of path commands
     Close,
     Move, Line, HLine, VLine, Cubic, SCubic, Quad, TQuad, Arc,
     RMove, RLine, RHLine, RVLine, RCubic, RSCubic, RQuad, RTQuad, RArc
 
-  PathCommand* = object
+  PathCommand = object
     ## Binary version of an SVG command.
     kind: PathCommandKind
     numbers: seq[float32]
@@ -50,15 +50,12 @@ proc newPath*(): Path =
   ## Create a new Path.
   Path()
 
-proc pixelScale(transform: Vec2 | Mat3): float32 =
+proc pixelScale(transform: Mat3): float32 =
   ## What is the largest scale factor of this transform?
-  when type(transform) is Vec2:
-    return 1.0
-  else:
-    max(
-      vec2(transform[0, 0], transform[0, 1]).length,
-      vec2(transform[1, 0], transform[1, 1]).length
-    )
+  max(
+    vec2(transform[0, 0], transform[0, 1]).length,
+    vec2(transform[1, 0], transform[1, 1]).length
+  )
 
 proc isRelative(kind: PathCommandKind): bool =
   kind in {
@@ -507,12 +504,6 @@ proc rect*(path: Path, x, y, w, h: float32, clockwise = true) =
     path.lineTo(x + w, y)
     path.closePath()
 
-proc rect*(path: Path, pos: Vec2, wh: Vec2, clockwise = true) {.inline.} =
-  ## Adds a rectangle.
-  ## Clockwise param can be used to subtract a rect from a path when using
-  ## even-odd winding rule.
-  path.rect(pos.x, pos.y, wh.x, wh.y, clockwise)
-
 proc rect*(path: Path, rect: Rect, clockwise = true) {.inline.} =
   ## Adds a rectangle.
   ## Clockwise param can be used to subtract a rect from a path when using
@@ -591,14 +582,6 @@ proc roundedRect*(
   path.closePath()
 
 proc roundedRect*(
-  path: Path, pos, wh: Vec2, nw, ne, se, sw: float32, clockwise = true
-) {.inline.} =
-  ## Adds a rounded rectangle.
-  ## Clockwise param can be used to subtract a rect from a path when using
-  ## even-odd winding rule.
-  path.roundedRect(pos.x, pos.y, wh.x, wh.y, nw, ne, se, sw, clockwise)
-
-proc roundedRect*(
   path: Path, rect: Rect, nw, ne, se, sw: float32, clockwise = true
 ) {.inline.} =
   ## Adds a rounded rectangle.
@@ -627,10 +610,6 @@ proc circle*(path: Path, cx, cy, r: float32) {.inline.} =
   ## Adds a circle.
   path.ellipse(cx, cy, r, r)
 
-proc circle*(path: Path, center: Vec2, r: float32) {.inline.} =
-  ## Adds a circle.
-  path.ellipse(center.x, center.y, r, r)
-
 proc circle*(path: Path, circle: Circle) {.inline.} =
   ## Adds a circle.
   path.ellipse(circle.pos.x, circle.pos.y, circle.radius, circle.radius)
@@ -648,7 +627,7 @@ proc polygon*(path: Path, pos: Vec2, size: float32, sides: int) {.inline.} =
   ## Adds a n-sided regular polygon at (x, y) with the parameter size.
   path.polygon(pos.x, pos.y, size, sides)
 
-proc commandsToShapes*(
+proc commandsToShapes(
   path: Path, closeSubpaths = false, pixelScale: float32 = 1.0
 ): seq[seq[Vec2]] =
   ## Converts SVG-like commands to sequences of vectors.
@@ -1750,22 +1729,16 @@ proc parseSomePath(
   elif type(path) is Path:
     path.commandsToShapes(closeSubpaths, pixelScale)
 
-proc transform(shapes: var seq[seq[Vec2]], transform: Vec2 | Mat3) =
-  when type(transform) is Vec2:
-    if transform != vec2():
-      for shape in shapes.mitems:
-        for segment in shape.mitems:
-          segment += transform
-  else:
-    if transform != mat3():
-      for shape in shapes.mitems:
-        for segment in shape.mitems:
-          segment = transform * segment
+proc transform(shapes: var seq[seq[Vec2]], transform: Mat3) =
+  if transform != mat3():
+    for shape in shapes.mitems:
+      for segment in shape.mitems:
+        segment = transform * segment
 
 proc fillPath*(
   mask: Mask,
   path: SomePath,
-  transform: Vec2 | Mat3 = vec2(),
+  transform = mat3(),
   windingRule = wrNonZero,
   blendMode = bmNormal
 ) =
@@ -1778,7 +1751,7 @@ proc fillPath*(
   image: Image,
   path: SomePath,
   paint: Paint,
-  transform: Vec2 | Mat3 = vec2(),
+  transform = mat3(),
   windingRule = wrNonZero
 ) =
   ## Fills a path.
@@ -1827,7 +1800,7 @@ proc fillPath*(
 proc strokePath*(
   mask: Mask,
   path: SomePath,
-  transform: Vec2 | Mat3 = vec2(),
+  transform = mat3(),
   strokeWidth = 1.0,
   lineCap = lcButt,
   lineJoin = ljMiter,
@@ -1851,7 +1824,7 @@ proc strokePath*(
   image: Image,
   path: SomePath,
   paint: Paint,
-  transform: Vec2 | Mat3 = vec2(),
+  transform = mat3(),
   strokeWidth = 1.0,
   lineCap = lcButt,
   lineJoin = ljMiter,
@@ -1948,7 +1921,7 @@ proc overlaps(
 proc fillOverlaps*(
   path: Path,
   test: Vec2,
-  transform: Vec2 | Mat3 = vec2(), ## Applied to the path, not the test point.
+  transform = mat3(), ## Applied to the path, not the test point.
   windingRule = wrNonZero
 ): bool =
   ## Returns whether or not the specified point is contained in the current path.
@@ -1959,7 +1932,7 @@ proc fillOverlaps*(
 proc strokeOverlaps*(
   path: Path,
   test: Vec2,
-  transform: Vec2 | Mat3 = vec2(), ## Applied to the path, not the test point.
+  transform = mat3(), ## Applied to the path, not the test point.
   strokeWidth = 1.0,
   lineCap = lcButt,
   lineJoin = ljMiter,

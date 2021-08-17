@@ -17,6 +17,14 @@ timeIt "fill_rgba":
   image.fill(rgba(63, 127, 191, 191))
   doAssert image[0, 0] == rgba(63, 127, 191, 191)
 
+image.fill(rgba(100, 0, 100, 100))
+timeIt "isOneColor":
+  doAssert image.isOneColor()
+
+image.fill(rgba(0, 0, 0, 0))
+timeIt "isTransparent":
+  doAssert image.isTransparent()
+
 reset()
 
 timeIt "subImage":

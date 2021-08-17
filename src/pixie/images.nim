@@ -126,6 +126,41 @@ proc fill*(image: Image, color: SomeColor) {.inline.} =
   ## Fills the image with the parameter color.
   fillUnsafe(image.data, color, 0, image.data.len)
 
+proc isOneColor(image: Image, color: ColorRGBX): bool =
+  ## Checks if the entire image is color.
+  result = true
+
+  let color = image.getRgbaUnsafe(0, 0)
+
+  var i: int
+  when defined(amd64) and not defined(pixieNoSimd):
+    let colorVec = mm_set1_epi32(cast[int32](color))
+    for j in countup(0, image.data.len - 16, 16):
+      let
+        values0 = mm_loadu_si128(image.data[j].addr)
+        values1 = mm_loadu_si128(image.data[j + 4].addr)
+        values2 = mm_loadu_si128(image.data[j + 8].addr)
+        values3 = mm_loadu_si128(image.data[j + 12].addr)
+        values01 = mm_or_si128(values0, values1)
+        values23 = mm_or_si128(values2, values3)
+        values = mm_or_si128(values01, values23)
+        mask = mm_movemask_epi8(mm_cmpeq_epi8(values, colorVec))
+      if mask != uint16.high.int:
+        return false
+      i += 16
+
+  for j in i ..< image.data.len:
+    if image.data[j] != color:
+      return false
+
+proc isOneColor*(image: Image): bool =
+  ## Checks if the entire image is the same color.
+  image.isOneColor(image.getRgbaUnsafe(0, 0))
+
+proc isTransparent*(image: Image): bool =
+  ## Checks if this image is fully transparent or not.
+  image.isOneColor(rgbx(0, 0, 0, 0))
+
 proc flipHorizontal*(image: Image) =
   ## Flips the image around the Y axis.
   let w = image.width div 2
@@ -169,30 +204,6 @@ proc subImage*(image: Image, x, y, w, h: int): Image =
       image.data[image.dataIndex(x, y + y2)].addr,
       w * 4
     )
-
-proc superImage*(image: Image, x, y, w, h: int): Image =
-  ## Either cuts a sub image or returns a super image with padded transparency.
-  if x >= 0 and x + w <= image.width and y >= 0 and y + h <= image.height:
-    result = image.subImage(x, y, w, h)
-  elif abs(x) >= image.width or abs(y) >= image.height:
-    # Nothing to copy, just an empty new image
-    result = newImage(w, h)
-  else:
-    let
-      readOffsetX = max(x, 0)
-      readOffsetY = max(y, 0)
-      writeOffsetX = max(0 - x, 0)
-      writeOffsetY = max(0 - y, 0)
-      copyWidth = max(min(image.width, w) - abs(x), 0)
-      copyHeight = max(min(image.height, h) - abs(y), 0)
-
-    result = newImage(w, h)
-    for y2 in 0 ..< copyHeight:
-      copyMem(
-        result.data[result.dataIndex(writeOffsetX, writeOffsetY + y2)].addr,
-        image.data[image.dataIndex(readOffsetX, readOffsetY + y2)].addr,
-        copyWidth * 4
-      )
 
 proc diff*(master, image: Image): (float32, Image) =
   ## Compares the parameters and returns a score and image of the difference.
@@ -815,7 +826,7 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
         zeroMem(a.data[a.dataIndex(xMax, y)].addr, 4 * (a.width - xMax))
 
 proc draw*(
-  a, b: Image, transform: Mat3 = mat3(), blendMode = bmNormal
+  a, b: Image, transform = mat3(), blendMode = bmNormal
 ) {.inline.} =
   ## Draws one image onto another using matrix with color blending.
   when type(transform) is Vec2:
@@ -824,7 +835,7 @@ proc draw*(
     a.drawUber(b, transform, blendMode)
 
 proc draw*(
-  a, b: Mask, transform: Mat3 = mat3(), blendMode = bmMask
+  a, b: Mask, transform = mat3(), blendMode = bmMask
 ) {.inline.} =
   ## Draws a mask onto a mask using a matrix with color blending.
   when type(transform) is Vec2:
@@ -833,7 +844,7 @@ proc draw*(
     a.drawUber(b, transform, blendMode)
 
 proc draw*(
-  image: Image, mask: Mask, transform: Mat3 = mat3(), blendMode = bmMask
+  image: Image, mask: Mask, transform = mat3(), blendMode = bmMask
 ) {.inline.} =
   ## Draws a mask onto an image using a matrix with color blending.
   when type(transform) is Vec2:
@@ -842,7 +853,7 @@ proc draw*(
     image.drawUber(mask, transform, blendMode)
 
 proc draw*(
-  mask: Mask, image: Image, transform: Mat3 = mat3(), blendMode = bmMask
+  mask: Mask, image: Image, transform = mat3(), blendMode = bmMask
 ) {.inline.} =
   ## Draws a image onto a mask using a matrix with color blending.
   when type(transform) is Vec2:
@@ -881,6 +892,14 @@ proc shadow*(
   result = newImage(shifted.width, shifted.height)
   result.fill(color)
   result.draw(shifted, blendMode = bmMask)
+
+proc superImage*(image: Image, x, y, w, h: int): Image =
+  ## Either cuts a sub image or returns a super image with padded transparency.
+  if x >= 0 and x + w <= image.width and y >= 0 and y + h <= image.height:
+    result = image.subImage(x, y, w, h)
+  else:
+    result = newImage(w, h)
+    result.draw(image, translate(vec2(-x.float32, -y.float32)), bmOverwrite)
 
 when defined(release):
   {.pop.}

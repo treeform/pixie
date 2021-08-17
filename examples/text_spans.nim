@@ -19,5 +19,5 @@ let spans = @[
       newFont(typeface, 14, color(0.3125, 0.3125, 0.3125, 1)))
 ]
 
-image.fillText(typeset(spans, bounds = vec2(180, 180)), vec2(10, 10))
+image.fillText(typeset(spans, vec2(180, 180)), translate(vec2(10, 10)))
 image.writeFile("examples/text_spans.png")
