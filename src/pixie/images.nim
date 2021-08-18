@@ -135,13 +135,15 @@ proc isOneColor*(image: Image): bool =
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
     let colorVec = mm_set1_epi32(cast[int32](color))
-    for j in countup(0, image.data.len - 4, 4):
+    for j in countup(0, image.data.len - 8, 8):
       let
-        values = mm_loadu_si128(image.data[j].addr)
-        mask = mm_movemask_epi8(mm_cmpeq_epi8(values, colorVec))
-      if mask != uint16.high.int:
+        values0 = mm_loadu_si128(image.data[j].addr)
+        values1 = mm_loadu_si128(image.data[j + 4].addr)
+        mask0 = mm_movemask_epi8(mm_cmpeq_epi8(values0, colorVec))
+        mask1 = mm_movemask_epi8(mm_cmpeq_epi8(values1, colorVec))
+      if mask0 != uint16.high.int or mask1 != uint16.high.int:
         return false
-      i += 4
+      i += 8
 
   for j in i ..< image.data.len:
     if image.data[j] != color:
