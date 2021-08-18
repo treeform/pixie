@@ -12,7 +12,7 @@ type
 when defined(release):
   {.push checks: off.}
 
-proc newMask*(width, height: int): Mask =
+proc newMask*(width, height: int): Mask {.raises: [PixieError].} =
   ## Creates a new mask with the parameter dimensions.
   if width <= 0 or height <= 0:
     raise newException(PixieError, "Mask width and height must be > 0")
@@ -22,59 +22,59 @@ proc newMask*(width, height: int): Mask =
   result.height = height
   result.data = newSeq[uint8](width * height)
 
-proc wh*(mask: Mask): Vec2 {.inline.} =
+proc wh*(mask: Mask): Vec2 {.inline, raises: [].} =
   ## Return with and height as a size vector.
   vec2(mask.width.float32, mask.height.float32)
 
-proc copy*(mask: Mask): Mask =
+proc copy*(mask: Mask): Mask {.raises: [PixieError].} =
   ## Copies the image data into a new image.
   result = newMask(mask.width, mask.height)
   result.data = mask.data
 
-proc `$`*(mask: Mask): string =
+proc `$`*(mask: Mask): string {.raises: [].} =
   ## Prints the mask size.
   "<Mask " & $mask.width & "x" & $mask.height & ">"
 
-proc inside*(mask: Mask, x, y: int): bool {.inline.} =
+proc inside*(mask: Mask, x, y: int): bool {.inline, raises: [].} =
   ## Returns true if (x, y) is inside the mask.
   x >= 0 and x < mask.width and y >= 0 and y < mask.height
 
-proc dataIndex*(mask: Mask, x, y: int): int {.inline.} =
+proc dataIndex*(mask: Mask, x, y: int): int {.inline, raises: [].} =
   mask.width * y + x
 
-proc getValueUnsafe*(mask: Mask, x, y: int): uint8 {.inline.} =
+proc getValueUnsafe*(mask: Mask, x, y: int): uint8 {.inline, raises: [].} =
   ## Gets a value from (x, y) coordinates.
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will case unsafe memory reads.
   result = mask.data[mask.width * y + x]
 
-proc `[]`*(mask: Mask, x, y: int): uint8 {.inline.} =
+proc `[]`*(mask: Mask, x, y: int): uint8 {.inline, raises: [].} =
   ## Gets a value at (x, y) or returns transparent black if outside of bounds.
   if mask.inside(x, y):
     return mask.getValueUnsafe(x, y)
 
-proc getValue*(mask: Mask, x, y: int): uint8 {.inline.} =
+proc getValue*(mask: Mask, x, y: int): uint8 {.inline, raises: [].} =
   ## Gets a value at (x, y) or returns transparent black if outside of bounds.
   mask[x, y]
 
-proc setValueUnsafe*(mask: Mask, x, y: int, value: uint8) {.inline.} =
+proc setValueUnsafe*(mask: Mask, x, y: int, value: uint8) {.inline, raises: [].} =
   ## Sets a value from (x, y) coordinates.
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will case unsafe memory writes.
   mask.data[mask.dataIndex(x, y)] = value
 
-proc `[]=`*(mask: Mask, x, y: int, value: uint8) {.inline.} =
+proc `[]=`*(mask: Mask, x, y: int, value: uint8) {.inline, raises: [].} =
   ## Sets a value at (x, y) or does nothing if outside of bounds.
   if mask.inside(x, y):
     mask.setValueUnsafe(x, y, value)
 
-proc setValue*(mask: Mask, x, y: int, value: uint8) {.inline.} =
+proc setValue*(mask: Mask, x, y: int, value: uint8) {.inline, raises: [].} =
   ## Sets a value at (x, y) or does nothing if outside of bounds.
   mask[x, y] = value
 
-proc minifyBy2*(mask: Mask, power = 1): Mask =
+proc minifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
   ## Scales the mask down by an integer scale.
   if power < 0:
     raise newException(PixieError, "Cannot minifyBy2 with negative power")
@@ -157,16 +157,18 @@ proc minifyBy2*(mask: Mask, power = 1): Mask =
     # Set src as this result for if we do another power
     src = result
 
-proc fillUnsafe*(data: var seq[uint8], value: uint8, start, len: int) =
+proc fillUnsafe*(
+  data: var seq[uint8], value: uint8, start, len: int
+) {.raises: [].} =
   ## Fills the mask data with the parameter value starting at index start and
   ## continuing for len indices.
   nimSetMem(data[start].addr, value.cint, len)
 
-proc fill*(mask: Mask, value: uint8) {.inline.} =
+proc fill*(mask: Mask, value: uint8) {.inline, raises: [].} =
   ## Fills the mask with the parameter value.
   fillUnsafe(mask.data, value, 0, mask.data.len)
 
-proc getValueSmooth*(mask: Mask, x, y: float32): uint8 =
+proc getValueSmooth*(mask: Mask, x, y: float32): uint8 {.raises: [].} =
   ## Gets a interpolated value with float point coordinates.
   let
     x0 = x.int
@@ -194,7 +196,7 @@ proc getValueSmooth*(mask: Mask, x, y: float32): uint8 =
   else:
     topMix
 
-proc spread*(mask: Mask, spread: float32) =
+proc spread*(mask: Mask, spread: float32) {.raises: [PixieError].} =
   ## Grows the mask by spread.
   let spread = round(spread).int
   if spread == 0:
@@ -227,7 +229,7 @@ proc spread*(mask: Mask, spread: float32) =
           break
       mask.setValueUnsafe(x, y, maxValue)
 
-proc ceil*(mask: Mask) =
+proc ceil*(mask: Mask) {.raises: [].} =
   ## A value of 0 stays 0. Anything else turns into 255.
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
@@ -245,7 +247,7 @@ proc ceil*(mask: Mask) =
     if mask.data[j] != 0:
       mask.data[j] = 255
 
-proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) =
+proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) {.raises: [PixieError].} =
   ## Applies Gaussian blur to the image given a radius.
   let radius = round(radius).int
   if radius == 0:

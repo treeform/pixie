@@ -334,32 +334,34 @@ type
 when defined(release):
   {.push checks: off.}
 
-proc eofCheck(buf: string, readTo: int) {.inline.} =
+template eofCheck(buf: string, readTo: int) =
   if readTo > buf.len:
     raise newException(PixieError, "Unexpected error reading font data, EOF")
 
-proc failUnsupported() =
+template failUnsupported() =
   raise newException(PixieError, "Unsupported font data")
 
-proc readUint16Seq(buf: string, offset, len: int): seq[uint16] =
+proc readUint16Seq(buf: string, offset, len: int): seq[uint16] {.raises: [].} =
   result = newSeq[uint16](len)
   for i in 0 ..< len:
     result[i] = buf.readUint16(offset + i * 2).swap()
 
-proc readFixed32(buf: string, offset: int): float32 =
+proc readFixed32(buf: string, offset: int): float32 {.raises: [].} =
   ## Packed 32-bit value with major and minor version numbers.
   ceil(buf.readInt32(offset).swap().float32 / 65536.0 * 100000.0) / 100000.0
 
-proc readFixed16(buf: string, offset: int): float32 =
+proc readFixed16(buf: string, offset: int): float32 {.raises: [].} =
   ## Reads 16-bit signed fixed number with the low 14 bits of fraction (2.14).
   buf.readInt16(offset).swap().float32 / 16384.0
 
-proc readLongDateTime(buf: string, offset: int): float64 =
+proc readLongDateTime(buf: string, offset: int): float64 {.raises: [].} =
   ## Date and time represented in number of seconds since 12:00 midnight,
   ## January 1, 1904, UTC.
   buf.readInt64(offset).swap().float64 - 2082844800
 
-proc parseCmapTable(buf: string, offset: int): CmapTable =
+proc parseCmapTable(
+  buf: string, offset: int
+): CmapTable {.raises: [PixieError].} =
   var i = offset
   buf.eofCheck(i + 4)
 
@@ -454,7 +456,9 @@ proc parseCmapTable(buf: string, offset: int): CmapTable =
       # TODO implement other cmap platformIDs
       discard
 
-proc parseHeadTable(buf: string, offset: int): HeadTable =
+proc parseHeadTable(
+  buf: string, offset: int
+): HeadTable {.raises: [PixieError].} =
   buf.eofCheck(offset + 54)
 
   result = HeadTable()
@@ -483,7 +487,9 @@ proc parseHeadTable(buf: string, offset: int): HeadTable =
   if result.glyphDataFormat != 0:
     failUnsupported()
 
-proc parseHheaTable(buf: string, offset: int): HheaTable =
+proc parseHheaTable(
+  buf: string, offset: int
+): HheaTable {.raises: [PixieError].} =
   buf.eofCheck(offset + 36)
 
   result = HheaTable()
@@ -512,7 +518,9 @@ proc parseHheaTable(buf: string, offset: int): HheaTable =
     failUnsupported()
   result.numberOfHMetrics = buf.readUint16(offset + 34).swap()
 
-proc parseMaxpTable(buf: string, offset: int): MaxpTable =
+proc parseMaxpTable(
+  buf: string, offset: int
+): MaxpTable {.raises: [PixieError].} =
   buf.eofCheck(offset + 32)
 
   result = MaxpTable()
@@ -536,7 +544,7 @@ proc parseMaxpTable(buf: string, offset: int): MaxpTable =
 
 proc parseHmtxTable(
   buf: string, offset: int, hhea: HheaTable, maxp: MaxpTable
-): HmtxTable =
+): HmtxTable {.raises: [PixieError].} =
   var i = offset
 
   let
@@ -557,7 +565,9 @@ proc parseHmtxTable(
       result.leftSideBearings.add(buf.readInt16(i).swap())
       i += 2
 
-proc parseNameTable(buf: string, offset: int): NameTable =
+proc parseNameTable(
+  buf: string, offset: int
+): NameTable {.raises: [PixieError].} =
   var i = offset
 
   buf.eofCheck(i + 6)
@@ -583,7 +593,9 @@ proc parseNameTable(buf: string, offset: int): NameTable =
     record.offset = buf.readUint16(i + 10).swap()
     i += 12
 
-proc parseOS2Table(buf: string, offset: int): OS2Table =
+proc parseOS2Table(
+  buf: string, offset: int
+): OS2Table {.raises: [PixieError].} =
   var i = offset
 
   buf.eofCheck(i + 78)
@@ -647,7 +659,7 @@ proc parseOS2Table(buf: string, offset: int): OS2Table =
 
 proc parseLocaTable(
   buf: string, offset: int, head: HeadTable, maxp: MaxpTable
-): LocaTable =
+): LocaTable {.raises: [PixieError].} =
   var i = offset
 
   result = LocaTable()
@@ -664,13 +676,17 @@ proc parseLocaTable(
       result.offsets.add(buf.readUint32(i).swap())
       i += 4
 
-proc parseGlyfTable(buf: string, offset: int, loca: LocaTable): GlyfTable =
+proc parseGlyfTable(
+  buf: string, offset: int, loca: LocaTable
+): GlyfTable {.raises: [].} =
   result = GlyfTable()
   result.offsets.setLen(loca.offsets.len)
   for glyphId in 0 ..< loca.offsets.len:
     result.offsets[glyphId] = offset.uint32 + loca.offsets[glyphId]
 
-proc parseKernTable(buf: string, offset: int): KernTable =
+proc parseKernTable(
+  buf: string, offset: int
+): KernTable {.raises: [PixieError].} =
   var i = offset
 
   buf.eofCheck(i + 2)
@@ -721,11 +737,10 @@ proc parseKernTable(buf: string, offset: int): KernTable =
             if pair.value != 0:
               let key = (pair.left, pair.right)
               var value = pair.value.float32
-              if key in result.kerningPairs:
-                if (table.coverage and 0b1000) != 0: # Override
-                  discard
-                else: # Accumulate
-                  value += result.kerningPairs[key]
+              if (table.coverage and 0b1000) != 0: # Override
+                discard
+              else: # Accumulate
+                value += result.kerningPairs.getOrDefault(key, 0)
               result.kerningPairs[key] = value
 
   elif version == 1:
@@ -733,7 +748,9 @@ proc parseKernTable(buf: string, offset: int): KernTable =
   else:
     failUnsupported()
 
-# proc parseLangSys(buf: string, offset: int): LangSys =
+# proc parseLangSys(
+#   buf: string, offset: int
+# ): LangSys {.raises: [PixieError].} =
 #   var i = offset
 
 #   buf.eofCheck(i + 6)
@@ -821,14 +838,16 @@ proc parseKernTable(buf: string, offset: int): KernTable =
 #     result.featureRecords.add(featureRecord)
 #     i += 6
 
-proc parseRangeRecord(buf: string, offset: int): RangeRecord =
+proc parseRangeRecord(
+  buf: string, offset: int
+): RangeRecord {.raises: [PixieError].} =
   buf.eofCheck(offset + 6)
 
   result.startGlyphID = buf.readUint16(offset + 0).swap()
   result.endGlyphID = buf.readUint16(offset + 2).swap()
   result.startCoverageIndex = buf.readUint16(offset + 4).swap()
 
-proc parseCoverage(buf: string, offset: int): Coverage =
+proc parseCoverage(buf: string, offset: int): Coverage {.raises: [PixieError].} =
   var i = offset
 
   buf.eofCheck(i + 4)
@@ -866,7 +885,7 @@ proc parseCoverage(buf: string, offset: int): Coverage =
     else:
       failUnsupported()
 
-proc valueFormatSize(valueFormat: uint16): int =
+proc valueFormatSize(valueFormat: uint16): int {.raises: [].} =
   # countSetBits(valueFormat) * 2
   var
     n = valueFormat
@@ -878,7 +897,7 @@ proc valueFormatSize(valueFormat: uint16): int =
 
 proc parseValueRecord(
   buf: string, offset: int, valueFormat: uint16
-): ValueRecord =
+): ValueRecord {.raises: [PixieError].} =
   buf.eofCheck(offset + valueFormatSize(valueFormat))
 
   var i = offset
@@ -909,7 +928,7 @@ proc parseValueRecord(
 
 proc parsePairValueRecord(
   buf: string, offset: int, valueFormat1, valueFormat2: uint16
-): PairValueRecord =
+): PairValueRecord {.raises: [PixieError].} =
   var i = offset
 
   buf.eofCheck(i + 2)
@@ -923,7 +942,7 @@ proc parsePairValueRecord(
 
 proc parsePairSet(
   buf: string, offset: int, valueFormat1, valueFormat2: uint16
-): PairSet =
+): PairSet {.raises: [PixieError].} =
   var i = offset
 
   buf.eofCheck(i + 2)
@@ -942,7 +961,7 @@ proc parsePairSet(
 
 proc parseClass2Record(
   buf: string, offset: int, valueFormat1, valueFormat2: uint16
-): Class2Record =
+): Class2Record {.raises: [PixieError].} =
   var i = offset
 
   buf.eofCheck(
@@ -955,7 +974,7 @@ proc parseClass2Record(
 
 proc parseClass1Record(
   buf: string, offset: int, valueFormat1, valueFormat2, class2Count: uint16
-): Class1Record =
+): Class1Record {.raises: [PixieError].} =
   var i = offset
 
   result.class2Records.setLen(class2Count.int)
@@ -964,14 +983,16 @@ proc parseClass1Record(
       parseClass2Record(buf, i, valueFormat1, valueFormat2)
     i += valueFormatSize(valueFormat1) + valueFormatSize(valueFormat2)
 
-proc parseClassRangeRecord(buf: string, offset: int): ClassRangeRecord =
+proc parseClassRangeRecord(
+  buf: string, offset: int
+): ClassRangeRecord {.raises: [PixieError].} =
   buf.eofCheck(offset + 6)
 
   result.startGlyphID = buf.readUint16(offset + 0).swap()
   result.endGlyphID = buf.readUint16(offset + 2).swap()
   result.class = buf.readUint16(offset + 4).swap()
 
-proc parseClassDef(buf: string, offset: int): ClassDef =
+proc parseClassDef(buf: string, offset: int): ClassDef {.raises: [PixieError].} =
   var i = offset
 
   buf.eofCheck(i + 2)
@@ -1003,7 +1024,7 @@ proc parseClassDef(buf: string, offset: int): ClassDef =
     else:
       failUnsupported()
 
-proc parsePairPos(buf: string, offset: int): PairPos =
+proc parsePairPos(buf: string, offset: int): PairPos {.raises: [PixieError].} =
   var i = offset
 
   buf.eofCheck(i + 4)
@@ -1136,7 +1157,9 @@ proc parsePairPos(buf: string, offset: int): PairPos =
     else:
       failUnsupported()
 
-proc parseLookup(buf: string, offset: int, gpos: GposTable): Lookup =
+proc parseLookup(
+  buf: string, offset: int, gpos: GposTable
+): Lookup {.raises: [PixieError].} =
   var i = offset
 
   buf.eofCheck(i + 6)
@@ -1162,7 +1185,9 @@ proc parseLookup(buf: string, offset: int, gpos: GposTable): Lookup =
         pairPos.classPairAdjustments.len > 0:
         gpos.lookupList.pairPosTables.add(pairPos)
 
-proc parseLookupList(buf: string, offset: int, gpos: GposTable): LookupList =
+proc parseLookupList(
+  buf: string, offset: int, gpos: GposTable
+): LookupList {.raises: [PixieError].} =
   var i = offset
 
   buf.eofCheck(i + 2)
@@ -1177,7 +1202,9 @@ proc parseLookupList(buf: string, offset: int, gpos: GposTable): LookupList =
   for lookupOffset in result.lookupoffsets:
     result.lookups.add(parseLookup(buf, offset + lookupOffset.int, gpos))
 
-proc parseGposTable(buf: string, offset: int): GPOSTable =
+proc parseGposTable(
+  buf: string, offset: int
+): GPOSTable {.raises: [PixieError].} =
   var i = offset
 
   buf.eofCheck(i + 10)
@@ -1208,7 +1235,9 @@ proc parseGposTable(buf: string, offset: int): GPOSTable =
   result.lookupList =
     parseLookupList(buf, offset + result.lookupListOffset.int, result)
 
-proc parsePostTable(buf: string, offset: int): PostTable =
+proc parsePostTable(
+  buf: string, offset: int
+): PostTable {.raises: [PixieError].} =
   buf.eofCheck(offset + 14)
 
   result = PostTable()
@@ -1218,15 +1247,14 @@ proc parsePostTable(buf: string, offset: int): PostTable =
   result.underlineThickness = buf.readInt16(offset + 10).swap()
   result.isFixedPitch = buf.readUint32(offset + 12).swap()
 
-proc getGlyphId(opentype: OpenType, rune: Rune): uint16 {.inline.} =
-  if rune in opentype.cmap.runeToGlyphId:
-    result = opentype.cmap.runeToGlyphId[rune]
-  else:
-    discard # Index 0 is the "missing character" glyph
+proc getGlyphId(opentype: OpenType, rune: Rune): uint16 {.inline, raises: [].} =
+  result = opentype.cmap.runeToGlyphId.getOrDefault(rune, 0)
 
-proc parseGlyph(opentype: OpenType, glyphId: uint16): Path
+proc parseGlyph(opentype: OpenType, glyphId: uint16): Path {.raises: [PixieError].}
 
-proc parseGlyphPath(buf: string, offset, numberOfContours: int): Path =
+proc parseGlyphPath(
+  buf: string, offset, numberOfContours: int
+): Path {.raises: [PixieError].} =
   if numberOfContours < 0:
     raise newException(PixieError, "Glyph numberOfContours must be >= 0")
 
@@ -1359,7 +1387,9 @@ proc parseGlyphPath(buf: string, offset, numberOfContours: int): Path =
 
     result.closePath()
 
-proc parseCompositeGlyph(opentype: OpenType, offset: int): Path =
+proc parseCompositeGlyph(
+  opentype: OpenType, offset: int
+): Path {.raises: [PixieError].} =
   result = newPath()
 
   var
@@ -1454,7 +1484,9 @@ proc parseCompositeGlyph(opentype: OpenType, offset: int): Path =
 
     moreComponents = (flags and 0b100000) != 0
 
-proc parseGlyph(opentype: OpenType, glyphId: uint16): Path =
+proc parseGlyph(
+  opentype: OpenType, glyphId: uint16
+): Path {.raises: [PixieError].} =
   if glyphId.int >= opentype.glyf.offsets.len:
     raise newException(PixieError, "Invalid glyph ID " & $glyphId)
 
@@ -1482,16 +1514,21 @@ proc parseGlyph(opentype: OpenType, glyphId: uint16): Path =
   else:
     parseGlyphPath(opentype.buf, i, numberOfContours)
 
-proc parseGlyph(opentype: OpenType, rune: Rune): Path {.inline.} =
+proc parseGlyph(
+  opentype: OpenType, rune: Rune
+): Path {.inline, raises: [PixieError].} =
   opentype.parseGlyph(opentype.getGlyphId(rune))
 
-proc getGlyphPath*(opentype: OpenType, rune: Rune): Path =
+proc getGlyphPath*(
+  opentype: OpenType, rune: Rune
+): Path {.raises: [PixieError].} =
   if rune notin opentype.glyphPaths:
-    opentype.glyphPaths[rune] = opentype.parseGlyph(rune)
-    opentype.glyphPaths[rune].transform(scale(vec2(1, -1)))
-  opentype.glyphPaths[rune]
+    let path = opentype.parseGlyph(rune)
+    path.transform(scale(vec2(1, -1)))
+    opentype.glyphPaths[rune] = path
+  opentype.glyphPaths.getOrDefault(rune, nil) # Never actually returns nil
 
-proc getLeftSideBearing*(opentype: OpenType, rune: Rune): float32 =
+proc getLeftSideBearing*(opentype: OpenType, rune: Rune): float32 {.raises: [].} =
   let glyphId = opentype.getGlyphId(rune).int
   if glyphId < opentype.hmtx.hMetrics.len:
     result = opentype.hmtx.hMetrics[glyphId].leftSideBearing.float32
@@ -1500,21 +1537,23 @@ proc getLeftSideBearing*(opentype: OpenType, rune: Rune): float32 =
     if index > 0 and index < opentype.hmtx.leftSideBearings.len:
       result = opentype.hmtx.leftSideBearings[index].float32
 
-proc getAdvance*(opentype: OpenType, rune: Rune): float32 =
+proc getAdvance*(opentype: OpenType, rune: Rune): float32 {.raises: [].} =
   let glyphId = opentype.getGlyphId(rune).int
   if glyphId < opentype.hmtx.hMetrics.len:
     result = opentype.hmtx.hMetrics[glyphId].advanceWidth.float32
   else:
     result = opentype.hmtx.hMetrics[^1].advanceWidth.float32
 
-proc getKerningAdjustment*(opentype: OpenType, left, right: Rune): float32 =
+proc getKerningAdjustment*(
+  opentype: OpenType, left, right: Rune
+): float32 {.raises: [].} =
   if left notin opentype.cmap.runeToGlyphId or
     right notin opentype.cmap.runeToGlyphId:
     return
 
   let
-    leftGlyphId = opentype.cmap.runeToGlyphId[left]
-    rightGlyphId = opentype.cmap.runeToGlyphId[right]
+    leftGlyphId = opentype.cmap.runeToGlyphId.getOrDefault(left, 0)
+    rightGlyphId = opentype.cmap.runeToGlyphId.getOrDefault(right, 0)
     glyphPair = (leftGlyphId, rightGlyphId)
 
   if opentype.gpos != nil:
@@ -1525,27 +1564,23 @@ proc getKerningAdjustment*(opentype: OpenType, left, right: Rune): float32 =
       case pairPos.posFormat:
         of 1:
           if glyphPair in pairPos.glyphPairAdjustments:
-            result = pairPos.glyphPairAdjustments[glyphPair].float32
+            result = pairPos.glyphPairAdjustments.getOrDefault(glyphPair, 0).float32
             break
         of 2:
-          var leftClass, rightClass: uint16
-          if leftGlyphId in pairPos.glyphIdToClass1:
-            leftClass = pairPos.glyphIdToClass1[leftGlyphId]
-          if rightGlyphId in pairPos.glyphIdToClass2:
-            rightClass = pairPos.glyphIdToClass2[rightGlyphId]
-
-          let classPair = (leftClass, rightClass)
+          let
+            leftClass = pairPos.glyphIdToClass1.getOrDefault(leftGlyphId, 0)
+            rightClass = pairPos.glyphIdToClass2.getOrDefault(rightGlyphId, 0)
+            classPair = (leftClass, rightClass)
           if classPair in pairPos.classPairAdjustments:
-            result = pairPos.classPairAdjustments[classPair].float32
+            result = pairPos.classPairAdjustments.getOrDefault(classPair, 0).float32
             break
         else:
           discard
 
   elif opentype.kern != nil:
-    if glyphPair in opentype.kern.kerningPairs:
-      result = opentype.kern.kerningPairs[glyphPair]
+    result = opentype.kern.kerningPairs.getOrDefault(glyphPair, 0)
 
-proc parseOpenType*(buf: string): OpenType =
+proc parseOpenType*(buf: string): OpenType {.raises: [PixieError].} =
   result = OpenType()
   result.buf = buf
 
@@ -1572,36 +1607,31 @@ proc parseOpenType*(buf: string): OpenType =
     result.tableRecords[tableRecord.tag] = tableRecord
     i += 16
 
-  const requiredTables = [
-    "cmap", "head", "hhea", "hmtx", "maxp", "name", "OS/2", "loca", "glyf",
-    "post"
-  ]
-  for table in requiredTables:
-    if table notin result.tableRecords:
-      raise newException(PixieError, "Missing required font table " & table)
+  try:
+    result.cmap = parseCmapTable(buf, result.tableRecords["cmap"].offset.int)
+    result.head = parseHeadTable(buf, result.tableRecords["head"].offset.int)
+    result.hhea = parseHheaTable(buf, result.tableRecords["hhea"].offset.int)
+    result.maxp = parseMaxpTable(buf, result.tableRecords["maxp"].offset.int)
+    result.hmtx = parseHmtxTable(
+      buf, result.tableRecords["hmtx"].offset.int, result.hhea, result.maxp
+    )
+    result.name = parseNameTable(buf, result.tableRecords["name"].offset.int)
+    result.os2 = parseOS2Table(buf, result.tableRecords["OS/2"].offset.int)
+    result.loca = parseLocaTable(
+      buf, result.tableRecords["loca"].offset.int, result.head, result.maxp
+    )
+    result.glyf =
+      parseGlyfTable(buf, result.tableRecords["glyf"].offset.int, result.loca)
 
-  result.cmap = parseCmapTable(buf, result.tableRecords["cmap"].offset.int)
-  result.head = parseHeadTable(buf, result.tableRecords["head"].offset.int)
-  result.hhea = parseHheaTable(buf, result.tableRecords["hhea"].offset.int)
-  result.maxp = parseMaxpTable(buf, result.tableRecords["maxp"].offset.int)
-  result.hmtx = parseHmtxTable(
-    buf, result.tableRecords["hmtx"].offset.int, result.hhea, result.maxp
-  )
-  result.name = parseNameTable(buf, result.tableRecords["name"].offset.int)
-  result.os2 = parseOS2Table(buf, result.tableRecords["OS/2"].offset.int)
-  result.loca = parseLocaTable(
-    buf, result.tableRecords["loca"].offset.int, result.head, result.maxp
-  )
-  result.glyf =
-    parseGlyfTable(buf, result.tableRecords["glyf"].offset.int, result.loca)
+    if "kern" in result.tableRecords:
+      result.kern = parseKernTable(buf, result.tableRecords["kern"].offset.int)
 
-  if "kern" in result.tableRecords:
-    result.kern = parseKernTable(buf, result.tableRecords["kern"].offset.int)
+    if "GPOS" in result.tableRecords:
+      result.gpos = parseGposTable(buf, result.tableRecords["GPOS"].offset.int)
 
-  if "GPOS" in result.tableRecords:
-    result.gpos = parseGposTable(buf, result.tableRecords["GPOS"].offset.int)
-
-  result.post = parsePostTable(buf, result.tableRecords["post"].offset.int)
+    result.post = parsePostTable(buf, result.tableRecords["post"].offset.int)
+  except KeyError as e:
+    raise newException(PixieError, "Missing required font table: " & e.msg)
 
 when defined(release):
   {.pop.}

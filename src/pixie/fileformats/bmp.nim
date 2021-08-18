@@ -4,7 +4,7 @@ import chroma, flatty/binny, pixie/common, pixie/images
 
 const bmpSignature* = "BM"
 
-proc decodeBmp*(data: string): Image =
+proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
   ## Decodes bitmap data into an Image.
 
   # BMP Header
@@ -48,11 +48,11 @@ proc decodeBmp*(data: string): Image =
         offset += 3
       result[x, result.height - y - 1] = rgba.rgbx()
 
-proc decodeBmp*(data: seq[uint8]): Image {.inline.} =
+proc decodeBmp*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
   ## Decodes bitmap data into an Image.
   decodeBmp(cast[string](data))
 
-proc encodeBmp*(image: Image): string =
+proc encodeBmp*(image: Image): string {.raises: [].} =
   ## Encodes an image into the BMP file format.
 
   # BMP Header

@@ -23,7 +23,7 @@ template failInvalid() =
 when defined(release):
   {.push checks: off.}
 
-proc decodeHeader(data: string): PngHeader =
+proc decodeHeader(data: string): PngHeader {.raises: [PixieError].} =
   result.width = data.readUint32(0).swap().int
   result.height = data.readUint32(4).swap().int
   result.bitDepth = data.readUint8(8)
@@ -79,7 +79,7 @@ proc decodeHeader(data: string): PngHeader =
   if result.interlaceMethod != 0:
     raise newException(PixieError, "Interlaced PNG not yet supported")
 
-proc decodePalette(data: string): seq[ColorRGB] =
+proc decodePalette(data: string): seq[ColorRGB] {.raises: [PixieError].} =
   if data.len == 0 or data.len mod 3 != 0:
     failInvalid()
 
@@ -88,7 +88,9 @@ proc decodePalette(data: string): seq[ColorRGB] =
   for i in 0 ..< data.len div 3:
     result[i] = cast[ptr ColorRGB](data[i * 3].unsafeAddr)[]
 
-proc unfilter(uncompressed: string, height, rowBytes, bpp: int): string =
+proc unfilter(
+  uncompressed: string, height, rowBytes, bpp: int
+): string {.raises: [].} =
   result.setLen(uncompressed.len - height)
 
   template uncompressedIdx(x, y: int): int =
@@ -162,7 +164,7 @@ proc decodeImageData(
   header: PngHeader,
   palette: seq[ColorRGB],
   transparency, data: string
-): seq[ColorRGBA] =
+): seq[ColorRGBA]  {.raises: [PixieError].} =
   result.setLen(header.width * header.height)
 
   let
@@ -314,7 +316,7 @@ proc decodeImageData(
   else:
     discard # Not possible, parseHeader validates
 
-proc decodePng*(data: string): Image =
+proc decodePng*(data: string): Image {.raises: [PixieError].} =
   ## Decodes the PNG data into an Image.
 
   if data.len < (8 + (8 + 13 + 4) + 4): # Magic bytes + IHDR + IEND
@@ -424,7 +426,9 @@ proc decodePng*(data: string): Image =
   result = newImage(header.width, header.height)
   copyMem(result.data[0].addr, pixels[0].addr, pixels.len * 4)
 
-proc encodePng*(width, height, channels: int, data: pointer, len: int): string =
+proc encodePng*(
+  width, height, channels: int, data: pointer, len: int
+): string {.raises: [PixieError].} =
   ## Encodes the image data into the PNG file format.
   ## If data points to RGBA data, it is assumed to be straight alpha.
 
@@ -503,7 +507,7 @@ proc encodePng*(width, height, channels: int, data: pointer, len: int): string =
   result.add("IEND")
   result.addUint32(crc32(result[result.len - 4 ..< result.len]).swap())
 
-proc encodePng*(image: Image): string =
+proc encodePng*(image: Image): string {.raises: [PixieError].} =
   ## Encodes the image data into the PNG file format.
   if image.data.len == 0:
     raise newException(
@@ -514,7 +518,7 @@ proc encodePng*(image: Image): string =
   copy.toStraightAlpha()
   encodePng(image.width, image.height, 4, copy[0].addr, copy.len * 4)
 
-proc encodePng*(mask: Mask): string =
+proc encodePng*(mask: Mask): string {.raises: [PixieError].} =
   ## Encodes the mask data into the PNG file format.
   if mask.data.len == 0:
     raise newException(

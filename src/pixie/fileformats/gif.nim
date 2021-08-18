@@ -10,7 +10,7 @@ template failInvalid() =
 when defined(release):
   {.push checks: off.}
 
-proc decodeGif*(data: string): Image =
+proc decodeGif*(data: string): Image {.raises: [PixieError].} =
   ## Decodes GIF data into an Image.
 
   if data.len <= 13: failInvalid()

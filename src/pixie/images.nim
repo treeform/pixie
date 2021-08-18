@@ -14,7 +14,7 @@ type
 when defined(release):
   {.push checks: off.}
 
-proc newImage*(width, height: int): Image =
+proc newImage*(width, height: int): Image {.raises: [PixieError].} =
   ## Creates a new image with the parameter dimensions.
   if width <= 0 or height <= 0:
     raise newException(PixieError, "Image width and height must be > 0")
@@ -24,7 +24,7 @@ proc newImage*(width, height: int): Image =
   result.height = height
   result.data = newSeq[ColorRGBX](width * height)
 
-proc newImage*(mask: Mask): Image =
+proc newImage*(mask: Mask): Image {.raises: [PixieError].} =
   result = newImage(mask.width, mask.height)
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
@@ -39,59 +39,63 @@ proc newImage*(mask: Mask): Image =
     let v = mask.data[i]
     result.data[i] = rgbx(v, v, v, v)
 
-proc wh*(image: Image): Vec2 {.inline.} =
+proc wh*(image: Image): Vec2 {.inline, raises: [].} =
   ## Return with and height as a size vector.
   vec2(image.width.float32, image.height.float32)
 
-proc copy*(image: Image): Image =
+proc copy*(image: Image): Image {.raises: [PixieError].} =
   ## Copies the image data into a new image.
   result = newImage(image.width, image.height)
   result.data = image.data
 
-proc `$`*(image: Image): string =
+proc `$`*(image: Image): string {.raises: [].} =
   ## Prints the image size.
   "<Image " & $image.width & "x" & $image.height & ">"
 
-proc inside*(image: Image, x, y: int): bool {.inline.} =
+proc inside*(image: Image, x, y: int): bool {.inline, raises: [].} =
   ## Returns true if (x, y) is inside the image.
   x >= 0 and x < image.width and y >= 0 and y < image.height
 
-proc dataIndex*(image: Image, x, y: int): int {.inline.} =
+proc dataIndex*(image: Image, x, y: int): int {.inline, raises: [].} =
   image.width * y + x
 
-proc getRgbaUnsafe*(image: Image, x, y: int): ColorRGBX {.inline.} =
+proc getRgbaUnsafe*(image: Image, x, y: int): ColorRGBX {.inline, raises: [].} =
   ## Gets a color from (x, y) coordinates.
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will case unsafe memory reads.
   result = image.data[image.width * y + x]
 
-proc `[]`*(image: Image, x, y: int): ColorRGBX {.inline.} =
+proc `[]`*(image: Image, x, y: int): ColorRGBX {.inline, raises: [].} =
   ## Gets a pixel at (x, y) or returns transparent black if outside of bounds.
   if image.inside(x, y):
     return image.getRgbaUnsafe(x, y)
 
-proc getColor*(image: Image, x, y: int): Color =
+proc getColor*(image: Image, x, y: int): Color {.inline, raises: [].} =
   ## Gets a color at (x, y) or returns transparent black if outside of bounds.
   image[x, y].color()
 
-proc setRgbaUnsafe*(image: Image, x, y: int, color: SomeColor) {.inline.} =
+proc setRgbaUnsafe*(
+  image: Image, x, y: int, color: SomeColor
+) {.inline, raises: [].} =
   ## Sets a color from (x, y) coordinates.
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will case unsafe memory writes.
   image.data[image.dataIndex(x, y)] = color.asRgbx()
 
-proc `[]=`*(image: Image, x, y: int, color: SomeColor) {.inline.} =
+proc `[]=`*(image: Image, x, y: int, color: SomeColor) {.inline, raises: [].} =
   ## Sets a pixel at (x, y) or does nothing if outside of bounds.
   if image.inside(x, y):
     image.setRgbaUnsafe(x, y, color.asRgbx())
 
-proc setColor*(image: Image, x, y: int, color: Color) =
+proc setColor*(image: Image, x, y: int, color: Color) {.inline, raises: [].} =
   ## Sets a color at (x, y) or does nothing if outside of bounds.
   image[x, y] = color.rgbx()
 
-proc fillUnsafe*(data: var seq[ColorRGBX], color: SomeColor, start, len: int) =
+proc fillUnsafe*(
+  data: var seq[ColorRGBX], color: SomeColor, start, len: int
+) {.raises: [].} =
   ## Fills the image data with the parameter color starting at index start and
   ## continuing for len indices.
 
@@ -122,11 +126,11 @@ proc fillUnsafe*(data: var seq[ColorRGBX], color: SomeColor, start, len: int) =
     for j in i ..< start + len:
       data[j] = rgbx
 
-proc fill*(image: Image, color: SomeColor) {.inline.} =
+proc fill*(image: Image, color: SomeColor) {.inline, raises: [].} =
   ## Fills the image with the parameter color.
   fillUnsafe(image.data, color, 0, image.data.len)
 
-proc isOneColor*(image: Image): bool =
+proc isOneColor*(image: Image): bool {.raises: [].} =
   ## Checks if the entire image is the same color.
   result = true
 
@@ -149,7 +153,7 @@ proc isOneColor*(image: Image): bool =
     if image.data[j] != color:
       return false
 
-proc isTransparent*(image: Image): bool =
+proc isTransparent*(image: Image): bool {.raises: [].} =
   ## Checks if this image is fully transparent or not.
   result = true
 
@@ -174,7 +178,7 @@ proc isTransparent*(image: Image): bool =
     if image.data[j].a != 0:
       return false
 
-proc flipHorizontal*(image: Image) =
+proc flipHorizontal*(image: Image) {.raises: [].} =
   ## Flips the image around the Y axis.
   let w = image.width div 2
   for y in 0 ..< image.height:
@@ -185,7 +189,7 @@ proc flipHorizontal*(image: Image) =
       image.setRgbaUnsafe(image.width - x - 1, y, rgba1)
       image.setRgbaUnsafe(x, y, rgba2)
 
-proc flipVertical*(image: Image) =
+proc flipVertical*(image: Image) {.raises: [].} =
   ## Flips the image around the X axis.
   let h = image.height div 2
   for y in 0 ..< h:
@@ -196,7 +200,7 @@ proc flipVertical*(image: Image) =
       image.setRgbaUnsafe(x, image.height - y - 1, rgba1)
       image.setRgbaUnsafe(x, y, rgba2)
 
-proc subImage*(image: Image, x, y, w, h: int): Image =
+proc subImage*(image: Image, x, y, w, h: int): Image {.raises: [PixieError].} =
   ## Gets a sub image from this image.
 
   if x < 0 or x + w > image.width:
@@ -218,7 +222,7 @@ proc subImage*(image: Image, x, y, w, h: int): Image =
       w * 4
     )
 
-proc diff*(master, image: Image): (float32, Image) =
+proc diff*(master, image: Image): (float32, Image) {.raises: [PixieError].} =
   ## Compares the parameters and returns a score and image of the difference.
   let
     w = max(master.width, image.width)
@@ -248,7 +252,7 @@ proc diff*(master, image: Image): (float32, Image) =
 
   (100 * diffScore.float32 / diffTotal.float32, diffImage)
 
-proc minifyBy2*(image: Image, power = 1): Image =
+proc minifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
   ## Scales the image down by an integer scale.
   if power < 0:
     raise newException(PixieError, "Cannot minifyBy2 with negative power")
@@ -323,7 +327,7 @@ proc minifyBy2*(image: Image, power = 1): Image =
     # Set src as this result for if we do another power
     src = result
 
-proc magnifyBy2*(image: Image, power = 1): Image =
+proc magnifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
   ## Scales image up by 2 ^ power.
   if power < 0:
     raise newException(PixieError, "Cannot magnifyBy2 with negative power")
@@ -339,7 +343,7 @@ proc magnifyBy2*(image: Image, power = 1): Image =
       for i in 0 ..< scale:
         result.data[idx + i] = rgba
 
-proc applyOpacity*(target: Image | Mask, opacity: float32) =
+proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
   ## Multiplies alpha of the image by opacity.
   let opacity = round(255 * opacity).uint16
 
@@ -405,7 +409,7 @@ proc applyOpacity*(target: Image | Mask, opacity: float32) =
     for j in i ..< target.data.len:
       target.data[j] = ((target.data[j] * opacity) div 255).uint8
 
-proc invert*(target: Image | Mask) =
+proc invert*(target: Image | Mask) {.raises: [].} =
   ## Inverts all of the colors and alpha.
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
@@ -447,7 +451,7 @@ proc invert*(target: Image | Mask) =
 
 proc blur*(
   image: Image, radius: float32, outOfBounds: SomeColor = ColorRGBX()
-) =
+) {.raises: [PixieError].} =
   ## Applies Gaussian blur to the image given a radius.
   let radius = round(radius).int
   if radius == 0:
@@ -512,7 +516,7 @@ proc blur*(
 
       image.setRgbaUnsafe(x, y, rgbx(values))
 
-proc newMask*(image: Image): Mask =
+proc newMask*(image: Image): Mask {.raises: [PixieError].} =
   ## Returns a new mask using the alpha values of the parameter image.
   result = newMask(image.width, image.height)
 
@@ -544,7 +548,9 @@ proc newMask*(image: Image): Mask =
   for j in i ..< image.data.len:
     result.data[j] = image.data[j].a
 
-proc getRgbaSmooth*(image: Image, x, y: float32, wrapped = false): ColorRGBX =
+proc getRgbaSmooth*(
+  image: Image, x, y: float32, wrapped = false
+): ColorRGBX {.raises: [].} =
   ## Gets a interpolated color with float point coordinates.
   ## Pixes outside the image are transparent.
   let
@@ -582,7 +588,7 @@ proc getRgbaSmooth*(image: Image, x, y: float32, wrapped = false): ColorRGBX =
 
 proc drawCorrect(
   a, b: Image | Mask, mat = mat3(), tiled = false, blendMode = bmNormal
-) =
+) {.raises: [PixieError].} =
   ## Draws one image onto another using matrix with color blending.
 
   when type(a) is Image:
@@ -634,7 +640,9 @@ proc drawCorrect(
           let sample = b.getValueSmooth(xFloat, yFloat)
         a.setValueUnsafe(x, y, masker(backdrop, sample))
 
-proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
+proc drawUber(
+  a, b: Image | Mask, mat = mat3(), blendMode = bmNormal
+) {.raises: [PixieError].} =
   let
     corners = [
       mat * vec2(0, 0),
@@ -840,7 +848,7 @@ proc drawUber(a, b: Image | Mask, mat = mat3(), blendMode = bmNormal) =
 
 proc draw*(
   a, b: Image, transform = mat3(), blendMode = bmNormal
-) {.inline.} =
+) {.inline, raises: [PixieError].} =
   ## Draws one image onto another using matrix with color blending.
   when type(transform) is Vec2:
     a.drawUber(b, translate(transform), blendMode)
@@ -849,7 +857,7 @@ proc draw*(
 
 proc draw*(
   a, b: Mask, transform = mat3(), blendMode = bmMask
-) {.inline.} =
+) {.inline, raises: [PixieError].} =
   ## Draws a mask onto a mask using a matrix with color blending.
   when type(transform) is Vec2:
     a.drawUber(b, translate(transform), blendMode)
@@ -858,7 +866,7 @@ proc draw*(
 
 proc draw*(
   image: Image, mask: Mask, transform = mat3(), blendMode = bmMask
-) {.inline.} =
+) {.inline, raises: [PixieError].} =
   ## Draws a mask onto an image using a matrix with color blending.
   when type(transform) is Vec2:
     image.drawUber(mask, translate(transform), blendMode)
@@ -867,17 +875,19 @@ proc draw*(
 
 proc draw*(
   mask: Mask, image: Image, transform = mat3(), blendMode = bmMask
-) {.inline.} =
+) {.inline, raises: [PixieError].} =
   ## Draws a image onto a mask using a matrix with color blending.
   when type(transform) is Vec2:
     mask.drawUber(image, translate(transform), blendMode)
   else:
     mask.drawUber(image, transform, blendMode)
 
-proc drawTiled*(dest, src: Image, mat: Mat3, blendMode = bmNormal) =
-  dest.drawCorrect(src, mat, true, blendMode)
+proc drawTiled*(
+  dst, src: Image, mat: Mat3, blendMode = bmNormal
+) {.raises: [PixieError]} =
+  dst.drawCorrect(src, mat, true, blendMode)
 
-proc resize*(srcImage: Image, width, height: int): Image =
+proc resize*(srcImage: Image, width, height: int): Image {.raises: [PixieError]} =
   ## Resize an image to a given height and width.
   if width == srcImage.width and height == srcImage.height:
     result = srcImage.copy()
@@ -894,7 +904,7 @@ proc resize*(srcImage: Image, width, height: int): Image =
 
 proc shadow*(
   image: Image, offset: Vec2, spread, blur: float32, color: SomeColor
-): Image =
+): Image {.raises: [PixieError]} =
   ## Create a shadow of the image with the offset, spread and blur.
   let
     mask = image.newMask()
@@ -906,7 +916,7 @@ proc shadow*(
   result.fill(color)
   result.draw(shifted, blendMode = bmMask)
 
-proc superImage*(image: Image, x, y, w, h: int): Image =
+proc superImage*(image: Image, x, y, w, h: int): Image {.raises: [PixieError]} =
   ## Either cuts a sub image or returns a super image with padded transparency.
   if x >= 0 and x + w <= image.width and y >= 0 and y + h <= image.height:
     result = image.subImage(x, y, w, h)
