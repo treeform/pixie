@@ -15,7 +15,7 @@ type
     blendMode*: BlendMode               ## Blend mode.
     opacity*: float32
     # pkSolid
-    color*: Color                   ## Color to fill with.
+    color*: Color                       ## Color to fill with.
     # pkImage, pkImageTiled:
     image*: Image                       ## Image to fill with.
     imageMat*: Mat3                     ## Matrix of the filled image.
@@ -25,7 +25,7 @@ type
 
   ColorStop* = object
     ## Color stop on a gradient curve.
-    color*: Color  ## Color of the stop.
+    color*: Color      ## Color of the stop.
     position*: float32 ## Gradient stop position 0..1.
 
   SomePaint* = string | Paint | SomeColor

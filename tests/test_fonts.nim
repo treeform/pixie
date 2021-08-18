@@ -154,7 +154,9 @@ block:
   let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, "First line")
-  image.fillText(font, "Second line", translate(vec2(0, font.defaultLineHeight)))
+  image.fillText(
+    font, "Second line", translate(vec2(0, font.defaultLineHeight))
+  )
 
   doDiff(image, "basic7")
 

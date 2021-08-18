@@ -385,7 +385,7 @@ proc clearRect*(ctx: Context, rect: Rect) =
   let path = newPath()
   path.rect(rect)
   if ctx.layer != nil:
-    ctx.layer.fillPath( path, paint, ctx.mat)
+    ctx.layer.fillPath(path, paint, ctx.mat)
   else:
     ctx.image.fillPath(path, paint, ctx.mat)
 
