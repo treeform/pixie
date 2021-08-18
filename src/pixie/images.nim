@@ -126,13 +126,34 @@ proc fill*(image: Image, color: SomeColor) {.inline.} =
   ## Fills the image with the parameter color.
   fillUnsafe(image.data, color, 0, image.data.len)
 
-proc isOneColor(image: Image, color: ColorRGBX): bool =
-  ## Checks if the entire image is color.
+proc isOneColor*(image: Image): bool =
+  ## Checks if the entire image is the same color.
   result = true
+
+  let color = image.getRgbaUnsafe(0, 0)
 
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
     let colorVec = mm_set1_epi32(cast[int32](color))
+    for j in countup(0, image.data.len - 4, 4):
+      let
+        values = mm_loadu_si128(image.data[j].addr)
+        mask = mm_movemask_epi8(mm_cmpeq_epi8(values, colorVec))
+      if mask != uint16.high.int:
+        return false
+      i += 4
+
+  for j in i ..< image.data.len:
+    if image.data[j] != color:
+      return false
+
+proc isTransparent*(image: Image): bool =
+  ## Checks if this image is fully transparent or not.
+  result = true
+
+  var i: int
+  when defined(amd64) and not defined(pixieNoSimd):
+    let transparent = mm_setzero_si128()
     for j in countup(0, image.data.len - 16, 16):
       let
         values0 = mm_loadu_si128(image.data[j].addr)
@@ -142,22 +163,14 @@ proc isOneColor(image: Image, color: ColorRGBX): bool =
         values01 = mm_or_si128(values0, values1)
         values23 = mm_or_si128(values2, values3)
         values = mm_or_si128(values01, values23)
-        mask = mm_movemask_epi8(mm_cmpeq_epi8(values, colorVec))
+        mask = mm_movemask_epi8(mm_cmpeq_epi8(values, transparent))
       if mask != uint16.high.int:
         return false
       i += 16
 
   for j in i ..< image.data.len:
-    if image.data[j] != color:
+    if image.data[j].a != 0:
       return false
-
-proc isOneColor*(image: Image): bool =
-  ## Checks if the entire image is the same color.
-  image.isOneColor(image.getRgbaUnsafe(0, 0))
-
-proc isTransparent*(image: Image): bool =
-  ## Checks if this image is fully transparent or not.
-  image.isOneColor(rgbx(0, 0, 0, 0))
 
 proc flipHorizontal*(image: Image) =
   ## Flips the image around the Y axis.
