@@ -17,9 +17,9 @@ type
     lineJoin*: LineJoin
     font*: string ## File path to a .ttf or .otf file.
     fontSize*: float32
-    textAlign*: HAlignMode
+    textAlign*: HorizontalAlignment
+    lineDash*: seq[float32]
     path: Path
-    lineDash: seq[float32]
     mat: Mat3
     mask: Mask
     layer: Image
@@ -35,7 +35,7 @@ type
     lineJoin: LineJoin
     font: string
     fontSize*: float32
-    textAlign: HAlignMode
+    textAlign: HorizontalAlignment
     lineDash: seq[float32]
     mat: Mat3
     mask: Mask
@@ -289,6 +289,22 @@ proc quadraticCurveTo*(ctx: Context, ctrl, to: Vec2) {.inline.} =
   ## Bézier curve.
   ctx.path.quadraticCurveTo(ctrl, to)
 
+proc arc*(ctx: Context, x, y, r, a0, a1: float32, ccw: bool = false) =
+  ## Draws a circular arc.
+  ctx.path.arc(x, y, r, a0, a1, ccw)
+
+proc arc*(ctx: Context, pos: Vec2, r: float32, a: Vec2, ccw: bool = false) =
+  ## Adds a circular arc to the current sub-path.
+  ctx.path.arc(pos, r, a, ccw)
+
+proc arcTo*(ctx: Context, x1, y1, x2, y2, radius: float32) =
+  ## Draws a circular arc using the given control points and radius.
+  ctx.path.arcTo(x1, y1, x2, y2, radius)
+
+proc arcTo*(ctx: Context, a, b: Vec2, r: float32) =
+  ## Adds a circular arc using the given control points and radius.
+  ctx.path.arcTo(a, b, r)
+
 proc closePath*(ctx: Context) {.inline.} =
   ## Attempts to add a straight line from the current point to the start of
   ## the current sub-path. If the shape has already been closed or has only
@@ -326,6 +342,8 @@ proc fill*(ctx: Context, windingRule = wrNonZero) {.inline.} =
   ## Fills the current path with the current fillStyle.
   ctx.fill(ctx.path, windingRule)
 
+proc clip*(ctx: Context, windingRule = wrNonZero) {.inline.}
+
 proc clip*(ctx: Context, path: Path, windingRule = wrNonZero) =
   ## Turns the path into the current clipping region. The previous clipping
   ## region, if any, is intersected with the current or given path to create
@@ -341,6 +359,8 @@ proc clip*(ctx: Context, windingRule = wrNonZero) {.inline.} =
   ## clipping region, if any, is intersected with the current or given path
   ## to create the new clipping region.
   ctx.clip(ctx.path, windingRule)
+
+proc stroke*(ctx: Context) {.inline.}
 
 proc stroke*(ctx: Context, path: Path) =
   ## Strokes (outlines) the current or given path with the current strokeStyle.
@@ -491,7 +511,110 @@ proc resetTransform*(ctx: Context) {.inline.} =
   ## Resets the current transform to the identity matrix.
   ctx.mat = mat3()
 
+proc drawImage*(ctx: Context, image: Image, dx, dy, dWidth, dHeight: float32) =
+  ## Draws a source image onto the destination image.
+  let
+    imageMat = ctx.mat * translate(vec2(dx, dy)) * scale(vec2(
+      dWidth / image.width.float32,
+      dHeight / image.height.float32
+    ))
+    savedFillStyle = ctx.fillStyle
+
+  ctx.fillStyle = newPaint(pkImage)
+  ctx.fillStyle.image = image
+  ctx.fillStyle.imageMat = imageMat
+
+  let path = newPath()
+  path.rect(rect(dx, dy, dWidth, dHeight))
+  ctx.fill(path)
+
+  ctx.fillStyle = savedFillStyle
+
+proc drawImage*(ctx: Context, image: Image, dx, dy: float32) =
+  ## Draws a source image onto the destination image.
+  ctx.drawImage(image, dx, dx, image.width.float32, image.height.float32)
+
+proc drawImage*(ctx: Context, image: Image, pos: Vec2) =
+  ## Draws a source image onto the destination image.
+  ctx.drawImage(image, pos.x, pos.y)
+
+proc drawImage*(ctx: Context, image: Image, rect: Rect) =
+  ## Draws a source image onto the destination image.
+  ctx.drawImage(image, rect.x, rect.y, rect.w, rect.h)
+
+proc drawImage*(
+  ctx: Context,
+  image: Image,
+  sx, sy, sWidth, sHeight,
+  dx, dy, dWidth, dHeight: float32
+) =
+  ## Draws a source image onto the destination image.
+  let image = image.subImage(sx.int, sy.int, sWidth.int, sHeight.int)
+  ctx.drawImage(image, dx, dx, image.width.float32, image.height.float32)
+
+proc drawImage*(ctx: Context, image: Image, src, dest: Rect) =
+  ## Draws a source image onto the destination image.
+  ctx.drawImage(
+    image,
+    src.x, src.y, src.w, src.h,
+    dest.x, dest.y, dest.w, dest.h
+  )
+
+proc isPointInPath*(
+  ctx: Context, path: Path, pos: Vec2, windingRule = wrNonZero
+): bool =
+  ## Returns whether or not the specified point is contained in the current path.
+  path.fillOverlaps(pos, ctx.mat, windingRule)
+
+proc isPointInPath*(
+  ctx: Context, path: Path, x, y: float32, windingRule = wrNonZero
+): bool {.inline.} =
+  ## Returns whether or not the specified point is contained in the current path.
+  ctx.isPointInPath(path, vec2(x, y), windingRule)
+
+proc isPointInPath*(
+  ctx: Context, pos: Vec2, windingRule = wrNonZero
+): bool {.inline.} =
+  ## Returns whether or not the specified point is contained in the current path.
+  ctx.isPointInPath(ctx.path, pos, windingRule)
+
+proc isPointInPath*(
+  ctx: Context, x, y: float32, windingRule = wrNonZero
+): bool {.inline.} =
+  ## Returns whether or not the specified point is contained in the current path.
+  ctx.isPointInPath(ctx.path, vec2(x, y), windingRule)
+
+proc isPointInStroke*(ctx: Context, path: Path, pos: Vec2): bool =
+  ## Returns whether or not the specified point is inside the area contained
+  ## by the stroking of a path.
+  path.strokeOverlaps(
+    pos,
+    ctx.mat,
+    ctx.lineWidth,
+    ctx.lineCap,
+    ctx.lineJoin,
+    ctx.miterLimit,
+    ctx.lineDash
+  )
+
+proc isPointInStroke*(ctx: Context, path: Path, x, y: float32): bool {.inline.} =
+  ## Returns whether or not the specified point is inside the area contained
+  ## by the stroking of a path.
+  ctx.isPointInStroke(path, vec2(x, y))
+
+proc isPointInStroke*(ctx: Context, pos: Vec2): bool {.inline.} =
+  ## Returns whether or not the specified point is inside the area contained
+  ## by the stroking of a path.
+  ctx.isPointInStroke(ctx.path, pos)
+
+proc isPointInStroke*(ctx: Context, x, y: float32): bool {.inline.} =
+  ## Returns whether or not the specified point is inside the area contained
+  ## by the stroking of a path.
+  ctx.isPointInStroke(ctx.path, vec2(x, y))
+
+#
 # Additional procs that are not part of the JS API
+#
 
 proc roundedRect*(ctx: Context, x, y, w, h, nw, ne, se, sw: float32) {.inline.} =
   ## Adds a rounded rectangle to the current path.
@@ -566,24 +689,11 @@ proc fillCircle*(ctx: Context, circle: Circle) =
   path.circle(circle)
   ctx.fill(path)
 
-proc fillCircle*(ctx: Context, center: Vec2, radius: float32) =
-  ## Draws a circle that is filled according to the current fillStyle.
-  let path = newPath()
-  path.ellipse(center, radius, radius)
-  ctx.fill(path)
-
 proc strokeCircle*(ctx: Context, circle: Circle) =
   ## Draws a circle that is stroked (outlined) according to the current
   ## strokeStyle and other context settings.
   let path = newPath()
   path.circle(circle)
-  ctx.stroke(path)
-
-proc strokeCircle*(ctx: Context, center: Vec2, radius: float32) =
-  ## Draws a circle that is stroked (outlined) according to the current
-  ## strokeStyle and other context settings.
-  let path = newPath()
-  path.ellipse(center, radius, radius)
   ctx.stroke(path)
 
 proc fillPolygon*(ctx: Context, pos: Vec2, size: float32, sides: int) =
@@ -599,120 +709,3 @@ proc strokePolygon*(ctx: Context, pos: Vec2, size: float32, sides: int) =
   let path = newPath()
   path.polygon(pos, size, sides)
   ctx.stroke(path)
-
-proc drawImage*(ctx: Context, image: Image, dx, dy, dWidth, dHeight: float32) =
-  ## Draws a source image onto the destination image.
-  let
-    imageMat = ctx.mat * translate(vec2(dx, dy)) * scale(vec2(
-      dWidth / image.width.float32,
-      dHeight / image.height.float32
-    ))
-    savedFillStyle = ctx.fillStyle
-
-  ctx.fillStyle = newPaint(pkImage)
-  ctx.fillStyle.image = image
-  ctx.fillStyle.imageMat = imageMat
-
-  let path = newPath()
-  path.rect(rect(dx, dy, dWidth, dHeight))
-  ctx.fill(path)
-
-  ctx.fillStyle = savedFillStyle
-
-proc drawImage*(ctx: Context, image: Image, dx, dy: float32) =
-  ## Draws a source image onto the destination image.
-  ctx.drawImage(image, dx, dx, image.width.float32, image.height.float32)
-
-proc drawImage*(ctx: Context, image: Image, pos: Vec2) =
-  ## Draws a source image onto the destination image.
-  ctx.drawImage(image, pos.x, pos.y)
-
-proc drawImage*(ctx: Context, image: Image, rect: Rect) =
-  ## Draws a source image onto the destination image.
-  ctx.drawImage(image, rect.x, rect.y, rect.w, rect.h)
-
-proc drawImage*(
-  ctx: Context,
-  image: Image,
-  sx, sy, sWidth, sHeight,
-  dx, dy, dWidth, dHeight: float32
-) =
-  ## Draws a source image onto the destination image.
-  let image = image.subImage(sx.int, sy.int, sWidth.int, sHeight.int)
-  ctx.drawImage(image, dx, dx, image.width.float32, image.height.float32)
-
-proc drawImage*(ctx: Context, image: Image, src, dest: Rect) =
-  ## Draws a source image onto the destination image.
-  ctx.drawImage(
-    image,
-    src.x, src.y, src.w, src.h,
-    dest.x, dest.y, dest.w, dest.h
-  )
-
-proc arc*(ctx: Context, x, y, r, a0, a1: float32, ccw: bool = false) =
-  ## Draws a circular arc.
-  ctx.path.arc(x, y, r, a0, a1, ccw)
-
-proc arc*(ctx: Context, pos: Vec2, r: float32, a: Vec2, ccw: bool = false) =
-  ## Adds a circular arc to the current sub-path.
-  ctx.path.arc(pos, r, a, ccw)
-
-proc arcTo*(ctx: Context, x1, y1, x2, y2, radius: float32) =
-  ## Draws a circular arc using the given control points and radius.
-  ctx.path.arcTo(x1, y1, x2, y2, radius)
-
-proc arcTo*(ctx: Context, a, b: Vec2, r: float32) =
-  ## Adds a circular arc using the given control points and radius.
-  ctx.path.arcTo(a, b, r)
-
-proc isPointInPath*(
-  ctx: Context, path: Path, pos: Vec2, windingRule = wrNonZero
-): bool =
-  ## Returns whether or not the specified point is contained in the current path.
-  path.fillOverlaps(pos, ctx.mat, windingRule)
-
-proc isPointInPath*(
-  ctx: Context, path: Path, x, y: float32, windingRule = wrNonZero
-): bool {.inline.} =
-  ## Returns whether or not the specified point is contained in the current path.
-  ctx.isPointInPath(path, vec2(x, y), windingRule)
-
-proc isPointInPath*(
-  ctx: Context, pos: Vec2, windingRule = wrNonZero
-): bool {.inline.} =
-  ## Returns whether or not the specified point is contained in the current path.
-  ctx.isPointInPath(ctx.path, pos, windingRule)
-
-proc isPointInPath*(
-  ctx: Context, x, y: float32, windingRule = wrNonZero
-): bool {.inline.} =
-  ## Returns whether or not the specified point is contained in the current path.
-  ctx.isPointInPath(ctx.path, vec2(x, y), windingRule)
-
-proc isPointInStroke*(ctx: Context, path: Path, pos: Vec2): bool =
-  ## Returns whether or not the specified point is inside the area contained
-  ## by the stroking of a path.
-  path.strokeOverlaps(
-    pos,
-    ctx.mat,
-    ctx.lineWidth,
-    ctx.lineCap,
-    ctx.lineJoin,
-    ctx.miterLimit,
-    ctx.lineDash
-  )
-
-proc isPointInStroke*(ctx: Context, path: Path, x, y: float32): bool {.inline.} =
-  ## Returns whether or not the specified point is inside the area contained
-  ## by the stroking of a path.
-  ctx.isPointInStroke(path, vec2(x, y))
-
-proc isPointInStroke*(ctx: Context, pos: Vec2): bool {.inline.} =
-  ## Returns whether or not the specified point is inside the area contained
-  ## by the stroking of a path.
-  ctx.isPointInStroke(ctx.path, pos)
-
-proc isPointInStroke*(ctx: Context, x, y: float32): bool {.inline.} =
-  ## Returns whether or not the specified point is inside the area contained
-  ## by the stroking of a path.
-  ctx.isPointInStroke(ctx.path, vec2(x, y))

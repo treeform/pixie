@@ -35,12 +35,12 @@ type
     positions*: seq[Vec2]      ## The positions of the glyphs for each rune.
     selectionRects*: seq[Rect] ## The selection rects for each glyph.
 
-  HAlignMode* = enum
+  HorizontalAlignment* = enum
     haLeft
     haCenter
     haRight
 
-  VAlignMode* = enum
+  VerticalAlignment* = enum
     vaTop
     vaMiddle
     vaBottom

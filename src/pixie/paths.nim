@@ -1021,7 +1021,13 @@ proc requiresAntiAliasing(segments: seq[(Segment, int16)]): bool =
       # AA is required if all segments are not vertical or have fractional > 0
       return true
 
-proc computePixelBounds(segments: seq[(Segment, int16)]): Rect =
+proc transform(shapes: var seq[seq[Vec2]], transform: Mat3) =
+  if transform != mat3():
+    for shape in shapes.mitems:
+      for vec in shape.mitems:
+        vec = transform * vec
+
+proc computeBounds(segments: seq[(Segment, int16)]): Rect =
   ## Compute the bounds of the segments.
   var
     xMin = float32.high
@@ -1035,11 +1041,6 @@ proc computePixelBounds(segments: seq[(Segment, int16)]): Rect =
     yMin = min(yMin, segment.at.y)
     yMax = max(yMax, segment.to.y)
 
-  xMin = floor(xMin)
-  xMax = ceil(xMax)
-  yMin = floor(yMin)
-  yMax = ceil(yMax)
-
   if xMin.isNaN() or xMax.isNaN() or yMin.isNaN() or yMax.isNaN():
     discard
   else:
@@ -1048,9 +1049,11 @@ proc computePixelBounds(segments: seq[(Segment, int16)]): Rect =
     result.w = xMax - xMin
     result.h = yMax - yMin
 
-proc computePixelBounds*(path: Path): Rect =
+proc computeBounds*(path: Path, transform = mat3()): Rect =
   ## Compute the bounds of the path.
-  path.commandsToShapes().shapesToSegments().computePixelBounds()
+  var shapes = path.commandsToShapes()
+  shapes.transform(transform)
+  computeBounds(shapes.shapesToSegments())
 
 proc partitionSegments(
   segments: seq[(Segment, int16)], top, height: int
@@ -1482,7 +1485,7 @@ proc fillShapes(
     rgbx = color.asRgbx()
     segments = shapes.shapesToSegments()
     aa = segments.requiresAntiAliasing()
-    bounds = computePixelBounds(segments)
+    bounds = computeBounds(segments).snapToPixels()
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
     pathHeight = min(image.height, (bounds.y + bounds.h).int)
@@ -1539,7 +1542,7 @@ proc fillShapes(
   let
     segments = shapes.shapesToSegments()
     aa = segments.requiresAntiAliasing()
-    bounds = computePixelBounds(segments)
+    bounds = computeBounds(segments).snapToPixels()
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
     pathHeight = min(mask.height, (bounds.y + bounds.h).int)
@@ -1728,12 +1731,6 @@ proc parseSomePath(
     parsePath(path).commandsToShapes(closeSubpaths, pixelScale)
   elif type(path) is Path:
     path.commandsToShapes(closeSubpaths, pixelScale)
-
-proc transform(shapes: var seq[seq[Vec2]], transform: Mat3) =
-  if transform != mat3():
-    for shape in shapes.mitems:
-      for segment in shape.mitems:
-        segment = transform * segment
 
 proc fillPath*(
   mask: Mask,
