@@ -197,3 +197,8 @@ block:
   let image = newImage(100, 100)
   image[99, 99] = rgba(255, 255, 255, 255)
   doAssert not image.isTransparent()
+
+block:
+  let image = newImage(100, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  doAssert not image.isTransparent()

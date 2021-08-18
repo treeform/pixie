@@ -130,8 +130,6 @@ proc isOneColor(image: Image, color: ColorRGBX): bool =
   ## Checks if the entire image is color.
   result = true
 
-  let color = image.getRgbaUnsafe(0, 0)
-
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
     let colorVec = mm_set1_epi32(cast[int32](color))
