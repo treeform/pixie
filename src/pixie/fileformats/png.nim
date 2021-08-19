@@ -23,7 +23,7 @@ template failInvalid() =
 when defined(release):
   {.push checks: off.}
 
-proc decodeHeader(data: string): PngHeader {.raises: [PixieError].} =
+proc decodeHeader(data: string): PngHeader =
   result.width = data.readUint32(0).swap().int
   result.height = data.readUint32(4).swap().int
   result.bitDepth = data.readUint8(8)
@@ -79,7 +79,7 @@ proc decodeHeader(data: string): PngHeader {.raises: [PixieError].} =
   if result.interlaceMethod != 0:
     raise newException(PixieError, "Interlaced PNG not yet supported")
 
-proc decodePalette(data: string): seq[ColorRGB] {.raises: [PixieError].} =
+proc decodePalette(data: string): seq[ColorRGB] =
   if data.len == 0 or data.len mod 3 != 0:
     failInvalid()
 
@@ -90,7 +90,7 @@ proc decodePalette(data: string): seq[ColorRGB] {.raises: [PixieError].} =
 
 proc unfilter(
   uncompressed: string, height, rowBytes, bpp: int
-): string {.raises: [].} =
+): string =
   result.setLen(uncompressed.len - height)
 
   template uncompressedIdx(x, y: int): int =
@@ -164,7 +164,7 @@ proc decodeImageData(
   header: PngHeader,
   palette: seq[ColorRGB],
   transparency, data: string
-): seq[ColorRGBA]  {.raises: [PixieError].} =
+): seq[ColorRGBA] =
   result.setLen(header.width * header.height)
 
   let

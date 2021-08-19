@@ -23,7 +23,7 @@ proc getKerningAdjustment*(
 template failInvalid() =
   raise newException(PixieError, "Invalid SVG font data")
 
-proc parseFloat(node: XmlNode, attr: string): float32 {.raises: [PixieError].} =
+proc parseFloat(node: XmlNode, attr: string): float32 =
   let value = node.attr(attr)
   if value.len == 0:
     raise newException(PixieError, "SVG font missing attr " & attr)

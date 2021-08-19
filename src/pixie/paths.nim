@@ -50,19 +50,19 @@ proc newPath*(): Path {.raises: [].} =
   ## Create a new Path.
   Path()
 
-proc pixelScale(transform: Mat3): float32 {.raises: [].} =
+proc pixelScale(transform: Mat3): float32 =
   ## What is the largest scale factor of this transform?
   max(
     vec2(transform[0, 0], transform[0, 1]).length,
     vec2(transform[1, 0], transform[1, 1]).length
   )
 
-proc isRelative(kind: PathCommandKind): bool {.inline, raises: [].} =
+proc isRelative(kind: PathCommandKind): bool {.inline.} =
   kind in {
     RMove, RLine, TQuad, RTQuad, RHLine, RVLine, RCubic, RSCubic, RQuad, RArc
   }
 
-proc parameterCount(kind: PathCommandKind): int {.raises: [].} =
+proc parameterCount(kind: PathCommandKind): int =
   ## Returns number of parameters a path command has.
   case kind:
   of Close: 0
@@ -635,7 +635,7 @@ proc polygon*(
 
 proc commandsToShapes(
   path: Path, closeSubpaths = false, pixelScale: float32 = 1.0
-): seq[seq[Vec2]] {.raises: [PixieError].} =
+): seq[seq[Vec2]] =
   ## Converts SVG-like commands to sequences of vectors.
   var
     start, at: Vec2
@@ -999,7 +999,7 @@ proc commandsToShapes(
 
 proc shapesToSegments(
   shapes: seq[seq[Vec2]]
-): seq[(Segment, int16)] {.raises: [].} =
+): seq[(Segment, int16)] =
   ## Converts the shapes into a set of filtered segments with winding value.
   for shape in shapes:
     for segment in shape.segments:
@@ -1014,7 +1014,7 @@ proc shapesToSegments(
 
       result.add((segment, winding))
 
-proc requiresAntiAliasing(segments: seq[(Segment, int16)]): bool {.raises: [].} =
+proc requiresAntiAliasing(segments: seq[(Segment, int16)]): bool =
   ## Returns true if the fill requires antialiasing.
 
   template hasFractional(v: float32): bool =
@@ -1029,13 +1029,13 @@ proc requiresAntiAliasing(segments: seq[(Segment, int16)]): bool {.raises: [].} 
       # AA is required if all segments are not vertical or have fractional > 0
       return true
 
-proc transform(shapes: var seq[seq[Vec2]], transform: Mat3) {.raises: [].} =
+proc transform(shapes: var seq[seq[Vec2]], transform: Mat3) =
   if transform != mat3():
     for shape in shapes.mitems:
       for vec in shape.mitems:
         vec = transform * vec
 
-proc computeBounds(segments: seq[(Segment, int16)]): Rect {.raises: [].} =
+proc computeBounds(segments: seq[(Segment, int16)]): Rect =
   ## Compute the bounds of the segments.
   var
     xMin = float32.high
@@ -1067,7 +1067,7 @@ proc computeBounds*(
 
 proc partitionSegments(
   segments: seq[(Segment, int16)], top, height: int
-): Partitioning {.raises: [].} =
+): Partitioning =
   ## Puts segments into the height partitions they intersect with.
   let
     maxPartitions = max(1, height div 10).uint32
@@ -1091,9 +1091,7 @@ proc partitionSegments(
       for i in atPartition .. toPartition:
         result.partitions[i].add((segment, winding))
 
-proc getIndexForY(
-  partitioning: Partitioning, y: int
-): uint32 {.inline, raises: [].} =
+proc getIndexForY(partitioning: Partitioning, y: int): uint32 {.inline.} =
   if partitioning.partitionHeight == 0 or partitioning.partitions.len == 1:
     0.uint32
   else:
@@ -1104,7 +1102,7 @@ proc getIndexForY(
 
 proc insertionSort(
   a: var seq[(float32, int16)], lo, hi: int
-) {.inline, raises: [].} =
+) {.inline.} =
   for i in lo + 1 .. hi:
     var
       j = i - 1
@@ -1114,7 +1112,7 @@ proc insertionSort(
       dec j
       dec k
 
-proc sort(a: var seq[(float32, int16)], inl, inr: int) {.raises: [].} =
+proc sort(a: var seq[(float32, int16)], inl, inr: int) =
   ## Quicksort + insertion sort, in-place and faster than standard lib sort.
   let n = inr - inl + 1
   if n < 32:
@@ -1138,7 +1136,7 @@ proc sort(a: var seq[(float32, int16)], inl, inr: int) {.raises: [].} =
 
 proc shouldFill(
   windingRule: WindingRule, count: int
-): bool {.inline, raises: [].} =
+): bool {.inline.} =
   ## Should we fill based on the current winding rule and count?
   case windingRule:
   of wrNonZero:
@@ -1152,7 +1150,7 @@ iterator walk(
   windingRule: WindingRule,
   y: int,
   size: Vec2
-): (float32, float32, int32) {.raises: [].} =
+): (float32, float32, int32) =
   var
     prevAt: float32
     count: int32
@@ -1184,7 +1182,7 @@ proc computeCoverages(
   aa: bool,
   partitioning: Partitioning,
   windingRule: WindingRule
-) {.inline, raises: [].} =
+) {.inline.} =
   let
     quality = if aa: 5 else: 1 # Must divide 255 cleanly (1, 3, 5, 15, 17, 51, 85)
     sampleCoverage = (255 div quality).uint8
@@ -1256,7 +1254,7 @@ proc computeCoverages(
 
 proc clearUnsafe(
   target: Image | Mask, startX, startY, toX, toY: int
-) {.raises: [].} =
+) =
   ## Clears data from [start, to).
   if startX == target.width or startY == target.height:
     return
@@ -1274,7 +1272,7 @@ proc fillCoverage(
   startX, y: int,
   coverages: seq[uint8],
   blendMode: BlendMode
-) {.raises: [PixieError].} =
+) =
   var x = startX
   when defined(amd64) and not defined(pixieNoSimd):
     if blendMode.hasSimdBlender():
@@ -1361,7 +1359,7 @@ proc fillCoverage(
   startX, y: int,
   coverages: seq[uint8],
   blendMode: BlendMode
-) {.raises: [PixieError].} =
+) =
   var x = startX
   when defined(amd64) and not defined(pixieNoSimd):
     if blendMode.hasSimdMasker():
@@ -1404,7 +1402,7 @@ proc fillHits(
   numHits: int,
   windingRule: WindingRule,
   blendMode: BlendMode
-) {.raises: [PixieError].} =
+) =
   let blender = blendMode.blender()
   var filledTo: int
   for (prevAt, at, count) in hits.walk(numHits, windingRule, y, image.wh):
@@ -1452,7 +1450,7 @@ proc fillHits(
   numHits: int,
   windingRule: WindingRule,
   blendMode: BlendMode
-) {.raises: [PixieError].} =
+) =
   let masker = blendMode.masker()
   var filledTo: int
   for (prevAt, at, count) in hits.walk(numHits, windingRule, y, mask.wh):
@@ -1496,7 +1494,7 @@ proc fillShapes(
   color: SomeColor,
   windingRule: WindingRule,
   blendMode: BlendMode
-) {.raises: [PixieError].} =
+) =
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
   let
@@ -1554,7 +1552,7 @@ proc fillShapes(
   shapes: seq[seq[Vec2]],
   windingRule: WindingRule,
   blendMode: BlendMode
-) {.raises: [PixieError].} =
+) =
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
   let
@@ -1592,11 +1590,11 @@ proc fillShapes(
     mask.clearUnsafe(0, 0, 0, startY)
     mask.clearUnsafe(0, pathHeight, 0, mask.height)
 
-proc miterLimitToAngle*(limit: float32): float32 {.inline, raises: [].} =
+proc miterLimitToAngle*(limit: float32): float32 {.inline.} =
   ## Converts miter-limit-ratio to miter-limit-angle.
   arcsin(1 / limit) * 2
 
-proc angleToMiterLimit*(angle: float32): float32 {.inline, raises: [].} =
+proc angleToMiterLimit*(angle: float32): float32 {.inline.} =
   ## Converts miter-limit-angle to miter-limit-ratio.
   1 / sin(angle / 2)
 
@@ -1607,7 +1605,7 @@ proc strokeShapes(
   lineJoin: LineJoin,
   miterLimit: float32,
   dashes: seq[float32]
-): seq[seq[Vec2]] {.raises: [PixieError].} =
+): seq[seq[Vec2]] =
   if strokeWidth <= 0:
     return
 
@@ -1743,7 +1741,7 @@ proc strokeShapes(
 
 proc parseSomePath(
   path: SomePath, closeSubpaths: bool, pixelScale: float32 = 1.0
-): seq[seq[Vec2]] {.inline, raises: [PixieError].} =
+): seq[seq[Vec2]] {.inline.} =
   ## Given SomePath, parse it in different ways.
   when type(path) is string:
     parsePath(path).commandsToShapes(closeSubpaths, pixelScale)
@@ -1908,7 +1906,7 @@ proc overlaps(
   shapes: seq[seq[Vec2]],
   test: Vec2,
   windingRule: WindingRule
-): bool  {.raises: [].} =
+): bool =
   var hits: seq[(float32, int16)]
 
   let

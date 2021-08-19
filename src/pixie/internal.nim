@@ -3,7 +3,7 @@ import chroma, vmath
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
 
-proc gaussianKernel*(radius: int): seq[uint32] =
+proc gaussianKernel*(radius: int): seq[uint32] {.raises: [].} =
   ## Compute lookup table for 1d Gaussian kernel.
   ## Values are [0, 255] * 1024.
   result.setLen(radius * 2 + 1)
@@ -23,7 +23,7 @@ proc gaussianKernel*(radius: int): seq[uint32] =
   for i, f in floats:
     result[i] = round(f * 255 * 1024).uint32
 
-proc applyOpacity*(color: ColorRGBX, opacity: float32): ColorRGBX =
+proc applyOpacity*(color: ColorRGBX, opacity: float32): ColorRGBX {.raises: [].} =
   if opacity == 0:
     rgbx(0, 0, 0, 0)
   else:
@@ -35,7 +35,7 @@ proc applyOpacity*(color: ColorRGBX, opacity: float32): ColorRGBX =
       a = ((color.a * x) div 255).uint8
     rgbx(r, g, b, a)
 
-proc toStraightAlpha*(data: var seq[ColorRGBA | ColorRGBX]) =
+proc toStraightAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} =
   ## Converts an image from premultiplied alpha to straight alpha.
   ## This is expensive for large images.
   for c in data.mitems:
@@ -46,7 +46,7 @@ proc toStraightAlpha*(data: var seq[ColorRGBA | ColorRGBX]) =
     c.g = ((c.g.uint32 * multiplier) div 255).uint8
     c.b = ((c.b.uint32 * multiplier) div 255).uint8
 
-proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) =
+proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} =
   ## Converts an image to premultiplied alpha from straight alpha.
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
@@ -94,7 +94,7 @@ proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) =
       data[j] = c
 
 when defined(amd64) and not defined(pixieNoSimd):
-  proc packAlphaValues*(v: M128i): M128i {.inline.} =
+  proc packAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
     ## Shuffle the alpha values for these 4 colors to the first 4 bytes
     result = mm_srli_epi32(v, 24)
     let
@@ -105,7 +105,7 @@ when defined(amd64) and not defined(pixieNoSimd):
     result = mm_or_si128(mm_or_si128(result, i), mm_or_si128(j, k))
     result = mm_and_si128(result, first32)
 
-  proc unpackAlphaValues*(v: M128i): M128i {.inline.} =
+  proc unpackAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
     ## Unpack the first 32 bits into 4 rgba(0, 0, 0, value)
     let mask = cast[M128i]([uint8.high.uint64, 0])
 
