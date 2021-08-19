@@ -495,7 +495,7 @@ proc getLineDash*(ctx: Context): seq[float32] {.inline, raises: [].} =
 proc setLineDash*(ctx: Context, lineDash: seq[float32]) {.inline, raises: [].} =
   ctx.lineDash = lineDash
 
-proc getTransform*(ctx: Context): Mat3 {.inline, raises: []} =
+proc getTransform*(ctx: Context): Mat3 {.inline, raises: [].} =
   ## Retrieves the current transform matrix being applied to the context.
   ctx.mat
 

@@ -1252,9 +1252,7 @@ proc computeCoverages(
           for j in i ..< fillStart + fillLen:
             coverages[j - startX] += sampleCoverage
 
-proc clearUnsafe(
-  target: Image | Mask, startX, startY, toX, toY: int
-) =
+proc clearUnsafe(target: Image | Mask, startX, startY, toX, toY: int) =
   ## Clears data from [start, to).
   if startX == target.width or startY == target.height:
     return

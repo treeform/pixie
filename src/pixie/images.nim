@@ -884,10 +884,10 @@ proc draw*(
 
 proc drawTiled*(
   dst, src: Image, mat: Mat3, blendMode = bmNormal
-) {.raises: [PixieError]} =
+) {.raises: [PixieError].} =
   dst.drawCorrect(src, mat, true, blendMode)
 
-proc resize*(srcImage: Image, width, height: int): Image {.raises: [PixieError]} =
+proc resize*(srcImage: Image, width, height: int): Image {.raises: [PixieError].} =
   ## Resize an image to a given height and width.
   if width == srcImage.width and height == srcImage.height:
     result = srcImage.copy()
@@ -904,7 +904,7 @@ proc resize*(srcImage: Image, width, height: int): Image {.raises: [PixieError]}
 
 proc shadow*(
   image: Image, offset: Vec2, spread, blur: float32, color: SomeColor
-): Image {.raises: [PixieError]} =
+): Image {.raises: [PixieError].} =
   ## Create a shadow of the image with the offset, spread and blur.
   let
     mask = image.newMask()
@@ -916,7 +916,7 @@ proc shadow*(
   result.fill(color)
   result.draw(shifted, blendMode = bmMask)
 
-proc superImage*(image: Image, x, y, w, h: int): Image {.raises: [PixieError]} =
+proc superImage*(image: Image, x, y, w, h: int): Image {.raises: [PixieError].} =
   ## Either cuts a sub image or returns a super image with padded transparency.
   if x >= 0 and x + w <= image.width and y >= 0 and y + h <= image.height:
     result = image.subImage(x, y, w, h)
