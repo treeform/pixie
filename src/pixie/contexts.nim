@@ -44,7 +44,7 @@ type
   TextMetrics* = object
     width*: float32
 
-proc newContext*(image: Image): Context =
+proc newContext*(image: Image): Context {.raises: [].} =
   ## Create a new Context that will draw to the parameter image.
   result = Context()
   result.image = image
@@ -53,15 +53,17 @@ proc newContext*(image: Image): Context =
   result.globalAlpha = 1
   result.lineWidth = 1
   result.miterLimit = 10
-  result.fillStyle = rgbx(0, 0, 0, 255)
-  result.strokeStyle = rgbx(0, 0, 0, 255)
+  result.fillStyle = newPaint(pkSolid)
+  result.fillStyle.color = color(0, 0, 0, 1)
+  result.strokeStyle = newPaint(pkSolid)
+  result.strokeStyle.color = color(0, 0, 0, 1)
   result.fontSize = 12
 
-proc newContext*(width, height: int): Context {.inline.} =
+proc newContext*(width, height: int): Context {.inline, raises: [PixieError].} =
   ## Create a new Context that will draw to a new image of width and height.
   newContext(newImage(width, height))
 
-proc state(ctx: Context): ContextState =
+proc state(ctx: Context): ContextState {.raises: [PixieError].} =
   result.fillStyle = ctx.fillStyle
   result.strokeStyle = ctx.strokeStyle
   result.globalAlpha = ctx.globalAlpha
@@ -76,7 +78,7 @@ proc state(ctx: Context): ContextState =
   result.mat = ctx.mat
   result.mask = if ctx.mask != nil: ctx.mask.copy() else: nil
 
-proc save*(ctx: Context) {.inline.} =
+proc save*(ctx: Context) {.inline, raises: [PixieError].} =
   ## Saves the entire state of the context by pushing the current state onto
   ## a stack.
   ctx.stateStack.add(ctx.state())
@@ -84,7 +86,7 @@ proc save*(ctx: Context) {.inline.} =
   ctx.fillStyle = newPaint(ctx.fillStyle)
   ctx.strokeStyle = newPaint(ctx.strokeStyle)
 
-proc saveLayer*(ctx: Context) =
+proc saveLayer*(ctx: Context) {.raises: [PixieError].} =
   ## Saves the entire state of the context by pushing the current state onto
   ## a stack and allocates a new image layer for subsequent drawing. Calling
   ## restore blends the current layer image onto the prior layer or root image.
@@ -93,7 +95,7 @@ proc saveLayer*(ctx: Context) =
   ctx.stateStack.add(state)
   ctx.layer = newImage(ctx.image.width, ctx.image.height)
 
-proc restore*(ctx: Context) =
+proc restore*(ctx: Context) {.raises: [PixieError].} =
   ## Restores the most recently saved context state by popping the top entry
   ## in the drawing state stack. If there is no saved state, this method does
   ## nothing.
@@ -128,7 +130,9 @@ proc restore*(ctx: Context) =
     else: # Otherwise draw to the root image
       ctx.image.draw(poppedLayer)
 
-proc fill(ctx: Context, image: Image, path: Path, windingRule: WindingRule) =
+proc fill(
+  ctx: Context, image: Image, path: Path, windingRule: WindingRule
+) {.raises: [PixieError].} =
   var image = image
 
   if ctx.globalAlpha != 1:
@@ -146,7 +150,7 @@ proc fill(ctx: Context, image: Image, path: Path, windingRule: WindingRule) =
     ctx.layer.applyOpacity(ctx.globalAlpha)
     ctx.restore()
 
-proc stroke(ctx: Context, image: Image, path: Path) =
+proc stroke(ctx: Context, image: Image, path: Path) {.raises: [PixieError].} =
   var image = image
 
   if ctx.globalAlpha != 1:
@@ -168,17 +172,19 @@ proc stroke(ctx: Context, image: Image, path: Path) =
     ctx.layer.applyOpacity(ctx.globalAlpha)
     ctx.restore()
 
-proc newFont(ctx: Context): Font =
+proc newFont(ctx: Context): Font {.raises: [PixieError].} =
   if ctx.font == "":
     raise newException(PixieError, "No font has been set on this Context")
 
   if ctx.font notin ctx.typefaces:
     ctx.typefaces[ctx.font] = readTypeface(ctx.font)
 
-  result = newFont(ctx.typefaces[ctx.font])
+  result = newFont(ctx.typefaces.getOrDefault(ctx.font, nil))
   result.size = ctx.fontSize
 
-proc fillText(ctx: Context, image: Image, text: string, at: Vec2) =
+proc fillText(
+  ctx: Context, image: Image, text: string, at: Vec2
+) {.raises: [PixieError].} =
   let font = newFont(ctx)
 
   # Canvas positions text relative to the alphabetic baseline by default
@@ -204,7 +210,9 @@ proc fillText(ctx: Context, image: Image, text: string, at: Vec2) =
     ctx.layer.applyOpacity(ctx.globalAlpha)
     ctx.restore()
 
-proc strokeText(ctx: Context, image: Image, text: string, at: Vec2) =
+proc strokeText(
+  ctx: Context, image: Image, text: string, at: Vec2
+) {.raises: [PixieError].} =
   let font = newFont(ctx)
 
   # Canvas positions text relative to the alphabetic baseline by default
@@ -235,29 +243,29 @@ proc strokeText(ctx: Context, image: Image, text: string, at: Vec2) =
     ctx.layer.applyOpacity(ctx.globalAlpha)
     ctx.restore()
 
-proc beginPath*(ctx: Context) {.inline.} =
+proc beginPath*(ctx: Context) {.inline, raises: [].} =
   ## Starts a new path by emptying the list of sub-paths.
   ctx.path = newPath()
 
-proc moveTo*(ctx: Context, v: Vec2) {.inline.} =
+proc moveTo*(ctx: Context, v: Vec2) {.inline, raises: [].} =
   ## Begins a new sub-path at the point (x, y).
   ctx.path.moveTo(v)
 
-proc moveTo*(ctx: Context, x, y: float32) {.inline.} =
+proc moveTo*(ctx: Context, x, y: float32) {.inline, raises: [].} =
   ## Begins a new sub-path at the point (x, y).
   ctx.moveTo(vec2(x, y))
 
-proc lineTo*(ctx: Context, v: Vec2) {.inline.} =
+proc lineTo*(ctx: Context, v: Vec2) {.inline, raises: [].} =
   ## Adds a straight line to the current sub-path by connecting the sub-path's
   ## last point to the specified (x, y) coordinates.
   ctx.path.lineTo(v)
 
-proc lineTo*(ctx: Context, x, y: float32) {.inline.} =
+proc lineTo*(ctx: Context, x, y: float32) {.inline, raises: [].} =
   ## Adds a straight line to the current sub-path by connecting the sub-path's
   ## last point to the specified (x, y) coordinates.
   ctx.lineTo(vec2(x, y))
 
-proc bezierCurveTo*(ctx: Context, cp1, cp2, to: Vec2) {.inline.} =
+proc bezierCurveTo*(ctx: Context, cp1, cp2, to: Vec2) {.inline, raises: [].} =
   ## Adds a cubic Bézier curve to the current sub-path. It requires three
   ## points: the first two are control points and the third one is the end
   ## point. The starting point is the latest point in the current path,
@@ -266,14 +274,16 @@ proc bezierCurveTo*(ctx: Context, cp1, cp2, to: Vec2) {.inline.} =
 
 proc bezierCurveTo*(
   ctx: Context, cp1x, cp1y, cp2x, cp2y, x, y: float32
-) {.inline.} =
+) {.inline, raises: [].} =
   ## Adds a cubic Bézier curve to the current sub-path. It requires three
   ## points: the first two are control points and the third one is the end
   ## point. The starting point is the latest point in the current path,
   ## which can be changed using moveTo() before creating the Bézier curve.
   ctx.bezierCurveTo(vec2(cp1x, cp1y), vec2(cp2x, cp2y), vec2(x, y))
 
-proc quadraticCurveTo*(ctx: Context, cpx, cpy, x, y: float32) {.inline.} =
+proc quadraticCurveTo*(
+  ctx: Context, cpx, cpy, x, y: float32
+) {.inline, raises: [].} =
   ## Adds a quadratic Bézier curve to the current sub-path. It requires two
   ## points: the first one is a control point and the second one is the end
   ## point. The starting point is the latest point in the current path,
@@ -281,7 +291,9 @@ proc quadraticCurveTo*(ctx: Context, cpx, cpy, x, y: float32) {.inline.} =
   ## Bézier curve.
   ctx.path.quadraticCurveTo(cpx, cpy, x, y)
 
-proc quadraticCurveTo*(ctx: Context, ctrl, to: Vec2) {.inline.} =
+proc quadraticCurveTo*(
+  ctx: Context, ctrl, to: Vec2
+) {.inline, raises: [].} =
   ## Adds a quadratic Bézier curve to the current sub-path. It requires two
   ## points: the first one is a control point and the second one is the end
   ## point. The starting point is the latest point in the current path,
@@ -289,45 +301,55 @@ proc quadraticCurveTo*(ctx: Context, ctrl, to: Vec2) {.inline.} =
   ## Bézier curve.
   ctx.path.quadraticCurveTo(ctrl, to)
 
-proc arc*(ctx: Context, x, y, r, a0, a1: float32, ccw: bool = false) =
+proc arc*(
+  ctx: Context, x, y, r, a0, a1: float32, ccw: bool = false
+) {.raises: [PixieError].} =
   ## Draws a circular arc.
   ctx.path.arc(x, y, r, a0, a1, ccw)
 
-proc arc*(ctx: Context, pos: Vec2, r: float32, a: Vec2, ccw: bool = false) =
+proc arc*(
+  ctx: Context, pos: Vec2, r: float32, a: Vec2, ccw: bool = false
+) {.raises: [PixieError].} =
   ## Adds a circular arc to the current sub-path.
   ctx.path.arc(pos, r, a, ccw)
 
-proc arcTo*(ctx: Context, x1, y1, x2, y2, radius: float32) =
+proc arcTo*(
+  ctx: Context, x1, y1, x2, y2, radius: float32
+) {.raises: [PixieError].} =
   ## Draws a circular arc using the given control points and radius.
   ctx.path.arcTo(x1, y1, x2, y2, radius)
 
-proc arcTo*(ctx: Context, a, b: Vec2, r: float32) =
+proc arcTo*(
+  ctx: Context, a, b: Vec2, r: float32
+) {.raises: [PixieError].} =
   ## Adds a circular arc using the given control points and radius.
   ctx.path.arcTo(a, b, r)
 
-proc closePath*(ctx: Context) {.inline.} =
+proc closePath*(ctx: Context) {.inline, raises: [].} =
   ## Attempts to add a straight line from the current point to the start of
   ## the current sub-path. If the shape has already been closed or has only
   ## one point, this function does nothing.
   ctx.path.closePath()
 
-proc rect*(ctx: Context, rect: Rect) {.inline.} =
+proc rect*(ctx: Context, rect: Rect) {.inline, raises: [].} =
   ## Adds a rectangle to the current path.
   ctx.path.rect(rect)
 
-proc rect*(ctx: Context, x, y, width, height: float32) {.inline.} =
+proc rect*(ctx: Context, x, y, width, height: float32) {.inline, raises: [].} =
   ## Adds a rectangle to the current path.
   ctx.path.rect(x, y, width, height)
 
-proc ellipse*(ctx: Context, center: Vec2, rx, ry: float32) {.inline.} =
+proc ellipse*(ctx: Context, center: Vec2, rx, ry: float32) {.inline, raises: [].} =
   ## Adds an ellipse to the current sub-path.
   ctx.path.ellipse(center, rx, ry)
 
-proc ellipse*(ctx: Context, x, y, rx, ry: float32) {.inline.} =
+proc ellipse*(ctx: Context, x, y, rx, ry: float32) {.inline, raises: [].} =
   ## Adds an ellipse to the current sub-path.
   ctx.path.ellipse(x, y, rx, ry)
 
-proc fill*(ctx: Context, path: Path, windingRule = wrNonZero) =
+proc fill*(
+  ctx: Context, path: Path, windingRule = wrNonZero
+) {.raises: [PixieError].} =
   ## Fills the path with the current fillStyle.
   if ctx.mask != nil and ctx.layer == nil:
     ctx.saveLayer()
@@ -338,13 +360,17 @@ proc fill*(ctx: Context, path: Path, windingRule = wrNonZero) =
   else:
     ctx.fill(ctx.image, path, windingRule)
 
-proc fill*(ctx: Context, windingRule = wrNonZero) {.inline.} =
+proc fill*(
+  ctx: Context, windingRule = wrNonZero
+) {.inline, raises: [PixieError].} =
   ## Fills the current path with the current fillStyle.
   ctx.fill(ctx.path, windingRule)
 
-proc clip*(ctx: Context, windingRule = wrNonZero) {.inline.}
+proc clip*(ctx: Context, windingRule = wrNonZero) {.inline, raises: [PixieError].}
 
-proc clip*(ctx: Context, path: Path, windingRule = wrNonZero) =
+proc clip*(
+  ctx: Context, path: Path, windingRule = wrNonZero
+) {.raises: [PixieError].} =
   ## Turns the path into the current clipping region. The previous clipping
   ## region, if any, is intersected with the current or given path to create
   ## the new clipping region.
@@ -354,15 +380,17 @@ proc clip*(ctx: Context, path: Path, windingRule = wrNonZero) =
   else:
     ctx.mask.fillPath(path, windingRule = windingRule, blendMode = bmMask)
 
-proc clip*(ctx: Context, windingRule = wrNonZero) {.inline.} =
+proc clip*(
+  ctx: Context, windingRule = wrNonZero
+) {.inline, raises: [PixieError].} =
   ## Turns the current path into the current clipping region. The previous
   ## clipping region, if any, is intersected with the current or given path
   ## to create the new clipping region.
   ctx.clip(ctx.path, windingRule)
 
-proc stroke*(ctx: Context) {.inline.}
+proc stroke*(ctx: Context) {.inline, raises: [PixieError].}
 
-proc stroke*(ctx: Context, path: Path) =
+proc stroke*(ctx: Context, path: Path) {.raises: [PixieError].} =
   ## Strokes (outlines) the current or given path with the current strokeStyle.
   if ctx.mask != nil and ctx.layer == nil:
     ctx.saveLayer()
@@ -373,11 +401,11 @@ proc stroke*(ctx: Context, path: Path) =
   else:
     ctx.stroke(ctx.image, path)
 
-proc stroke*(ctx: Context) {.inline.} =
+proc stroke*(ctx: Context) {.inline, raises: [PixieError].} =
   ## Strokes (outlines) the current or given path with the current strokeStyle.
   ctx.stroke(ctx.path)
 
-proc clearRect*(ctx: Context, rect: Rect) =
+proc clearRect*(ctx: Context, rect: Rect) {.raises: [PixieError].} =
   ## Erases the pixels in a rectangular area.
   let paint = newPaint(pkSolid)
   paint.blendMode = bmOverwrite
@@ -385,37 +413,43 @@ proc clearRect*(ctx: Context, rect: Rect) =
   let path = newPath()
   path.rect(rect)
   if ctx.layer != nil:
-    ctx.layer.fillPath( path, paint, ctx.mat)
+    ctx.layer.fillPath(path, paint, ctx.mat)
   else:
     ctx.image.fillPath(path, paint, ctx.mat)
 
-proc clearRect*(ctx: Context, x, y, width, height: float32) {.inline.} =
+proc clearRect*(
+  ctx: Context, x, y, width, height: float32
+) {.inline, raises: [PixieError].} =
   ## Erases the pixels in a rectangular area.
   ctx.clearRect(rect(x, y, width, height))
 
-proc fillRect*(ctx: Context, rect: Rect) =
+proc fillRect*(ctx: Context, rect: Rect) {.raises: [PixieError].} =
   ## Draws a rectangle that is filled according to the current fillStyle.
   let path = newPath()
   path.rect(rect)
   ctx.fill(path)
 
-proc fillRect*(ctx: Context, x, y, width, height: float32) {.inline.} =
+proc fillRect*(
+  ctx: Context, x, y, width, height: float32
+) {.inline, raises: [PixieError].} =
   ## Draws a rectangle that is filled according to the current fillStyle.
   ctx.fillRect(rect(x, y, width, height))
 
-proc strokeRect*(ctx: Context, rect: Rect) =
+proc strokeRect*(ctx: Context, rect: Rect) {.raises: [PixieError].} =
   ## Draws a rectangle that is stroked (outlined) according to the current
   ## strokeStyle and other context settings.
   let path = newPath()
   path.rect(rect)
   ctx.stroke(path)
 
-proc strokeRect*(ctx: Context, x, y, width, height: float32) {.inline.} =
+proc strokeRect*(
+  ctx: Context, x, y, width, height: float32
+) {.inline, raises: [PixieError].} =
   ## Draws a rectangle that is stroked (outlined) according to the current
   ## strokeStyle and other context settings.
   ctx.strokeRect(rect(x, y, width, height))
 
-proc fillText*(ctx: Context, text: string, at: Vec2) =
+proc fillText*(ctx: Context, text: string, at: Vec2) {.raises: [PixieError].} =
   ## Draws a text string at the specified coordinates, filling the string's
   ## characters with the current fillStyle
   if ctx.mask != nil and ctx.layer == nil:
@@ -427,12 +461,14 @@ proc fillText*(ctx: Context, text: string, at: Vec2) =
   else:
     ctx.fillText(ctx.image, text, at)
 
-proc fillText*(ctx: Context, text: string, x, y: float32) {.inline.} =
+proc fillText*(
+  ctx: Context, text: string, x, y: float32
+) {.inline, raises: [PixieError].} =
   ## Draws the outlines of the characters of a text string at the specified
   ## coordinates.
   ctx.fillText(text, vec2(x, y))
 
-proc strokeText*(ctx: Context, text: string, at: Vec2) =
+proc strokeText*(ctx: Context, text: string, at: Vec2) {.raises: [PixieError].} =
   ## Draws the outlines of the characters of a text string at the specified
   ## coordinates.
   if ctx.mask != nil and ctx.layer == nil:
@@ -444,12 +480,14 @@ proc strokeText*(ctx: Context, text: string, at: Vec2) =
   else:
     ctx.strokeText(ctx.image, text, at)
 
-proc strokeText*(ctx: Context, text: string, x, y: float32) {.inline.} =
+proc strokeText*(
+  ctx: Context, text: string, x, y: float32
+) {.inline, raises: [PixieError].} =
   ## Draws the outlines of the characters of a text string at the specified
   ## coordinates.
   ctx.strokeText(text, vec2(x, y))
 
-proc measureText*(ctx: Context, text: string): TextMetrics =
+proc measureText*(ctx: Context, text: string): TextMetrics {.raises: [PixieError].} =
   ## Returns a TextMetrics object that contains information about the measured
   ## text (such as its width, for example).
   let
@@ -457,61 +495,63 @@ proc measureText*(ctx: Context, text: string): TextMetrics =
     bounds = typeset(font, text).computeBounds()
   result.width = bounds.x
 
-proc getLineDash*(ctx: Context): seq[float32] {.inline.} =
+proc getLineDash*(ctx: Context): seq[float32] {.inline, raises: [].} =
   ctx.lineDash
 
-proc setLineDash*(ctx: Context, lineDash: seq[float32]) {.inline.} =
+proc setLineDash*(ctx: Context, lineDash: seq[float32]) {.inline, raises: [].} =
   ctx.lineDash = lineDash
 
-proc getTransform*(ctx: Context): Mat3 {.inline.} =
+proc getTransform*(ctx: Context): Mat3 {.inline, raises: []} =
   ## Retrieves the current transform matrix being applied to the context.
   ctx.mat
 
-proc setTransform*(ctx: Context, transform: Mat3) {.inline.} =
+proc setTransform*(ctx: Context, transform: Mat3) {.inline, raises: [].} =
   ## Overrides the transform matrix being applied to the context.
   ctx.mat = transform
 
-proc setTransform*(ctx: Context, a, b, c, d, e, f: float32) {.inline.} =
+proc setTransform*(ctx: Context, a, b, c, d, e, f: float32) {.inline, raises: [].} =
   ## Overrides the transform matrix being applied to the context.
   ctx.mat = mat3(a, b, 0, c, d, 0, e, f, 1)
 
-proc transform*(ctx: Context, transform: Mat3) {.inline.} =
+proc transform*(ctx: Context, transform: Mat3) {.inline, raises: [].} =
   ## Multiplies the current transform with the matrix described by the
   ## arguments of this method.
   ctx.mat = ctx.mat * transform
 
-proc transform*(ctx: Context, a, b, c, d, e, f: float32) {.inline.} =
+proc transform*(ctx: Context, a, b, c, d, e, f: float32) {.inline, raises: [].} =
   ## Multiplies the current transform with the matrix described by the
   ## arguments of this method.
   ctx.transform(mat3(a, b, 0, c, d, 0, e, f, 1))
 
-proc translate*(ctx: Context, v: Vec2) {.inline.} =
+proc translate*(ctx: Context, v: Vec2) {.inline, raises: [].} =
   ## Adds a translation transformation to the current matrix.
   ctx.mat = ctx.mat * translate(v)
 
-proc translate*(ctx: Context, x, y: float32) {.inline.} =
+proc translate*(ctx: Context, x, y: float32) {.inline, raises: [].} =
   ## Adds a translation transformation to the current matrix.
   ctx.mat = ctx.mat * translate(vec2(x, y))
 
-proc scale*(ctx: Context, v: Vec2) {.inline.} =
+proc scale*(ctx: Context, v: Vec2) {.inline, raises: [].} =
   ## Adds a scaling transformation to the context units horizontally and/or
   ## vertically.
   ctx.mat = ctx.mat * scale(v)
 
-proc scale*(ctx: Context, x, y: float32) {.inline.} =
+proc scale*(ctx: Context, x, y: float32) {.inline, raises: [].} =
   ## Adds a scaling transformation to the context units horizontally and/or
   ## vertically.
   ctx.mat = ctx.mat * scale(vec2(x, y))
 
-proc rotate*(ctx: Context, angle: float32) {.inline.} =
+proc rotate*(ctx: Context, angle: float32) {.inline, raises: [].} =
   ## Adds a rotation to the transformation matrix.
   ctx.mat = ctx.mat * rotate(-angle)
 
-proc resetTransform*(ctx: Context) {.inline.} =
+proc resetTransform*(ctx: Context) {.inline, raises: [].} =
   ## Resets the current transform to the identity matrix.
   ctx.mat = mat3()
 
-proc drawImage*(ctx: Context, image: Image, dx, dy, dWidth, dHeight: float32) =
+proc drawImage*(
+  ctx: Context, image: Image, dx, dy, dWidth, dHeight: float32
+) {.raises: [PixieError].} =
   ## Draws a source image onto the destination image.
   let
     imageMat = ctx.mat * translate(vec2(dx, dy)) * scale(vec2(
@@ -530,15 +570,17 @@ proc drawImage*(ctx: Context, image: Image, dx, dy, dWidth, dHeight: float32) =
 
   ctx.fillStyle = savedFillStyle
 
-proc drawImage*(ctx: Context, image: Image, dx, dy: float32) =
+proc drawImage*(
+  ctx: Context, image: Image, dx, dy: float32
+) {.raises: [PixieError].} =
   ## Draws a source image onto the destination image.
   ctx.drawImage(image, dx, dx, image.width.float32, image.height.float32)
 
-proc drawImage*(ctx: Context, image: Image, pos: Vec2) =
+proc drawImage*(ctx: Context, image: Image, pos: Vec2) {.raises: [PixieError].} =
   ## Draws a source image onto the destination image.
   ctx.drawImage(image, pos.x, pos.y)
 
-proc drawImage*(ctx: Context, image: Image, rect: Rect) =
+proc drawImage*(ctx: Context, image: Image, rect: Rect) {.raises: [PixieError].} =
   ## Draws a source image onto the destination image.
   ctx.drawImage(image, rect.x, rect.y, rect.w, rect.h)
 
@@ -547,12 +589,12 @@ proc drawImage*(
   image: Image,
   sx, sy, sWidth, sHeight,
   dx, dy, dWidth, dHeight: float32
-) =
+) {.raises: [PixieError].} =
   ## Draws a source image onto the destination image.
   let image = image.subImage(sx.int, sy.int, sWidth.int, sHeight.int)
   ctx.drawImage(image, dx, dx, image.width.float32, image.height.float32)
 
-proc drawImage*(ctx: Context, image: Image, src, dest: Rect) =
+proc drawImage*(ctx: Context, image: Image, src, dest: Rect) {.raises: [PixieError].} =
   ## Draws a source image onto the destination image.
   ctx.drawImage(
     image,
@@ -562,29 +604,31 @@ proc drawImage*(ctx: Context, image: Image, src, dest: Rect) =
 
 proc isPointInPath*(
   ctx: Context, path: Path, pos: Vec2, windingRule = wrNonZero
-): bool =
+): bool {.raises: [PixieError].} =
   ## Returns whether or not the specified point is contained in the current path.
   path.fillOverlaps(pos, ctx.mat, windingRule)
 
 proc isPointInPath*(
   ctx: Context, path: Path, x, y: float32, windingRule = wrNonZero
-): bool {.inline.} =
+): bool {.inline, raises: [PixieError].} =
   ## Returns whether or not the specified point is contained in the current path.
   ctx.isPointInPath(path, vec2(x, y), windingRule)
 
 proc isPointInPath*(
   ctx: Context, pos: Vec2, windingRule = wrNonZero
-): bool {.inline.} =
+): bool {.inline, raises: [PixieError].} =
   ## Returns whether or not the specified point is contained in the current path.
   ctx.isPointInPath(ctx.path, pos, windingRule)
 
 proc isPointInPath*(
   ctx: Context, x, y: float32, windingRule = wrNonZero
-): bool {.inline.} =
+): bool {.inline, raises: [PixieError].} =
   ## Returns whether or not the specified point is contained in the current path.
   ctx.isPointInPath(ctx.path, vec2(x, y), windingRule)
 
-proc isPointInStroke*(ctx: Context, path: Path, pos: Vec2): bool =
+proc isPointInStroke*(
+  ctx: Context, path: Path, pos: Vec2
+): bool {.raises: [PixieError].} =
   ## Returns whether or not the specified point is inside the area contained
   ## by the stroking of a path.
   path.strokeOverlaps(
@@ -597,17 +641,23 @@ proc isPointInStroke*(ctx: Context, path: Path, pos: Vec2): bool =
     ctx.lineDash
   )
 
-proc isPointInStroke*(ctx: Context, path: Path, x, y: float32): bool {.inline.} =
+proc isPointInStroke*(
+  ctx: Context, path: Path, x, y: float32
+): bool {.inline, raises: [PixieError].} =
   ## Returns whether or not the specified point is inside the area contained
   ## by the stroking of a path.
   ctx.isPointInStroke(path, vec2(x, y))
 
-proc isPointInStroke*(ctx: Context, pos: Vec2): bool {.inline.} =
+proc isPointInStroke*(
+  ctx: Context, pos: Vec2
+): bool {.inline, raises: [PixieError].} =
   ## Returns whether or not the specified point is inside the area contained
   ## by the stroking of a path.
   ctx.isPointInStroke(ctx.path, pos)
 
-proc isPointInStroke*(ctx: Context, x, y: float32): bool {.inline.} =
+proc isPointInStroke*(
+  ctx: Context, x, y: float32
+): bool {.inline, raises: [PixieError].} =
   ## Returns whether or not the specified point is inside the area contained
   ## by the stroking of a path.
   ctx.isPointInStroke(ctx.path, vec2(x, y))
@@ -616,53 +666,69 @@ proc isPointInStroke*(ctx: Context, x, y: float32): bool {.inline.} =
 # Additional procs that are not part of the JS API
 #
 
-proc roundedRect*(ctx: Context, x, y, w, h, nw, ne, se, sw: float32) {.inline.} =
+proc roundedRect*(
+  ctx: Context, x, y, w, h, nw, ne, se, sw: float32
+) {.inline, raises: [].} =
   ## Adds a rounded rectangle to the current path.
   ctx.path.roundedRect(x, y, w, h, nw, ne, se, sw)
 
-proc roundedRect*(ctx: Context, rect: Rect, nw, ne, se, sw: float32) {.inline.} =
+proc roundedRect*(
+  ctx: Context, rect: Rect, nw, ne, se, sw: float32
+) {.inline, raises: [].} =
   ## Adds a rounded rectangle to the current path.
   ctx.path.roundedRect(rect, nw, ne, se, sw)
 
-proc circle*(ctx: Context, cx, cy, r: float32) {.inline.} =
+proc circle*(ctx: Context, cx, cy, r: float32) {.inline, raises: [].} =
   ## Adds a circle to the current path.
   ctx.path.circle(cx, cy, r)
 
-proc circle*(ctx: Context, circle: Circle) {.inline.} =
+proc circle*(ctx: Context, circle: Circle) {.inline, raises: [].} =
   ## Adds a circle to the current path.
   ctx.path.circle(circle)
 
-proc polygon*(ctx: Context, x, y, size: float32, sides: int) {.inline.} =
+proc polygon*(
+  ctx: Context, x, y, size: float32, sides: int
+) {.inline, raises: [].} =
   ## Adds an n-sided regular polygon at (x, y) of size to the current path.
   ctx.path.polygon(x, y, size, sides)
 
-proc polygon*(ctx: Context, pos: Vec2, size: float32, sides: int) {.inline.} =
+proc polygon*(
+  ctx: Context, pos: Vec2, size: float32, sides: int
+) {.inline, raises: [].} =
   ## Adds an n-sided regular polygon at (x, y) of size to the current path.
   ctx.path.polygon(pos, size, sides)
 
-proc fillRoundedRect*(ctx: Context, rect: Rect, nw, ne, se, sw: float32) =
+proc fillRoundedRect*(
+  ctx: Context, rect: Rect, nw, ne, se, sw: float32
+) {.raises: [PixieError].} =
   ## Draws a rounded rectangle that is filled according to the current fillStyle.
   let path = newPath()
   path.roundedRect(rect, nw, ne, se, sw)
   ctx.fill(path)
 
-proc fillRoundedRect*(ctx: Context, rect: Rect, radius: float32) {.inline.} =
+proc fillRoundedRect*(
+  ctx: Context, rect: Rect, radius: float32
+) {.inline, raises: [PixieError].} =
   ## Draws a rounded rectangle that is filled according to the current fillStyle.
   ctx.fillRoundedRect(rect, radius, radius, radius, radius)
 
-proc strokeRoundedRect*(ctx: Context, rect: Rect, nw, ne, se, sw: float32) =
+proc strokeRoundedRect*(
+  ctx: Context, rect: Rect, nw, ne, se, sw: float32
+) {.raises: [PixieError].} =
   ## Draws a rounded rectangle that is stroked (outlined) according to the
   ## current strokeStyle and other context settings.
   let path = newPath()
   path.roundedRect(rect, nw, ne, se, sw)
   ctx.stroke(path)
 
-proc strokeRoundedRect*(ctx: Context, rect: Rect, radius: float32) {.inline.} =
+proc strokeRoundedRect*(
+  ctx: Context, rect: Rect, radius: float32
+) {.inline, raises: [PixieError].} =
   ## Draws a rounded rectangle that is stroked (outlined) according to the
   ## current strokeStyle and other context settings.
   ctx.strokeRoundedRect(rect, radius, radius, radius, radius)
 
-proc strokeSegment*(ctx: Context, segment: Segment) =
+proc strokeSegment*(ctx: Context, segment: Segment) {.raises: [PixieError].} =
   ## Strokes a segment (draws a line from segment.at to segment.to) according
   ## to the current strokeStyle and other context settings.
   let path = newPath()
@@ -670,40 +736,52 @@ proc strokeSegment*(ctx: Context, segment: Segment) =
   path.lineTo(segment.to)
   ctx.stroke(path)
 
-proc fillEllipse*(ctx: Context, center: Vec2, rx, ry: float32) =
+proc fillEllipse*(
+  ctx: Context, center: Vec2, rx, ry: float32
+) {.raises: [PixieError].} =
   ## Draws an ellipse that is filled according to the current fillStyle.
   let path = newPath()
   path.ellipse(center, rx, ry)
   ctx.fill(path)
 
-proc strokeEllipse*(ctx: Context, center: Vec2, rx, ry: float32) =
+proc strokeEllipse*(
+  ctx: Context, center: Vec2, rx, ry: float32
+) {.raises: [PixieError].} =
   ## Draws an ellipse that is stroked (outlined) according to the current
   ## strokeStyle and other context settings.
   let path = newPath()
   path.ellipse(center, rx, ry)
   ctx.stroke(path)
 
-proc fillCircle*(ctx: Context, circle: Circle) =
+proc fillCircle*(
+  ctx: Context, circle: Circle
+) {.raises: [PixieError].} =
   ## Draws a circle that is filled according to the current fillStyle
   let path = newPath()
   path.circle(circle)
   ctx.fill(path)
 
-proc strokeCircle*(ctx: Context, circle: Circle) =
+proc strokeCircle*(
+  ctx: Context, circle: Circle
+) {.raises: [PixieError].} =
   ## Draws a circle that is stroked (outlined) according to the current
   ## strokeStyle and other context settings.
   let path = newPath()
   path.circle(circle)
   ctx.stroke(path)
 
-proc fillPolygon*(ctx: Context, pos: Vec2, size: float32, sides: int) =
+proc fillPolygon*(
+  ctx: Context, pos: Vec2, size: float32, sides: int
+) {.raises: [PixieError].} =
   ## Draws an n-sided regular polygon at (x, y) of size that is filled according
   ## to the current fillStyle.
   let path = newPath()
   path.polygon(pos, size, sides)
   ctx.fill(path)
 
-proc strokePolygon*(ctx: Context, pos: Vec2, size: float32, sides: int) =
+proc strokePolygon*(
+  ctx: Context, pos: Vec2, size: float32, sides: int
+) {.raises: [PixieError].} =
   ## Draws an n-sided regular polygon at (x, y) of size that is stroked
   ## (outlined) according to the current strokeStyle and other context settings.
   let path = newPath()

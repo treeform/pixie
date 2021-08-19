@@ -46,23 +46,23 @@ const
 when defined(release):
   {.push checks: off.}
 
-proc newPath*(): Path =
+proc newPath*(): Path {.raises: [].} =
   ## Create a new Path.
   Path()
 
-proc pixelScale(transform: Mat3): float32 =
+proc pixelScale(transform: Mat3): float32 {.raises: [].} =
   ## What is the largest scale factor of this transform?
   max(
     vec2(transform[0, 0], transform[0, 1]).length,
     vec2(transform[1, 0], transform[1, 1]).length
   )
 
-proc isRelative(kind: PathCommandKind): bool =
+proc isRelative(kind: PathCommandKind): bool {.inline, raises: [].} =
   kind in {
     RMove, RLine, TQuad, RTQuad, RHLine, RVLine, RCubic, RSCubic, RQuad, RArc
   }
 
-proc parameterCount(kind: PathCommandKind): int =
+proc parameterCount(kind: PathCommandKind): int {.raises: [].} =
   ## Returns number of parameters a path command has.
   case kind:
   of Close: 0
@@ -72,7 +72,7 @@ proc parameterCount(kind: PathCommandKind): int =
   of SCubic, RSCubic, Quad, RQuad: 4
   of Arc, RArc: 7
 
-proc `$`*(path: Path): string =
+proc `$`*(path: Path): string {.raises: [].} =
   ## Turn path int into a string.
   for i, command in path.commands:
     case command.kind
@@ -103,7 +103,7 @@ proc `$`*(path: Path): string =
       if i != path.commands.len - 1 or j != command.numbers.len - 1:
         result.add " "
 
-proc parsePath*(path: string): Path =
+proc parsePath*(path: string): Path {.raises: [PixieError].} =
   ## Converts a SVG style path string into seq of commands.
   result = newPath()
 
@@ -249,7 +249,7 @@ proc parsePath*(path: string): Path =
 
   finishCommand(result)
 
-proc transform*(path: Path, mat: Mat3) =
+proc transform*(path: Path, mat: Mat3) {.raises: [].} =
   ## Apply a matrix transform to a path.
   if mat == mat3():
     return
@@ -314,39 +314,39 @@ proc transform*(path: Path, mat: Mat3) =
       command.numbers[5] = to.x
       command.numbers[6] = to.y
 
-proc addPath*(path: Path, other: Path) =
+proc addPath*(path: Path, other: Path) {.raises: [].} =
   ## Adds a path to the current path.
   path.commands.add(other.commands)
 
-proc closePath*(path: Path) =
+proc closePath*(path: Path) {.raises: [].} =
   ## Attempts to add a straight line from the current point to the start of
   ## the current sub-path. If the shape has already been closed or has only
   ## one point, this function does nothing.
   path.commands.add(PathCommand(kind: Close))
   path.at = path.start
 
-proc moveTo*(path: Path, x, y: float32) =
+proc moveTo*(path: Path, x, y: float32) {.raises: [].} =
   ## Begins a new sub-path at the point (x, y).
   path.commands.add(PathCommand(kind: Move, numbers: @[x, y]))
   path.start = vec2(x, y)
   path.at = path.start
 
-proc moveTo*(path: Path, v: Vec2) {.inline.} =
+proc moveTo*(path: Path, v: Vec2) {.inline, raises: [].} =
   ## Begins a new sub-path at the point (x, y).
   path.moveTo(v.x, v.y)
 
-proc lineTo*(path: Path, x, y: float32) =
+proc lineTo*(path: Path, x, y: float32) {.raises: [].} =
   ## Adds a straight line to the current sub-path by connecting the sub-path's
   ## last point to the specified (x, y) coordinates.
   path.commands.add(PathCommand(kind: Line, numbers: @[x, y]))
   path.at = vec2(x, y)
 
-proc lineTo*(path: Path, v: Vec2) {.inline.} =
+proc lineTo*(path: Path, v: Vec2) {.inline, raises: [].} =
   ## Adds a straight line to the current sub-path by connecting the sub-path's
   ## last point to the specified (x, y) coordinates.
   path.lineTo(v.x, v.y)
 
-proc bezierCurveTo*(path: Path, x1, y1, x2, y2, x3, y3: float32) =
+proc bezierCurveTo*(path: Path, x1, y1, x2, y2, x3, y3: float32) {.raises: [].} =
   ## Adds a cubic Bézier curve to the current sub-path. It requires three
   ## points: the first two are control points and the third one is the end
   ## point. The starting point is the latest point in the current path,
@@ -357,14 +357,14 @@ proc bezierCurveTo*(path: Path, x1, y1, x2, y2, x3, y3: float32) =
   ))
   path.at = vec2(x3, y3)
 
-proc bezierCurveTo*(path: Path, ctrl1, ctrl2, to: Vec2) {.inline.} =
+proc bezierCurveTo*(path: Path, ctrl1, ctrl2, to: Vec2) {.inline, raises: [].} =
   ## Adds a cubic Bézier curve to the current sub-path. It requires three
   ## points: the first two are control points and the third one is the end
   ## point. The starting point is the latest point in the current path,
   ## which can be changed using moveTo() before creating the Bézier curve.
   path.bezierCurveTo(ctrl1.x, ctrl1.y, ctrl2.x, ctrl2.y, to.x, to.y)
 
-proc quadraticCurveTo*(path: Path, x1, y1, x2, y2: float32) =
+proc quadraticCurveTo*(path: Path, x1, y1, x2, y2: float32) {.raises: [].} =
   ## Adds a quadratic Bézier curve to the current sub-path. It requires two
   ## points: the first one is a control point and the second one is the end
   ## point. The starting point is the latest point in the current path,
@@ -376,7 +376,7 @@ proc quadraticCurveTo*(path: Path, x1, y1, x2, y2: float32) =
   ))
   path.at = vec2(x2, y2)
 
-proc quadraticCurveTo*(path: Path, ctrl, to: Vec2) {.inline.} =
+proc quadraticCurveTo*(path: Path, ctrl, to: Vec2) {.inline, raises: [].} =
   ## Adds a quadratic Bézier curve to the current sub-path. It requires two
   ## points: the first one is a control point and the second one is the end
   ## point. The starting point is the latest point in the current path,
@@ -390,7 +390,7 @@ proc ellipticalArcTo*(
   xAxisRotation: float32,
   largeArcFlag, sweepFlag: bool,
   x, y: float32
-) =
+) {.raises: [].} =
   ## Adds an elliptical arc to the current sub-path, using the given radius
   ## ratios, sweep flags, and end position.
   path.commands.add(PathCommand(
@@ -401,7 +401,9 @@ proc ellipticalArcTo*(
   ))
   path.at = vec2(x, y)
 
-proc arc*(path: Path, x, y, r, a0, a1: float32, ccw: bool) =
+proc arc*(
+  path: Path, x, y, r, a0, a1: float32, ccw: bool
+) {.raises: [PixieError].} =
   ## Adds a circular arc to the current sub-path.
   if r == 0: # When radius is zero, do nothing.
     return
@@ -438,11 +440,13 @@ proc arc*(path: Path, x, y, r, a0, a1: float32, ccw: bool) =
     path.at.y = y + r * sin(a1)
     path.ellipticalArcTo(r, r, 0, angle >= PI, cw, path.at.x, path.at.y)
 
-proc arc*(path: Path, pos: Vec2, r: float32, a: Vec2, ccw: bool = false) =
+proc arc*(
+  path: Path, pos: Vec2, r: float32, a: Vec2, ccw: bool = false
+) {.inline, raises: [PixieError].} =
   ## Adds a circular arc to the current sub-path.
   path.arc(pos.x, pos.y, r, a.x, a.y, ccw)
 
-proc arcTo*(path: Path, x1, y1, x2, y2, r: float32) =
+proc arcTo*(path: Path, x1, y1, x2, y2, r: float32) {.raises: [PixieError].} =
   ## Adds a circular arc using the given control points and radius.
   ## Commonly used for making rounded corners.
   if r < 0: # When radius is negative, error.
@@ -483,11 +487,11 @@ proc arcTo*(path: Path, x1, y1, x2, y2, r: float32) =
     path.at.y = y1 + t21 * y21
     path.ellipticalArcTo(r, r, 0, false, y01 * x20 > x01 * y20, path.at.x, path.at.y)
 
-proc arcTo*(path: Path, a, b: Vec2, r: float32) =
+proc arcTo*(path: Path, a, b: Vec2, r: float32) {.inline, raises: [PixieError].} =
   ## Adds a circular arc using the given control points and radius.
   path.arcTo(a.x, a.y, b.x, b.y, r)
 
-proc rect*(path: Path, x, y, w, h: float32, clockwise = true) =
+proc rect*(path: Path, x, y, w, h: float32, clockwise = true) {.raises: [].} =
   ## Adds a rectangle.
   ## Clockwise param can be used to subtract a rect from a path when using
   ## even-odd winding rule.
@@ -504,7 +508,7 @@ proc rect*(path: Path, x, y, w, h: float32, clockwise = true) =
     path.lineTo(x + w, y)
     path.closePath()
 
-proc rect*(path: Path, rect: Rect, clockwise = true) {.inline.} =
+proc rect*(path: Path, rect: Rect, clockwise = true) {.inline, raises: [].} =
   ## Adds a rectangle.
   ## Clockwise param can be used to subtract a rect from a path when using
   ## even-odd winding rule.
@@ -516,7 +520,7 @@ const splineCircleK = 4.0 * (-1.0 + sqrt(2.0)) / 3
 
 proc roundedRect*(
   path: Path, x, y, w, h, nw, ne, se, sw: float32, clockwise = true
-) =
+) {.raises: [].} =
   ## Adds a rounded rectangle.
   ## Clockwise param can be used to subtract a rect from a path when using
   ## even-odd winding rule.
@@ -583,13 +587,13 @@ proc roundedRect*(
 
 proc roundedRect*(
   path: Path, rect: Rect, nw, ne, se, sw: float32, clockwise = true
-) {.inline.} =
+) {.inline, raises: [].} =
   ## Adds a rounded rectangle.
   ## Clockwise param can be used to subtract a rect from a path when using
   ## even-odd winding rule.
   path.roundedRect(rect.x, rect.y, rect.w, rect.h, nw, ne, se, sw, clockwise)
 
-proc ellipse*(path: Path, cx, cy, rx, ry: float32) =
+proc ellipse*(path: Path, cx, cy, rx, ry: float32) {.raises: [].} =
   ## Adds a ellipse.
   let
     magicX = splineCircleK * rx
@@ -602,19 +606,19 @@ proc ellipse*(path: Path, cx, cy, rx, ry: float32) =
   path.bezierCurveTo(cx + magicX, cy - ry, cx + rx, cy - magicY, cx + rx, cy)
   path.closePath()
 
-proc ellipse*(path: Path, center: Vec2, rx, ry: float32) {.inline.} =
+proc ellipse*(path: Path, center: Vec2, rx, ry: float32) {.inline, raises: [].} =
   ## Adds a ellipse.
   path.ellipse(center.x, center.y, rx, ry)
 
-proc circle*(path: Path, cx, cy, r: float32) {.inline.} =
+proc circle*(path: Path, cx, cy, r: float32) {.inline, raises: [].} =
   ## Adds a circle.
   path.ellipse(cx, cy, r, r)
 
-proc circle*(path: Path, circle: Circle) {.inline.} =
+proc circle*(path: Path, circle: Circle) {.inline, raises: [].} =
   ## Adds a circle.
   path.ellipse(circle.pos.x, circle.pos.y, circle.radius, circle.radius)
 
-proc polygon*(path: Path, x, y, size: float32, sides: int) =
+proc polygon*(path: Path, x, y, size: float32, sides: int) {.raises: [].} =
   ## Adds an n-sided regular polygon at (x, y) with the parameter size.
   path.moveTo(x + size * cos(0.0), y + size * sin(0.0))
   for side in 0 .. sides:
@@ -623,13 +627,15 @@ proc polygon*(path: Path, x, y, size: float32, sides: int) =
       y + size * sin(side.float32 * 2.0 * PI / sides.float32)
     )
 
-proc polygon*(path: Path, pos: Vec2, size: float32, sides: int) {.inline.} =
+proc polygon*(
+  path: Path, pos: Vec2, size: float32, sides: int
+) {.inline, raises: [].} =
   ## Adds a n-sided regular polygon at (x, y) with the parameter size.
   path.polygon(pos.x, pos.y, size, sides)
 
 proc commandsToShapes(
   path: Path, closeSubpaths = false, pixelScale: float32 = 1.0
-): seq[seq[Vec2]] =
+): seq[seq[Vec2]] {.raises: [PixieError].} =
   ## Converts SVG-like commands to sequences of vectors.
   var
     start, at: Vec2
@@ -991,7 +997,9 @@ proc commandsToShapes(
       shape.addSegment(at, start)
     result.add(shape)
 
-proc shapesToSegments(shapes: seq[seq[Vec2]]): seq[(Segment, int16)] =
+proc shapesToSegments(
+  shapes: seq[seq[Vec2]]
+): seq[(Segment, int16)] {.raises: [].} =
   ## Converts the shapes into a set of filtered segments with winding value.
   for shape in shapes:
     for segment in shape.segments:
@@ -1006,7 +1014,7 @@ proc shapesToSegments(shapes: seq[seq[Vec2]]): seq[(Segment, int16)] =
 
       result.add((segment, winding))
 
-proc requiresAntiAliasing(segments: seq[(Segment, int16)]): bool =
+proc requiresAntiAliasing(segments: seq[(Segment, int16)]): bool {.raises: [].} =
   ## Returns true if the fill requires antialiasing.
 
   template hasFractional(v: float32): bool =
@@ -1021,13 +1029,13 @@ proc requiresAntiAliasing(segments: seq[(Segment, int16)]): bool =
       # AA is required if all segments are not vertical or have fractional > 0
       return true
 
-proc transform(shapes: var seq[seq[Vec2]], transform: Mat3) =
+proc transform(shapes: var seq[seq[Vec2]], transform: Mat3) {.raises: [].} =
   if transform != mat3():
     for shape in shapes.mitems:
       for vec in shape.mitems:
         vec = transform * vec
 
-proc computeBounds(segments: seq[(Segment, int16)]): Rect =
+proc computeBounds(segments: seq[(Segment, int16)]): Rect {.raises: [].} =
   ## Compute the bounds of the segments.
   var
     xMin = float32.high
@@ -1049,7 +1057,9 @@ proc computeBounds(segments: seq[(Segment, int16)]): Rect =
     result.w = xMax - xMin
     result.h = yMax - yMin
 
-proc computeBounds*(path: Path, transform = mat3()): Rect =
+proc computeBounds*(
+  path: Path, transform = mat3()
+): Rect {.raises: [PixieError].} =
   ## Compute the bounds of the path.
   var shapes = path.commandsToShapes()
   shapes.transform(transform)
@@ -1057,7 +1067,7 @@ proc computeBounds*(path: Path, transform = mat3()): Rect =
 
 proc partitionSegments(
   segments: seq[(Segment, int16)], top, height: int
-): Partitioning =
+): Partitioning {.raises: [].} =
   ## Puts segments into the height partitions they intersect with.
   let
     maxPartitions = max(1, height div 10).uint32
@@ -1081,7 +1091,9 @@ proc partitionSegments(
       for i in atPartition .. toPartition:
         result.partitions[i].add((segment, winding))
 
-proc getIndexForY(partitioning: Partitioning, y: int): uint32 {.inline.} =
+proc getIndexForY(
+  partitioning: Partitioning, y: int
+): uint32 {.inline, raises: [].} =
   if partitioning.partitionHeight == 0 or partitioning.partitions.len == 1:
     0.uint32
   else:
@@ -1090,7 +1102,9 @@ proc getIndexForY(partitioning: Partitioning, y: int): uint32 {.inline.} =
       partitioning.partitions.high.uint32
     )
 
-proc insertionSort(a: var seq[(float32, int16)], lo, hi: int) {.inline.} =
+proc insertionSort(
+  a: var seq[(float32, int16)], lo, hi: int
+) {.inline, raises: [].} =
   for i in lo + 1 .. hi:
     var
       j = i - 1
@@ -1100,7 +1114,7 @@ proc insertionSort(a: var seq[(float32, int16)], lo, hi: int) {.inline.} =
       dec j
       dec k
 
-proc sort(a: var seq[(float32, int16)], inl, inr: int) =
+proc sort(a: var seq[(float32, int16)], inl, inr: int) {.raises: [].} =
   ## Quicksort + insertion sort, in-place and faster than standard lib sort.
   let n = inr - inl + 1
   if n < 32:
@@ -1122,7 +1136,9 @@ proc sort(a: var seq[(float32, int16)], inl, inr: int) =
   sort(a, inl, r)
   sort(a, l, inr)
 
-proc shouldFill(windingRule: WindingRule, count: int): bool {.inline.} =
+proc shouldFill(
+  windingRule: WindingRule, count: int
+): bool {.inline, raises: [].} =
   ## Should we fill based on the current winding rule and count?
   case windingRule:
   of wrNonZero:
@@ -1136,7 +1152,7 @@ iterator walk(
   windingRule: WindingRule,
   y: int,
   size: Vec2
-): (float32, float32, int32) =
+): (float32, float32, int32) {.raises: [].} =
   var
     prevAt: float32
     count: int32
@@ -1168,7 +1184,7 @@ proc computeCoverages(
   aa: bool,
   partitioning: Partitioning,
   windingRule: WindingRule
-) {.inline.} =
+) {.inline, raises: [].} =
   let
     quality = if aa: 5 else: 1 # Must divide 255 cleanly (1, 3, 5, 15, 17, 51, 85)
     sampleCoverage = (255 div quality).uint8
@@ -1238,7 +1254,9 @@ proc computeCoverages(
           for j in i ..< fillStart + fillLen:
             coverages[j - startX] += sampleCoverage
 
-proc clearUnsafe(target: Image | Mask, startX, startY, toX, toY: int) =
+proc clearUnsafe(
+  target: Image | Mask, startX, startY, toX, toY: int
+) {.raises: [].} =
   ## Clears data from [start, to).
   if startX == target.width or startY == target.height:
     return
@@ -1256,7 +1274,7 @@ proc fillCoverage(
   startX, y: int,
   coverages: seq[uint8],
   blendMode: BlendMode
-) =
+) {.raises: [PixieError].} =
   var x = startX
   when defined(amd64) and not defined(pixieNoSimd):
     if blendMode.hasSimdBlender():
@@ -1343,7 +1361,7 @@ proc fillCoverage(
   startX, y: int,
   coverages: seq[uint8],
   blendMode: BlendMode
-) =
+) {.raises: [PixieError].} =
   var x = startX
   when defined(amd64) and not defined(pixieNoSimd):
     if blendMode.hasSimdMasker():
@@ -1386,7 +1404,7 @@ proc fillHits(
   numHits: int,
   windingRule: WindingRule,
   blendMode: BlendMode
-) =
+) {.raises: [PixieError].} =
   let blender = blendMode.blender()
   var filledTo: int
   for (prevAt, at, count) in hits.walk(numHits, windingRule, y, image.wh):
@@ -1434,7 +1452,7 @@ proc fillHits(
   numHits: int,
   windingRule: WindingRule,
   blendMode: BlendMode
-) =
+) {.raises: [PixieError].} =
   let masker = blendMode.masker()
   var filledTo: int
   for (prevAt, at, count) in hits.walk(numHits, windingRule, y, mask.wh):
@@ -1478,7 +1496,7 @@ proc fillShapes(
   color: SomeColor,
   windingRule: WindingRule,
   blendMode: BlendMode
-) =
+) {.raises: [PixieError].} =
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
   let
@@ -1536,7 +1554,7 @@ proc fillShapes(
   shapes: seq[seq[Vec2]],
   windingRule: WindingRule,
   blendMode: BlendMode
-) =
+) {.raises: [PixieError].} =
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
   let
@@ -1574,11 +1592,11 @@ proc fillShapes(
     mask.clearUnsafe(0, 0, 0, startY)
     mask.clearUnsafe(0, pathHeight, 0, mask.height)
 
-proc miterLimitToAngle*(limit: float32): float32 =
+proc miterLimitToAngle*(limit: float32): float32 {.inline, raises: [].} =
   ## Converts miter-limit-ratio to miter-limit-angle.
   arcsin(1 / limit) * 2
 
-proc angleToMiterLimit*(angle: float32): float32 =
+proc angleToMiterLimit*(angle: float32): float32 {.inline, raises: [].} =
   ## Converts miter-limit-angle to miter-limit-ratio.
   1 / sin(angle / 2)
 
@@ -1589,7 +1607,7 @@ proc strokeShapes(
   lineJoin: LineJoin,
   miterLimit: float32,
   dashes: seq[float32]
-): seq[seq[Vec2]] =
+): seq[seq[Vec2]] {.raises: [PixieError].} =
   if strokeWidth <= 0:
     return
 
@@ -1725,7 +1743,7 @@ proc strokeShapes(
 
 proc parseSomePath(
   path: SomePath, closeSubpaths: bool, pixelScale: float32 = 1.0
-): seq[seq[Vec2]] {.inline.} =
+): seq[seq[Vec2]] {.inline, raises: [PixieError].} =
   ## Given SomePath, parse it in different ways.
   when type(path) is string:
     parsePath(path).commandsToShapes(closeSubpaths, pixelScale)
@@ -1738,7 +1756,7 @@ proc fillPath*(
   transform = mat3(),
   windingRule = wrNonZero,
   blendMode = bmNormal
-) =
+) {.raises: [PixieError].} =
   ## Fills a path.
   var shapes = parseSomePath(path, true, transform.pixelScale())
   shapes.transform(transform)
@@ -1750,7 +1768,7 @@ proc fillPath*(
   paint: Paint,
   transform = mat3(),
   windingRule = wrNonZero
-) =
+) {.raises: [PixieError].} =
   ## Fills a path.
   if paint.opacity == 0:
     return
@@ -1804,7 +1822,7 @@ proc strokePath*(
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[],
   blendMode = bmNormal
-) =
+) {.raises: [PixieError].} =
   ## Strokes a path.
   var strokeShapes = strokeShapes(
     parseSomePath(path, false, transform.pixelScale()),
@@ -1827,7 +1845,7 @@ proc strokePath*(
   lineJoin = ljMiter,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[]
-) =
+) {.raises: [PixieError].} =
   ## Strokes a path.
   if paint.opacity == 0:
     return
@@ -1890,7 +1908,7 @@ proc overlaps(
   shapes: seq[seq[Vec2]],
   test: Vec2,
   windingRule: WindingRule
-): bool =
+): bool  {.raises: [].} =
   var hits: seq[(float32, int16)]
 
   let
@@ -1920,7 +1938,7 @@ proc fillOverlaps*(
   test: Vec2,
   transform = mat3(), ## Applied to the path, not the test point.
   windingRule = wrNonZero
-): bool =
+): bool {.raises: [PixieError].} =
   ## Returns whether or not the specified point is contained in the current path.
   var shapes = parseSomePath(path, true, transform.pixelScale())
   shapes.transform(transform)
@@ -1935,7 +1953,7 @@ proc strokeOverlaps*(
   lineJoin = ljMiter,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[],
-): bool =
+): bool {.raises: [PixieError].} =
   ## Returns whether or not the specified point is inside the area contained
   ## by the stroking of a path.
   var strokeShapes = strokeShapes(

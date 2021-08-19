@@ -15,7 +15,7 @@ type
     blendMode*: BlendMode               ## Blend mode.
     opacity*: float32
     # pkSolid
-    color*: Color                   ## Color to fill with.
+    color*: Color                       ## Color to fill with.
     # pkImage, pkImageTiled:
     image*: Image                       ## Image to fill with.
     imageMat*: Mat3                     ## Matrix of the filled image.
@@ -25,16 +25,16 @@ type
 
   ColorStop* = object
     ## Color stop on a gradient curve.
-    color*: Color  ## Color of the stop.
+    color*: Color      ## Color of the stop.
     position*: float32 ## Gradient stop position 0..1.
 
   SomePaint* = string | Paint | SomeColor
 
-proc newPaint*(kind: PaintKind): Paint =
+proc newPaint*(kind: PaintKind): Paint {.raises: [].} =
   ## Create a new Paint.
   result = Paint(kind: kind, opacity: 1, imageMat: mat3())
 
-proc newPaint*(paint: Paint): Paint =
+proc newPaint*(paint: Paint): Paint {.raises: [].} =
   ## Create a new Paint with the same properties.
   result = newPaint(paint.kind)
   result.blendMode = paint.blendMode
@@ -45,11 +45,16 @@ proc newPaint*(paint: Paint): Paint =
   result.gradientHandlePositions = paint.gradientHandlePositions
   result.gradientStops = paint.gradientStops
 
-converter parseSomePaint*(paint: SomePaint): Paint {.inline.} =
+converter parseSomePaint*(
+  paint: SomePaint
+): Paint {.inline, raises: [PixieError].} =
   ## Given SomePaint, parse it in different ways.
   when type(paint) is string:
     result = newPaint(pkSolid)
-    result.color = parseHtmlColor(paint)
+    try:
+      result.color = parseHtmlColor(paint)
+    except:
+      raise newException(PixieError, "Unable to parse color " & paint)
   elif type(paint) is SomeColor:
     result = newPaint(pkSolid)
     when type(paint) is Color:
@@ -59,7 +64,7 @@ converter parseSomePaint*(paint: SomePaint): Paint {.inline.} =
   elif type(paint) is Paint:
     paint
 
-proc toLineSpace(at, to, point: Vec2): float32 {.inline.} =
+proc toLineSpace(at, to, point: Vec2): float32 {.inline, raises: [].} =
   ## Convert position on to where it would fall on a line between at and to.
   let
     d = to - at
@@ -68,7 +73,7 @@ proc toLineSpace(at, to, point: Vec2): float32 {.inline.} =
 
 proc gradientPut(
   image: Image, paint: Paint, x, y: int, t: float32, stops: seq[ColorStop]
-) =
+) {.raises: [].} =
   ## Put an gradient color based on `t` - where are we related to a line.
   var index = -1
   for i, stop in stops:
@@ -95,7 +100,7 @@ proc gradientPut(
   color.a *= paint.opacity
   image.setRgbaUnsafe(x, y, color.rgbx())
 
-proc fillGradientLinear(image: Image, paint: Paint) =
+proc fillGradientLinear(image: Image, paint: Paint) {.raises: [PixieError].} =
   ## Fills a linear gradient.
 
   if paint.gradientHandlePositions.len != 2:
@@ -117,7 +122,7 @@ proc fillGradientLinear(image: Image, paint: Paint) =
         t = toLineSpace(at, to, xy)
       image.gradientPut(paint, x, y, t, paint.gradientStops)
 
-proc fillGradientRadial(image: Image, paint: Paint) =
+proc fillGradientRadial(image: Image, paint: Paint) {.raises: [PixieError].} =
   ## Fills a radial gradient.
 
   if paint.gradientHandlePositions.len != 3:
@@ -148,7 +153,7 @@ proc fillGradientRadial(image: Image, paint: Paint) =
         t = (mat * xy).length()
       image.gradientPut(paint, x, y, t, paint.gradientStops)
 
-proc fillGradientAngular(image: Image, paint: Paint) =
+proc fillGradientAngular(image: Image, paint: Paint) {.raises: [PixieError].} =
   ## Fills an angular gradient.
 
   if paint.gradientHandlePositions.len != 3:
@@ -173,7 +178,7 @@ proc fillGradientAngular(image: Image, paint: Paint) =
         t = (angle + gradientAngle + PI / 2).fixAngle() / 2 / PI + 0.5
       image.gradientPut(paint, x, y, t, paint.gradientStops)
 
-proc fillGradient*(image: Image, paint: Paint) =
+proc fillGradient*(image: Image, paint: Paint) {.raises: [PixieError].} =
   ## Fills with the Paint gradient.
 
   case paint.kind:

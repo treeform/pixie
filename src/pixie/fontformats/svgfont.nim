@@ -8,27 +8,22 @@ type SvgFont* = ref object
   missingGlyphAdvance: float32
   missingGlyphPath: Path
 
-proc getGlyphPath*(svgFont: SvgFont, rune: Rune): Path =
-  if rune in svgFont.glyphPaths:
-    svgFont.glyphPaths[rune]
-  else:
-    svgFont.missingGlyphPath
+proc getGlyphPath*(svgFont: SvgFont, rune: Rune): Path {.raises: [].} =
+  svgFont.glyphPaths.getOrDefault(rune, svgFont.missingGlyphPath)
 
-proc getAdvance*(svgFont: SvgFont, rune: Rune): float32 =
-  if rune in svgFont.advances:
-    svgFont.advances[rune]
-  else:
-    svgFont.missingGlyphAdvance
+proc getAdvance*(svgFont: SvgFont, rune: Rune): float32 {.raises: [].} =
+  svgFont.advances.getOrDefault(rune, svgFont.missingGlyphAdvance)
 
-proc getKerningAdjustment*(svgFont: SvgFont, left, right: Rune): float32 =
+proc getKerningAdjustment*(
+  svgFont: SvgFont, left, right: Rune
+): float32 {.raises: [].} =
   let pair = (left, right)
-  if pair in svgFont.kerningPairs:
-    result = svgFont.kerningPairs[pair]
+  result = svgFont.kerningPairs.getOrDefault(pair, 0)
 
-proc failInvalid() =
+template failInvalid() =
   raise newException(PixieError, "Invalid SVG font data")
 
-proc parseFloat(node: XmlNode, attr: string): float32 =
+proc parseFloat(node: XmlNode, attr: string): float32 {.raises: [PixieError].} =
   let value = node.attr(attr)
   if value.len == 0:
     raise newException(PixieError, "SVG font missing attr " & attr)
@@ -37,12 +32,17 @@ proc parseFloat(node: XmlNode, attr: string): float32 =
   except:
     failInvalid()
 
-proc parseSvgFont*(buf: string): SvgFont =
+proc parseSvgFont*(buf: string): SvgFont {.raises: [PixieError].} =
   result = SvgFont()
 
-  let
-    root = parseXml(buf)
-    defs = root.child("defs")
+  let root =
+    try:
+      parseXml(buf)
+    except:
+      let e = getCurrentException()
+      raise newException(PixieError, e.msg, e)
+
+  let defs = root.child("defs")
   if defs == nil:
     failInvalid()
 
@@ -75,8 +75,9 @@ proc parseSvgFont*(buf: string): SvgFont =
             if node.attr("horiz-adv-x").len > 0:
               advance = node.parseFloat("horiz-adv-x")
             result.advances[rune] = advance
-            result.glyphPaths[rune] = parsePath(node.attr("d"))
-            result.glyphPaths[rune].transform(scale(vec2(1, -1)))
+            let path = parsePath(node.attr("d"))
+            path.transform(scale(vec2(1, -1)))
+            result.glyphPaths[rune] = path
           else:
             discard # Multi-rune unicode?
       of "hkern":

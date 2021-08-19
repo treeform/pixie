@@ -33,15 +33,19 @@ type
 template failInvalid() =
   raise newException(PixieError, "Invalid SVG data")
 
-proc attrOrDefault(node: XmlNode, name, default: string): string =
+proc attrOrDefault(node: XmlNode, name, default: string): string {.raises: [].} =
   result = node.attr(name)
   if result.len == 0:
     result = default
 
-proc initCtx(): Ctx =
+proc initCtx(): Ctx {.raises: [PixieError].} =
   result.display = true
-  result.fill = parseHtmlColor("black").rgbx
-  result.stroke = parseHtmlColor("black").rgbx
+  try:
+    result.fill = parseHtmlColor("black").rgbx
+    result.stroke = parseHtmlColor("black").rgbx
+  except:
+    let e = getCurrentException()
+    raise newException(PixieError, e.msg, e)
   result.strokeWidth = 1
   result.transform = mat3()
   result.strokeMiterLimit = defaultMiterLimit
@@ -49,7 +53,7 @@ proc initCtx(): Ctx =
   result.strokeOpacity = 1
   result.linearGradients = newTable[string, LinearGradient]()
 
-proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
+proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
   result = inherited
 
   proc splitArgs(s: string): seq[string] =
@@ -313,14 +317,23 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
       else:
         failInvalidTransform(transform)
 
-proc fill(img: Image, ctx: Ctx, path: Path) {.inline.} =
+proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx {.raises: [PixieError].} =
+  try:
+    decodeCtxInternal(inherited, node)
+  except PixieError as e:
+    raise e
+  except:
+    let e = getCurrentException()
+    raise newException(PixieError, e.msg, e)
+
+proc fill(img: Image, ctx: Ctx, path: Path) {.inline, raises: [PixieError].} =
   if ctx.display and ctx.opacity > 0:
     let paint = newPaint(ctx.fill)
     if ctx.opacity != 1:
       paint.opacity = paint.opacity * ctx.opacity
     img.fillPath(path, paint, ctx.transform, ctx.fillRule)
 
-proc stroke(img: Image, ctx: Ctx, path: Path) {.inline.} =
+proc stroke(img: Image, ctx: Ctx, path: Path) {.inline, raises: [PixieError].} =
   if ctx.display and ctx.opacity > 0:
     let paint = newPaint(ctx.stroke)
     if ctx.opacity != 1:
@@ -336,7 +349,7 @@ proc stroke(img: Image, ctx: Ctx, path: Path) {.inline.} =
       dashes = ctx.strokeDashArray
     )
 
-proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
+proc drawInternal(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
   if node.kind != xnElement:
     # Skip <!-- comments -->
     return
@@ -353,7 +366,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     let ctx = decodeCtx(ctxStack[^1], node)
     ctxStack.add(ctx)
     for child in node:
-      img.draw(child, ctxStack)
+      img.drawInternal(child, ctxStack)
     discard ctxStack.pop()
 
   of "path":
@@ -543,7 +556,20 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
   else:
     raise newException(PixieError, "Unsupported SVG tag: " & node.tag)
 
-proc decodeSvg*(data: string, width = 0, height = 0): Image =
+proc draw(
+  img: Image, node: XmlNode, ctxStack: var seq[Ctx]
+) {.raises: [PixieError].} =
+  try:
+    drawInternal(img, node, ctxStack)
+  except PixieError as e:
+    raise e
+  except:
+    let e = getCurrentException()
+    raise newException(PixieError, e.msg, e)
+
+proc decodeSvg*(
+  data: string, width = 0, height = 0
+): Image {.raises: [PixieError].} =
   ## Render SVG file and return the image. Defaults to the SVG's view box size.
   try:
     let root = parseXml(data)
