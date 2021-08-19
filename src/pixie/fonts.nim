@@ -76,19 +76,19 @@ proc lineHeight*(typeface: Typeface): float32 {.inline, raises: [].} =
   ## The default line height in font units.
   typeface.ascent - typeface.descent + typeface.lineGap
 
-proc underlinePosition(typeface: Typeface): float32 {.raises: [].} =
+proc underlinePosition(typeface: Typeface): float32 =
   if typeface.opentype != nil:
     result = typeface.opentype.post.underlinePosition.float32
 
-proc underlineThickness(typeface: Typeface): float32 {.raises: [].} =
+proc underlineThickness(typeface: Typeface): float32 =
   if typeface.opentype != nil:
     result = typeface.opentype.post.underlineThickness.float32
 
-proc strikeoutPosition(typeface: Typeface): float32 {.raises: [].} =
+proc strikeoutPosition(typeface: Typeface): float32 =
   if typeface.opentype != nil:
     result = typeface.opentype.os2.yStrikeoutPosition.float32
 
-proc strikeoutThickness(typeface: Typeface): float32 {.raises: [].} =
+proc strikeoutThickness(typeface: Typeface): float32 =
   if typeface.opentype != nil:
     result = typeface.opentype.os2.yStrikeoutSize.float32
 
@@ -152,7 +152,7 @@ proc newSpan*(text: string, font: Font): Span {.raises: [].} =
   result.text = text
   result.font = font
 
-proc convertTextCase(runes: var seq[Rune], textCase: TextCase) {.raises: [].} =
+proc convertTextCase(runes: var seq[Rune], textCase: TextCase) =
   case textCase:
   of tcNormal:
     discard
@@ -169,7 +169,7 @@ proc convertTextCase(runes: var seq[Rune], textCase: TextCase) {.raises: [].} =
         rune = rune.toUpper()
       prevRune = rune
 
-proc canWrap(rune: Rune): bool {.inline, raises: [].} =
+proc canWrap(rune: Rune): bool {.inline.} =
   rune == Rune(32) or rune.isWhiteSpace()
 
 proc typeset*(
@@ -447,7 +447,7 @@ proc textUber(
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[],
   stroke: static[bool] = false
-) {.raises: [PixieError].} =
+) =
   var line: int
   for spanIndex, (start, stop) in arrangement.spans:
     let

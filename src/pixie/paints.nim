@@ -64,7 +64,7 @@ converter parseSomePaint*(
   elif type(paint) is Paint:
     paint
 
-proc toLineSpace(at, to, point: Vec2): float32 {.inline, raises: [].} =
+proc toLineSpace(at, to, point: Vec2): float32 {.inline.} =
   ## Convert position on to where it would fall on a line between at and to.
   let
     d = to - at
@@ -73,7 +73,7 @@ proc toLineSpace(at, to, point: Vec2): float32 {.inline, raises: [].} =
 
 proc gradientPut(
   image: Image, paint: Paint, x, y: int, t: float32, stops: seq[ColorStop]
-) {.raises: [].} =
+) =
   ## Put an gradient color based on `t` - where are we related to a line.
   var index = -1
   for i, stop in stops:
@@ -100,7 +100,7 @@ proc gradientPut(
   color.a *= paint.opacity
   image.setRgbaUnsafe(x, y, color.rgbx())
 
-proc fillGradientLinear(image: Image, paint: Paint) {.raises: [PixieError].} =
+proc fillGradientLinear(image: Image, paint: Paint) =
   ## Fills a linear gradient.
 
   if paint.gradientHandlePositions.len != 2:
@@ -122,7 +122,7 @@ proc fillGradientLinear(image: Image, paint: Paint) {.raises: [PixieError].} =
         t = toLineSpace(at, to, xy)
       image.gradientPut(paint, x, y, t, paint.gradientStops)
 
-proc fillGradientRadial(image: Image, paint: Paint) {.raises: [PixieError].} =
+proc fillGradientRadial(image: Image, paint: Paint) =
   ## Fills a radial gradient.
 
   if paint.gradientHandlePositions.len != 3:
@@ -153,7 +153,7 @@ proc fillGradientRadial(image: Image, paint: Paint) {.raises: [PixieError].} =
         t = (mat * xy).length()
       image.gradientPut(paint, x, y, t, paint.gradientStops)
 
-proc fillGradientAngular(image: Image, paint: Paint) {.raises: [PixieError].} =
+proc fillGradientAngular(image: Image, paint: Paint) =
   ## Fills an angular gradient.
 
   if paint.gradientHandlePositions.len != 3:

@@ -63,7 +63,7 @@ proc newContext*(width, height: int): Context {.inline, raises: [PixieError].} =
   ## Create a new Context that will draw to a new image of width and height.
   newContext(newImage(width, height))
 
-proc state(ctx: Context): ContextState {.raises: [PixieError].} =
+proc state(ctx: Context): ContextState =
   result.fillStyle = ctx.fillStyle
   result.strokeStyle = ctx.strokeStyle
   result.globalAlpha = ctx.globalAlpha
@@ -130,9 +130,7 @@ proc restore*(ctx: Context) {.raises: [PixieError].} =
     else: # Otherwise draw to the root image
       ctx.image.draw(poppedLayer)
 
-proc fill(
-  ctx: Context, image: Image, path: Path, windingRule: WindingRule
-) {.raises: [PixieError].} =
+proc fill(ctx: Context, image: Image, path: Path, windingRule: WindingRule) =
   var image = image
 
   if ctx.globalAlpha != 1:
@@ -150,7 +148,7 @@ proc fill(
     ctx.layer.applyOpacity(ctx.globalAlpha)
     ctx.restore()
 
-proc stroke(ctx: Context, image: Image, path: Path) {.raises: [PixieError].} =
+proc stroke(ctx: Context, image: Image, path: Path) =
   var image = image
 
   if ctx.globalAlpha != 1:
@@ -172,7 +170,7 @@ proc stroke(ctx: Context, image: Image, path: Path) {.raises: [PixieError].} =
     ctx.layer.applyOpacity(ctx.globalAlpha)
     ctx.restore()
 
-proc newFont(ctx: Context): Font {.raises: [PixieError].} =
+proc newFont(ctx: Context): Font =
   if ctx.font == "":
     raise newException(PixieError, "No font has been set on this Context")
 
@@ -182,9 +180,7 @@ proc newFont(ctx: Context): Font {.raises: [PixieError].} =
   result = newFont(ctx.typefaces.getOrDefault(ctx.font, nil))
   result.size = ctx.fontSize
 
-proc fillText(
-  ctx: Context, image: Image, text: string, at: Vec2
-) {.raises: [PixieError].} =
+proc fillText(ctx: Context, image: Image, text: string, at: Vec2) =
   let font = newFont(ctx)
 
   # Canvas positions text relative to the alphabetic baseline by default
@@ -210,9 +206,7 @@ proc fillText(
     ctx.layer.applyOpacity(ctx.globalAlpha)
     ctx.restore()
 
-proc strokeText(
-  ctx: Context, image: Image, text: string, at: Vec2
-) {.raises: [PixieError].} =
+proc strokeText(ctx: Context, image: Image, text: string, at: Vec2) =
   let font = newFont(ctx)
 
   # Canvas positions text relative to the alphabetic baseline by default
@@ -501,7 +495,7 @@ proc getLineDash*(ctx: Context): seq[float32] {.inline, raises: [].} =
 proc setLineDash*(ctx: Context, lineDash: seq[float32]) {.inline, raises: [].} =
   ctx.lineDash = lineDash
 
-proc getTransform*(ctx: Context): Mat3 {.inline, raises: []} =
+proc getTransform*(ctx: Context): Mat3 {.inline, raises: [].} =
   ## Retrieves the current transform matrix being applied to the context.
   ctx.mat
 

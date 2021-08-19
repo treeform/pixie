@@ -33,12 +33,12 @@ type
 template failInvalid() =
   raise newException(PixieError, "Invalid SVG data")
 
-proc attrOrDefault(node: XmlNode, name, default: string): string {.raises: [].} =
+proc attrOrDefault(node: XmlNode, name, default: string): string =
   result = node.attr(name)
   if result.len == 0:
     result = default
 
-proc initCtx(): Ctx {.raises: [PixieError].} =
+proc initCtx(): Ctx =
   result.display = true
   try:
     result.fill = parseHtmlColor("black").rgbx
@@ -317,7 +317,7 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
       else:
         failInvalidTransform(transform)
 
-proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx {.raises: [PixieError].} =
+proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
   try:
     decodeCtxInternal(inherited, node)
   except PixieError as e:
@@ -326,14 +326,14 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx {.raises: [PixieError].} =
     let e = getCurrentException()
     raise newException(PixieError, e.msg, e)
 
-proc fill(img: Image, ctx: Ctx, path: Path) {.inline, raises: [PixieError].} =
+proc fill(img: Image, ctx: Ctx, path: Path) {.inline.} =
   if ctx.display and ctx.opacity > 0:
     let paint = newPaint(ctx.fill)
     if ctx.opacity != 1:
       paint.opacity = paint.opacity * ctx.opacity
     img.fillPath(path, paint, ctx.transform, ctx.fillRule)
 
-proc stroke(img: Image, ctx: Ctx, path: Path) {.inline, raises: [PixieError].} =
+proc stroke(img: Image, ctx: Ctx, path: Path) {.inline.} =
   if ctx.display and ctx.opacity > 0:
     let paint = newPaint(ctx.stroke)
     if ctx.opacity != 1:
@@ -556,9 +556,7 @@ proc drawInternal(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
   else:
     raise newException(PixieError, "Unsupported SVG tag: " & node.tag)
 
-proc draw(
-  img: Image, node: XmlNode, ctxStack: var seq[Ctx]
-) {.raises: [PixieError].} =
+proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
   try:
     drawInternal(img, node, ctxStack)
   except PixieError as e:
