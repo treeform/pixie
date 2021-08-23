@@ -47,7 +47,7 @@ proc newPaint*(paint: Paint): Paint {.raises: [].} =
 
 converter parseSomePaint*(
   paint: SomePaint
-): Paint {.inline, raises: [PixieError].} =
+): Paint {.inline.} =
   ## Given SomePaint, parse it in different ways.
   when type(paint) is string:
     result = newPaint(pkSolid)

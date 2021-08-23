@@ -10,3 +10,4 @@ nimcache
 *.ilk
 .*
 *.dll
+__pycache__
