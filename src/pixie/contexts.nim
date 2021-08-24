@@ -503,19 +503,10 @@ proc setTransform*(ctx: Context, transform: Mat3) {.inline, raises: [].} =
   ## Overrides the transform matrix being applied to the context.
   ctx.mat = transform
 
-proc setTransform*(ctx: Context, a, b, c, d, e, f: float32) {.inline, raises: [].} =
-  ## Overrides the transform matrix being applied to the context.
-  ctx.mat = mat3(a, b, 0, c, d, 0, e, f, 1)
-
 proc transform*(ctx: Context, transform: Mat3) {.inline, raises: [].} =
   ## Multiplies the current transform with the matrix described by the
   ## arguments of this method.
   ctx.mat = ctx.mat * transform
-
-proc transform*(ctx: Context, a, b, c, d, e, f: float32) {.inline, raises: [].} =
-  ## Multiplies the current transform with the matrix described by the
-  ## arguments of this method.
-  ctx.transform(mat3(a, b, 0, c, d, 0, e, f, 1))
 
 proc translate*(ctx: Context, v: Vec2) {.inline, raises: [].} =
   ## Adds a translation transformation to the current matrix.
