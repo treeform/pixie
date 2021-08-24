@@ -34,12 +34,26 @@ proc drawImage3*(
 ) {.raises: [PixieError].} =
   ctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)
 
-exportEnums [
-  FileFormat, BlendMode, PaintKind, WindingRule, LineCap, LineJoin,
-  HorizontalAlignment, VerticalAlignment, TextCase
-]
+exportEnums:
+  export
+    FileFormat,
+    BlendMode,
+    PaintKind,
+    WindingRule,
+    LineCap,
+    LineJoin,
+    HorizontalAlignment,
+    VerticalAlignment,
+    TextCase
 
-exportObjects [Vector2, Matrix3, Rect, Color, ColorStop, TextMetrics]
+exportObjects:
+  export
+    Vector2,
+    Matrix3,
+    Rect,
+    Color,
+    ColorStop,
+    TextMetrics
 
 exportProcs:
   export

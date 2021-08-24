@@ -16,5 +16,5 @@ requires "bumpy >= 1.0.3"
 task docs, "Generate API documents":
   exec "nim doc --index:on --project --out:docs --hints:off src/pixie.nim"
 
-task dll, "Generate DLL and bindings":
+task bindings, "Generate bindings":
   exec "nim c -f -d:release --app:lib --gc:arc --tlsEmulation:off --out:pixie --outdir:bindings/generated bindings/bindings.nim"
