@@ -109,26 +109,6 @@ proc pixie_image_unref*(x: Image) {.importc: "pixie_image_unref", cdecl.}
 proc `=destroy`(x: var Image) =
   pixie_image_unref(x)
 
-proc pixie_image_get_width(image: Image): int {.importc: "pixie_image_get_width", cdecl.}
-
-proc width*(image: Image): int {.inline.} =
-  pixie_image_get_width(image)
-
-proc pixie_image_set_width(image: Image, width: int) {.importc: "pixie_image_set_width", cdecl.}
-
-proc `width=`*(image: Image, width: int) =
-  pixie_image_set_width(image, width)
-
-proc pixie_image_get_height(image: Image): int {.importc: "pixie_image_get_height", cdecl.}
-
-proc height*(image: Image): int {.inline.} =
-  pixie_image_get_height(image)
-
-proc pixie_image_set_height(image: Image, height: int) {.importc: "pixie_image_set_height", cdecl.}
-
-proc `height=`*(image: Image, height: int) =
-  pixie_image_set_height(image, height)
-
 type Mask* = object
   reference: pointer
 
@@ -137,26 +117,6 @@ proc pixie_mask_unref*(x: Mask) {.importc: "pixie_mask_unref", cdecl.}
 proc `=destroy`(x: var Mask) =
   pixie_mask_unref(x)
 
-proc pixie_mask_get_width(mask: Mask): int {.importc: "pixie_mask_get_width", cdecl.}
-
-proc width*(mask: Mask): int {.inline.} =
-  pixie_mask_get_width(mask)
-
-proc pixie_mask_set_width(mask: Mask, width: int) {.importc: "pixie_mask_set_width", cdecl.}
-
-proc `width=`*(mask: Mask, width: int) =
-  pixie_mask_set_width(mask, width)
-
-proc pixie_mask_get_height(mask: Mask): int {.importc: "pixie_mask_get_height", cdecl.}
-
-proc height*(mask: Mask): int {.inline.} =
-  pixie_mask_get_height(mask)
-
-proc pixie_mask_set_height(mask: Mask, height: int) {.importc: "pixie_mask_set_height", cdecl.}
-
-proc `height=`*(mask: Mask, height: int) =
-  pixie_mask_set_height(mask, height)
-
 type Paint* = object
   reference: pointer
 
@@ -164,66 +124,6 @@ proc pixie_paint_unref*(x: Paint) {.importc: "pixie_paint_unref", cdecl.}
 
 proc `=destroy`(x: var Paint) =
   pixie_paint_unref(x)
-
-proc pixie_paint_get_kind(paint: Paint): PaintKind {.importc: "pixie_paint_get_kind", cdecl.}
-
-proc kind*(paint: Paint): PaintKind {.inline.} =
-  pixie_paint_get_kind(paint)
-
-proc pixie_paint_set_kind(paint: Paint, kind: PaintKind) {.importc: "pixie_paint_set_kind", cdecl.}
-
-proc `kind=`*(paint: Paint, kind: PaintKind) =
-  pixie_paint_set_kind(paint, kind)
-
-proc pixie_paint_get_blend_mode(paint: Paint): BlendMode {.importc: "pixie_paint_get_blend_mode", cdecl.}
-
-proc blendMode*(paint: Paint): BlendMode {.inline.} =
-  pixie_paint_get_blend_mode(paint)
-
-proc pixie_paint_set_blend_mode(paint: Paint, blendMode: BlendMode) {.importc: "pixie_paint_set_blend_mode", cdecl.}
-
-proc `blendMode=`*(paint: Paint, blendMode: BlendMode) =
-  pixie_paint_set_blend_mode(paint, blendMode)
-
-proc pixie_paint_get_opacity(paint: Paint): float32 {.importc: "pixie_paint_get_opacity", cdecl.}
-
-proc opacity*(paint: Paint): float32 {.inline.} =
-  pixie_paint_get_opacity(paint)
-
-proc pixie_paint_set_opacity(paint: Paint, opacity: float32) {.importc: "pixie_paint_set_opacity", cdecl.}
-
-proc `opacity=`*(paint: Paint, opacity: float32) =
-  pixie_paint_set_opacity(paint, opacity)
-
-proc pixie_paint_get_color(paint: Paint): Color {.importc: "pixie_paint_get_color", cdecl.}
-
-proc color*(paint: Paint): Color {.inline.} =
-  pixie_paint_get_color(paint)
-
-proc pixie_paint_set_color(paint: Paint, color: Color) {.importc: "pixie_paint_set_color", cdecl.}
-
-proc `color=`*(paint: Paint, color: Color) =
-  pixie_paint_set_color(paint, color)
-
-proc pixie_paint_get_image(paint: Paint): Image {.importc: "pixie_paint_get_image", cdecl.}
-
-proc image*(paint: Paint): Image {.inline.} =
-  pixie_paint_get_image(paint)
-
-proc pixie_paint_set_image(paint: Paint, image: Image) {.importc: "pixie_paint_set_image", cdecl.}
-
-proc `image=`*(paint: Paint, image: Image) =
-  pixie_paint_set_image(paint, image)
-
-proc pixie_paint_get_image_mat(paint: Paint): Mat3 {.importc: "pixie_paint_get_image_mat", cdecl.}
-
-proc imageMat*(paint: Paint): Mat3 {.inline.} =
-  pixie_paint_get_image_mat(paint)
-
-proc pixie_paint_set_image_mat(paint: Paint, imageMat: Mat3) {.importc: "pixie_paint_set_image_mat", cdecl.}
-
-proc `imageMat=`*(paint: Paint, imageMat: Mat3) =
-  pixie_paint_set_image_mat(paint, imageMat)
 
 type Path* = object
   reference: pointer
@@ -241,16 +141,6 @@ proc pixie_typeface_unref*(x: Typeface) {.importc: "pixie_typeface_unref", cdecl
 proc `=destroy`(x: var Typeface) =
   pixie_typeface_unref(x)
 
-proc pixie_typeface_get_file_path(typeface: Typeface): cstring {.importc: "pixie_typeface_get_file_path", cdecl.}
-
-proc filePath*(typeface: Typeface): cstring {.inline.} =
-  pixie_typeface_get_file_path(typeface).`$`
-
-proc pixie_typeface_set_file_path(typeface: Typeface, filePath: cstring) {.importc: "pixie_typeface_set_file_path", cdecl.}
-
-proc `filePath=`*(typeface: Typeface, filePath: string) =
-  pixie_typeface_set_file_path(typeface, filePath.cstring)
-
 type Font* = object
   reference: pointer
 
@@ -259,76 +149,6 @@ proc pixie_font_unref*(x: Font) {.importc: "pixie_font_unref", cdecl.}
 proc `=destroy`(x: var Font) =
   pixie_font_unref(x)
 
-proc pixie_font_get_typeface(font: Font): Typeface {.importc: "pixie_font_get_typeface", cdecl.}
-
-proc typeface*(font: Font): Typeface {.inline.} =
-  pixie_font_get_typeface(font)
-
-proc pixie_font_set_typeface(font: Font, typeface: Typeface) {.importc: "pixie_font_set_typeface", cdecl.}
-
-proc `typeface=`*(font: Font, typeface: Typeface) =
-  pixie_font_set_typeface(font, typeface)
-
-proc pixie_font_get_size(font: Font): float32 {.importc: "pixie_font_get_size", cdecl.}
-
-proc size*(font: Font): float32 {.inline.} =
-  pixie_font_get_size(font)
-
-proc pixie_font_set_size(font: Font, size: float32) {.importc: "pixie_font_set_size", cdecl.}
-
-proc `size=`*(font: Font, size: float32) =
-  pixie_font_set_size(font, size)
-
-proc pixie_font_get_line_height(font: Font): float32 {.importc: "pixie_font_get_line_height", cdecl.}
-
-proc lineHeight*(font: Font): float32 {.inline.} =
-  pixie_font_get_line_height(font)
-
-proc pixie_font_set_line_height(font: Font, lineHeight: float32) {.importc: "pixie_font_set_line_height", cdecl.}
-
-proc `lineHeight=`*(font: Font, lineHeight: float32) =
-  pixie_font_set_line_height(font, lineHeight)
-
-proc pixie_font_get_text_case(font: Font): TextCase {.importc: "pixie_font_get_text_case", cdecl.}
-
-proc textCase*(font: Font): TextCase {.inline.} =
-  pixie_font_get_text_case(font)
-
-proc pixie_font_set_text_case(font: Font, textCase: TextCase) {.importc: "pixie_font_set_text_case", cdecl.}
-
-proc `textCase=`*(font: Font, textCase: TextCase) =
-  pixie_font_set_text_case(font, textCase)
-
-proc pixie_font_get_underline(font: Font): bool {.importc: "pixie_font_get_underline", cdecl.}
-
-proc underline*(font: Font): bool {.inline.} =
-  pixie_font_get_underline(font)
-
-proc pixie_font_set_underline(font: Font, underline: bool) {.importc: "pixie_font_set_underline", cdecl.}
-
-proc `underline=`*(font: Font, underline: bool) =
-  pixie_font_set_underline(font, underline)
-
-proc pixie_font_get_strikethrough(font: Font): bool {.importc: "pixie_font_get_strikethrough", cdecl.}
-
-proc strikethrough*(font: Font): bool {.inline.} =
-  pixie_font_get_strikethrough(font)
-
-proc pixie_font_set_strikethrough(font: Font, strikethrough: bool) {.importc: "pixie_font_set_strikethrough", cdecl.}
-
-proc `strikethrough=`*(font: Font, strikethrough: bool) =
-  pixie_font_set_strikethrough(font, strikethrough)
-
-proc pixie_font_get_no_kerning_adjustments(font: Font): bool {.importc: "pixie_font_get_no_kerning_adjustments", cdecl.}
-
-proc noKerningAdjustments*(font: Font): bool {.inline.} =
-  pixie_font_get_no_kerning_adjustments(font)
-
-proc pixie_font_set_no_kerning_adjustments(font: Font, noKerningAdjustments: bool) {.importc: "pixie_font_set_no_kerning_adjustments", cdecl.}
-
-proc `noKerningAdjustments=`*(font: Font, noKerningAdjustments: bool) =
-  pixie_font_set_no_kerning_adjustments(font, noKerningAdjustments)
-
 type Span* = object
   reference: pointer
 
@@ -336,26 +156,6 @@ proc pixie_span_unref*(x: Span) {.importc: "pixie_span_unref", cdecl.}
 
 proc `=destroy`(x: var Span) =
   pixie_span_unref(x)
-
-proc pixie_span_get_text(span: Span): cstring {.importc: "pixie_span_get_text", cdecl.}
-
-proc text*(span: Span): cstring {.inline.} =
-  pixie_span_get_text(span).`$`
-
-proc pixie_span_set_text(span: Span, text: cstring) {.importc: "pixie_span_set_text", cdecl.}
-
-proc `text=`*(span: Span, text: string) =
-  pixie_span_set_text(span, text.cstring)
-
-proc pixie_span_get_font(span: Span): Font {.importc: "pixie_span_get_font", cdecl.}
-
-proc font*(span: Span): Font {.inline.} =
-  pixie_span_get_font(span)
-
-proc pixie_span_set_font(span: Span, font: Font) {.importc: "pixie_span_set_font", cdecl.}
-
-proc `font=`*(span: Span, font: Font) =
-  pixie_span_set_font(span, font)
 
 type Arrangement* = object
   reference: pointer
@@ -372,116 +172,6 @@ proc pixie_context_unref*(x: Context) {.importc: "pixie_context_unref", cdecl.}
 
 proc `=destroy`(x: var Context) =
   pixie_context_unref(x)
-
-proc pixie_context_get_image(context: Context): Image {.importc: "pixie_context_get_image", cdecl.}
-
-proc image*(context: Context): Image {.inline.} =
-  pixie_context_get_image(context)
-
-proc pixie_context_set_image(context: Context, image: Image) {.importc: "pixie_context_set_image", cdecl.}
-
-proc `image=`*(context: Context, image: Image) =
-  pixie_context_set_image(context, image)
-
-proc pixie_context_get_fill_style(context: Context): Paint {.importc: "pixie_context_get_fill_style", cdecl.}
-
-proc fillStyle*(context: Context): Paint {.inline.} =
-  pixie_context_get_fill_style(context)
-
-proc pixie_context_set_fill_style(context: Context, fillStyle: Paint) {.importc: "pixie_context_set_fill_style", cdecl.}
-
-proc `fillStyle=`*(context: Context, fillStyle: Paint) =
-  pixie_context_set_fill_style(context, fillStyle)
-
-proc pixie_context_get_stroke_style(context: Context): Paint {.importc: "pixie_context_get_stroke_style", cdecl.}
-
-proc strokeStyle*(context: Context): Paint {.inline.} =
-  pixie_context_get_stroke_style(context)
-
-proc pixie_context_set_stroke_style(context: Context, strokeStyle: Paint) {.importc: "pixie_context_set_stroke_style", cdecl.}
-
-proc `strokeStyle=`*(context: Context, strokeStyle: Paint) =
-  pixie_context_set_stroke_style(context, strokeStyle)
-
-proc pixie_context_get_global_alpha(context: Context): float32 {.importc: "pixie_context_get_global_alpha", cdecl.}
-
-proc globalAlpha*(context: Context): float32 {.inline.} =
-  pixie_context_get_global_alpha(context)
-
-proc pixie_context_set_global_alpha(context: Context, globalAlpha: float32) {.importc: "pixie_context_set_global_alpha", cdecl.}
-
-proc `globalAlpha=`*(context: Context, globalAlpha: float32) =
-  pixie_context_set_global_alpha(context, globalAlpha)
-
-proc pixie_context_get_line_width(context: Context): float32 {.importc: "pixie_context_get_line_width", cdecl.}
-
-proc lineWidth*(context: Context): float32 {.inline.} =
-  pixie_context_get_line_width(context)
-
-proc pixie_context_set_line_width(context: Context, lineWidth: float32) {.importc: "pixie_context_set_line_width", cdecl.}
-
-proc `lineWidth=`*(context: Context, lineWidth: float32) =
-  pixie_context_set_line_width(context, lineWidth)
-
-proc pixie_context_get_miter_limit(context: Context): float32 {.importc: "pixie_context_get_miter_limit", cdecl.}
-
-proc miterLimit*(context: Context): float32 {.inline.} =
-  pixie_context_get_miter_limit(context)
-
-proc pixie_context_set_miter_limit(context: Context, miterLimit: float32) {.importc: "pixie_context_set_miter_limit", cdecl.}
-
-proc `miterLimit=`*(context: Context, miterLimit: float32) =
-  pixie_context_set_miter_limit(context, miterLimit)
-
-proc pixie_context_get_line_cap(context: Context): LineCap {.importc: "pixie_context_get_line_cap", cdecl.}
-
-proc lineCap*(context: Context): LineCap {.inline.} =
-  pixie_context_get_line_cap(context)
-
-proc pixie_context_set_line_cap(context: Context, lineCap: LineCap) {.importc: "pixie_context_set_line_cap", cdecl.}
-
-proc `lineCap=`*(context: Context, lineCap: LineCap) =
-  pixie_context_set_line_cap(context, lineCap)
-
-proc pixie_context_get_line_join(context: Context): LineJoin {.importc: "pixie_context_get_line_join", cdecl.}
-
-proc lineJoin*(context: Context): LineJoin {.inline.} =
-  pixie_context_get_line_join(context)
-
-proc pixie_context_set_line_join(context: Context, lineJoin: LineJoin) {.importc: "pixie_context_set_line_join", cdecl.}
-
-proc `lineJoin=`*(context: Context, lineJoin: LineJoin) =
-  pixie_context_set_line_join(context, lineJoin)
-
-proc pixie_context_get_font(context: Context): cstring {.importc: "pixie_context_get_font", cdecl.}
-
-proc font*(context: Context): cstring {.inline.} =
-  pixie_context_get_font(context).`$`
-
-proc pixie_context_set_font(context: Context, font: cstring) {.importc: "pixie_context_set_font", cdecl.}
-
-proc `font=`*(context: Context, font: string) =
-  pixie_context_set_font(context, font.cstring)
-
-proc pixie_context_get_font_size(context: Context): float32 {.importc: "pixie_context_get_font_size", cdecl.}
-
-proc fontSize*(context: Context): float32 {.inline.} =
-  pixie_context_get_font_size(context)
-
-proc pixie_context_set_font_size(context: Context, fontSize: float32) {.importc: "pixie_context_set_font_size", cdecl.}
-
-proc `fontSize=`*(context: Context, fontSize: float32) =
-  pixie_context_set_font_size(context, fontSize)
-
-proc pixie_context_get_text_align(context: Context): HorizontalAlignment {.importc: "pixie_context_get_text_align", cdecl.}
-
-proc textAlign*(context: Context): HorizontalAlignment {.inline.} =
-  pixie_context_get_text_align(context)
-
-proc pixie_context_set_text_align(context: Context, textAlign: HorizontalAlignment) {.importc: "pixie_context_set_text_align", cdecl.}
-
-proc `textAlign=`*(context: Context, textAlign: HorizontalAlignment) =
-  pixie_context_set_text_align(context, textAlign)
 
 proc pixie_check_error(): bool {.importc: "pixie_check_error", cdecl.}
 
@@ -536,6 +226,26 @@ proc pixie_seq_span_compute_bounds(spans: SeqSpan): Vec2 {.importc: "pixie_seq_s
 
 proc computeBounds*(spans: SeqSpan): Vec2 {.inline.} =
   result = pixie_seq_span_compute_bounds(spans)
+
+proc pixie_image_get_width(image: Image): int {.importc: "pixie_image_get_width", cdecl.}
+
+proc width*(image: Image): int {.inline.} =
+  pixie_image_get_width(image)
+
+proc pixie_image_set_width(image: Image, width: int) {.importc: "pixie_image_set_width", cdecl.}
+
+proc `width=`*(image: Image, width: int) =
+  pixie_image_set_width(image, width)
+
+proc pixie_image_get_height(image: Image): int {.importc: "pixie_image_get_height", cdecl.}
+
+proc height*(image: Image): int {.inline.} =
+  pixie_image_get_height(image)
+
+proc pixie_image_set_height(image: Image, height: int) {.importc: "pixie_image_set_height", cdecl.}
+
+proc `height=`*(image: Image, height: int) =
+  pixie_image_set_height(image, height)
 
 proc pixie_image_write_file(image: Image, file_path: cstring) {.importc: "pixie_image_write_file", cdecl.}
 
@@ -715,6 +425,26 @@ proc pixie_image_new_context(image: Image): Context {.importc: "pixie_image_new_
 proc newContext*(image: Image): Context {.inline.} =
   result = pixie_image_new_context(image)
 
+proc pixie_mask_get_width(mask: Mask): int {.importc: "pixie_mask_get_width", cdecl.}
+
+proc width*(mask: Mask): int {.inline.} =
+  pixie_mask_get_width(mask)
+
+proc pixie_mask_set_width(mask: Mask, width: int) {.importc: "pixie_mask_set_width", cdecl.}
+
+proc `width=`*(mask: Mask, width: int) =
+  pixie_mask_set_width(mask, width)
+
+proc pixie_mask_get_height(mask: Mask): int {.importc: "pixie_mask_get_height", cdecl.}
+
+proc height*(mask: Mask): int {.inline.} =
+  pixie_mask_get_height(mask)
+
+proc pixie_mask_set_height(mask: Mask, height: int) {.importc: "pixie_mask_set_height", cdecl.}
+
+proc `height=`*(mask: Mask, height: int) =
+  pixie_mask_set_height(mask, height)
+
 proc pixie_mask_write_file(mask: Mask, file_path: cstring) {.importc: "pixie_mask_write_file", cdecl.}
 
 proc writeFile*(mask: Mask, filePath: string) {.inline.} =
@@ -848,6 +578,66 @@ proc strokePath*(mask: Mask, path: Path, transform: Mat3, strokeWidth: float32, 
   if checkError():
     raise newException(PixieError, $takeError())
 
+proc pixie_paint_get_kind(paint: Paint): PaintKind {.importc: "pixie_paint_get_kind", cdecl.}
+
+proc kind*(paint: Paint): PaintKind {.inline.} =
+  pixie_paint_get_kind(paint)
+
+proc pixie_paint_set_kind(paint: Paint, kind: PaintKind) {.importc: "pixie_paint_set_kind", cdecl.}
+
+proc `kind=`*(paint: Paint, kind: PaintKind) =
+  pixie_paint_set_kind(paint, kind)
+
+proc pixie_paint_get_blend_mode(paint: Paint): BlendMode {.importc: "pixie_paint_get_blend_mode", cdecl.}
+
+proc blendMode*(paint: Paint): BlendMode {.inline.} =
+  pixie_paint_get_blend_mode(paint)
+
+proc pixie_paint_set_blend_mode(paint: Paint, blendMode: BlendMode) {.importc: "pixie_paint_set_blend_mode", cdecl.}
+
+proc `blendMode=`*(paint: Paint, blendMode: BlendMode) =
+  pixie_paint_set_blend_mode(paint, blendMode)
+
+proc pixie_paint_get_opacity(paint: Paint): float32 {.importc: "pixie_paint_get_opacity", cdecl.}
+
+proc opacity*(paint: Paint): float32 {.inline.} =
+  pixie_paint_get_opacity(paint)
+
+proc pixie_paint_set_opacity(paint: Paint, opacity: float32) {.importc: "pixie_paint_set_opacity", cdecl.}
+
+proc `opacity=`*(paint: Paint, opacity: float32) =
+  pixie_paint_set_opacity(paint, opacity)
+
+proc pixie_paint_get_color(paint: Paint): Color {.importc: "pixie_paint_get_color", cdecl.}
+
+proc color*(paint: Paint): Color {.inline.} =
+  pixie_paint_get_color(paint)
+
+proc pixie_paint_set_color(paint: Paint, color: Color) {.importc: "pixie_paint_set_color", cdecl.}
+
+proc `color=`*(paint: Paint, color: Color) =
+  pixie_paint_set_color(paint, color)
+
+proc pixie_paint_get_image(paint: Paint): Image {.importc: "pixie_paint_get_image", cdecl.}
+
+proc image*(paint: Paint): Image {.inline.} =
+  pixie_paint_get_image(paint)
+
+proc pixie_paint_set_image(paint: Paint, image: Image) {.importc: "pixie_paint_set_image", cdecl.}
+
+proc `image=`*(paint: Paint, image: Image) =
+  pixie_paint_set_image(paint, image)
+
+proc pixie_paint_get_image_mat(paint: Paint): Mat3 {.importc: "pixie_paint_get_image_mat", cdecl.}
+
+proc imageMat*(paint: Paint): Mat3 {.inline.} =
+  pixie_paint_get_image_mat(paint)
+
+proc pixie_paint_set_image_mat(paint: Paint, imageMat: Mat3) {.importc: "pixie_paint_set_image_mat", cdecl.}
+
+proc `imageMat=`*(paint: Paint, imageMat: Mat3) =
+  pixie_paint_set_image_mat(paint, imageMat)
+
 proc pixie_paint_gradient_handle_positions_len(s: Paint): int {.importc: "pixie_paint_gradient_handle_positions_len", cdecl.}
 
 proc pixie_paint_gradient_handle_positions_add(s: Paint, v: Vec2) {.importc: "pixie_paint_gradient_handle_positions_add", cdecl.}
@@ -977,6 +767,16 @@ proc pixie_path_polygon(path: Path, x: float32, y: float32, size: float32, sides
 proc polygon*(path: Path, x: float32, y: float32, size: float32, sides: int) {.inline.} =
   pixie_path_polygon(path, x, y, size, sides)
 
+proc pixie_typeface_get_file_path(typeface: Typeface): cstring {.importc: "pixie_typeface_get_file_path", cdecl.}
+
+proc filePath*(typeface: Typeface): cstring {.inline.} =
+  pixie_typeface_get_file_path(typeface).`$`
+
+proc pixie_typeface_set_file_path(typeface: Typeface, filePath: cstring) {.importc: "pixie_typeface_set_file_path", cdecl.}
+
+proc `filePath=`*(typeface: Typeface, filePath: string) =
+  pixie_typeface_set_file_path(typeface, filePath.cstring)
+
 proc pixie_typeface_ascent(typeface: Typeface): float32 {.importc: "pixie_typeface_ascent", cdecl.}
 
 proc ascent*(typeface: Typeface): float32 {.inline.} =
@@ -1019,6 +819,36 @@ proc pixie_typeface_new_font(typeface: Typeface): Font {.importc: "pixie_typefac
 proc newFont*(typeface: Typeface): Font {.inline.} =
   result = pixie_typeface_new_font(typeface)
 
+proc pixie_font_get_typeface(font: Font): Typeface {.importc: "pixie_font_get_typeface", cdecl.}
+
+proc typeface*(font: Font): Typeface {.inline.} =
+  pixie_font_get_typeface(font)
+
+proc pixie_font_set_typeface(font: Font, typeface: Typeface) {.importc: "pixie_font_set_typeface", cdecl.}
+
+proc `typeface=`*(font: Font, typeface: Typeface) =
+  pixie_font_set_typeface(font, typeface)
+
+proc pixie_font_get_size(font: Font): float32 {.importc: "pixie_font_get_size", cdecl.}
+
+proc size*(font: Font): float32 {.inline.} =
+  pixie_font_get_size(font)
+
+proc pixie_font_set_size(font: Font, size: float32) {.importc: "pixie_font_set_size", cdecl.}
+
+proc `size=`*(font: Font, size: float32) =
+  pixie_font_set_size(font, size)
+
+proc pixie_font_get_line_height(font: Font): float32 {.importc: "pixie_font_get_line_height", cdecl.}
+
+proc lineHeight*(font: Font): float32 {.inline.} =
+  pixie_font_get_line_height(font)
+
+proc pixie_font_set_line_height(font: Font, lineHeight: float32) {.importc: "pixie_font_set_line_height", cdecl.}
+
+proc `lineHeight=`*(font: Font, lineHeight: float32) =
+  pixie_font_set_line_height(font, lineHeight)
+
 proc pixie_font_paints_len(s: Font): int {.importc: "pixie_font_paints_len", cdecl.}
 
 proc pixie_font_paints_add(s: Font, v: Paint) {.importc: "pixie_font_paints_add", cdecl.}
@@ -1030,6 +860,46 @@ proc pixie_font_paints_set(s: Font, i: int, v: Paint) {.importc: "pixie_font_pai
 proc pixie_font_paints_remove(s: Font, i: int) {.importc: "pixie_font_paints_remove", cdecl.}
 
 proc pixie_font_paints_clear(s: Font) {.importc: "pixie_font_paints_clear", cdecl.}
+
+proc pixie_font_get_text_case(font: Font): TextCase {.importc: "pixie_font_get_text_case", cdecl.}
+
+proc textCase*(font: Font): TextCase {.inline.} =
+  pixie_font_get_text_case(font)
+
+proc pixie_font_set_text_case(font: Font, textCase: TextCase) {.importc: "pixie_font_set_text_case", cdecl.}
+
+proc `textCase=`*(font: Font, textCase: TextCase) =
+  pixie_font_set_text_case(font, textCase)
+
+proc pixie_font_get_underline(font: Font): bool {.importc: "pixie_font_get_underline", cdecl.}
+
+proc underline*(font: Font): bool {.inline.} =
+  pixie_font_get_underline(font)
+
+proc pixie_font_set_underline(font: Font, underline: bool) {.importc: "pixie_font_set_underline", cdecl.}
+
+proc `underline=`*(font: Font, underline: bool) =
+  pixie_font_set_underline(font, underline)
+
+proc pixie_font_get_strikethrough(font: Font): bool {.importc: "pixie_font_get_strikethrough", cdecl.}
+
+proc strikethrough*(font: Font): bool {.inline.} =
+  pixie_font_get_strikethrough(font)
+
+proc pixie_font_set_strikethrough(font: Font, strikethrough: bool) {.importc: "pixie_font_set_strikethrough", cdecl.}
+
+proc `strikethrough=`*(font: Font, strikethrough: bool) =
+  pixie_font_set_strikethrough(font, strikethrough)
+
+proc pixie_font_get_no_kerning_adjustments(font: Font): bool {.importc: "pixie_font_get_no_kerning_adjustments", cdecl.}
+
+proc noKerningAdjustments*(font: Font): bool {.inline.} =
+  pixie_font_get_no_kerning_adjustments(font)
+
+proc pixie_font_set_no_kerning_adjustments(font: Font, noKerningAdjustments: bool) {.importc: "pixie_font_set_no_kerning_adjustments", cdecl.}
+
+proc `noKerningAdjustments=`*(font: Font, noKerningAdjustments: bool) =
+  pixie_font_set_no_kerning_adjustments(font, noKerningAdjustments)
 
 proc pixie_font_scale(font: Font): float32 {.importc: "pixie_font_scale", cdecl.}
 
@@ -1051,10 +921,140 @@ proc pixie_font_compute_bounds(font: Font, text: cstring): Vec2 {.importc: "pixi
 proc computeBounds*(font: Font, text: string): Vec2 {.inline.} =
   result = pixie_font_compute_bounds(font, text.cstring)
 
+proc pixie_span_get_text(span: Span): cstring {.importc: "pixie_span_get_text", cdecl.}
+
+proc text*(span: Span): cstring {.inline.} =
+  pixie_span_get_text(span).`$`
+
+proc pixie_span_set_text(span: Span, text: cstring) {.importc: "pixie_span_set_text", cdecl.}
+
+proc `text=`*(span: Span, text: string) =
+  pixie_span_set_text(span, text.cstring)
+
+proc pixie_span_get_font(span: Span): Font {.importc: "pixie_span_get_font", cdecl.}
+
+proc font*(span: Span): Font {.inline.} =
+  pixie_span_get_font(span)
+
+proc pixie_span_set_font(span: Span, font: Font) {.importc: "pixie_span_set_font", cdecl.}
+
+proc `font=`*(span: Span, font: Font) =
+  pixie_span_set_font(span, font)
+
 proc pixie_arrangement_compute_bounds(arrangement: Arrangement): Vec2 {.importc: "pixie_arrangement_compute_bounds", cdecl.}
 
 proc computeBounds*(arrangement: Arrangement): Vec2 {.inline.} =
   result = pixie_arrangement_compute_bounds(arrangement)
+
+proc pixie_context_get_image(context: Context): Image {.importc: "pixie_context_get_image", cdecl.}
+
+proc image*(context: Context): Image {.inline.} =
+  pixie_context_get_image(context)
+
+proc pixie_context_set_image(context: Context, image: Image) {.importc: "pixie_context_set_image", cdecl.}
+
+proc `image=`*(context: Context, image: Image) =
+  pixie_context_set_image(context, image)
+
+proc pixie_context_get_fill_style(context: Context): Paint {.importc: "pixie_context_get_fill_style", cdecl.}
+
+proc fillStyle*(context: Context): Paint {.inline.} =
+  pixie_context_get_fill_style(context)
+
+proc pixie_context_set_fill_style(context: Context, fillStyle: Paint) {.importc: "pixie_context_set_fill_style", cdecl.}
+
+proc `fillStyle=`*(context: Context, fillStyle: Paint) =
+  pixie_context_set_fill_style(context, fillStyle)
+
+proc pixie_context_get_stroke_style(context: Context): Paint {.importc: "pixie_context_get_stroke_style", cdecl.}
+
+proc strokeStyle*(context: Context): Paint {.inline.} =
+  pixie_context_get_stroke_style(context)
+
+proc pixie_context_set_stroke_style(context: Context, strokeStyle: Paint) {.importc: "pixie_context_set_stroke_style", cdecl.}
+
+proc `strokeStyle=`*(context: Context, strokeStyle: Paint) =
+  pixie_context_set_stroke_style(context, strokeStyle)
+
+proc pixie_context_get_global_alpha(context: Context): float32 {.importc: "pixie_context_get_global_alpha", cdecl.}
+
+proc globalAlpha*(context: Context): float32 {.inline.} =
+  pixie_context_get_global_alpha(context)
+
+proc pixie_context_set_global_alpha(context: Context, globalAlpha: float32) {.importc: "pixie_context_set_global_alpha", cdecl.}
+
+proc `globalAlpha=`*(context: Context, globalAlpha: float32) =
+  pixie_context_set_global_alpha(context, globalAlpha)
+
+proc pixie_context_get_line_width(context: Context): float32 {.importc: "pixie_context_get_line_width", cdecl.}
+
+proc lineWidth*(context: Context): float32 {.inline.} =
+  pixie_context_get_line_width(context)
+
+proc pixie_context_set_line_width(context: Context, lineWidth: float32) {.importc: "pixie_context_set_line_width", cdecl.}
+
+proc `lineWidth=`*(context: Context, lineWidth: float32) =
+  pixie_context_set_line_width(context, lineWidth)
+
+proc pixie_context_get_miter_limit(context: Context): float32 {.importc: "pixie_context_get_miter_limit", cdecl.}
+
+proc miterLimit*(context: Context): float32 {.inline.} =
+  pixie_context_get_miter_limit(context)
+
+proc pixie_context_set_miter_limit(context: Context, miterLimit: float32) {.importc: "pixie_context_set_miter_limit", cdecl.}
+
+proc `miterLimit=`*(context: Context, miterLimit: float32) =
+  pixie_context_set_miter_limit(context, miterLimit)
+
+proc pixie_context_get_line_cap(context: Context): LineCap {.importc: "pixie_context_get_line_cap", cdecl.}
+
+proc lineCap*(context: Context): LineCap {.inline.} =
+  pixie_context_get_line_cap(context)
+
+proc pixie_context_set_line_cap(context: Context, lineCap: LineCap) {.importc: "pixie_context_set_line_cap", cdecl.}
+
+proc `lineCap=`*(context: Context, lineCap: LineCap) =
+  pixie_context_set_line_cap(context, lineCap)
+
+proc pixie_context_get_line_join(context: Context): LineJoin {.importc: "pixie_context_get_line_join", cdecl.}
+
+proc lineJoin*(context: Context): LineJoin {.inline.} =
+  pixie_context_get_line_join(context)
+
+proc pixie_context_set_line_join(context: Context, lineJoin: LineJoin) {.importc: "pixie_context_set_line_join", cdecl.}
+
+proc `lineJoin=`*(context: Context, lineJoin: LineJoin) =
+  pixie_context_set_line_join(context, lineJoin)
+
+proc pixie_context_get_font(context: Context): cstring {.importc: "pixie_context_get_font", cdecl.}
+
+proc font*(context: Context): cstring {.inline.} =
+  pixie_context_get_font(context).`$`
+
+proc pixie_context_set_font(context: Context, font: cstring) {.importc: "pixie_context_set_font", cdecl.}
+
+proc `font=`*(context: Context, font: string) =
+  pixie_context_set_font(context, font.cstring)
+
+proc pixie_context_get_font_size(context: Context): float32 {.importc: "pixie_context_get_font_size", cdecl.}
+
+proc fontSize*(context: Context): float32 {.inline.} =
+  pixie_context_get_font_size(context)
+
+proc pixie_context_set_font_size(context: Context, fontSize: float32) {.importc: "pixie_context_set_font_size", cdecl.}
+
+proc `fontSize=`*(context: Context, fontSize: float32) =
+  pixie_context_set_font_size(context, fontSize)
+
+proc pixie_context_get_text_align(context: Context): HorizontalAlignment {.importc: "pixie_context_get_text_align", cdecl.}
+
+proc textAlign*(context: Context): HorizontalAlignment {.inline.} =
+  pixie_context_get_text_align(context)
+
+proc pixie_context_set_text_align(context: Context, textAlign: HorizontalAlignment) {.importc: "pixie_context_set_text_align", cdecl.}
+
+proc `textAlign=`*(context: Context, textAlign: HorizontalAlignment) =
+  pixie_context_set_text_align(context, textAlign)
 
 proc pixie_context_line_dash_len(s: Context): int {.importc: "pixie_context_line_dash_len", cdecl.}
 
@@ -1392,4 +1392,3 @@ proc pixie_angle_to_miter_limit(angle: float32): float32 {.importc: "pixie_angle
 
 proc angleToMiterLimit*(angle: float32): float32 {.inline.} =
   result = pixie_angle_to_miter_limit(angle)
-
