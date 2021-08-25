@@ -234,4 +234,4 @@ exportProcs:
 
 writeFiles("bindings/generated", "pixie")
 
-include generated/dllapi
+include generated/internal
