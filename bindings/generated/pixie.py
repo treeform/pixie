@@ -1,6 +1,6 @@
 from ctypes import *
 
-dll = cdll.LoadLibrary("pixie.dll")
+dll = cdll.LoadLibrary("./pixie.dll")
 
 class PixieError(Exception):
     pass
@@ -590,6 +590,60 @@ class Paint(Structure):
     def image_mat(self, image_mat):
         dll.pixie_paint_set_image_mat(self, image_mat)
 
+    class GradientHandlePositions:
+
+        def __init__(self, paint):
+            self.paint = paint
+
+        def __len__(self):
+            return dll.pixie_paint_gradient_handle_positions_len(self.paint)
+
+        def __getitem__(self, index):
+            return dll.pixie_paint_gradient_handle_positions_get(self.paint, index)
+
+        def __setitem__(self, index, value):
+            dll.pixie_paint_gradient_handle_positions_set(self.paint, index, value)
+
+        def __delitem__(self, index):
+            dll.pixie_paint_gradient_handle_positions_remove(self.paint, index)
+
+        def append(self, value):
+            dll.pixie_paint_gradient_handle_positions_add(self.paint, value)
+
+        def clear(self):
+            dll.pixie_paint_gradient_handle_positions_clear(self.paint)
+
+    @property
+    def gradient_handle_positions(self):
+        return self.GradientHandlePositions(self)
+
+    class GradientStops:
+
+        def __init__(self, paint):
+            self.paint = paint
+
+        def __len__(self):
+            return dll.pixie_paint_gradient_stops_len(self.paint)
+
+        def __getitem__(self, index):
+            return dll.pixie_paint_gradient_stops_get(self.paint, index)
+
+        def __setitem__(self, index, value):
+            dll.pixie_paint_gradient_stops_set(self.paint, index, value)
+
+        def __delitem__(self, index):
+            dll.pixie_paint_gradient_stops_remove(self.paint, index)
+
+        def append(self, value):
+            dll.pixie_paint_gradient_stops_add(self.paint, value)
+
+        def clear(self):
+            dll.pixie_paint_gradient_stops_clear(self.paint)
+
+    @property
+    def gradient_stops(self):
+        return self.GradientStops(self)
+
     def new_paint(self):
         result = dll.pixie_paint_new_paint(self)
         return result
@@ -762,6 +816,33 @@ class Font(Structure):
     @line_height.setter
     def line_height(self, line_height):
         dll.pixie_font_set_line_height(self, line_height)
+
+    class Paints:
+
+        def __init__(self, font):
+            self.font = font
+
+        def __len__(self):
+            return dll.pixie_font_paints_len(self.font)
+
+        def __getitem__(self, index):
+            return dll.pixie_font_paints_get(self.font, index)
+
+        def __setitem__(self, index, value):
+            dll.pixie_font_paints_set(self.font, index, value)
+
+        def __delitem__(self, index):
+            dll.pixie_font_paints_remove(self.font, index)
+
+        def append(self, value):
+            dll.pixie_font_paints_add(self.font, value)
+
+        def clear(self):
+            dll.pixie_font_paints_clear(self.font)
+
+    @property
+    def paints(self):
+        return self.Paints(self)
 
     @property
     def text_case(self):
@@ -954,6 +1035,33 @@ class Context(Structure):
     @text_align.setter
     def text_align(self, text_align):
         dll.pixie_context_set_text_align(self, text_align)
+
+    class LineDash:
+
+        def __init__(self, context):
+            self.context = context
+
+        def __len__(self):
+            return dll.pixie_context_line_dash_len(self.context)
+
+        def __getitem__(self, index):
+            return dll.pixie_context_line_dash_get(self.context, index)
+
+        def __setitem__(self, index, value):
+            dll.pixie_context_line_dash_set(self.context, index, value)
+
+        def __delitem__(self, index):
+            dll.pixie_context_line_dash_remove(self.context, index)
+
+        def append(self, value):
+            dll.pixie_context_line_dash_add(self.context, value)
+
+        def clear(self):
+            dll.pixie_context_line_dash_clear(self.context)
+
+    @property
+    def line_dash(self):
+        return self.LineDash(self)
 
     def save(self):
         dll.pixie_context_save(self)
@@ -1201,7 +1309,7 @@ dll.pixie_seq_float_32_unref.argtypes = [SeqFloat32]
 dll.pixie_seq_float_32_unref.restype = None
 
 dll.pixie_seq_float_32_len.argtypes = [SeqFloat32]
-dll.pixie_seq_float_32_len.restype = None
+dll.pixie_seq_float_32_len.restype = c_longlong
 
 dll.pixie_seq_float_32_get.argtypes = [SeqFloat32, c_longlong]
 dll.pixie_seq_float_32_get.restype = SeqFloat32
@@ -1222,7 +1330,7 @@ dll.pixie_seq_span_unref.argtypes = [SeqSpan]
 dll.pixie_seq_span_unref.restype = None
 
 dll.pixie_seq_span_len.argtypes = [SeqSpan]
-dll.pixie_seq_span_len.restype = None
+dll.pixie_seq_span_len.restype = c_longlong
 
 dll.pixie_seq_span_get.argtypes = [SeqSpan, c_longlong]
 dll.pixie_seq_span_get.restype = SeqSpan
@@ -1461,6 +1569,42 @@ dll.pixie_paint_get_image_mat.restype = Matrix3
 dll.pixie_paint_set_image_mat.argtypes = [Paint, Matrix3]
 dll.pixie_paint_set_image_mat.restype = None
 
+dll.pixie_paint_gradient_handle_positions_len.argtypes = [Paint]
+dll.pixie_paint_gradient_handle_positions_len.restype = c_longlong
+
+dll.pixie_paint_gradient_handle_positions_get.argtypes = [Paint, c_longlong]
+dll.pixie_paint_gradient_handle_positions_get.restype = Paint
+
+dll.pixie_paint_gradient_handle_positions_set.argtypes = [Paint, c_longlong, Vector2]
+dll.pixie_paint_gradient_handle_positions_set.restype = None
+
+dll.pixie_paint_gradient_handle_positions_remove.argtypes = [Paint, c_longlong]
+dll.pixie_paint_gradient_handle_positions_remove.restype = None
+
+dll.pixie_paint_gradient_handle_positions_add.argtypes = [Paint, Vector2]
+dll.pixie_paint_gradient_handle_positions_add.restype = None
+
+dll.pixie_paint_gradient_handle_positions_clear.argtypes = [Paint]
+dll.pixie_paint_gradient_handle_positions_clear.restype = None
+
+dll.pixie_paint_gradient_stops_len.argtypes = [Paint]
+dll.pixie_paint_gradient_stops_len.restype = c_longlong
+
+dll.pixie_paint_gradient_stops_get.argtypes = [Paint, c_longlong]
+dll.pixie_paint_gradient_stops_get.restype = Paint
+
+dll.pixie_paint_gradient_stops_set.argtypes = [Paint, c_longlong, ColorStop]
+dll.pixie_paint_gradient_stops_set.restype = None
+
+dll.pixie_paint_gradient_stops_remove.argtypes = [Paint, c_longlong]
+dll.pixie_paint_gradient_stops_remove.restype = None
+
+dll.pixie_paint_gradient_stops_add.argtypes = [Paint, ColorStop]
+dll.pixie_paint_gradient_stops_add.restype = None
+
+dll.pixie_paint_gradient_stops_clear.argtypes = [Paint]
+dll.pixie_paint_gradient_stops_clear.restype = None
+
 dll.pixie_paint_new_paint.argtypes = [Paint]
 dll.pixie_paint_new_paint.restype = Paint
 
@@ -1574,6 +1718,24 @@ dll.pixie_font_get_line_height.restype = c_float
 
 dll.pixie_font_set_line_height.argtypes = [Font, c_float]
 dll.pixie_font_set_line_height.restype = None
+
+dll.pixie_font_paints_len.argtypes = [Font]
+dll.pixie_font_paints_len.restype = c_longlong
+
+dll.pixie_font_paints_get.argtypes = [Font, c_longlong]
+dll.pixie_font_paints_get.restype = Font
+
+dll.pixie_font_paints_set.argtypes = [Font, c_longlong, Paint]
+dll.pixie_font_paints_set.restype = None
+
+dll.pixie_font_paints_remove.argtypes = [Font, c_longlong]
+dll.pixie_font_paints_remove.restype = None
+
+dll.pixie_font_paints_add.argtypes = [Font, Paint]
+dll.pixie_font_paints_add.restype = None
+
+dll.pixie_font_paints_clear.argtypes = [Font]
+dll.pixie_font_paints_clear.restype = None
 
 dll.pixie_font_get_text_case.argtypes = [Font]
 dll.pixie_font_get_text_case.restype = TextCase
@@ -1700,6 +1862,24 @@ dll.pixie_context_get_text_align.restype = HorizontalAlignment
 
 dll.pixie_context_set_text_align.argtypes = [Context, HorizontalAlignment]
 dll.pixie_context_set_text_align.restype = None
+
+dll.pixie_context_line_dash_len.argtypes = [Context]
+dll.pixie_context_line_dash_len.restype = c_longlong
+
+dll.pixie_context_line_dash_get.argtypes = [Context, c_longlong]
+dll.pixie_context_line_dash_get.restype = Context
+
+dll.pixie_context_line_dash_set.argtypes = [Context, c_longlong, c_float]
+dll.pixie_context_line_dash_set.restype = None
+
+dll.pixie_context_line_dash_remove.argtypes = [Context, c_longlong]
+dll.pixie_context_line_dash_remove.restype = None
+
+dll.pixie_context_line_dash_add.argtypes = [Context, c_float]
+dll.pixie_context_line_dash_add.restype = None
+
+dll.pixie_context_line_dash_clear.argtypes = [Context]
+dll.pixie_context_line_dash_clear.restype = None
 
 dll.pixie_context_save.argtypes = [Context]
 dll.pixie_context_save.restype = None
@@ -1859,4 +2039,3 @@ dll.pixie_miter_limit_to_angle.restype = c_float
 
 dll.pixie_angle_to_miter_limit.argtypes = [c_float]
 dll.pixie_angle_to_miter_limit.restype = c_float
-
