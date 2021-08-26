@@ -1,6 +1,17 @@
 from ctypes import *
+import os, sys
+from pathlib import Path
 
-dll = cdll.LoadLibrary("pixie.dll")
+src_path = Path(__file__).resolve()
+src_dir = str(src_path.parent)
+
+if sys.platform == "win32":
+  dllPath = src_dir + "/pixie.dll"
+elif sys.platform == "darwin":
+  dllPath = src_dir + "/libpixie.dylib"
+else:
+  dllPath = src_dir + "/libpixie.so"
+dll = cdll.LoadLibrary(dllPath)
 
 class PixieError(Exception):
     pass
