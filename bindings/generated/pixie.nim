@@ -88,10 +88,10 @@ type TextMetrics* = object
 type SeqFloat32* = object
   reference: pointer
 
-proc pixie_seq_float32_unref*(x: SeqFloat32) {.importc: "pixie_seq_float32_unref", cdecl.}
+proc pixie_seq_float_32_unref*(x: SeqFloat32) {.importc: "pixie_seq_float_32_unref", cdecl.}
 
 proc `=destroy`(x: var SeqFloat32) =
-  pixie_seq_float32_unref(x)
+  pixie_seq_float_32_unref(x)
 
 type SeqSpan* = object
   reference: pointer
@@ -183,22 +183,22 @@ proc pixie_take_error(): cstring {.importc: "pixie_take_error", cdecl.}
 proc takeError*(): cstring {.inline.} =
   result = pixie_take_error()
 
-proc pixie_seq_float32_len(s: SeqFloat32): int {.importc: "pixie_seq_float32_len", cdecl.}
+proc pixie_seq_float_32_len(s: SeqFloat32): int {.importc: "pixie_seq_float_32_len", cdecl.}
 
-proc pixie_seq_float32_add(s: SeqFloat32, v: float32) {.importc: "pixie_seq_float32_add", cdecl.}
+proc pixie_seq_float_32_add(s: SeqFloat32, v: float32) {.importc: "pixie_seq_float_32_add", cdecl.}
 
-proc pixie_seq_float32_get(s: SeqFloat32, i: int): float32 {.importc: "pixie_seq_float32_get", cdecl.}
+proc pixie_seq_float_32_get(s: SeqFloat32, i: int): float32 {.importc: "pixie_seq_float_32_get", cdecl.}
 
-proc pixie_seq_float32_set(s: SeqFloat32, i: int, v: float32) {.importc: "pixie_seq_float32_set", cdecl.}
+proc pixie_seq_float_32_set(s: SeqFloat32, i: int, v: float32) {.importc: "pixie_seq_float_32_set", cdecl.}
 
-proc pixie_seq_float32_remove(s: SeqFloat32, i: int) {.importc: "pixie_seq_float32_remove", cdecl.}
+proc pixie_seq_float_32_remove(s: SeqFloat32, i: int) {.importc: "pixie_seq_float_32_remove", cdecl.}
 
-proc pixie_seq_float32_clear(s: SeqFloat32) {.importc: "pixie_seq_float32_clear", cdecl.}
+proc pixie_seq_float_32_clear(s: SeqFloat32) {.importc: "pixie_seq_float_32_clear", cdecl.}
 
-proc pixie_new_seq_float32*(): SeqFloat32 {.importc: "pixie_new_seq_float32", cdecl.}
+proc pixie_new_seq_float_32*(): SeqFloat32 {.importc: "pixie_new_seq_float_32", cdecl.}
 
 proc newSeqFloat32*(): SeqFloat32 =
-  pixie_new_seq_float32()
+  pixie_new_seq_float_32()
 
 proc pixie_seq_span_len(s: SeqSpan): int {.importc: "pixie_seq_span_len", cdecl.}
 
@@ -298,17 +298,17 @@ proc subImage*(image: Image, x: int, y: int, w: int, h: int): Image {.inline.} =
   if checkError():
     raise newException(PixieError, $takeError())
 
-proc pixie_image_minify_by2(image: Image, power: int): Image {.importc: "pixie_image_minify_by2", cdecl.}
+proc pixie_image_minify_by_2(image: Image, power: int): Image {.importc: "pixie_image_minify_by_2", cdecl.}
 
 proc minifyBy2*(image: Image, power: int): Image {.inline.} =
-  result = pixie_image_minify_by2(image, power)
+  result = pixie_image_minify_by_2(image, power)
   if checkError():
     raise newException(PixieError, $takeError())
 
-proc pixie_image_magnify_by2(image: Image, power: int): Image {.importc: "pixie_image_magnify_by2", cdecl.}
+proc pixie_image_magnify_by_2(image: Image, power: int): Image {.importc: "pixie_image_magnify_by_2", cdecl.}
 
 proc magnifyBy2*(image: Image, power: int): Image {.inline.} =
-  result = pixie_image_magnify_by2(image, power)
+  result = pixie_image_magnify_by_2(image, power)
   if checkError():
     raise newException(PixieError, $takeError())
 
@@ -479,10 +479,10 @@ proc pixie_mask_fill(mask: Mask, value: uint8) {.importc: "pixie_mask_fill", cde
 proc fill*(mask: Mask, value: uint8) {.inline.} =
   pixie_mask_fill(mask, value)
 
-proc pixie_mask_minify_by2(mask: Mask, power: int): Mask {.importc: "pixie_mask_minify_by2", cdecl.}
+proc pixie_mask_minify_by_2(mask: Mask, power: int): Mask {.importc: "pixie_mask_minify_by_2", cdecl.}
 
 proc minifyBy2*(mask: Mask, power: int): Mask {.inline.} =
-  result = pixie_mask_minify_by2(mask, power)
+  result = pixie_mask_minify_by_2(mask, power)
   if checkError():
     raise newException(PixieError, $takeError())
 
@@ -713,12 +713,12 @@ proc pixie_path_line_to(path: Path, x: float32, y: float32) {.importc: "pixie_pa
 proc lineTo*(path: Path, x: float32, y: float32) {.inline.} =
   pixie_path_line_to(path, x, y)
 
-proc pixie_path_bezier_curve_to(path: Path, x1: float32, y1: float32, x2: float32, y2: float32, x3: float32, y3: float32) {.importc: "pixie_path_bezier_curve_to", cdecl.}
+proc pixie_path_bezier_curve_to(path: Path, x_1: float32, y_1: float32, x_2: float32, y_2: float32, x_3: float32, y_3: float32) {.importc: "pixie_path_bezier_curve_to", cdecl.}
 
 proc bezierCurveTo*(path: Path, x1: float32, y1: float32, x2: float32, y2: float32, x3: float32, y3: float32) {.inline.} =
   pixie_path_bezier_curve_to(path, x1, y1, x2, y2, x3, y3)
 
-proc pixie_path_quadratic_curve_to(path: Path, x1: float32, y1: float32, x2: float32, y2: float32) {.importc: "pixie_path_quadratic_curve_to", cdecl.}
+proc pixie_path_quadratic_curve_to(path: Path, x_1: float32, y_1: float32, x_2: float32, y_2: float32) {.importc: "pixie_path_quadratic_curve_to", cdecl.}
 
 proc quadraticCurveTo*(path: Path, x1: float32, y1: float32, x2: float32, y2: float32) {.inline.} =
   pixie_path_quadratic_curve_to(path, x1, y1, x2, y2)
@@ -728,14 +728,14 @@ proc pixie_path_elliptical_arc_to(path: Path, rx: float32, ry: float32, x_axis_r
 proc ellipticalArcTo*(path: Path, rx: float32, ry: float32, xAxisRotation: float32, largeArcFlag: bool, sweepFlag: bool, x: float32, y: float32) {.inline.} =
   pixie_path_elliptical_arc_to(path, rx, ry, xAxisRotation, largeArcFlag, sweepFlag, x, y)
 
-proc pixie_path_arc(path: Path, x: float32, y: float32, r: float32, a0: float32, a1: float32, ccw: bool) {.importc: "pixie_path_arc", cdecl.}
+proc pixie_path_arc(path: Path, x: float32, y: float32, r: float32, a_0: float32, a_1: float32, ccw: bool) {.importc: "pixie_path_arc", cdecl.}
 
 proc arc*(path: Path, x: float32, y: float32, r: float32, a0: float32, a1: float32, ccw: bool) {.inline.} =
   pixie_path_arc(path, x, y, r, a0, a1, ccw)
   if checkError():
     raise newException(PixieError, $takeError())
 
-proc pixie_path_arc_to(path: Path, x1: float32, y1: float32, x2: float32, y2: float32, r: float32) {.importc: "pixie_path_arc_to", cdecl.}
+proc pixie_path_arc_to(path: Path, x_1: float32, y_1: float32, x_2: float32, y_2: float32, r: float32) {.importc: "pixie_path_arc_to", cdecl.}
 
 proc arcTo*(path: Path, x1: float32, y1: float32, x2: float32, y2: float32, r: float32) {.inline.} =
   pixie_path_arc_to(path, x1, y1, x2, y2, r)
@@ -1168,24 +1168,24 @@ proc pixie_context_reset_transform(ctx: Context) {.importc: "pixie_context_reset
 proc resetTransform*(ctx: Context) {.inline.} =
   pixie_context_reset_transform(ctx)
 
-proc pixie_context_draw_image1(ctx: Context, image: Image, dx: float32, dy: float32) {.importc: "pixie_context_draw_image1", cdecl.}
+proc pixie_context_draw_image_1(ctx: Context, image: Image, dx: float32, dy: float32) {.importc: "pixie_context_draw_image_1", cdecl.}
 
 proc drawImage1*(ctx: Context, image: Image, dx: float32, dy: float32) {.inline.} =
-  pixie_context_draw_image1(ctx, image, dx, dy)
+  pixie_context_draw_image_1(ctx, image, dx, dy)
   if checkError():
     raise newException(PixieError, $takeError())
 
-proc pixie_context_draw_image2(ctx: Context, image: Image, dx: float32, dy: float32, d_width: float32, d_height: float32) {.importc: "pixie_context_draw_image2", cdecl.}
+proc pixie_context_draw_image_2(ctx: Context, image: Image, dx: float32, dy: float32, d_width: float32, d_height: float32) {.importc: "pixie_context_draw_image_2", cdecl.}
 
 proc drawImage2*(ctx: Context, image: Image, dx: float32, dy: float32, dWidth: float32, dHeight: float32) {.inline.} =
-  pixie_context_draw_image2(ctx, image, dx, dy, dWidth, dHeight)
+  pixie_context_draw_image_2(ctx, image, dx, dy, dWidth, dHeight)
   if checkError():
     raise newException(PixieError, $takeError())
 
-proc pixie_context_draw_image3(ctx: Context, image: Image, sx: float32, sy: float32, s_width: float32, s_height: float32, dx: float32, dy: float32, d_width: float32, d_height: float32) {.importc: "pixie_context_draw_image3", cdecl.}
+proc pixie_context_draw_image_3(ctx: Context, image: Image, sx: float32, sy: float32, s_width: float32, s_height: float32, dx: float32, dy: float32, d_width: float32, d_height: float32) {.importc: "pixie_context_draw_image_3", cdecl.}
 
 proc drawImage3*(ctx: Context, image: Image, sx: float32, sy: float32, sWidth: float32, sHeight: float32, dx: float32, dy: float32, dWidth: float32, dHeight: float32) {.inline.} =
-  pixie_context_draw_image3(ctx, image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)
+  pixie_context_draw_image_3(ctx, image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)
   if checkError():
     raise newException(PixieError, $takeError())
 
@@ -1199,7 +1199,7 @@ proc pixie_context_line_to(ctx: Context, x: float32, y: float32) {.importc: "pix
 proc lineTo*(ctx: Context, x: float32, y: float32) {.inline.} =
   pixie_context_line_to(ctx, x, y)
 
-proc pixie_context_bezier_curve_to(ctx: Context, cp1x: float32, cp1y: float32, cp2x: float32, cp2y: float32, x: float32, y: float32) {.importc: "pixie_context_bezier_curve_to", cdecl.}
+proc pixie_context_bezier_curve_to(ctx: Context, cp_1x: float32, cp_1y: float32, cp_2x: float32, cp_2y: float32, x: float32, y: float32) {.importc: "pixie_context_bezier_curve_to", cdecl.}
 
 proc bezierCurveTo*(ctx: Context, cp1x: float32, cp1y: float32, cp2x: float32, cp2y: float32, x: float32, y: float32) {.inline.} =
   pixie_context_bezier_curve_to(ctx, cp1x, cp1y, cp2x, cp2y, x, y)
@@ -1209,14 +1209,14 @@ proc pixie_context_quadratic_curve_to(ctx: Context, cpx: float32, cpy: float32, 
 proc quadraticCurveTo*(ctx: Context, cpx: float32, cpy: float32, x: float32, y: float32) {.inline.} =
   pixie_context_quadratic_curve_to(ctx, cpx, cpy, x, y)
 
-proc pixie_context_arc(ctx: Context, x: float32, y: float32, r: float32, a0: float32, a1: float32, ccw: bool) {.importc: "pixie_context_arc", cdecl.}
+proc pixie_context_arc(ctx: Context, x: float32, y: float32, r: float32, a_0: float32, a_1: float32, ccw: bool) {.importc: "pixie_context_arc", cdecl.}
 
 proc arc*(ctx: Context, x: float32, y: float32, r: float32, a0: float32, a1: float32, ccw: bool) {.inline.} =
   pixie_context_arc(ctx, x, y, r, a0, a1, ccw)
   if checkError():
     raise newException(PixieError, $takeError())
 
-proc pixie_context_arc_to(ctx: Context, x1: float32, y1: float32, x2: float32, y2: float32, radius: float32) {.importc: "pixie_context_arc_to", cdecl.}
+proc pixie_context_arc_to(ctx: Context, x_1: float32, y_1: float32, x_2: float32, y_2: float32, radius: float32) {.importc: "pixie_context_arc_to", cdecl.}
 
 proc arcTo*(ctx: Context, x1: float32, y1: float32, x2: float32, y2: float32, radius: float32) {.inline.} =
   pixie_context_arc_to(ctx, x1, y1, x2, y2, radius)

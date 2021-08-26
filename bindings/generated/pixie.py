@@ -187,25 +187,25 @@ class SeqFloat32(Structure):
         self.ref == obj.ref
 
     def __del__(self):
-        dll.pixie_seq_float32_unref(self)
+        dll.pixie_seq_float_32_unref(self)
 
     def __len__(self):
-        dll.seq_float32_len(self)
+        dll.seq_float_32_len(self)
 
     def __getitem__(self, index):
-        dll.seq_float32_get(self, index)
+        dll.seq_float_32_get(self, index)
 
     def __setitem__(self, index, value):
-        dll.seq_float32_set(self, index, value)
+        dll.seq_float_32_set(self, index, value)
 
     def __delitem__(self, index):
-        dll.seq_float32_remove(self, index)
+        dll.seq_float_32_remove(self, index)
 
     def append(self, value):
-        dll.seq_float32_add(self, value)
+        dll.seq_float_32_add(self, value)
 
     def clear(self):
-        dll.seq_float32_clear(self)
+        dll.seq_float_32_clear(self)
 
 class SeqSpan(Structure):
     _fields_ = [("ref", c_ulonglong)]
@@ -310,14 +310,14 @@ class Image(Structure):
             raise PixieError(take_error())
         return result
 
-    def minify_by2(self, power):
-        result = dll.pixie_image_minify_by2(self, power)
+    def minify_by_2(self, power):
+        result = dll.pixie_image_minify_by_2(self, power)
         if check_error():
             raise PixieError(take_error())
         return result
 
-    def magnify_by2(self, power):
-        result = dll.pixie_image_magnify_by2(self, power)
+    def magnify_by_2(self, power):
+        result = dll.pixie_image_magnify_by_2(self, power)
         if check_error():
             raise PixieError(take_error())
         return result
@@ -459,8 +459,8 @@ class Mask(Structure):
     def fill(self, value):
         dll.pixie_mask_fill(self, value)
 
-    def minify_by2(self, power):
-        result = dll.pixie_mask_minify_by2(self, power)
+    def minify_by_2(self, power):
+        result = dll.pixie_mask_minify_by_2(self, power)
         if check_error():
             raise PixieError(take_error())
         return result
@@ -639,22 +639,22 @@ class Path(Structure):
     def line_to(self, x, y):
         dll.pixie_path_line_to(self, x, y)
 
-    def bezier_curve_to(self, x1, y1, x2, y2, x3, y3):
-        dll.pixie_path_bezier_curve_to(self, x1, y1, x2, y2, x3, y3)
+    def bezier_curve_to(self, x_1, y_1, x_2, y_2, x_3, y_3):
+        dll.pixie_path_bezier_curve_to(self, x_1, y_1, x_2, y_2, x_3, y_3)
 
-    def quadratic_curve_to(self, x1, y1, x2, y2):
-        dll.pixie_path_quadratic_curve_to(self, x1, y1, x2, y2)
+    def quadratic_curve_to(self, x_1, y_1, x_2, y_2):
+        dll.pixie_path_quadratic_curve_to(self, x_1, y_1, x_2, y_2)
 
     def elliptical_arc_to(self, rx, ry, x_axis_rotation, large_arc_flag, sweep_flag, x, y):
         dll.pixie_path_elliptical_arc_to(self, rx, ry, x_axis_rotation, large_arc_flag, sweep_flag, x, y)
 
-    def arc(self, x, y, r, a0, a1, ccw):
-        dll.pixie_path_arc(self, x, y, r, a0, a1, ccw)
+    def arc(self, x, y, r, a_0, a_1, ccw):
+        dll.pixie_path_arc(self, x, y, r, a_0, a_1, ccw)
         if check_error():
             raise PixieError(take_error())
 
-    def arc_to(self, x1, y1, x2, y2, r):
-        dll.pixie_path_arc_to(self, x1, y1, x2, y2, r)
+    def arc_to(self, x_1, y_1, x_2, y_2, r):
+        dll.pixie_path_arc_to(self, x_1, y_1, x_2, y_2, r)
         if check_error():
             raise PixieError(take_error())
 
@@ -1025,18 +1025,18 @@ class Context(Structure):
     def reset_transform(self):
         dll.pixie_context_reset_transform(self)
 
-    def draw_image1(self, image, dx, dy):
-        dll.pixie_context_draw_image1(self, image, dx, dy)
+    def draw_image_1(self, image, dx, dy):
+        dll.pixie_context_draw_image_1(self, image, dx, dy)
         if check_error():
             raise PixieError(take_error())
 
-    def draw_image2(self, image, dx, dy, d_width, d_height):
-        dll.pixie_context_draw_image2(self, image, dx, dy, d_width, d_height)
+    def draw_image_2(self, image, dx, dy, d_width, d_height):
+        dll.pixie_context_draw_image_2(self, image, dx, dy, d_width, d_height)
         if check_error():
             raise PixieError(take_error())
 
-    def draw_image3(self, image, sx, sy, s_width, s_height, dx, dy, d_width, d_height):
-        dll.pixie_context_draw_image3(self, image, sx, sy, s_width, s_height, dx, dy, d_width, d_height)
+    def draw_image_3(self, image, sx, sy, s_width, s_height, dx, dy, d_width, d_height):
+        dll.pixie_context_draw_image_3(self, image, sx, sy, s_width, s_height, dx, dy, d_width, d_height)
         if check_error():
             raise PixieError(take_error())
 
@@ -1046,19 +1046,19 @@ class Context(Structure):
     def line_to(self, x, y):
         dll.pixie_context_line_to(self, x, y)
 
-    def bezier_curve_to(self, cp1x, cp1y, cp2x, cp2y, x, y):
-        dll.pixie_context_bezier_curve_to(self, cp1x, cp1y, cp2x, cp2y, x, y)
+    def bezier_curve_to(self, cp_1x, cp_1y, cp_2x, cp_2y, x, y):
+        dll.pixie_context_bezier_curve_to(self, cp_1x, cp_1y, cp_2x, cp_2y, x, y)
 
     def quadratic_curve_to(self, cpx, cpy, x, y):
         dll.pixie_context_quadratic_curve_to(self, cpx, cpy, x, y)
 
-    def arc(self, x, y, r, a0, a1, ccw):
-        dll.pixie_context_arc(self, x, y, r, a0, a1, ccw)
+    def arc(self, x, y, r, a_0, a_1, ccw):
+        dll.pixie_context_arc(self, x, y, r, a_0, a_1, ccw)
         if check_error():
             raise PixieError(take_error())
 
-    def arc_to(self, x1, y1, x2, y2, radius):
-        dll.pixie_context_arc_to(self, x1, y1, x2, y2, radius)
+    def arc_to(self, x_1, y_1, x_2, y_2, radius):
+        dll.pixie_context_arc_to(self, x_1, y_1, x_2, y_2, radius)
         if check_error():
             raise PixieError(take_error())
 
@@ -1197,26 +1197,26 @@ dll.pixie_check_error.restype = c_bool
 dll.pixie_take_error.argtypes = []
 dll.pixie_take_error.restype = c_char_p
 
-dll.pixie_seq_float32_unref.argtypes = [SeqFloat32]
-dll.pixie_seq_float32_unref.restype = None
+dll.pixie_seq_float_32_unref.argtypes = [SeqFloat32]
+dll.pixie_seq_float_32_unref.restype = None
 
-dll.seq_float32_len.argtypes = [SeqFloat32]
-dll.seq_float32_len.restype = None
+dll.seq_float_32_len.argtypes = [SeqFloat32]
+dll.seq_float_32_len.restype = None
 
-dll.seq_float32_get.argtypes = [SeqFloat32, c_longlong]
-dll.seq_float32_get.restype = SeqFloat32
+dll.seq_float_32_get.argtypes = [SeqFloat32, c_longlong]
+dll.seq_float_32_get.restype = SeqFloat32
 
-dll.seq_float32_set.argtypes = [SeqFloat32, c_longlong, c_float]
-dll.seq_float32_set.restype = None
+dll.seq_float_32_set.argtypes = [SeqFloat32, c_longlong, c_float]
+dll.seq_float_32_set.restype = None
 
-dll.seq_float32_remove.argtypes = [SeqFloat32, c_longlong]
-dll.seq_float32_remove.restype = None
+dll.seq_float_32_remove.argtypes = [SeqFloat32, c_longlong]
+dll.seq_float_32_remove.restype = None
 
-dll.seq_float32_add.argtypes = [SeqFloat32, c_float]
-dll.seq_float32_add.restype = None
+dll.seq_float_32_add.argtypes = [SeqFloat32, c_float]
+dll.seq_float_32_add.restype = None
 
-dll.seq_float32_clear.argtypes = [SeqFloat32]
-dll.seq_float32_clear.restype = None
+dll.seq_float_32_clear.argtypes = [SeqFloat32]
+dll.seq_float_32_clear.restype = None
 
 dll.pixie_seq_span_unref.argtypes = [SeqSpan]
 dll.pixie_seq_span_unref.restype = None
@@ -1287,11 +1287,11 @@ dll.pixie_image_flip_vertical.restype = None
 dll.pixie_image_sub_image.argtypes = [Image, c_longlong, c_longlong, c_longlong, c_longlong]
 dll.pixie_image_sub_image.restype = Image
 
-dll.pixie_image_minify_by2.argtypes = [Image, c_longlong]
-dll.pixie_image_minify_by2.restype = Image
+dll.pixie_image_minify_by_2.argtypes = [Image, c_longlong]
+dll.pixie_image_minify_by_2.restype = Image
 
-dll.pixie_image_magnify_by2.argtypes = [Image, c_longlong]
-dll.pixie_image_magnify_by2.restype = Image
+dll.pixie_image_magnify_by_2.argtypes = [Image, c_longlong]
+dll.pixie_image_magnify_by_2.restype = Image
 
 dll.pixie_image_apply_opacity.argtypes = [Image, c_float]
 dll.pixie_image_apply_opacity.restype = None
@@ -1377,8 +1377,8 @@ dll.pixie_mask_set_value.restype = None
 dll.pixie_mask_fill.argtypes = [Mask, c_ubyte]
 dll.pixie_mask_fill.restype = None
 
-dll.pixie_mask_minify_by2.argtypes = [Mask, c_longlong]
-dll.pixie_mask_minify_by2.restype = Mask
+dll.pixie_mask_minify_by_2.argtypes = [Mask, c_longlong]
+dll.pixie_mask_minify_by_2.restype = Mask
 
 dll.pixie_mask_spread.argtypes = [Mask, c_float]
 dll.pixie_mask_spread.restype = None
@@ -1749,14 +1749,14 @@ dll.pixie_context_transform.restype = None
 dll.pixie_context_reset_transform.argtypes = [Context]
 dll.pixie_context_reset_transform.restype = None
 
-dll.pixie_context_draw_image1.argtypes = [Context, Image, c_float, c_float]
-dll.pixie_context_draw_image1.restype = None
+dll.pixie_context_draw_image_1.argtypes = [Context, Image, c_float, c_float]
+dll.pixie_context_draw_image_1.restype = None
 
-dll.pixie_context_draw_image2.argtypes = [Context, Image, c_float, c_float, c_float, c_float]
-dll.pixie_context_draw_image2.restype = None
+dll.pixie_context_draw_image_2.argtypes = [Context, Image, c_float, c_float, c_float, c_float]
+dll.pixie_context_draw_image_2.restype = None
 
-dll.pixie_context_draw_image3.argtypes = [Context, Image, c_float, c_float, c_float, c_float, c_float, c_float, c_float, c_float]
-dll.pixie_context_draw_image3.restype = None
+dll.pixie_context_draw_image_3.argtypes = [Context, Image, c_float, c_float, c_float, c_float, c_float, c_float, c_float, c_float]
+dll.pixie_context_draw_image_3.restype = None
 
 dll.pixie_context_move_to.argtypes = [Context, c_float, c_float]
 dll.pixie_context_move_to.restype = None

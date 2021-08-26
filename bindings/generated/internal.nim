@@ -7,28 +7,28 @@ proc pixie_take_error*(): cstring {.raises: [], cdecl, exportc, dynlib.} =
 type SeqFloat32* = ref object
   s: seq[float32]
 
-proc pixie_new_seq_float32*(): SeqFloat32 {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_new_seq_float_32*(): SeqFloat32 {.raises: [], cdecl, exportc, dynlib.} =
   SeqFloat32()
 
-proc pixie_seq_float32_len*(s: SeqFloat32): int {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_seq_float_32_len*(s: SeqFloat32): int {.raises: [], cdecl, exportc, dynlib.} =
   s.s.len
 
-proc pixie_seq_float32_add*(s: SeqFloat32, v: float32) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_seq_float_32_add*(s: SeqFloat32, v: float32) {.raises: [], cdecl, exportc, dynlib.} =
   s.s.add(v)
 
-proc pixie_seq_float32_get*(s: SeqFloat32, i: int): float32 {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_seq_float_32_get*(s: SeqFloat32, i: int): float32 {.raises: [], cdecl, exportc, dynlib.} =
   s.s[i]
 
-proc pixie_seq_float32_set*(s: SeqFloat32, i: int, v: float32) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_seq_float_32_set*(s: SeqFloat32, i: int, v: float32) {.raises: [], cdecl, exportc, dynlib.} =
   s.s[i] = v
 
-proc pixie_seq_float32_remove*(s: SeqFloat32, i: int) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_seq_float_32_remove*(s: SeqFloat32, i: int) {.raises: [], cdecl, exportc, dynlib.} =
   s.s.delete(i)
 
-proc pixie_seq_float32_clear*(s: SeqFloat32) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_seq_float_32_clear*(s: SeqFloat32) {.raises: [], cdecl, exportc, dynlib.} =
   s.s.setLen(0)
 
-proc pixie_seq_float32_unref*(s: SeqFloat32) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_seq_float_32_unref*(s: SeqFloat32) {.raises: [], cdecl, exportc, dynlib.} =
   GC_unref(s)
 
 type SeqSpan* = ref object
@@ -115,13 +115,13 @@ proc pixie_image_sub_image*(image: Image, x: int, y: int, w: int, h: int): Image
   except PixieError as e:
     lastError = e
 
-proc pixie_image_minify_by2*(image: Image, power: int): Image {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_image_minify_by_2*(image: Image, power: int): Image {.raises: [], cdecl, exportc, dynlib.} =
   try:
     result = minifyBy2(image, power)
   except PixieError as e:
     lastError = e
 
-proc pixie_image_magnify_by2*(image: Image, power: int): Image {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_image_magnify_by_2*(image: Image, power: int): Image {.raises: [], cdecl, exportc, dynlib.} =
   try:
     result = magnifyBy2(image, power)
   except PixieError as e:
@@ -259,7 +259,7 @@ proc pixie_mask_set_value*(mask: Mask, x: int, y: int, value: uint8) {.raises: [
 proc pixie_mask_fill*(mask: Mask, value: uint8) {.raises: [], cdecl, exportc, dynlib.} =
   fill(mask, value)
 
-proc pixie_mask_minify_by2*(mask: Mask, power: int): Mask {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_mask_minify_by_2*(mask: Mask, power: int): Mask {.raises: [], cdecl, exportc, dynlib.} =
   try:
     result = minifyBy2(mask, power)
   except PixieError as e:
@@ -454,24 +454,24 @@ proc pixie_path_move_to*(path: Path, x: float32, y: float32) {.raises: [], cdecl
 proc pixie_path_line_to*(path: Path, x: float32, y: float32) {.raises: [], cdecl, exportc, dynlib.} =
   lineTo(path, x, y)
 
-proc pixie_path_bezier_curve_to*(path: Path, x1: float32, y1: float32, x2: float32, y2: float32, x3: float32, y3: float32) {.raises: [], cdecl, exportc, dynlib.} =
-  bezierCurveTo(path, x1, y1, x2, y2, x3, y3)
+proc pixie_path_bezier_curve_to*(path: Path, x_1: float32, y_1: float32, x_2: float32, y_2: float32, x_3: float32, y_3: float32) {.raises: [], cdecl, exportc, dynlib.} =
+  bezierCurveTo(path, x_1, y_1, x_2, y_2, x_3, y_3)
 
-proc pixie_path_quadratic_curve_to*(path: Path, x1: float32, y1: float32, x2: float32, y2: float32) {.raises: [], cdecl, exportc, dynlib.} =
-  quadraticCurveTo(path, x1, y1, x2, y2)
+proc pixie_path_quadratic_curve_to*(path: Path, x_1: float32, y_1: float32, x_2: float32, y_2: float32) {.raises: [], cdecl, exportc, dynlib.} =
+  quadraticCurveTo(path, x_1, y_1, x_2, y_2)
 
 proc pixie_path_elliptical_arc_to*(path: Path, rx: float32, ry: float32, x_axis_rotation: float32, large_arc_flag: bool, sweep_flag: bool, x: float32, y: float32) {.raises: [], cdecl, exportc, dynlib.} =
   ellipticalArcTo(path, rx, ry, x_axis_rotation, large_arc_flag, sweep_flag, x, y)
 
-proc pixie_path_arc*(path: Path, x: float32, y: float32, r: float32, a0: float32, a1: float32, ccw: bool) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_path_arc*(path: Path, x: float32, y: float32, r: float32, a_0: float32, a_1: float32, ccw: bool) {.raises: [], cdecl, exportc, dynlib.} =
   try:
-    arc(path, x, y, r, a0, a1, ccw)
+    arc(path, x, y, r, a_0, a_1, ccw)
   except PixieError as e:
     lastError = e
 
-proc pixie_path_arc_to*(path: Path, x1: float32, y1: float32, x2: float32, y2: float32, r: float32) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_path_arc_to*(path: Path, x_1: float32, y_1: float32, x_2: float32, y_2: float32, r: float32) {.raises: [], cdecl, exportc, dynlib.} =
   try:
-    arcTo(path, x1, y1, x2, y2, r)
+    arcTo(path, x_1, y_1, x_2, y_2, r)
   except PixieError as e:
     lastError = e
 
@@ -787,19 +787,19 @@ proc pixie_context_transform*(ctx: Context, transform: Mat3) {.raises: [], cdecl
 proc pixie_context_reset_transform*(ctx: Context) {.raises: [], cdecl, exportc, dynlib.} =
   resetTransform(ctx)
 
-proc pixie_context_draw_image1*(ctx: Context, image: Image, dx: float32, dy: float32) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_context_draw_image_1*(ctx: Context, image: Image, dx: float32, dy: float32) {.raises: [], cdecl, exportc, dynlib.} =
   try:
     drawImage1(ctx, image, dx, dy)
   except PixieError as e:
     lastError = e
 
-proc pixie_context_draw_image2*(ctx: Context, image: Image, dx: float32, dy: float32, d_width: float32, d_height: float32) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_context_draw_image_2*(ctx: Context, image: Image, dx: float32, dy: float32, d_width: float32, d_height: float32) {.raises: [], cdecl, exportc, dynlib.} =
   try:
     drawImage2(ctx, image, dx, dy, d_width, d_height)
   except PixieError as e:
     lastError = e
 
-proc pixie_context_draw_image3*(ctx: Context, image: Image, sx: float32, sy: float32, s_width: float32, s_height: float32, dx: float32, dy: float32, d_width: float32, d_height: float32) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_context_draw_image_3*(ctx: Context, image: Image, sx: float32, sy: float32, s_width: float32, s_height: float32, dx: float32, dy: float32, d_width: float32, d_height: float32) {.raises: [], cdecl, exportc, dynlib.} =
   try:
     drawImage3(ctx, image, sx, sy, s_width, s_height, dx, dy, d_width, d_height)
   except PixieError as e:
@@ -811,21 +811,21 @@ proc pixie_context_move_to*(ctx: Context, x: float32, y: float32) {.raises: [], 
 proc pixie_context_line_to*(ctx: Context, x: float32, y: float32) {.raises: [], cdecl, exportc, dynlib.} =
   lineTo(ctx, x, y)
 
-proc pixie_context_bezier_curve_to*(ctx: Context, cp1x: float32, cp1y: float32, cp2x: float32, cp2y: float32, x: float32, y: float32) {.raises: [], cdecl, exportc, dynlib.} =
-  bezierCurveTo(ctx, cp1x, cp1y, cp2x, cp2y, x, y)
+proc pixie_context_bezier_curve_to*(ctx: Context, cp_1x: float32, cp_1y: float32, cp_2x: float32, cp_2y: float32, x: float32, y: float32) {.raises: [], cdecl, exportc, dynlib.} =
+  bezierCurveTo(ctx, cp_1x, cp_1y, cp_2x, cp_2y, x, y)
 
 proc pixie_context_quadratic_curve_to*(ctx: Context, cpx: float32, cpy: float32, x: float32, y: float32) {.raises: [], cdecl, exportc, dynlib.} =
   quadraticCurveTo(ctx, cpx, cpy, x, y)
 
-proc pixie_context_arc*(ctx: Context, x: float32, y: float32, r: float32, a0: float32, a1: float32, ccw: bool) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_context_arc*(ctx: Context, x: float32, y: float32, r: float32, a_0: float32, a_1: float32, ccw: bool) {.raises: [], cdecl, exportc, dynlib.} =
   try:
-    arc(ctx, x, y, r, a0, a1, ccw)
+    arc(ctx, x, y, r, a_0, a_1, ccw)
   except PixieError as e:
     lastError = e
 
-proc pixie_context_arc_to*(ctx: Context, x1: float32, y1: float32, x2: float32, y2: float32, radius: float32) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_context_arc_to*(ctx: Context, x_1: float32, y_1: float32, x_2: float32, y_2: float32, radius: float32) {.raises: [], cdecl, exportc, dynlib.} =
   try:
-    arcTo(ctx, x1, y1, x2, y2, radius)
+    arcTo(ctx, x_1, y_1, x_2, y_2, radius)
   except PixieError as e:
     lastError = e
 
