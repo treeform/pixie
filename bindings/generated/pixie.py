@@ -1,6 +1,6 @@
 from ctypes import *
 
-dll = cdll.LoadLibrary("./pixie.dll")
+dll = cdll.LoadLibrary("pixie.dll")
 
 class PixieError(Exception):
     pass
@@ -190,10 +190,10 @@ class SeqFloat32(Structure):
         dll.pixie_seq_float_32_unref(self)
 
     def __len__(self):
-        dll.pixie_seq_float_32_len(self)
+        return dll.pixie_seq_float_32_len(self)
 
     def __getitem__(self, index):
-        dll.pixie_seq_float_32_get(self, index)
+        return dll.pixie_seq_float_32_get(self, index)
 
     def __setitem__(self, index, value):
         dll.pixie_seq_float_32_set(self, index, value)
@@ -220,10 +220,10 @@ class SeqSpan(Structure):
         dll.pixie_seq_span_unref(self)
 
     def __len__(self):
-        dll.pixie_seq_span_len(self)
+        return dll.pixie_seq_span_len(self)
 
     def __getitem__(self, index):
-        dll.pixie_seq_span_get(self, index)
+        return dll.pixie_seq_span_get(self, index)
 
     def __setitem__(self, index, value):
         dll.pixie_seq_span_set(self, index, value)
@@ -259,7 +259,7 @@ class Image(Structure):
 
     @property
     def width(self):
-        dll.pixie_image_get_width(self)
+        return dll.pixie_image_get_width(self)
 
     @width.setter
     def width(self, width):
@@ -267,7 +267,7 @@ class Image(Structure):
 
     @property
     def height(self):
-        dll.pixie_image_get_height(self)
+        return dll.pixie_image_get_height(self)
 
     @height.setter
     def height(self, height):
@@ -420,7 +420,7 @@ class Mask(Structure):
 
     @property
     def width(self):
-        dll.pixie_mask_get_width(self)
+        return dll.pixie_mask_get_width(self)
 
     @width.setter
     def width(self, width):
@@ -428,7 +428,7 @@ class Mask(Structure):
 
     @property
     def height(self):
-        dll.pixie_mask_get_height(self)
+        return dll.pixie_mask_get_height(self)
 
     @height.setter
     def height(self, height):
@@ -544,7 +544,7 @@ class Paint(Structure):
 
     @property
     def kind(self):
-        dll.pixie_paint_get_kind(self)
+        return dll.pixie_paint_get_kind(self)
 
     @kind.setter
     def kind(self, kind):
@@ -552,7 +552,7 @@ class Paint(Structure):
 
     @property
     def blend_mode(self):
-        dll.pixie_paint_get_blend_mode(self)
+        return dll.pixie_paint_get_blend_mode(self)
 
     @blend_mode.setter
     def blend_mode(self, blend_mode):
@@ -560,7 +560,7 @@ class Paint(Structure):
 
     @property
     def opacity(self):
-        dll.pixie_paint_get_opacity(self)
+        return dll.pixie_paint_get_opacity(self)
 
     @opacity.setter
     def opacity(self, opacity):
@@ -568,7 +568,7 @@ class Paint(Structure):
 
     @property
     def color(self):
-        dll.pixie_paint_get_color(self)
+        return dll.pixie_paint_get_color(self)
 
     @color.setter
     def color(self, color):
@@ -576,7 +576,7 @@ class Paint(Structure):
 
     @property
     def image(self):
-        dll.pixie_paint_get_image(self)
+        return dll.pixie_paint_get_image(self)
 
     @image.setter
     def image(self, image):
@@ -584,7 +584,7 @@ class Paint(Structure):
 
     @property
     def image_mat(self):
-        dll.pixie_paint_get_image_mat(self)
+        return dll.pixie_paint_get_image_mat(self)
 
     @image_mat.setter
     def image_mat(self, image_mat):
@@ -687,7 +687,7 @@ class Typeface(Structure):
 
     @property
     def file_path(self):
-        dll.pixie_typeface_get_file_path(self).decode("utf8")
+        return dll.pixie_typeface_get_file_path(self).decode("utf8")
 
     @file_path.setter
     def file_path(self, file_path):
@@ -741,7 +741,7 @@ class Font(Structure):
 
     @property
     def typeface(self):
-        dll.pixie_font_get_typeface(self)
+        return dll.pixie_font_get_typeface(self)
 
     @typeface.setter
     def typeface(self, typeface):
@@ -749,7 +749,7 @@ class Font(Structure):
 
     @property
     def size(self):
-        dll.pixie_font_get_size(self)
+        return dll.pixie_font_get_size(self)
 
     @size.setter
     def size(self, size):
@@ -757,7 +757,7 @@ class Font(Structure):
 
     @property
     def line_height(self):
-        dll.pixie_font_get_line_height(self)
+        return dll.pixie_font_get_line_height(self)
 
     @line_height.setter
     def line_height(self, line_height):
@@ -765,7 +765,7 @@ class Font(Structure):
 
     @property
     def text_case(self):
-        dll.pixie_font_get_text_case(self)
+        return dll.pixie_font_get_text_case(self)
 
     @text_case.setter
     def text_case(self, text_case):
@@ -773,7 +773,7 @@ class Font(Structure):
 
     @property
     def underline(self):
-        dll.pixie_font_get_underline(self)
+        return dll.pixie_font_get_underline(self)
 
     @underline.setter
     def underline(self, underline):
@@ -781,7 +781,7 @@ class Font(Structure):
 
     @property
     def strikethrough(self):
-        dll.pixie_font_get_strikethrough(self)
+        return dll.pixie_font_get_strikethrough(self)
 
     @strikethrough.setter
     def strikethrough(self, strikethrough):
@@ -789,7 +789,7 @@ class Font(Structure):
 
     @property
     def no_kerning_adjustments(self):
-        dll.pixie_font_get_no_kerning_adjustments(self)
+        return dll.pixie_font_get_no_kerning_adjustments(self)
 
     @no_kerning_adjustments.setter
     def no_kerning_adjustments(self, no_kerning_adjustments):
@@ -825,7 +825,7 @@ class Span(Structure):
 
     @property
     def text(self):
-        dll.pixie_span_get_text(self).decode("utf8")
+        return dll.pixie_span_get_text(self).decode("utf8")
 
     @text.setter
     def text(self, text):
@@ -833,7 +833,7 @@ class Span(Structure):
 
     @property
     def font(self):
-        dll.pixie_span_get_font(self)
+        return dll.pixie_span_get_font(self)
 
     @font.setter
     def font(self, font):
@@ -869,7 +869,7 @@ class Context(Structure):
 
     @property
     def image(self):
-        dll.pixie_context_get_image(self)
+        return dll.pixie_context_get_image(self)
 
     @image.setter
     def image(self, image):
@@ -877,7 +877,7 @@ class Context(Structure):
 
     @property
     def fill_style(self):
-        dll.pixie_context_get_fill_style(self)
+        return dll.pixie_context_get_fill_style(self)
 
     @fill_style.setter
     def fill_style(self, fill_style):
@@ -885,7 +885,7 @@ class Context(Structure):
 
     @property
     def stroke_style(self):
-        dll.pixie_context_get_stroke_style(self)
+        return dll.pixie_context_get_stroke_style(self)
 
     @stroke_style.setter
     def stroke_style(self, stroke_style):
@@ -893,7 +893,7 @@ class Context(Structure):
 
     @property
     def global_alpha(self):
-        dll.pixie_context_get_global_alpha(self)
+        return dll.pixie_context_get_global_alpha(self)
 
     @global_alpha.setter
     def global_alpha(self, global_alpha):
@@ -901,7 +901,7 @@ class Context(Structure):
 
     @property
     def line_width(self):
-        dll.pixie_context_get_line_width(self)
+        return dll.pixie_context_get_line_width(self)
 
     @line_width.setter
     def line_width(self, line_width):
@@ -909,7 +909,7 @@ class Context(Structure):
 
     @property
     def miter_limit(self):
-        dll.pixie_context_get_miter_limit(self)
+        return dll.pixie_context_get_miter_limit(self)
 
     @miter_limit.setter
     def miter_limit(self, miter_limit):
@@ -917,7 +917,7 @@ class Context(Structure):
 
     @property
     def line_cap(self):
-        dll.pixie_context_get_line_cap(self)
+        return dll.pixie_context_get_line_cap(self)
 
     @line_cap.setter
     def line_cap(self, line_cap):
@@ -925,7 +925,7 @@ class Context(Structure):
 
     @property
     def line_join(self):
-        dll.pixie_context_get_line_join(self)
+        return dll.pixie_context_get_line_join(self)
 
     @line_join.setter
     def line_join(self, line_join):
@@ -933,7 +933,7 @@ class Context(Structure):
 
     @property
     def font(self):
-        dll.pixie_context_get_font(self).decode("utf8")
+        return dll.pixie_context_get_font(self).decode("utf8")
 
     @font.setter
     def font(self, font):
@@ -941,7 +941,7 @@ class Context(Structure):
 
     @property
     def font_size(self):
-        dll.pixie_context_get_font_size(self)
+        return dll.pixie_context_get_font_size(self)
 
     @font_size.setter
     def font_size(self, font_size):
@@ -949,7 +949,7 @@ class Context(Structure):
 
     @property
     def text_align(self):
-        dll.pixie_context_get_text_align(self)
+        return dll.pixie_context_get_text_align(self)
 
     @text_align.setter
     def text_align(self, text_align):
@@ -1859,3 +1859,4 @@ dll.pixie_miter_limit_to_angle.restype = c_float
 
 dll.pixie_angle_to_miter_limit.argtypes = [c_float]
 dll.pixie_angle_to_miter_limit.restype = c_float
+
