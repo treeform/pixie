@@ -1,8 +1,19 @@
-import bumpy, chroma, unicode, vmath
+import bumpy, chroma, os, unicode, vmath
 
 export bumpy, chroma, unicode, vmath
 
-{.push dynlib: "pixie.dll".}
+let
+  srcPath = currentSourcePath()
+  srcDir = srcPath.parentDir()
+
+when defined(windows):
+  const dllPath = "pixie.dll"
+elif defined(macosx):
+  const dllPath = "libpixie.dll"
+else:
+  const dllPath = "libpixie.so"
+
+{.push dynlib: srcDir / dllPath.}
 
 type PixieError = object of ValueError
 
