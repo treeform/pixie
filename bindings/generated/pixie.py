@@ -607,7 +607,7 @@ class Paint(Structure):
     def image_mat(self, image_mat):
         dll.pixie_paint_set_image_mat(self, image_mat)
 
-    class GradientHandlePositions:
+    class PaintGradientHandlePositions:
 
         def __init__(self, paint):
             self.paint = paint
@@ -631,10 +631,10 @@ class Paint(Structure):
             dll.pixie_paint_gradient_handle_positions_clear(self.paint)
 
     @property
-    def gradient_handle_positions(self):
-        return self.GradientHandlePositions(self)
+    def paint_gradient_handle_positions(self):
+        return self.PaintGradientHandlePositions(self)
 
-    class GradientStops:
+    class PaintGradientStops:
 
         def __init__(self, paint):
             self.paint = paint
@@ -658,8 +658,8 @@ class Paint(Structure):
             dll.pixie_paint_gradient_stops_clear(self.paint)
 
     @property
-    def gradient_stops(self):
-        return self.GradientStops(self)
+    def paint_gradient_stops(self):
+        return self.PaintGradientStops(self)
 
     def new_paint(self):
         result = dll.pixie_paint_new_paint(self)
@@ -834,7 +834,7 @@ class Font(Structure):
     def line_height(self, line_height):
         dll.pixie_font_set_line_height(self, line_height)
 
-    class Paints:
+    class FontPaints:
 
         def __init__(self, font):
             self.font = font
@@ -858,8 +858,8 @@ class Font(Structure):
             dll.pixie_font_paints_clear(self.font)
 
     @property
-    def paints(self):
-        return self.Paints(self)
+    def font_paints(self):
+        return self.FontPaints(self)
 
     @property
     def text_case(self):
@@ -1052,33 +1052,6 @@ class Context(Structure):
     @text_align.setter
     def text_align(self, text_align):
         dll.pixie_context_set_text_align(self, text_align)
-
-    class LineDash:
-
-        def __init__(self, context):
-            self.context = context
-
-        def __len__(self):
-            return dll.pixie_context_line_dash_len(self.context)
-
-        def __getitem__(self, index):
-            return dll.pixie_context_line_dash_get(self.context, index)
-
-        def __setitem__(self, index, value):
-            dll.pixie_context_line_dash_set(self.context, index, value)
-
-        def __delitem__(self, index):
-            dll.pixie_context_line_dash_remove(self.context, index)
-
-        def append(self, value):
-            dll.pixie_context_line_dash_add(self.context, value)
-
-        def clear(self):
-            dll.pixie_context_line_dash_clear(self.context)
-
-    @property
-    def line_dash(self):
-        return self.LineDash(self)
 
     def save(self):
         dll.pixie_context_save(self)
@@ -1885,24 +1858,6 @@ dll.pixie_context_get_text_align.restype = HorizontalAlignment
 
 dll.pixie_context_set_text_align.argtypes = [Context, HorizontalAlignment]
 dll.pixie_context_set_text_align.restype = None
-
-dll.pixie_context_line_dash_len.argtypes = [Context]
-dll.pixie_context_line_dash_len.restype = c_longlong
-
-dll.pixie_context_line_dash_get.argtypes = [Context, c_longlong]
-dll.pixie_context_line_dash_get.restype = c_float
-
-dll.pixie_context_line_dash_set.argtypes = [Context, c_longlong, c_float]
-dll.pixie_context_line_dash_set.restype = None
-
-dll.pixie_context_line_dash_remove.argtypes = [Context, c_longlong]
-dll.pixie_context_line_dash_remove.restype = None
-
-dll.pixie_context_line_dash_add.argtypes = [Context, c_float]
-dll.pixie_context_line_dash_add.restype = None
-
-dll.pixie_context_line_dash_clear.argtypes = [Context]
-dll.pixie_context_line_dash_clear.restype = None
 
 dll.pixie_context_save.argtypes = [Context]
 dll.pixie_context_save.restype = None

@@ -18,7 +18,7 @@ type
     font*: string ## File path to a .ttf or .otf file.
     fontSize*: float32
     textAlign*: HorizontalAlignment
-    lineDash*: seq[float32]
+    lineDash: seq[float32]
     path: Path
     mat: Mat3
     mask: Mask

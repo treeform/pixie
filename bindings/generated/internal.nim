@@ -691,24 +691,6 @@ proc pixie_context_get_text_align*(context: Context): HorizontalAlignment {.rais
 proc pixie_context_set_text_align*(context: Context, textAlign: HorizontalAlignment) {.raises: [], cdecl, exportc, dynlib.} =
   context.textAlign = textAlign
 
-proc pixie_context_line_dash_len*(context: Context): int {.raises: [], cdecl, exportc, dynlib.} =
-  context.lineDash.len
-
-proc pixie_context_line_dash_add*(context: Context, v: float32) {.raises: [], cdecl, exportc, dynlib.} =
-  context.lineDash.add(v)
-
-proc pixie_context_line_dash_get*(context: Context, i: int): float32 {.raises: [], cdecl, exportc, dynlib.} =
-  context.lineDash[i]
-
-proc pixie_context_line_dash_set*(context: Context, i: int, v: float32) {.raises: [], cdecl, exportc, dynlib.} =
-  context.lineDash[i] = v
-
-proc pixie_context_line_dash_remove*(context: Context, i: int) {.raises: [], cdecl, exportc, dynlib.} =
-  context.lineDash.delete(i)
-
-proc pixie_context_line_dash_clear*(context: Context) {.raises: [], cdecl, exportc, dynlib.} =
-  context.lineDash.setLen(0)
-
 proc pixie_context_save*(ctx: Context) {.raises: [], cdecl, exportc, dynlib.} =
   try:
     save(ctx)

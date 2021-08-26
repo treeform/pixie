@@ -96,92 +96,114 @@ type ColorStop* = object
 type TextMetrics* = object
   width*: float32
 
-type SeqFloat32* = object
+type SeqFloat32Obj* = object
   reference: pointer
 
-proc pixie_seq_float_32_unref*(x: SeqFloat32) {.importc: "pixie_seq_float_32_unref", cdecl.}
+type SeqFloat32* = ref SeqFloat32Obj
 
-proc `=destroy`(x: var SeqFloat32) =
+proc pixie_seq_float_32_unref(x: SeqFloat32Obj) {.importc: "pixie_seq_float_32_unref", cdecl.}
+
+proc `=destroy`(x: var SeqFloat32Obj) =
   pixie_seq_float_32_unref(x)
 
-type SeqSpan* = object
+type SeqSpanObj* = object
   reference: pointer
 
-proc pixie_seq_span_unref*(x: SeqSpan) {.importc: "pixie_seq_span_unref", cdecl.}
+type SeqSpan* = ref SeqSpanObj
 
-proc `=destroy`(x: var SeqSpan) =
+proc pixie_seq_span_unref(x: SeqSpanObj) {.importc: "pixie_seq_span_unref", cdecl.}
+
+proc `=destroy`(x: var SeqSpanObj) =
   pixie_seq_span_unref(x)
 
-type Image* = object
+type ImageObj* = object
   reference: pointer
 
-proc pixie_image_unref*(x: Image) {.importc: "pixie_image_unref", cdecl.}
+type Image* = ref ImageObj
 
-proc `=destroy`(x: var Image) =
+proc pixie_image_unref(x: ImageObj) {.importc: "pixie_image_unref", cdecl.}
+
+proc `=destroy`(x: var ImageObj) =
   pixie_image_unref(x)
 
-type Mask* = object
+type MaskObj* = object
   reference: pointer
 
-proc pixie_mask_unref*(x: Mask) {.importc: "pixie_mask_unref", cdecl.}
+type Mask* = ref MaskObj
 
-proc `=destroy`(x: var Mask) =
+proc pixie_mask_unref(x: MaskObj) {.importc: "pixie_mask_unref", cdecl.}
+
+proc `=destroy`(x: var MaskObj) =
   pixie_mask_unref(x)
 
-type Paint* = object
+type PaintObj* = object
   reference: pointer
 
-proc pixie_paint_unref*(x: Paint) {.importc: "pixie_paint_unref", cdecl.}
+type Paint* = ref PaintObj
 
-proc `=destroy`(x: var Paint) =
+proc pixie_paint_unref(x: PaintObj) {.importc: "pixie_paint_unref", cdecl.}
+
+proc `=destroy`(x: var PaintObj) =
   pixie_paint_unref(x)
 
-type Path* = object
+type PathObj* = object
   reference: pointer
 
-proc pixie_path_unref*(x: Path) {.importc: "pixie_path_unref", cdecl.}
+type Path* = ref PathObj
 
-proc `=destroy`(x: var Path) =
+proc pixie_path_unref(x: PathObj) {.importc: "pixie_path_unref", cdecl.}
+
+proc `=destroy`(x: var PathObj) =
   pixie_path_unref(x)
 
-type Typeface* = object
+type TypefaceObj* = object
   reference: pointer
 
-proc pixie_typeface_unref*(x: Typeface) {.importc: "pixie_typeface_unref", cdecl.}
+type Typeface* = ref TypefaceObj
 
-proc `=destroy`(x: var Typeface) =
+proc pixie_typeface_unref(x: TypefaceObj) {.importc: "pixie_typeface_unref", cdecl.}
+
+proc `=destroy`(x: var TypefaceObj) =
   pixie_typeface_unref(x)
 
-type Font* = object
+type FontObj* = object
   reference: pointer
 
-proc pixie_font_unref*(x: Font) {.importc: "pixie_font_unref", cdecl.}
+type Font* = ref FontObj
 
-proc `=destroy`(x: var Font) =
+proc pixie_font_unref(x: FontObj) {.importc: "pixie_font_unref", cdecl.}
+
+proc `=destroy`(x: var FontObj) =
   pixie_font_unref(x)
 
-type Span* = object
+type SpanObj* = object
   reference: pointer
 
-proc pixie_span_unref*(x: Span) {.importc: "pixie_span_unref", cdecl.}
+type Span* = ref SpanObj
 
-proc `=destroy`(x: var Span) =
+proc pixie_span_unref(x: SpanObj) {.importc: "pixie_span_unref", cdecl.}
+
+proc `=destroy`(x: var SpanObj) =
   pixie_span_unref(x)
 
-type Arrangement* = object
+type ArrangementObj* = object
   reference: pointer
 
-proc pixie_arrangement_unref*(x: Arrangement) {.importc: "pixie_arrangement_unref", cdecl.}
+type Arrangement* = ref ArrangementObj
 
-proc `=destroy`(x: var Arrangement) =
+proc pixie_arrangement_unref(x: ArrangementObj) {.importc: "pixie_arrangement_unref", cdecl.}
+
+proc `=destroy`(x: var ArrangementObj) =
   pixie_arrangement_unref(x)
 
-type Context* = object
+type ContextObj* = object
   reference: pointer
 
-proc pixie_context_unref*(x: Context) {.importc: "pixie_context_unref", cdecl.}
+type Context* = ref ContextObj
 
-proc `=destroy`(x: var Context) =
+proc pixie_context_unref(x: ContextObj) {.importc: "pixie_context_unref", cdecl.}
+
+proc `=destroy`(x: var ContextObj) =
   pixie_context_unref(x)
 
 proc pixie_check_error(): bool {.importc: "pixie_check_error", cdecl.}
@@ -196,15 +218,33 @@ proc takeError*(): cstring {.inline.} =
 
 proc pixie_seq_float_32_len(s: SeqFloat32): int {.importc: "pixie_seq_float_32_len", cdecl.}
 
+proc len*(s: SeqFloat32): int =
+  pixie_seq_float_32_len(s)
+
 proc pixie_seq_float_32_add(s: SeqFloat32, v: float32) {.importc: "pixie_seq_float_32_add", cdecl.}
+
+proc add*(s: SeqFloat32, v: float32) =
+  pixie_seq_float_32_add(s, v)
 
 proc pixie_seq_float_32_get(s: SeqFloat32, i: int): float32 {.importc: "pixie_seq_float_32_get", cdecl.}
 
+proc `[]`*(s: SeqFloat32, i: int): float32 =
+  pixie_seq_float_32_get(s, i)
+
 proc pixie_seq_float_32_set(s: SeqFloat32, i: int, v: float32) {.importc: "pixie_seq_float_32_set", cdecl.}
+
+proc `[]=`*(s: SeqFloat32, i: int, v: float32) =
+  pixie_seq_float_32_set(s, i, v)
 
 proc pixie_seq_float_32_remove(s: SeqFloat32, i: int) {.importc: "pixie_seq_float_32_remove", cdecl.}
 
+proc remove*(s: SeqFloat32, i: int) =
+  pixie_seq_float_32_remove(s, i)
+
 proc pixie_seq_float_32_clear(s: SeqFloat32) {.importc: "pixie_seq_float_32_clear", cdecl.}
+
+proc clear*(s: SeqFloat32) =
+  pixie_seq_float_32_clear(s)
 
 proc pixie_new_seq_float_32*(): SeqFloat32 {.importc: "pixie_new_seq_float_32", cdecl.}
 
@@ -213,15 +253,33 @@ proc newSeqFloat32*(): SeqFloat32 =
 
 proc pixie_seq_span_len(s: SeqSpan): int {.importc: "pixie_seq_span_len", cdecl.}
 
+proc len*(s: SeqSpan): int =
+  pixie_seq_span_len(s)
+
 proc pixie_seq_span_add(s: SeqSpan, v: Span) {.importc: "pixie_seq_span_add", cdecl.}
+
+proc add*(s: SeqSpan, v: Span) =
+  pixie_seq_span_add(s, v)
 
 proc pixie_seq_span_get(s: SeqSpan, i: int): Span {.importc: "pixie_seq_span_get", cdecl.}
 
+proc `[]`*(s: SeqSpan, i: int): Span =
+  pixie_seq_span_get(s, i)
+
 proc pixie_seq_span_set(s: SeqSpan, i: int, v: Span) {.importc: "pixie_seq_span_set", cdecl.}
+
+proc `[]=`*(s: SeqSpan, i: int, v: Span) =
+  pixie_seq_span_set(s, i, v)
 
 proc pixie_seq_span_remove(s: SeqSpan, i: int) {.importc: "pixie_seq_span_remove", cdecl.}
 
+proc remove*(s: SeqSpan, i: int) =
+  pixie_seq_span_remove(s, i)
+
 proc pixie_seq_span_clear(s: SeqSpan) {.importc: "pixie_seq_span_clear", cdecl.}
+
+proc clear*(s: SeqSpan) =
+  pixie_seq_span_clear(s)
 
 proc pixie_new_seq_span*(): SeqSpan {.importc: "pixie_new_seq_span", cdecl.}
 
@@ -649,29 +707,77 @@ proc pixie_paint_set_image_mat(paint: Paint, imageMat: Mat3) {.importc: "pixie_p
 proc `imageMat=`*(paint: Paint, imageMat: Mat3) =
   pixie_paint_set_image_mat(paint, imageMat)
 
+type PaintGradientHandlePositions = object
+    paint: Paint
+
+proc gradientHandlePositions*(paint: Paint): PaintGradientHandlePositions =
+  PaintGradientHandlePositions(paint: paint)
+
 proc pixie_paint_gradient_handle_positions_len(s: Paint): int {.importc: "pixie_paint_gradient_handle_positions_len", cdecl.}
+
+proc len*(s: PaintGradientHandlePositions): int =
+  pixie_paint_gradient_handle_positions_len(s.paint)
 
 proc pixie_paint_gradient_handle_positions_add(s: Paint, v: Vec2) {.importc: "pixie_paint_gradient_handle_positions_add", cdecl.}
 
+proc add*(s: PaintGradientHandlePositions, v: Vec2) =
+  pixie_paint_gradient_handle_positions_add(s.paint, v)
+
 proc pixie_paint_gradient_handle_positions_get(s: Paint, i: int): Vec2 {.importc: "pixie_paint_gradient_handle_positions_get", cdecl.}
+
+proc `[]`*(s: PaintGradientHandlePositions, i: int): Vec2 =
+  pixie_paint_gradient_handle_positions_get(s.paint, i)
 
 proc pixie_paint_gradient_handle_positions_set(s: Paint, i: int, v: Vec2) {.importc: "pixie_paint_gradient_handle_positions_set", cdecl.}
 
+proc `[]=`*(s: PaintGradientHandlePositions, i: int, v: Vec2) =
+  pixie_paint_gradient_handle_positions_set(s.paint, i, v)
+
 proc pixie_paint_gradient_handle_positions_remove(s: Paint, i: int) {.importc: "pixie_paint_gradient_handle_positions_remove", cdecl.}
+
+proc remove*(s: PaintGradientHandlePositions, i: int) =
+  pixie_paint_gradient_handle_positions_remove(s.paint, i)
 
 proc pixie_paint_gradient_handle_positions_clear(s: Paint) {.importc: "pixie_paint_gradient_handle_positions_clear", cdecl.}
 
+proc clear*(s: PaintGradientHandlePositions) =
+  pixie_paint_gradient_handle_positions_clear(s.paint)
+
+type PaintGradientStops = object
+    paint: Paint
+
+proc gradientStops*(paint: Paint): PaintGradientStops =
+  PaintGradientStops(paint: paint)
+
 proc pixie_paint_gradient_stops_len(s: Paint): int {.importc: "pixie_paint_gradient_stops_len", cdecl.}
+
+proc len*(s: PaintGradientStops): int =
+  pixie_paint_gradient_stops_len(s.paint)
 
 proc pixie_paint_gradient_stops_add(s: Paint, v: ColorStop) {.importc: "pixie_paint_gradient_stops_add", cdecl.}
 
+proc add*(s: PaintGradientStops, v: ColorStop) =
+  pixie_paint_gradient_stops_add(s.paint, v)
+
 proc pixie_paint_gradient_stops_get(s: Paint, i: int): ColorStop {.importc: "pixie_paint_gradient_stops_get", cdecl.}
+
+proc `[]`*(s: PaintGradientStops, i: int): ColorStop =
+  pixie_paint_gradient_stops_get(s.paint, i)
 
 proc pixie_paint_gradient_stops_set(s: Paint, i: int, v: ColorStop) {.importc: "pixie_paint_gradient_stops_set", cdecl.}
 
+proc `[]=`*(s: PaintGradientStops, i: int, v: ColorStop) =
+  pixie_paint_gradient_stops_set(s.paint, i, v)
+
 proc pixie_paint_gradient_stops_remove(s: Paint, i: int) {.importc: "pixie_paint_gradient_stops_remove", cdecl.}
 
+proc remove*(s: PaintGradientStops, i: int) =
+  pixie_paint_gradient_stops_remove(s.paint, i)
+
 proc pixie_paint_gradient_stops_clear(s: Paint) {.importc: "pixie_paint_gradient_stops_clear", cdecl.}
+
+proc clear*(s: PaintGradientStops) =
+  pixie_paint_gradient_stops_clear(s.paint)
 
 proc pixie_paint_new_paint(paint: Paint): Paint {.importc: "pixie_paint_new_paint", cdecl.}
 
@@ -860,17 +966,41 @@ proc pixie_font_set_line_height(font: Font, lineHeight: float32) {.importc: "pix
 proc `lineHeight=`*(font: Font, lineHeight: float32) =
   pixie_font_set_line_height(font, lineHeight)
 
+type FontPaints = object
+    font: Font
+
+proc paints*(font: Font): FontPaints =
+  FontPaints(font: font)
+
 proc pixie_font_paints_len(s: Font): int {.importc: "pixie_font_paints_len", cdecl.}
+
+proc len*(s: FontPaints): int =
+  pixie_font_paints_len(s.font)
 
 proc pixie_font_paints_add(s: Font, v: Paint) {.importc: "pixie_font_paints_add", cdecl.}
 
+proc add*(s: FontPaints, v: Paint) =
+  pixie_font_paints_add(s.font, v)
+
 proc pixie_font_paints_get(s: Font, i: int): Paint {.importc: "pixie_font_paints_get", cdecl.}
+
+proc `[]`*(s: FontPaints, i: int): Paint =
+  pixie_font_paints_get(s.font, i)
 
 proc pixie_font_paints_set(s: Font, i: int, v: Paint) {.importc: "pixie_font_paints_set", cdecl.}
 
+proc `[]=`*(s: FontPaints, i: int, v: Paint) =
+  pixie_font_paints_set(s.font, i, v)
+
 proc pixie_font_paints_remove(s: Font, i: int) {.importc: "pixie_font_paints_remove", cdecl.}
 
+proc remove*(s: FontPaints, i: int) =
+  pixie_font_paints_remove(s.font, i)
+
 proc pixie_font_paints_clear(s: Font) {.importc: "pixie_font_paints_clear", cdecl.}
+
+proc clear*(s: FontPaints) =
+  pixie_font_paints_clear(s.font)
 
 proc pixie_font_get_text_case(font: Font): TextCase {.importc: "pixie_font_get_text_case", cdecl.}
 
@@ -1066,18 +1196,6 @@ proc pixie_context_set_text_align(context: Context, textAlign: HorizontalAlignme
 
 proc `textAlign=`*(context: Context, textAlign: HorizontalAlignment) =
   pixie_context_set_text_align(context, textAlign)
-
-proc pixie_context_line_dash_len(s: Context): int {.importc: "pixie_context_line_dash_len", cdecl.}
-
-proc pixie_context_line_dash_add(s: Context, v: float32) {.importc: "pixie_context_line_dash_add", cdecl.}
-
-proc pixie_context_line_dash_get(s: Context, i: int): float32 {.importc: "pixie_context_line_dash_get", cdecl.}
-
-proc pixie_context_line_dash_set(s: Context, i: int, v: float32) {.importc: "pixie_context_line_dash_set", cdecl.}
-
-proc pixie_context_line_dash_remove(s: Context, i: int) {.importc: "pixie_context_line_dash_remove", cdecl.}
-
-proc pixie_context_line_dash_clear(s: Context) {.importc: "pixie_context_line_dash_clear", cdecl.}
 
 proc pixie_context_save(ctx: Context) {.importc: "pixie_context_save", cdecl.}
 
@@ -1403,4 +1521,3 @@ proc pixie_angle_to_miter_limit(angle: float32): float32 {.importc: "pixie_angle
 
 proc angleToMiterLimit*(angle: float32): float32 {.inline.} =
   result = pixie_angle_to_miter_limit(angle)
-
