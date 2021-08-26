@@ -1,6 +1,6 @@
 from ctypes import *
 
-dll = cdll.LoadLibrary("./pixie.dll")
+dll = cdll.LoadLibrary("pixie.dll")
 
 class PixieError(Exception):
     pass
@@ -189,6 +189,9 @@ class SeqFloat32(Structure):
     def __del__(self):
         dll.pixie_seq_float_32_unref(self)
 
+    def __init__(self):
+        self.ref = dll.pixie_new_seq_float_32()
+
     def __len__(self):
         return dll.pixie_seq_float_32_len(self)
 
@@ -218,6 +221,9 @@ class SeqSpan(Structure):
 
     def __del__(self):
         dll.pixie_seq_span_unref(self)
+
+    def __init__(self):
+        self.ref = dll.pixie_new_seq_span()
 
     def __len__(self):
         return dll.pixie_seq_span_len(self)
@@ -1308,11 +1314,14 @@ dll.pixie_take_error.restype = c_char_p
 dll.pixie_seq_float_32_unref.argtypes = [SeqFloat32]
 dll.pixie_seq_float_32_unref.restype = None
 
+dll.pixie_new_seq_float_32.argtypes = []
+dll.pixie_new_seq_float_32.restype = c_ulonglong
+
 dll.pixie_seq_float_32_len.argtypes = [SeqFloat32]
 dll.pixie_seq_float_32_len.restype = c_longlong
 
 dll.pixie_seq_float_32_get.argtypes = [SeqFloat32, c_longlong]
-dll.pixie_seq_float_32_get.restype = SeqFloat32
+dll.pixie_seq_float_32_get.restype = c_float
 
 dll.pixie_seq_float_32_set.argtypes = [SeqFloat32, c_longlong, c_float]
 dll.pixie_seq_float_32_set.restype = None
@@ -1329,11 +1338,14 @@ dll.pixie_seq_float_32_clear.restype = None
 dll.pixie_seq_span_unref.argtypes = [SeqSpan]
 dll.pixie_seq_span_unref.restype = None
 
+dll.pixie_new_seq_span.argtypes = []
+dll.pixie_new_seq_span.restype = c_ulonglong
+
 dll.pixie_seq_span_len.argtypes = [SeqSpan]
 dll.pixie_seq_span_len.restype = c_longlong
 
 dll.pixie_seq_span_get.argtypes = [SeqSpan, c_longlong]
-dll.pixie_seq_span_get.restype = SeqSpan
+dll.pixie_seq_span_get.restype = Span
 
 dll.pixie_seq_span_set.argtypes = [SeqSpan, c_longlong, Span]
 dll.pixie_seq_span_set.restype = None
@@ -1573,7 +1585,7 @@ dll.pixie_paint_gradient_handle_positions_len.argtypes = [Paint]
 dll.pixie_paint_gradient_handle_positions_len.restype = c_longlong
 
 dll.pixie_paint_gradient_handle_positions_get.argtypes = [Paint, c_longlong]
-dll.pixie_paint_gradient_handle_positions_get.restype = Paint
+dll.pixie_paint_gradient_handle_positions_get.restype = Vector2
 
 dll.pixie_paint_gradient_handle_positions_set.argtypes = [Paint, c_longlong, Vector2]
 dll.pixie_paint_gradient_handle_positions_set.restype = None
@@ -1591,7 +1603,7 @@ dll.pixie_paint_gradient_stops_len.argtypes = [Paint]
 dll.pixie_paint_gradient_stops_len.restype = c_longlong
 
 dll.pixie_paint_gradient_stops_get.argtypes = [Paint, c_longlong]
-dll.pixie_paint_gradient_stops_get.restype = Paint
+dll.pixie_paint_gradient_stops_get.restype = ColorStop
 
 dll.pixie_paint_gradient_stops_set.argtypes = [Paint, c_longlong, ColorStop]
 dll.pixie_paint_gradient_stops_set.restype = None
@@ -1723,7 +1735,7 @@ dll.pixie_font_paints_len.argtypes = [Font]
 dll.pixie_font_paints_len.restype = c_longlong
 
 dll.pixie_font_paints_get.argtypes = [Font, c_longlong]
-dll.pixie_font_paints_get.restype = Font
+dll.pixie_font_paints_get.restype = Paint
 
 dll.pixie_font_paints_set.argtypes = [Font, c_longlong, Paint]
 dll.pixie_font_paints_set.restype = None
@@ -1867,7 +1879,7 @@ dll.pixie_context_line_dash_len.argtypes = [Context]
 dll.pixie_context_line_dash_len.restype = c_longlong
 
 dll.pixie_context_line_dash_get.argtypes = [Context, c_longlong]
-dll.pixie_context_line_dash_get.restype = Context
+dll.pixie_context_line_dash_get.restype = c_float
 
 dll.pixie_context_line_dash_set.argtypes = [Context, c_longlong, c_float]
 dll.pixie_context_line_dash_set.restype = None
@@ -2039,3 +2051,4 @@ dll.pixie_miter_limit_to_angle.restype = c_float
 
 dll.pixie_angle_to_miter_limit.argtypes = [c_float]
 dll.pixie_angle_to_miter_limit.restype = c_float
+
