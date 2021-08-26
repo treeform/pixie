@@ -1,6 +1,6 @@
 from ctypes import *
 
-dll = cdll.LoadLibrary("pixie.dll")
+dll = cdll.LoadLibrary("./pixie.dll")
 
 class PixieError(Exception):
     pass
@@ -190,22 +190,22 @@ class SeqFloat32(Structure):
         dll.pixie_seq_float_32_unref(self)
 
     def __len__(self):
-        dll.seq_float_32_len(self)
+        dll.pixie_seq_float_32_len(self)
 
     def __getitem__(self, index):
-        dll.seq_float_32_get(self, index)
+        dll.pixie_seq_float_32_get(self, index)
 
     def __setitem__(self, index, value):
-        dll.seq_float_32_set(self, index, value)
+        dll.pixie_seq_float_32_set(self, index, value)
 
     def __delitem__(self, index):
-        dll.seq_float_32_remove(self, index)
+        dll.pixie_seq_float_32_remove(self, index)
 
     def append(self, value):
-        dll.seq_float_32_add(self, value)
+        dll.pixie_seq_float_32_add(self, value)
 
     def clear(self):
-        dll.seq_float_32_clear(self)
+        dll.pixie_seq_float_32_clear(self)
 
 class SeqSpan(Structure):
     _fields_ = [("ref", c_ulonglong)]
@@ -220,22 +220,22 @@ class SeqSpan(Structure):
         dll.pixie_seq_span_unref(self)
 
     def __len__(self):
-        dll.seq_span_len(self)
+        dll.pixie_seq_span_len(self)
 
     def __getitem__(self, index):
-        dll.seq_span_get(self, index)
+        dll.pixie_seq_span_get(self, index)
 
     def __setitem__(self, index, value):
-        dll.seq_span_set(self, index, value)
+        dll.pixie_seq_span_set(self, index, value)
 
     def __delitem__(self, index):
-        dll.seq_span_remove(self, index)
+        dll.pixie_seq_span_remove(self, index)
 
     def append(self, value):
-        dll.seq_span_add(self, value)
+        dll.pixie_seq_span_add(self, value)
 
     def clear(self):
-        dll.seq_span_clear(self)
+        dll.pixie_seq_span_clear(self)
 
     def typeset(self, bounds, h_align, v_align, wrap):
         result = dll.pixie_seq_span_typeset(self, bounds, h_align, v_align, wrap)
@@ -259,19 +259,19 @@ class Image(Structure):
 
     @property
     def width(self):
-        dll.image_get_width(self)
+        dll.pixie_image_get_width(self)
 
     @width.setter
     def width(self, width):
-        dll.image_set_width(self, width)
+        dll.pixie_image_set_width(self, width)
 
     @property
     def height(self):
-        dll.image_get_height(self)
+        dll.pixie_image_get_height(self)
 
     @height.setter
     def height(self, height):
-        dll.image_set_height(self, height)
+        dll.pixie_image_set_height(self, height)
 
     def write_file(self, file_path):
         dll.pixie_image_write_file(self, file_path.encode("utf8"))
@@ -420,19 +420,19 @@ class Mask(Structure):
 
     @property
     def width(self):
-        dll.mask_get_width(self)
+        dll.pixie_mask_get_width(self)
 
     @width.setter
     def width(self, width):
-        dll.mask_set_width(self, width)
+        dll.pixie_mask_set_width(self, width)
 
     @property
     def height(self):
-        dll.mask_get_height(self)
+        dll.pixie_mask_get_height(self)
 
     @height.setter
     def height(self, height):
-        dll.mask_set_height(self, height)
+        dll.pixie_mask_set_height(self, height)
 
     def write_file(self, file_path):
         dll.pixie_mask_write_file(self, file_path.encode("utf8"))
@@ -544,51 +544,51 @@ class Paint(Structure):
 
     @property
     def kind(self):
-        dll.paint_get_kind(self)
+        dll.pixie_paint_get_kind(self)
 
     @kind.setter
     def kind(self, kind):
-        dll.paint_set_kind(self, kind)
+        dll.pixie_paint_set_kind(self, kind)
 
     @property
     def blend_mode(self):
-        dll.paint_get_blend_mode(self)
+        dll.pixie_paint_get_blend_mode(self)
 
     @blend_mode.setter
     def blend_mode(self, blend_mode):
-        dll.paint_set_blend_mode(self, blend_mode)
+        dll.pixie_paint_set_blend_mode(self, blend_mode)
 
     @property
     def opacity(self):
-        dll.paint_get_opacity(self)
+        dll.pixie_paint_get_opacity(self)
 
     @opacity.setter
     def opacity(self, opacity):
-        dll.paint_set_opacity(self, opacity)
+        dll.pixie_paint_set_opacity(self, opacity)
 
     @property
     def color(self):
-        dll.paint_get_color(self)
+        dll.pixie_paint_get_color(self)
 
     @color.setter
     def color(self, color):
-        dll.paint_set_color(self, color)
+        dll.pixie_paint_set_color(self, color)
 
     @property
     def image(self):
-        dll.paint_get_image(self)
+        dll.pixie_paint_get_image(self)
 
     @image.setter
     def image(self, image):
-        dll.paint_set_image(self, image)
+        dll.pixie_paint_set_image(self, image)
 
     @property
     def image_mat(self):
-        dll.paint_get_image_mat(self)
+        dll.pixie_paint_get_image_mat(self)
 
     @image_mat.setter
     def image_mat(self, image_mat):
-        dll.paint_set_image_mat(self, image_mat)
+        dll.pixie_paint_set_image_mat(self, image_mat)
 
     def new_paint(self):
         result = dll.pixie_paint_new_paint(self)
@@ -687,11 +687,11 @@ class Typeface(Structure):
 
     @property
     def file_path(self):
-        dll.typeface_get_file_path(self).decode("utf8")
+        dll.pixie_typeface_get_file_path(self).decode("utf8")
 
     @file_path.setter
     def file_path(self, file_path):
-        dll.typeface_set_file_path(self, file_path.encode("utf8"))
+        dll.pixie_typeface_set_file_path(self, file_path.encode("utf8"))
 
     def ascent(self):
         result = dll.pixie_typeface_ascent(self)
@@ -741,59 +741,59 @@ class Font(Structure):
 
     @property
     def typeface(self):
-        dll.font_get_typeface(self)
+        dll.pixie_font_get_typeface(self)
 
     @typeface.setter
     def typeface(self, typeface):
-        dll.font_set_typeface(self, typeface)
+        dll.pixie_font_set_typeface(self, typeface)
 
     @property
     def size(self):
-        dll.font_get_size(self)
+        dll.pixie_font_get_size(self)
 
     @size.setter
     def size(self, size):
-        dll.font_set_size(self, size)
+        dll.pixie_font_set_size(self, size)
 
     @property
     def line_height(self):
-        dll.font_get_line_height(self)
+        dll.pixie_font_get_line_height(self)
 
     @line_height.setter
     def line_height(self, line_height):
-        dll.font_set_line_height(self, line_height)
+        dll.pixie_font_set_line_height(self, line_height)
 
     @property
     def text_case(self):
-        dll.font_get_text_case(self)
+        dll.pixie_font_get_text_case(self)
 
     @text_case.setter
     def text_case(self, text_case):
-        dll.font_set_text_case(self, text_case)
+        dll.pixie_font_set_text_case(self, text_case)
 
     @property
     def underline(self):
-        dll.font_get_underline(self)
+        dll.pixie_font_get_underline(self)
 
     @underline.setter
     def underline(self, underline):
-        dll.font_set_underline(self, underline)
+        dll.pixie_font_set_underline(self, underline)
 
     @property
     def strikethrough(self):
-        dll.font_get_strikethrough(self)
+        dll.pixie_font_get_strikethrough(self)
 
     @strikethrough.setter
     def strikethrough(self, strikethrough):
-        dll.font_set_strikethrough(self, strikethrough)
+        dll.pixie_font_set_strikethrough(self, strikethrough)
 
     @property
     def no_kerning_adjustments(self):
-        dll.font_get_no_kerning_adjustments(self)
+        dll.pixie_font_get_no_kerning_adjustments(self)
 
     @no_kerning_adjustments.setter
     def no_kerning_adjustments(self, no_kerning_adjustments):
-        dll.font_set_no_kerning_adjustments(self, no_kerning_adjustments)
+        dll.pixie_font_set_no_kerning_adjustments(self, no_kerning_adjustments)
 
     def scale(self):
         result = dll.pixie_font_scale(self)
@@ -825,19 +825,19 @@ class Span(Structure):
 
     @property
     def text(self):
-        dll.span_get_text(self).decode("utf8")
+        dll.pixie_span_get_text(self).decode("utf8")
 
     @text.setter
     def text(self, text):
-        dll.span_set_text(self, text.encode("utf8"))
+        dll.pixie_span_set_text(self, text.encode("utf8"))
 
     @property
     def font(self):
-        dll.span_get_font(self)
+        dll.pixie_span_get_font(self)
 
     @font.setter
     def font(self, font):
-        dll.span_set_font(self, font)
+        dll.pixie_span_set_font(self, font)
 
 class Arrangement(Structure):
     _fields_ = [("ref", c_ulonglong)]
@@ -869,91 +869,91 @@ class Context(Structure):
 
     @property
     def image(self):
-        dll.context_get_image(self)
+        dll.pixie_context_get_image(self)
 
     @image.setter
     def image(self, image):
-        dll.context_set_image(self, image)
+        dll.pixie_context_set_image(self, image)
 
     @property
     def fill_style(self):
-        dll.context_get_fill_style(self)
+        dll.pixie_context_get_fill_style(self)
 
     @fill_style.setter
     def fill_style(self, fill_style):
-        dll.context_set_fill_style(self, fill_style)
+        dll.pixie_context_set_fill_style(self, fill_style)
 
     @property
     def stroke_style(self):
-        dll.context_get_stroke_style(self)
+        dll.pixie_context_get_stroke_style(self)
 
     @stroke_style.setter
     def stroke_style(self, stroke_style):
-        dll.context_set_stroke_style(self, stroke_style)
+        dll.pixie_context_set_stroke_style(self, stroke_style)
 
     @property
     def global_alpha(self):
-        dll.context_get_global_alpha(self)
+        dll.pixie_context_get_global_alpha(self)
 
     @global_alpha.setter
     def global_alpha(self, global_alpha):
-        dll.context_set_global_alpha(self, global_alpha)
+        dll.pixie_context_set_global_alpha(self, global_alpha)
 
     @property
     def line_width(self):
-        dll.context_get_line_width(self)
+        dll.pixie_context_get_line_width(self)
 
     @line_width.setter
     def line_width(self, line_width):
-        dll.context_set_line_width(self, line_width)
+        dll.pixie_context_set_line_width(self, line_width)
 
     @property
     def miter_limit(self):
-        dll.context_get_miter_limit(self)
+        dll.pixie_context_get_miter_limit(self)
 
     @miter_limit.setter
     def miter_limit(self, miter_limit):
-        dll.context_set_miter_limit(self, miter_limit)
+        dll.pixie_context_set_miter_limit(self, miter_limit)
 
     @property
     def line_cap(self):
-        dll.context_get_line_cap(self)
+        dll.pixie_context_get_line_cap(self)
 
     @line_cap.setter
     def line_cap(self, line_cap):
-        dll.context_set_line_cap(self, line_cap)
+        dll.pixie_context_set_line_cap(self, line_cap)
 
     @property
     def line_join(self):
-        dll.context_get_line_join(self)
+        dll.pixie_context_get_line_join(self)
 
     @line_join.setter
     def line_join(self, line_join):
-        dll.context_set_line_join(self, line_join)
+        dll.pixie_context_set_line_join(self, line_join)
 
     @property
     def font(self):
-        dll.context_get_font(self).decode("utf8")
+        dll.pixie_context_get_font(self).decode("utf8")
 
     @font.setter
     def font(self, font):
-        dll.context_set_font(self, font.encode("utf8"))
+        dll.pixie_context_set_font(self, font.encode("utf8"))
 
     @property
     def font_size(self):
-        dll.context_get_font_size(self)
+        dll.pixie_context_get_font_size(self)
 
     @font_size.setter
     def font_size(self, font_size):
-        dll.context_set_font_size(self, font_size)
+        dll.pixie_context_set_font_size(self, font_size)
 
     @property
     def text_align(self):
-        dll.context_get_text_align(self)
+        dll.pixie_context_get_text_align(self)
 
     @text_align.setter
     def text_align(self, text_align):
-        dll.context_set_text_align(self, text_align)
+        dll.pixie_context_set_text_align(self, text_align)
 
     def save(self):
         dll.pixie_context_save(self)
@@ -1200,44 +1200,44 @@ dll.pixie_take_error.restype = c_char_p
 dll.pixie_seq_float_32_unref.argtypes = [SeqFloat32]
 dll.pixie_seq_float_32_unref.restype = None
 
-dll.seq_float_32_len.argtypes = [SeqFloat32]
-dll.seq_float_32_len.restype = None
+dll.pixie_seq_float_32_len.argtypes = [SeqFloat32]
+dll.pixie_seq_float_32_len.restype = None
 
-dll.seq_float_32_get.argtypes = [SeqFloat32, c_longlong]
-dll.seq_float_32_get.restype = SeqFloat32
+dll.pixie_seq_float_32_get.argtypes = [SeqFloat32, c_longlong]
+dll.pixie_seq_float_32_get.restype = SeqFloat32
 
-dll.seq_float_32_set.argtypes = [SeqFloat32, c_longlong, c_float]
-dll.seq_float_32_set.restype = None
+dll.pixie_seq_float_32_set.argtypes = [SeqFloat32, c_longlong, c_float]
+dll.pixie_seq_float_32_set.restype = None
 
-dll.seq_float_32_remove.argtypes = [SeqFloat32, c_longlong]
-dll.seq_float_32_remove.restype = None
+dll.pixie_seq_float_32_remove.argtypes = [SeqFloat32, c_longlong]
+dll.pixie_seq_float_32_remove.restype = None
 
-dll.seq_float_32_add.argtypes = [SeqFloat32, c_float]
-dll.seq_float_32_add.restype = None
+dll.pixie_seq_float_32_add.argtypes = [SeqFloat32, c_float]
+dll.pixie_seq_float_32_add.restype = None
 
-dll.seq_float_32_clear.argtypes = [SeqFloat32]
-dll.seq_float_32_clear.restype = None
+dll.pixie_seq_float_32_clear.argtypes = [SeqFloat32]
+dll.pixie_seq_float_32_clear.restype = None
 
 dll.pixie_seq_span_unref.argtypes = [SeqSpan]
 dll.pixie_seq_span_unref.restype = None
 
-dll.seq_span_len.argtypes = [SeqSpan]
-dll.seq_span_len.restype = None
+dll.pixie_seq_span_len.argtypes = [SeqSpan]
+dll.pixie_seq_span_len.restype = None
 
-dll.seq_span_get.argtypes = [SeqSpan, c_longlong]
-dll.seq_span_get.restype = SeqSpan
+dll.pixie_seq_span_get.argtypes = [SeqSpan, c_longlong]
+dll.pixie_seq_span_get.restype = SeqSpan
 
-dll.seq_span_set.argtypes = [SeqSpan, c_longlong, Span]
-dll.seq_span_set.restype = None
+dll.pixie_seq_span_set.argtypes = [SeqSpan, c_longlong, Span]
+dll.pixie_seq_span_set.restype = None
 
-dll.seq_span_remove.argtypes = [SeqSpan, c_longlong]
-dll.seq_span_remove.restype = None
+dll.pixie_seq_span_remove.argtypes = [SeqSpan, c_longlong]
+dll.pixie_seq_span_remove.restype = None
 
-dll.seq_span_add.argtypes = [SeqSpan, Span]
-dll.seq_span_add.restype = None
+dll.pixie_seq_span_add.argtypes = [SeqSpan, Span]
+dll.pixie_seq_span_add.restype = None
 
-dll.seq_span_clear.argtypes = [SeqSpan]
-dll.seq_span_clear.restype = None
+dll.pixie_seq_span_clear.argtypes = [SeqSpan]
+dll.pixie_seq_span_clear.restype = None
 
 dll.pixie_seq_span_typeset.argtypes = [SeqSpan, Vector2, HorizontalAlignment, VerticalAlignment, c_bool]
 dll.pixie_seq_span_typeset.restype = Arrangement
@@ -1248,17 +1248,17 @@ dll.pixie_seq_span_compute_bounds.restype = Vector2
 dll.pixie_image_unref.argtypes = [Image]
 dll.pixie_image_unref.restype = None
 
-dll.image_get_width.argtypes = [Image]
-dll.image_get_width.restype = c_longlong
+dll.pixie_image_get_width.argtypes = [Image]
+dll.pixie_image_get_width.restype = c_longlong
 
-dll.image_set_width.argtypes = [Image, c_longlong]
-dll.image_set_width.restype = None
+dll.pixie_image_set_width.argtypes = [Image, c_longlong]
+dll.pixie_image_set_width.restype = None
 
-dll.image_get_height.argtypes = [Image]
-dll.image_get_height.restype = c_longlong
+dll.pixie_image_get_height.argtypes = [Image]
+dll.pixie_image_get_height.restype = c_longlong
 
-dll.image_set_height.argtypes = [Image, c_longlong]
-dll.image_set_height.restype = None
+dll.pixie_image_set_height.argtypes = [Image, c_longlong]
+dll.pixie_image_set_height.restype = None
 
 dll.pixie_image_write_file.argtypes = [Image, c_char_p]
 dll.pixie_image_write_file.restype = None
@@ -1347,17 +1347,17 @@ dll.pixie_image_new_context.restype = Context
 dll.pixie_mask_unref.argtypes = [Mask]
 dll.pixie_mask_unref.restype = None
 
-dll.mask_get_width.argtypes = [Mask]
-dll.mask_get_width.restype = c_longlong
+dll.pixie_mask_get_width.argtypes = [Mask]
+dll.pixie_mask_get_width.restype = c_longlong
 
-dll.mask_set_width.argtypes = [Mask, c_longlong]
-dll.mask_set_width.restype = None
+dll.pixie_mask_set_width.argtypes = [Mask, c_longlong]
+dll.pixie_mask_set_width.restype = None
 
-dll.mask_get_height.argtypes = [Mask]
-dll.mask_get_height.restype = c_longlong
+dll.pixie_mask_get_height.argtypes = [Mask]
+dll.pixie_mask_get_height.restype = c_longlong
 
-dll.mask_set_height.argtypes = [Mask, c_longlong]
-dll.mask_set_height.restype = None
+dll.pixie_mask_set_height.argtypes = [Mask, c_longlong]
+dll.pixie_mask_set_height.restype = None
 
 dll.pixie_mask_write_file.argtypes = [Mask, c_char_p]
 dll.pixie_mask_write_file.restype = None
@@ -1425,41 +1425,41 @@ dll.pixie_mask_stroke_path.restype = None
 dll.pixie_paint_unref.argtypes = [Paint]
 dll.pixie_paint_unref.restype = None
 
-dll.paint_get_kind.argtypes = [Paint]
-dll.paint_get_kind.restype = PaintKind
+dll.pixie_paint_get_kind.argtypes = [Paint]
+dll.pixie_paint_get_kind.restype = PaintKind
 
-dll.paint_set_kind.argtypes = [Paint, PaintKind]
-dll.paint_set_kind.restype = None
+dll.pixie_paint_set_kind.argtypes = [Paint, PaintKind]
+dll.pixie_paint_set_kind.restype = None
 
-dll.paint_get_blend_mode.argtypes = [Paint]
-dll.paint_get_blend_mode.restype = BlendMode
+dll.pixie_paint_get_blend_mode.argtypes = [Paint]
+dll.pixie_paint_get_blend_mode.restype = BlendMode
 
-dll.paint_set_blend_mode.argtypes = [Paint, BlendMode]
-dll.paint_set_blend_mode.restype = None
+dll.pixie_paint_set_blend_mode.argtypes = [Paint, BlendMode]
+dll.pixie_paint_set_blend_mode.restype = None
 
-dll.paint_get_opacity.argtypes = [Paint]
-dll.paint_get_opacity.restype = c_float
+dll.pixie_paint_get_opacity.argtypes = [Paint]
+dll.pixie_paint_get_opacity.restype = c_float
 
-dll.paint_set_opacity.argtypes = [Paint, c_float]
-dll.paint_set_opacity.restype = None
+dll.pixie_paint_set_opacity.argtypes = [Paint, c_float]
+dll.pixie_paint_set_opacity.restype = None
 
-dll.paint_get_color.argtypes = [Paint]
-dll.paint_get_color.restype = Color
+dll.pixie_paint_get_color.argtypes = [Paint]
+dll.pixie_paint_get_color.restype = Color
 
-dll.paint_set_color.argtypes = [Paint, Color]
-dll.paint_set_color.restype = None
+dll.pixie_paint_set_color.argtypes = [Paint, Color]
+dll.pixie_paint_set_color.restype = None
 
-dll.paint_get_image.argtypes = [Paint]
-dll.paint_get_image.restype = Image
+dll.pixie_paint_get_image.argtypes = [Paint]
+dll.pixie_paint_get_image.restype = Image
 
-dll.paint_set_image.argtypes = [Paint, Image]
-dll.paint_set_image.restype = None
+dll.pixie_paint_set_image.argtypes = [Paint, Image]
+dll.pixie_paint_set_image.restype = None
 
-dll.paint_get_image_mat.argtypes = [Paint]
-dll.paint_get_image_mat.restype = Matrix3
+dll.pixie_paint_get_image_mat.argtypes = [Paint]
+dll.pixie_paint_get_image_mat.restype = Matrix3
 
-dll.paint_set_image_mat.argtypes = [Paint, Matrix3]
-dll.paint_set_image_mat.restype = None
+dll.pixie_paint_set_image_mat.argtypes = [Paint, Matrix3]
+dll.pixie_paint_set_image_mat.restype = None
 
 dll.pixie_paint_new_paint.argtypes = [Paint]
 dll.pixie_paint_new_paint.restype = Paint
@@ -1524,11 +1524,11 @@ dll.pixie_path_polygon.restype = None
 dll.pixie_typeface_unref.argtypes = [Typeface]
 dll.pixie_typeface_unref.restype = None
 
-dll.typeface_get_file_path.argtypes = [Typeface]
-dll.typeface_get_file_path.restype = c_char_p
+dll.pixie_typeface_get_file_path.argtypes = [Typeface]
+dll.pixie_typeface_get_file_path.restype = c_char_p
 
-dll.typeface_set_file_path.argtypes = [Typeface, c_char_p]
-dll.typeface_set_file_path.restype = None
+dll.pixie_typeface_set_file_path.argtypes = [Typeface, c_char_p]
+dll.pixie_typeface_set_file_path.restype = None
 
 dll.pixie_typeface_ascent.argtypes = [Typeface]
 dll.pixie_typeface_ascent.restype = c_float
@@ -1557,47 +1557,47 @@ dll.pixie_typeface_new_font.restype = Font
 dll.pixie_font_unref.argtypes = [Font]
 dll.pixie_font_unref.restype = None
 
-dll.font_get_typeface.argtypes = [Font]
-dll.font_get_typeface.restype = Typeface
+dll.pixie_font_get_typeface.argtypes = [Font]
+dll.pixie_font_get_typeface.restype = Typeface
 
-dll.font_set_typeface.argtypes = [Font, Typeface]
-dll.font_set_typeface.restype = None
+dll.pixie_font_set_typeface.argtypes = [Font, Typeface]
+dll.pixie_font_set_typeface.restype = None
 
-dll.font_get_size.argtypes = [Font]
-dll.font_get_size.restype = c_float
+dll.pixie_font_get_size.argtypes = [Font]
+dll.pixie_font_get_size.restype = c_float
 
-dll.font_set_size.argtypes = [Font, c_float]
-dll.font_set_size.restype = None
+dll.pixie_font_set_size.argtypes = [Font, c_float]
+dll.pixie_font_set_size.restype = None
 
-dll.font_get_line_height.argtypes = [Font]
-dll.font_get_line_height.restype = c_float
+dll.pixie_font_get_line_height.argtypes = [Font]
+dll.pixie_font_get_line_height.restype = c_float
 
-dll.font_set_line_height.argtypes = [Font, c_float]
-dll.font_set_line_height.restype = None
+dll.pixie_font_set_line_height.argtypes = [Font, c_float]
+dll.pixie_font_set_line_height.restype = None
 
-dll.font_get_text_case.argtypes = [Font]
-dll.font_get_text_case.restype = TextCase
+dll.pixie_font_get_text_case.argtypes = [Font]
+dll.pixie_font_get_text_case.restype = TextCase
 
-dll.font_set_text_case.argtypes = [Font, TextCase]
-dll.font_set_text_case.restype = None
+dll.pixie_font_set_text_case.argtypes = [Font, TextCase]
+dll.pixie_font_set_text_case.restype = None
 
-dll.font_get_underline.argtypes = [Font]
-dll.font_get_underline.restype = c_bool
+dll.pixie_font_get_underline.argtypes = [Font]
+dll.pixie_font_get_underline.restype = c_bool
 
-dll.font_set_underline.argtypes = [Font, c_bool]
-dll.font_set_underline.restype = None
+dll.pixie_font_set_underline.argtypes = [Font, c_bool]
+dll.pixie_font_set_underline.restype = None
 
-dll.font_get_strikethrough.argtypes = [Font]
-dll.font_get_strikethrough.restype = c_bool
+dll.pixie_font_get_strikethrough.argtypes = [Font]
+dll.pixie_font_get_strikethrough.restype = c_bool
 
-dll.font_set_strikethrough.argtypes = [Font, c_bool]
-dll.font_set_strikethrough.restype = None
+dll.pixie_font_set_strikethrough.argtypes = [Font, c_bool]
+dll.pixie_font_set_strikethrough.restype = None
 
-dll.font_get_no_kerning_adjustments.argtypes = [Font]
-dll.font_get_no_kerning_adjustments.restype = c_bool
+dll.pixie_font_get_no_kerning_adjustments.argtypes = [Font]
+dll.pixie_font_get_no_kerning_adjustments.restype = c_bool
 
-dll.font_set_no_kerning_adjustments.argtypes = [Font, c_bool]
-dll.font_set_no_kerning_adjustments.restype = None
+dll.pixie_font_set_no_kerning_adjustments.argtypes = [Font, c_bool]
+dll.pixie_font_set_no_kerning_adjustments.restype = None
 
 dll.pixie_font_scale.argtypes = [Font]
 dll.pixie_font_scale.restype = c_float
@@ -1614,17 +1614,17 @@ dll.pixie_font_compute_bounds.restype = Vector2
 dll.pixie_span_unref.argtypes = [Span]
 dll.pixie_span_unref.restype = None
 
-dll.span_get_text.argtypes = [Span]
-dll.span_get_text.restype = c_char_p
+dll.pixie_span_get_text.argtypes = [Span]
+dll.pixie_span_get_text.restype = c_char_p
 
-dll.span_set_text.argtypes = [Span, c_char_p]
-dll.span_set_text.restype = None
+dll.pixie_span_set_text.argtypes = [Span, c_char_p]
+dll.pixie_span_set_text.restype = None
 
-dll.span_get_font.argtypes = [Span]
-dll.span_get_font.restype = Font
+dll.pixie_span_get_font.argtypes = [Span]
+dll.pixie_span_get_font.restype = Font
 
-dll.span_set_font.argtypes = [Span, Font]
-dll.span_set_font.restype = None
+dll.pixie_span_set_font.argtypes = [Span, Font]
+dll.pixie_span_set_font.restype = None
 
 dll.pixie_arrangement_unref.argtypes = [Arrangement]
 dll.pixie_arrangement_unref.restype = None
@@ -1635,71 +1635,71 @@ dll.pixie_arrangement_compute_bounds.restype = Vector2
 dll.pixie_context_unref.argtypes = [Context]
 dll.pixie_context_unref.restype = None
 
-dll.context_get_image.argtypes = [Context]
-dll.context_get_image.restype = Image
+dll.pixie_context_get_image.argtypes = [Context]
+dll.pixie_context_get_image.restype = Image
 
-dll.context_set_image.argtypes = [Context, Image]
-dll.context_set_image.restype = None
+dll.pixie_context_set_image.argtypes = [Context, Image]
+dll.pixie_context_set_image.restype = None
 
-dll.context_get_fill_style.argtypes = [Context]
-dll.context_get_fill_style.restype = Paint
+dll.pixie_context_get_fill_style.argtypes = [Context]
+dll.pixie_context_get_fill_style.restype = Paint
 
-dll.context_set_fill_style.argtypes = [Context, Paint]
-dll.context_set_fill_style.restype = None
+dll.pixie_context_set_fill_style.argtypes = [Context, Paint]
+dll.pixie_context_set_fill_style.restype = None
 
-dll.context_get_stroke_style.argtypes = [Context]
-dll.context_get_stroke_style.restype = Paint
+dll.pixie_context_get_stroke_style.argtypes = [Context]
+dll.pixie_context_get_stroke_style.restype = Paint
 
-dll.context_set_stroke_style.argtypes = [Context, Paint]
-dll.context_set_stroke_style.restype = None
+dll.pixie_context_set_stroke_style.argtypes = [Context, Paint]
+dll.pixie_context_set_stroke_style.restype = None
 
-dll.context_get_global_alpha.argtypes = [Context]
-dll.context_get_global_alpha.restype = c_float
+dll.pixie_context_get_global_alpha.argtypes = [Context]
+dll.pixie_context_get_global_alpha.restype = c_float
 
-dll.context_set_global_alpha.argtypes = [Context, c_float]
-dll.context_set_global_alpha.restype = None
+dll.pixie_context_set_global_alpha.argtypes = [Context, c_float]
+dll.pixie_context_set_global_alpha.restype = None
 
-dll.context_get_line_width.argtypes = [Context]
-dll.context_get_line_width.restype = c_float
+dll.pixie_context_get_line_width.argtypes = [Context]
+dll.pixie_context_get_line_width.restype = c_float
 
-dll.context_set_line_width.argtypes = [Context, c_float]
-dll.context_set_line_width.restype = None
+dll.pixie_context_set_line_width.argtypes = [Context, c_float]
+dll.pixie_context_set_line_width.restype = None
 
-dll.context_get_miter_limit.argtypes = [Context]
-dll.context_get_miter_limit.restype = c_float
+dll.pixie_context_get_miter_limit.argtypes = [Context]
+dll.pixie_context_get_miter_limit.restype = c_float
 
-dll.context_set_miter_limit.argtypes = [Context, c_float]
-dll.context_set_miter_limit.restype = None
+dll.pixie_context_set_miter_limit.argtypes = [Context, c_float]
+dll.pixie_context_set_miter_limit.restype = None
 
-dll.context_get_line_cap.argtypes = [Context]
-dll.context_get_line_cap.restype = LineCap
+dll.pixie_context_get_line_cap.argtypes = [Context]
+dll.pixie_context_get_line_cap.restype = LineCap
 
-dll.context_set_line_cap.argtypes = [Context, LineCap]
-dll.context_set_line_cap.restype = None
+dll.pixie_context_set_line_cap.argtypes = [Context, LineCap]
+dll.pixie_context_set_line_cap.restype = None
 
-dll.context_get_line_join.argtypes = [Context]
-dll.context_get_line_join.restype = LineJoin
+dll.pixie_context_get_line_join.argtypes = [Context]
+dll.pixie_context_get_line_join.restype = LineJoin
 
-dll.context_set_line_join.argtypes = [Context, LineJoin]
-dll.context_set_line_join.restype = None
+dll.pixie_context_set_line_join.argtypes = [Context, LineJoin]
+dll.pixie_context_set_line_join.restype = None
 
-dll.context_get_font.argtypes = [Context]
-dll.context_get_font.restype = c_char_p
+dll.pixie_context_get_font.argtypes = [Context]
+dll.pixie_context_get_font.restype = c_char_p
 
-dll.context_set_font.argtypes = [Context, c_char_p]
-dll.context_set_font.restype = None
+dll.pixie_context_set_font.argtypes = [Context, c_char_p]
+dll.pixie_context_set_font.restype = None
 
-dll.context_get_font_size.argtypes = [Context]
-dll.context_get_font_size.restype = c_float
+dll.pixie_context_get_font_size.argtypes = [Context]
+dll.pixie_context_get_font_size.restype = c_float
 
-dll.context_set_font_size.argtypes = [Context, c_float]
-dll.context_set_font_size.restype = None
+dll.pixie_context_set_font_size.argtypes = [Context, c_float]
+dll.pixie_context_set_font_size.restype = None
 
-dll.context_get_text_align.argtypes = [Context]
-dll.context_get_text_align.restype = HorizontalAlignment
+dll.pixie_context_get_text_align.argtypes = [Context]
+dll.pixie_context_get_text_align.restype = HorizontalAlignment
 
-dll.context_set_text_align.argtypes = [Context, HorizontalAlignment]
-dll.context_set_text_align.restype = None
+dll.pixie_context_set_text_align.argtypes = [Context, HorizontalAlignment]
+dll.pixie_context_set_text_align.restype = None
 
 dll.pixie_context_save.argtypes = [Context]
 dll.pixie_context_save.restype = None
@@ -1859,4 +1859,3 @@ dll.pixie_miter_limit_to_angle.restype = c_float
 
 dll.pixie_angle_to_miter_limit.argtypes = [c_float]
 dll.pixie_angle_to_miter_limit.restype = c_float
-
