@@ -69,6 +69,7 @@ exportSeq seq[Span]:
     pixie.computeBounds
 
 exportRefObject Image, ["width", "height"]:
+  discard newImage(0, 0)
   export
     pixie.writeFile,
     pixie.wh,
@@ -97,6 +98,7 @@ exportRefObject Image, ["width", "height"]:
     pixie.newContext
 
 exportRefObject Mask, ["width", "height"]:
+  discard newMask(0, 0)
   export
     pixie.writeFile,
     pixie.wh,
@@ -118,10 +120,12 @@ exportRefObject Mask, ["width", "height"]:
     pixie.strokePath
 
 exportRefObject Paint, ["*"]:
+  discard newPaint(pkSolid)
   export
     pixie.newPaint
 
 exportRefObject Path, ["*"]:
+  discard newPath()
   export
     pixie.transform,
     pixie.addPath,
@@ -147,6 +151,7 @@ exportRefObject Path, ["*"]:
     pixie.polygon
 
 exportRefObject Typeface, ["*"]:
+  discard
   export
     pixie.ascent,
     pixie.descent,
@@ -158,6 +163,7 @@ exportRefObject Typeface, ["*"]:
     pixie.newFont
 
 exportRefObject Font, ["*"]:
+  discard
   export
     pixie.scale,
     pixie.defaultLineHeight,
@@ -165,13 +171,15 @@ exportRefObject Font, ["*"]:
     pixie.computeBounds
 
 exportRefObject Span, ["*"]:
-  discard
+  discard newSpan("", Font())
 
 exportRefObject Arrangement, []:
+  discard
   export
     pixie.computeBounds
 
 exportRefObject Context, ["*"]:
+  discard newContext(0, 0)
   export
     pixie.save,
     pixie.saveLayer,
@@ -218,12 +226,6 @@ exportRefObject Context, ["*"]:
 
 exportProcs:
   export
-    pixie.newImage,
-    pixie.newMask,
-    pixie.newPaint,
-    pixie.newPath,
-    pixie.newSpan,
-    pixie.newContext,
     pixie.readImage,
     pixie.readmask,
     pixie.readTypeface,

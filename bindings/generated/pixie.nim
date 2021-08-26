@@ -292,6 +292,13 @@ proc pixie_seq_span_compute_bounds(spans: SeqSpan): Vec2 {.importc: "pixie_seq_s
 proc computeBounds*(spans: SeqSpan): Vec2 {.inline.} =
   result = pixie_seq_span_compute_bounds(spans)
 
+proc pixie_new_image(width: int, height: int): Image {.importc: "pixie_new_image", cdecl.}
+
+proc newImage*(width: int, height: int): Image {.inline.} =
+  result = pixie_new_image(width, height)
+  if checkError():
+    raise newException(PixieError, $takeError())
+
 proc pixie_image_get_width(image: Image): int {.importc: "pixie_image_get_width", cdecl.}
 
 proc width*(image: Image): int {.inline.} =
@@ -490,6 +497,13 @@ proc pixie_image_new_context(image: Image): Context {.importc: "pixie_image_new_
 proc newContext*(image: Image): Context {.inline.} =
   result = pixie_image_new_context(image)
 
+proc pixie_new_mask(width: int, height: int): Mask {.importc: "pixie_new_mask", cdecl.}
+
+proc newMask*(width: int, height: int): Mask {.inline.} =
+  result = pixie_new_mask(width, height)
+  if checkError():
+    raise newException(PixieError, $takeError())
+
 proc pixie_mask_get_width(mask: Mask): int {.importc: "pixie_mask_get_width", cdecl.}
 
 proc width*(mask: Mask): int {.inline.} =
@@ -643,6 +657,11 @@ proc strokePath*(mask: Mask, path: Path, transform: Mat3, strokeWidth: float32, 
   if checkError():
     raise newException(PixieError, $takeError())
 
+proc pixie_new_paint(kind: PaintKind): Paint {.importc: "pixie_new_paint", cdecl.}
+
+proc newPaint*(kind: PaintKind): Paint {.inline.} =
+  result = pixie_new_paint(kind)
+
 proc pixie_paint_get_kind(paint: Paint): PaintKind {.importc: "pixie_paint_get_kind", cdecl.}
 
 proc kind*(paint: Paint): PaintKind {.inline.} =
@@ -779,6 +798,11 @@ proc pixie_paint_new_paint(paint: Paint): Paint {.importc: "pixie_paint_new_pain
 
 proc newPaint*(paint: Paint): Paint {.inline.} =
   result = pixie_paint_new_paint(paint)
+
+proc pixie_new_path(): Path {.importc: "pixie_new_path", cdecl.}
+
+proc newPath*(): Path {.inline.} =
+  result = pixie_new_path()
 
 proc pixie_path_transform(path: Path, mat: Mat3) {.importc: "pixie_path_transform", cdecl.}
 
@@ -1058,6 +1082,11 @@ proc pixie_font_compute_bounds(font: Font, text: cstring): Vec2 {.importc: "pixi
 proc computeBounds*(font: Font, text: string): Vec2 {.inline.} =
   result = pixie_font_compute_bounds(font, text.cstring)
 
+proc pixie_new_span(text: cstring, font: Font): Span {.importc: "pixie_new_span", cdecl.}
+
+proc newSpan*(text: string, font: Font): Span {.inline.} =
+  result = pixie_new_span(text.cstring, font)
+
 proc pixie_span_get_text(span: Span): cstring {.importc: "pixie_span_get_text", cdecl.}
 
 proc text*(span: Span): cstring {.inline.} =
@@ -1082,6 +1111,13 @@ proc pixie_arrangement_compute_bounds(arrangement: Arrangement): Vec2 {.importc:
 
 proc computeBounds*(arrangement: Arrangement): Vec2 {.inline.} =
   result = pixie_arrangement_compute_bounds(arrangement)
+
+proc pixie_new_context(width: int, height: int): Context {.importc: "pixie_new_context", cdecl.}
+
+proc newContext*(width: int, height: int): Context {.inline.} =
+  result = pixie_new_context(width, height)
+  if checkError():
+    raise newException(PixieError, $takeError())
 
 proc pixie_context_get_image(context: Context): Image {.importc: "pixie_context_get_image", cdecl.}
 
@@ -1434,42 +1470,6 @@ proc pixie_context_is_point_in_stroke(ctx: Context, x: float32, y: float32): boo
 
 proc isPointInStroke*(ctx: Context, x: float32, y: float32): bool {.inline.} =
   result = pixie_context_is_point_in_stroke(ctx, x, y)
-  if checkError():
-    raise newException(PixieError, $takeError())
-
-proc pixie_new_image(width: int, height: int): Image {.importc: "pixie_new_image", cdecl.}
-
-proc newImage*(width: int, height: int): Image {.inline.} =
-  result = pixie_new_image(width, height)
-  if checkError():
-    raise newException(PixieError, $takeError())
-
-proc pixie_new_mask(width: int, height: int): Mask {.importc: "pixie_new_mask", cdecl.}
-
-proc newMask*(width: int, height: int): Mask {.inline.} =
-  result = pixie_new_mask(width, height)
-  if checkError():
-    raise newException(PixieError, $takeError())
-
-proc pixie_new_paint(kind: PaintKind): Paint {.importc: "pixie_new_paint", cdecl.}
-
-proc newPaint*(kind: PaintKind): Paint {.inline.} =
-  result = pixie_new_paint(kind)
-
-proc pixie_new_path(): Path {.importc: "pixie_new_path", cdecl.}
-
-proc newPath*(): Path {.inline.} =
-  result = pixie_new_path()
-
-proc pixie_new_span(text: cstring, font: Font): Span {.importc: "pixie_new_span", cdecl.}
-
-proc newSpan*(text: string, font: Font): Span {.inline.} =
-  result = pixie_new_span(text.cstring, font)
-
-proc pixie_new_context(width: int, height: int): Context {.importc: "pixie_new_context", cdecl.}
-
-proc newContext*(width: int, height: int): Context {.inline.} =
-  result = pixie_new_context(width, height)
   if checkError():
     raise newException(PixieError, $takeError())
 
