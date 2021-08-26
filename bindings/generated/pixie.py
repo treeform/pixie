@@ -631,7 +631,7 @@ class Paint(Structure):
             dll.pixie_paint_gradient_handle_positions_clear(self.paint)
 
     @property
-    def paint_gradient_handle_positions(self):
+    def gradient_handle_positions(self):
         return self.PaintGradientHandlePositions(self)
 
     class PaintGradientStops:
@@ -658,7 +658,7 @@ class Paint(Structure):
             dll.pixie_paint_gradient_stops_clear(self.paint)
 
     @property
-    def paint_gradient_stops(self):
+    def gradient_stops(self):
         return self.PaintGradientStops(self)
 
     def new_paint(self):
@@ -858,7 +858,7 @@ class Font(Structure):
             dll.pixie_font_paints_clear(self.font)
 
     @property
-    def font_paints(self):
+    def paints(self):
         return self.FontPaints(self)
 
     @property

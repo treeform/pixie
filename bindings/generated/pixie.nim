@@ -1521,3 +1521,4 @@ proc pixie_angle_to_miter_limit(angle: float32): float32 {.importc: "pixie_angle
 
 proc angleToMiterLimit*(angle: float32): float32 {.inline.} =
   result = pixie_angle_to_miter_limit(angle)
+
