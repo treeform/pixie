@@ -1,10 +1,6 @@
-import bumpy, chroma, os, unicode, vmath
+import bumpy, chroma, unicode, vmath
 
 export bumpy, chroma, unicode, vmath
-
-let
-  srcPath = currentSourcePath()
-  srcDir = srcPath.parentDir()
 
 when defined(windows):
   const dllPath = "pixie.dll"
@@ -13,7 +9,7 @@ elif defined(macosx):
 else:
   const dllPath = "libpixie.so"
 
-{.push dynlib: srcDir / dllPath.}
+{.push dynlib: dllPath.}
 
 type PixieError = object of ValueError
 
