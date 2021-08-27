@@ -6,12 +6,12 @@ src_path = Path(__file__).resolve()
 src_dir = str(src_path.parent)
 
 if sys.platform == "win32":
-  libPath = "pixie.dll"
+  libName = "pixie.dll"
 elif sys.platform == "darwin":
-  libPath = "libpixie.dylib"
+  libName = "libpixie.dylib"
 else:
-  libPath = "libpixie.so"
-dll = cdll.LoadLibrary(src_dir + "/" + libPath)
+  libName = "libpixie.so"
+dll = cdll.LoadLibrary(src_dir + "/" + libName)
 
 class PixieError(Exception):
     pass
