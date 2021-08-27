@@ -67,6 +67,12 @@ proc pixie_seq_span_compute_bounds*(spans: SeqSpan): Vec2 {.raises: [], cdecl, e
 proc pixie_image_unref*(x: Image) {.raises: [], cdecl, exportc, dynlib.} =
   GC_unref(x)
 
+proc pixie_new_image*(width: int, height: int): Image {.raises: [], cdecl, exportc, dynlib.} =
+  try:
+    result = newImage(width, height)
+  except PixieError as e:
+    lastError = e
+
 proc pixie_image_get_width*(image: Image): int {.raises: [], cdecl, exportc, dynlib.} =
   image.width
 
@@ -223,6 +229,12 @@ proc pixie_image_new_context*(image: Image): Context {.raises: [], cdecl, export
 proc pixie_mask_unref*(x: Mask) {.raises: [], cdecl, exportc, dynlib.} =
   GC_unref(x)
 
+proc pixie_new_mask*(width: int, height: int): Mask {.raises: [], cdecl, exportc, dynlib.} =
+  try:
+    result = newMask(width, height)
+  except PixieError as e:
+    lastError = e
+
 proc pixie_mask_get_width*(mask: Mask): int {.raises: [], cdecl, exportc, dynlib.} =
   mask.width
 
@@ -343,6 +355,9 @@ proc pixie_mask_stroke_path*(mask: Mask, path: Path, transform: Mat3, stroke_wid
 proc pixie_paint_unref*(x: Paint) {.raises: [], cdecl, exportc, dynlib.} =
   GC_unref(x)
 
+proc pixie_new_paint*(kind: PaintKind): Paint {.raises: [], cdecl, exportc, dynlib.} =
+  newPaint(kind)
+
 proc pixie_paint_get_kind*(paint: Paint): PaintKind {.raises: [], cdecl, exportc, dynlib.} =
   paint.kind
 
@@ -420,6 +435,9 @@ proc pixie_paint_new_paint*(paint: Paint): Paint {.raises: [], cdecl, exportc, d
 
 proc pixie_path_unref*(x: Path) {.raises: [], cdecl, exportc, dynlib.} =
   GC_unref(x)
+
+proc pixie_new_path*(): Path {.raises: [], cdecl, exportc, dynlib.} =
+  newPath()
 
 proc pixie_path_transform*(path: Path, mat: Mat3) {.raises: [], cdecl, exportc, dynlib.} =
   transform(path, mat)
@@ -604,6 +622,9 @@ proc pixie_font_compute_bounds*(font: Font, text: cstring): Vec2 {.raises: [], c
 proc pixie_span_unref*(x: Span) {.raises: [], cdecl, exportc, dynlib.} =
   GC_unref(x)
 
+proc pixie_new_span*(text: cstring, font: Font): Span {.raises: [], cdecl, exportc, dynlib.} =
+  newSpan(text.`$`, font)
+
 proc pixie_span_get_text*(span: Span): cstring {.raises: [], cdecl, exportc, dynlib.} =
   span.text.cstring
 
@@ -624,6 +645,12 @@ proc pixie_arrangement_compute_bounds*(arrangement: Arrangement): Vec2 {.raises:
 
 proc pixie_context_unref*(x: Context) {.raises: [], cdecl, exportc, dynlib.} =
   GC_unref(x)
+
+proc pixie_new_context*(width: int, height: int): Context {.raises: [], cdecl, exportc, dynlib.} =
+  try:
+    result = newContext(width, height)
+  except PixieError as e:
+    lastError = e
 
 proc pixie_context_get_image*(context: Context): Image {.raises: [], cdecl, exportc, dynlib.} =
   context.image
@@ -690,24 +717,6 @@ proc pixie_context_get_text_align*(context: Context): HorizontalAlignment {.rais
 
 proc pixie_context_set_text_align*(context: Context, textAlign: HorizontalAlignment) {.raises: [], cdecl, exportc, dynlib.} =
   context.textAlign = textAlign
-
-proc pixie_context_line_dash_len*(context: Context): int {.raises: [], cdecl, exportc, dynlib.} =
-  context.lineDash.len
-
-proc pixie_context_line_dash_add*(context: Context, v: float32) {.raises: [], cdecl, exportc, dynlib.} =
-  context.lineDash.add(v)
-
-proc pixie_context_line_dash_get*(context: Context, i: int): float32 {.raises: [], cdecl, exportc, dynlib.} =
-  context.lineDash[i]
-
-proc pixie_context_line_dash_set*(context: Context, i: int, v: float32) {.raises: [], cdecl, exportc, dynlib.} =
-  context.lineDash[i] = v
-
-proc pixie_context_line_dash_remove*(context: Context, i: int) {.raises: [], cdecl, exportc, dynlib.} =
-  context.lineDash.delete(i)
-
-proc pixie_context_line_dash_clear*(context: Context) {.raises: [], cdecl, exportc, dynlib.} =
-  context.lineDash.setLen(0)
 
 proc pixie_context_save*(ctx: Context) {.raises: [], cdecl, exportc, dynlib.} =
   try:
@@ -892,33 +901,6 @@ proc pixie_context_is_point_in_path*(ctx: Context, x: float32, y: float32, windi
 proc pixie_context_is_point_in_stroke*(ctx: Context, x: float32, y: float32): bool {.raises: [], cdecl, exportc, dynlib.} =
   try:
     result = isPointInStroke(ctx, x, y)
-  except PixieError as e:
-    lastError = e
-
-proc pixie_new_image*(width: int, height: int): Image {.raises: [], cdecl, exportc, dynlib.} =
-  try:
-    result = newImage(width, height)
-  except PixieError as e:
-    lastError = e
-
-proc pixie_new_mask*(width: int, height: int): Mask {.raises: [], cdecl, exportc, dynlib.} =
-  try:
-    result = newMask(width, height)
-  except PixieError as e:
-    lastError = e
-
-proc pixie_new_paint*(kind: PaintKind): Paint {.raises: [], cdecl, exportc, dynlib.} =
-  newPaint(kind)
-
-proc pixie_new_path*(): Path {.raises: [], cdecl, exportc, dynlib.} =
-  newPath()
-
-proc pixie_new_span*(text: cstring, font: Font): Span {.raises: [], cdecl, exportc, dynlib.} =
-  newSpan(text.`$`, font)
-
-proc pixie_new_context*(width: int, height: int): Context {.raises: [], cdecl, exportc, dynlib.} =
-  try:
-    result = newContext(width, height)
   except PixieError as e:
     lastError = e
 

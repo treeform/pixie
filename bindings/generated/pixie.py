@@ -1,6 +1,17 @@
 from ctypes import *
+import os, sys
+from pathlib import Path
 
-dll = cdll.LoadLibrary("pixie.dll")
+src_path = Path(__file__).resolve()
+src_dir = str(src_path.parent)
+
+if sys.platform == "win32":
+  dllPath = "pixie.dll"
+elif sys.platform == "darwin":
+  dllPath = "libpixie.dylib"
+else:
+  dllPath = "libpixie.so"
+dll = cdll.LoadLibrary(src_dir + "/" + dllPath)
 
 class PixieError(Exception):
     pass
@@ -263,6 +274,12 @@ class Image(Structure):
     def __del__(self):
         dll.pixie_image_unref(self)
 
+    def __init__(self, width, height):
+        result = dll.pixie_new_image(width, height)
+        if check_error():
+            raise PixieError(take_error())
+        self.ref = result
+
     @property
     def width(self):
         return dll.pixie_image_get_width(self)
@@ -424,6 +441,12 @@ class Mask(Structure):
     def __del__(self):
         dll.pixie_mask_unref(self)
 
+    def __init__(self, width, height):
+        result = dll.pixie_new_mask(width, height)
+        if check_error():
+            raise PixieError(take_error())
+        self.ref = result
+
     @property
     def width(self):
         return dll.pixie_mask_get_width(self)
@@ -548,6 +571,10 @@ class Paint(Structure):
     def __del__(self):
         dll.pixie_paint_unref(self)
 
+    def __init__(self, kind):
+        result = dll.pixie_new_paint(kind)
+        self.ref = result
+
     @property
     def kind(self):
         return dll.pixie_paint_get_kind(self)
@@ -596,7 +623,7 @@ class Paint(Structure):
     def image_mat(self, image_mat):
         dll.pixie_paint_set_image_mat(self, image_mat)
 
-    class GradientHandlePositions:
+    class PaintGradientHandlePositions:
 
         def __init__(self, paint):
             self.paint = paint
@@ -621,9 +648,9 @@ class Paint(Structure):
 
     @property
     def gradient_handle_positions(self):
-        return self.GradientHandlePositions(self)
+        return self.PaintGradientHandlePositions(self)
 
-    class GradientStops:
+    class PaintGradientStops:
 
         def __init__(self, paint):
             self.paint = paint
@@ -648,7 +675,7 @@ class Paint(Structure):
 
     @property
     def gradient_stops(self):
-        return self.GradientStops(self)
+        return self.PaintGradientStops(self)
 
     def new_paint(self):
         result = dll.pixie_paint_new_paint(self)
@@ -665,6 +692,10 @@ class Path(Structure):
 
     def __del__(self):
         dll.pixie_path_unref(self)
+
+    def __init__(self):
+        result = dll.pixie_new_path()
+        self.ref = result
 
     def transform(self, mat):
         dll.pixie_path_transform(self, mat)
@@ -823,7 +854,7 @@ class Font(Structure):
     def line_height(self, line_height):
         dll.pixie_font_set_line_height(self, line_height)
 
-    class Paints:
+    class FontPaints:
 
         def __init__(self, font):
             self.font = font
@@ -848,7 +879,7 @@ class Font(Structure):
 
     @property
     def paints(self):
-        return self.Paints(self)
+        return self.FontPaints(self)
 
     @property
     def text_case(self):
@@ -910,6 +941,10 @@ class Span(Structure):
     def __del__(self):
         dll.pixie_span_unref(self)
 
+    def __init__(self, text, font):
+        result = dll.pixie_new_span(text.encode("utf8"), font)
+        self.ref = result
+
     @property
     def text(self):
         return dll.pixie_span_get_text(self).decode("utf8")
@@ -953,6 +988,12 @@ class Context(Structure):
 
     def __del__(self):
         dll.pixie_context_unref(self)
+
+    def __init__(self, width, height):
+        result = dll.pixie_new_context(width, height)
+        if check_error():
+            raise PixieError(take_error())
+        self.ref = result
 
     @property
     def image(self):
@@ -1041,33 +1082,6 @@ class Context(Structure):
     @text_align.setter
     def text_align(self, text_align):
         dll.pixie_context_set_text_align(self, text_align)
-
-    class LineDash:
-
-        def __init__(self, context):
-            self.context = context
-
-        def __len__(self):
-            return dll.pixie_context_line_dash_len(self.context)
-
-        def __getitem__(self, index):
-            return dll.pixie_context_line_dash_get(self.context, index)
-
-        def __setitem__(self, index, value):
-            dll.pixie_context_line_dash_set(self.context, index, value)
-
-        def __delitem__(self, index):
-            dll.pixie_context_line_dash_remove(self.context, index)
-
-        def append(self, value):
-            dll.pixie_context_line_dash_add(self.context, value)
-
-        def clear(self):
-            dll.pixie_context_line_dash_clear(self.context)
-
-    @property
-    def line_dash(self):
-        return self.LineDash(self)
 
     def save(self):
         dll.pixie_context_save(self)
@@ -1237,36 +1251,6 @@ class Context(Structure):
             raise PixieError(take_error())
         return result
 
-def new_image(width, height):
-    result = dll.pixie_new_image(width, height)
-    if check_error():
-        raise PixieError(take_error())
-    return result
-
-def new_mask(width, height):
-    result = dll.pixie_new_mask(width, height)
-    if check_error():
-        raise PixieError(take_error())
-    return result
-
-def new_paint(kind):
-    result = dll.pixie_new_paint(kind)
-    return result
-
-def new_path():
-    result = dll.pixie_new_path()
-    return result
-
-def new_span(text, font):
-    result = dll.pixie_new_span(text.encode("utf8"), font)
-    return result
-
-def new_context(width, height):
-    result = dll.pixie_new_context(width, height)
-    if check_error():
-        raise PixieError(take_error())
-    return result
-
 def read_image(file_path):
     result = dll.pixie_read_image(file_path.encode("utf8"))
     if check_error():
@@ -1368,6 +1352,9 @@ dll.pixie_seq_span_compute_bounds.restype = Vector2
 dll.pixie_image_unref.argtypes = [Image]
 dll.pixie_image_unref.restype = None
 
+dll.pixie_new_image.argtypes = []
+dll.pixie_new_image.restype = c_ulonglong
+
 dll.pixie_image_get_width.argtypes = [Image]
 dll.pixie_image_get_width.restype = c_longlong
 
@@ -1467,6 +1454,9 @@ dll.pixie_image_new_context.restype = Context
 dll.pixie_mask_unref.argtypes = [Mask]
 dll.pixie_mask_unref.restype = None
 
+dll.pixie_new_mask.argtypes = []
+dll.pixie_new_mask.restype = c_ulonglong
+
 dll.pixie_mask_get_width.argtypes = [Mask]
 dll.pixie_mask_get_width.restype = c_longlong
 
@@ -1545,6 +1535,9 @@ dll.pixie_mask_stroke_path.restype = None
 dll.pixie_paint_unref.argtypes = [Paint]
 dll.pixie_paint_unref.restype = None
 
+dll.pixie_new_paint.argtypes = []
+dll.pixie_new_paint.restype = c_ulonglong
+
 dll.pixie_paint_get_kind.argtypes = [Paint]
 dll.pixie_paint_get_kind.restype = PaintKind
 
@@ -1622,6 +1615,9 @@ dll.pixie_paint_new_paint.restype = Paint
 
 dll.pixie_path_unref.argtypes = [Path]
 dll.pixie_path_unref.restype = None
+
+dll.pixie_new_path.argtypes = []
+dll.pixie_new_path.restype = c_ulonglong
 
 dll.pixie_path_transform.argtypes = [Path, Matrix3]
 dll.pixie_path_transform.restype = None
@@ -1788,6 +1784,9 @@ dll.pixie_font_compute_bounds.restype = Vector2
 dll.pixie_span_unref.argtypes = [Span]
 dll.pixie_span_unref.restype = None
 
+dll.pixie_new_span.argtypes = []
+dll.pixie_new_span.restype = c_ulonglong
+
 dll.pixie_span_get_text.argtypes = [Span]
 dll.pixie_span_get_text.restype = c_char_p
 
@@ -1808,6 +1807,9 @@ dll.pixie_arrangement_compute_bounds.restype = Vector2
 
 dll.pixie_context_unref.argtypes = [Context]
 dll.pixie_context_unref.restype = None
+
+dll.pixie_new_context.argtypes = []
+dll.pixie_new_context.restype = c_ulonglong
 
 dll.pixie_context_get_image.argtypes = [Context]
 dll.pixie_context_get_image.restype = Image
@@ -1874,24 +1876,6 @@ dll.pixie_context_get_text_align.restype = HorizontalAlignment
 
 dll.pixie_context_set_text_align.argtypes = [Context, HorizontalAlignment]
 dll.pixie_context_set_text_align.restype = None
-
-dll.pixie_context_line_dash_len.argtypes = [Context]
-dll.pixie_context_line_dash_len.restype = c_longlong
-
-dll.pixie_context_line_dash_get.argtypes = [Context, c_longlong]
-dll.pixie_context_line_dash_get.restype = c_float
-
-dll.pixie_context_line_dash_set.argtypes = [Context, c_longlong, c_float]
-dll.pixie_context_line_dash_set.restype = None
-
-dll.pixie_context_line_dash_remove.argtypes = [Context, c_longlong]
-dll.pixie_context_line_dash_remove.restype = None
-
-dll.pixie_context_line_dash_add.argtypes = [Context, c_float]
-dll.pixie_context_line_dash_add.restype = None
-
-dll.pixie_context_line_dash_clear.argtypes = [Context]
-dll.pixie_context_line_dash_clear.restype = None
 
 dll.pixie_context_save.argtypes = [Context]
 dll.pixie_context_save.restype = None
@@ -2012,24 +1996,6 @@ dll.pixie_context_is_point_in_path.restype = c_bool
 
 dll.pixie_context_is_point_in_stroke.argtypes = [Context, c_float, c_float]
 dll.pixie_context_is_point_in_stroke.restype = c_bool
-
-dll.pixie_new_image.argtypes = [c_longlong, c_longlong]
-dll.pixie_new_image.restype = Image
-
-dll.pixie_new_mask.argtypes = [c_longlong, c_longlong]
-dll.pixie_new_mask.restype = Mask
-
-dll.pixie_new_paint.argtypes = [PaintKind]
-dll.pixie_new_paint.restype = Paint
-
-dll.pixie_new_path.argtypes = []
-dll.pixie_new_path.restype = Path
-
-dll.pixie_new_span.argtypes = [c_char_p, Font]
-dll.pixie_new_span.restype = Span
-
-dll.pixie_new_context.argtypes = [c_longlong, c_longlong]
-dll.pixie_new_context.restype = Context
 
 dll.pixie_read_image.argtypes = [c_char_p]
 dll.pixie_read_image.restype = Image
