@@ -6,15 +6,19 @@ src_path = Path(__file__).resolve()
 src_dir = str(src_path.parent)
 
 if sys.platform == "win32":
-  dllPath = "pixie.dll"
+  libPath = "pixie.dll"
 elif sys.platform == "darwin":
-  dllPath = "libpixie.dylib"
+  libPath = "libpixie.dylib"
 else:
-  dllPath = "libpixie.so"
-dll = cdll.LoadLibrary(src_dir + "/" + dllPath)
+  libPath = "libpixie.so"
+dll = cdll.LoadLibrary(src_dir + "/" + libPath)
 
 class PixieError(Exception):
     pass
+
+DEFAULT_MITER_LIMIT = 4.0
+
+AUTO_LINE_HEIGHT = -1.0
 
 FileFormat = c_byte
 FF_PNG = 0
@@ -213,7 +217,7 @@ class SeqFloat32(Structure):
         dll.pixie_seq_float_32_set(self, index, value)
 
     def __delitem__(self, index):
-        dll.pixie_seq_float_32_remove(self, index)
+        dll.pixie_seq_float_32_delete(self, index)
 
     def append(self, value):
         dll.pixie_seq_float_32_add(self, value)
@@ -246,7 +250,7 @@ class SeqSpan(Structure):
         dll.pixie_seq_span_set(self, index, value)
 
     def __delitem__(self, index):
-        dll.pixie_seq_span_remove(self, index)
+        dll.pixie_seq_span_delete(self, index)
 
     def append(self, value):
         dll.pixie_seq_span_add(self, value)
@@ -638,7 +642,7 @@ class Paint(Structure):
             dll.pixie_paint_gradient_handle_positions_set(self.paint, index, value)
 
         def __delitem__(self, index):
-            dll.pixie_paint_gradient_handle_positions_remove(self.paint, index)
+            dll.pixie_paint_gradient_handle_positions_delete(self.paint, index)
 
         def append(self, value):
             dll.pixie_paint_gradient_handle_positions_add(self.paint, value)
@@ -665,7 +669,7 @@ class Paint(Structure):
             dll.pixie_paint_gradient_stops_set(self.paint, index, value)
 
         def __delitem__(self, index):
-            dll.pixie_paint_gradient_stops_remove(self.paint, index)
+            dll.pixie_paint_gradient_stops_delete(self.paint, index)
 
         def append(self, value):
             dll.pixie_paint_gradient_stops_add(self.paint, value)
@@ -869,7 +873,7 @@ class Font(Structure):
             dll.pixie_font_paints_set(self.font, index, value)
 
         def __delitem__(self, index):
-            dll.pixie_font_paints_remove(self.font, index)
+            dll.pixie_font_paints_delete(self.font, index)
 
         def append(self, value):
             dll.pixie_font_paints_add(self.font, value)
@@ -1310,8 +1314,8 @@ dll.pixie_seq_float_32_get.restype = c_float
 dll.pixie_seq_float_32_set.argtypes = [SeqFloat32, c_longlong, c_float]
 dll.pixie_seq_float_32_set.restype = None
 
-dll.pixie_seq_float_32_remove.argtypes = [SeqFloat32, c_longlong]
-dll.pixie_seq_float_32_remove.restype = None
+dll.pixie_seq_float_32_delete.argtypes = [SeqFloat32, c_longlong]
+dll.pixie_seq_float_32_delete.restype = None
 
 dll.pixie_seq_float_32_add.argtypes = [SeqFloat32, c_float]
 dll.pixie_seq_float_32_add.restype = None
@@ -1334,8 +1338,8 @@ dll.pixie_seq_span_get.restype = Span
 dll.pixie_seq_span_set.argtypes = [SeqSpan, c_longlong, Span]
 dll.pixie_seq_span_set.restype = None
 
-dll.pixie_seq_span_remove.argtypes = [SeqSpan, c_longlong]
-dll.pixie_seq_span_remove.restype = None
+dll.pixie_seq_span_delete.argtypes = [SeqSpan, c_longlong]
+dll.pixie_seq_span_delete.restype = None
 
 dll.pixie_seq_span_add.argtypes = [SeqSpan, Span]
 dll.pixie_seq_span_add.restype = None
@@ -1583,8 +1587,8 @@ dll.pixie_paint_gradient_handle_positions_get.restype = Vector2
 dll.pixie_paint_gradient_handle_positions_set.argtypes = [Paint, c_longlong, Vector2]
 dll.pixie_paint_gradient_handle_positions_set.restype = None
 
-dll.pixie_paint_gradient_handle_positions_remove.argtypes = [Paint, c_longlong]
-dll.pixie_paint_gradient_handle_positions_remove.restype = None
+dll.pixie_paint_gradient_handle_positions_delete.argtypes = [Paint, c_longlong]
+dll.pixie_paint_gradient_handle_positions_delete.restype = None
 
 dll.pixie_paint_gradient_handle_positions_add.argtypes = [Paint, Vector2]
 dll.pixie_paint_gradient_handle_positions_add.restype = None
@@ -1601,8 +1605,8 @@ dll.pixie_paint_gradient_stops_get.restype = ColorStop
 dll.pixie_paint_gradient_stops_set.argtypes = [Paint, c_longlong, ColorStop]
 dll.pixie_paint_gradient_stops_set.restype = None
 
-dll.pixie_paint_gradient_stops_remove.argtypes = [Paint, c_longlong]
-dll.pixie_paint_gradient_stops_remove.restype = None
+dll.pixie_paint_gradient_stops_delete.argtypes = [Paint, c_longlong]
+dll.pixie_paint_gradient_stops_delete.restype = None
 
 dll.pixie_paint_gradient_stops_add.argtypes = [Paint, ColorStop]
 dll.pixie_paint_gradient_stops_add.restype = None
@@ -1736,8 +1740,8 @@ dll.pixie_font_paints_get.restype = Paint
 dll.pixie_font_paints_set.argtypes = [Font, c_longlong, Paint]
 dll.pixie_font_paints_set.restype = None
 
-dll.pixie_font_paints_remove.argtypes = [Font, c_longlong]
-dll.pixie_font_paints_remove.restype = None
+dll.pixie_font_paints_delete.argtypes = [Font, c_longlong]
+dll.pixie_font_paints_delete.restype = None
 
 dll.pixie_font_paints_add.argtypes = [Font, Paint]
 dll.pixie_font_paints_add.restype = None
@@ -2017,4 +2021,3 @@ dll.pixie_miter_limit_to_angle.restype = c_float
 
 dll.pixie_angle_to_miter_limit.argtypes = [c_float]
 dll.pixie_angle_to_miter_limit.restype = c_float
-

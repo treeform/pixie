@@ -34,6 +34,11 @@ proc drawImage3*(
 ) {.raises: [PixieError].} =
   ctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)
 
+exportConsts:
+  export
+    defaultMiterLimit,
+    autoLineHeight
+
 exportEnums:
   export
     FileFormat,
