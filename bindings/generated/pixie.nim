@@ -83,12 +83,6 @@ type TextCase* = enum
   tcLower
   tcTitle
 
-type Rect* = object
-  x*: float32
-  y*: float32
-  w*: float32
-  h*: float32
-
 type ColorStop* = object
   color*: Color
   position*: float32

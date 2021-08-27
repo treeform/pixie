@@ -86,6 +86,14 @@ TC_UPPER = 1
 TC_LOWER = 2
 TC_TITLE = 3
 
+def check_error():
+    result = dll.pixie_check_error()
+    return result
+
+def take_error():
+    result = dll.pixie_take_error().decode("utf8")
+    return result
+
 class Vector2(Structure):
     _fields_ = [
         ("x", c_float),
@@ -93,8 +101,9 @@ class Vector2(Structure):
     ]
 
     def __init__(self, x, y):
-        self.x = x
-        self.y = y
+        tmp = dll.pixie_vector_2(x, y)
+        self.x = tmp.x
+        self.y = tmp.y
 
     def __eq__(self, obj):
         self.x == obj.x and self.y == obj.y
@@ -112,16 +121,17 @@ class Matrix3(Structure):
         ("i", c_float)
     ]
 
-    def __init__(self, a, b, c, d, e, f, g, h, i):
-        self.a = a
-        self.b = b
-        self.c = c
-        self.d = d
-        self.e = e
-        self.f = f
-        self.g = g
-        self.h = h
-        self.i = i
+    def __init__(self):
+        tmp = dll.pixie_matrix_3()
+        self.a = tmp.a
+        self.b = tmp.b
+        self.c = tmp.c
+        self.d = tmp.d
+        self.e = tmp.e
+        self.f = tmp.f
+        self.g = tmp.g
+        self.h = tmp.h
+        self.i = tmp.i
 
     def __eq__(self, obj):
         self.a == obj.a and self.b == obj.b and self.c == obj.c and self.d == obj.d and self.e == obj.e and self.f == obj.f and self.g == obj.g and self.h == obj.h and self.i == obj.i
@@ -134,12 +144,6 @@ class Rect(Structure):
         ("h", c_float)
     ]
 
-    def __init__(self, x, y, w, h):
-        self.x = x
-        self.y = y
-        self.w = w
-        self.h = h
-
     def __eq__(self, obj):
         self.x == obj.x and self.y == obj.y and self.w == obj.w and self.h == obj.h
 
@@ -151,12 +155,6 @@ class Color(Structure):
         ("a", c_float)
     ]
 
-    def __init__(self, r, g, b, a):
-        self.r = r
-        self.g = g
-        self.b = b
-        self.a = a
-
     def __eq__(self, obj):
         self.r == obj.r and self.g == obj.g and self.b == obj.b and self.a == obj.a
 
@@ -166,10 +164,6 @@ class ColorStop(Structure):
         ("position", c_float)
     ]
 
-    def __init__(self, color, position):
-        self.color = color
-        self.position = position
-
     def __eq__(self, obj):
         self.color == obj.color and self.position == obj.position
 
@@ -178,19 +172,8 @@ class TextMetrics(Structure):
         ("width", c_float)
     ]
 
-    def __init__(self, width):
-        self.width = width
-
     def __eq__(self, obj):
         self.width == obj.width
-
-def check_error():
-    result = dll.pixie_check_error()
-    return result
-
-def take_error():
-    result = dll.pixie_take_error().decode("utf8")
-    return result
 
 class SeqFloat32(Structure):
     _fields_ = [("ref", c_ulonglong)]
@@ -1299,6 +1282,12 @@ dll.pixie_check_error.restype = c_bool
 dll.pixie_take_error.argtypes = []
 dll.pixie_take_error.restype = c_char_p
 
+dll.pixie_vector_2.argtypes = [c_float, c_float]
+dll.pixie_vector_2.restype = Vector2
+
+dll.pixie_matrix_3.argtypes = []
+dll.pixie_matrix_3.restype = Matrix3
+
 dll.pixie_seq_float_32_unref.argtypes = [SeqFloat32]
 dll.pixie_seq_float_32_unref.restype = None
 
@@ -2021,3 +2010,4 @@ dll.pixie_miter_limit_to_angle.restype = c_float
 
 dll.pixie_angle_to_miter_limit.argtypes = [c_float]
 dll.pixie_angle_to_miter_limit.restype = c_float
+
