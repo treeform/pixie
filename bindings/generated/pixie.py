@@ -2210,3 +2210,4 @@ dll.pixie_miter_limit_to_angle.restype = c_float
 
 dll.pixie_angle_to_miter_limit.argtypes = [c_float]
 dll.pixie_angle_to_miter_limit.restype = c_float
+
