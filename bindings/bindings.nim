@@ -77,7 +77,7 @@ exportObject Color:
   discard
 
 exportObject ColorStop:
-  discard
+  discard colorStop(Color(), 0)
 
 exportObject TextMetrics:
   discard

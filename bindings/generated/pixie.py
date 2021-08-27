@@ -164,6 +164,11 @@ class ColorStop(Structure):
         ("position", c_float)
     ]
 
+    def __init__(self, color, position):
+        tmp = dll.pixie_color_stop(color, position)
+        self.color = tmp.color
+        self.position = tmp.position
+
     def __eq__(self, obj):
         self.color == obj.color and self.position == obj.position
 
@@ -1287,6 +1292,9 @@ dll.pixie_vector_2.restype = Vector2
 
 dll.pixie_matrix_3.argtypes = []
 dll.pixie_matrix_3.restype = Matrix3
+
+dll.pixie_color_stop.argtypes = [Color, c_float]
+dll.pixie_color_stop.restype = ColorStop
 
 dll.pixie_seq_float_32_unref.argtypes = [SeqFloat32]
 dll.pixie_seq_float_32_unref.restype = None

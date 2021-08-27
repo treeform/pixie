@@ -10,6 +10,9 @@ proc pixie_vector_2*(x: float32, y: float32): Vector2 {.raises: [], cdecl, expor
 proc pixie_matrix_3*(): Matrix3 {.raises: [], cdecl, exportc, dynlib.} =
   matrix3()
 
+proc pixie_color_stop*(color: Color, position: float32): ColorStop {.raises: [], cdecl, exportc, dynlib.} =
+  colorStop(color, position)
+
 type SeqFloat32* = ref object
   s: seq[float32]
 
