@@ -64,11 +64,9 @@ exportProcs:
 
 exportObject Vector2:
   discard vector2(0, 0)
-  discard
 
 exportObject Matrix3:
   discard matrix3()
-  discard
 
 exportObject Rect:
   discard
