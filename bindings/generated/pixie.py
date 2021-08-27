@@ -246,7 +246,15 @@ class SeqSpan(Structure):
     def clear(self):
         dll.pixie_seq_span_clear(self)
 
-    def typeset(self, bounds, h_align, v_align, wrap):
+    def typeset(self, bounds = None, h_align = None, v_align = None, wrap = None):
+        if bounds is None:
+            bounds = Vector2(0, 0)
+        if h_align is None:
+            h_align = HA_LEFT
+        if v_align is None:
+            v_align = VA_TOP
+        if wrap is None:
+            wrap = True
         result = dll.pixie_seq_span_typeset(self, bounds, h_align, v_align, wrap)
         return result
 
@@ -325,13 +333,17 @@ class Image(Structure):
             raise PixieError(take_error())
         return result
 
-    def minify_by_2(self, power):
+    def minify_by_2(self, power = None):
+        if power is None:
+            power = 1
         result = dll.pixie_image_minify_by_2(self, power)
         if check_error():
             raise PixieError(take_error())
         return result
 
-    def magnify_by_2(self, power):
+    def magnify_by_2(self, power = None):
+        if power is None:
+            power = 1
         result = dll.pixie_image_magnify_by_2(self, power)
         if check_error():
             raise PixieError(take_error())
@@ -343,7 +355,9 @@ class Image(Structure):
     def invert(self):
         dll.pixie_image_invert(self)
 
-    def blur(self, radius, out_of_bounds):
+    def blur(self, radius, out_of_bounds = None):
+        if out_of_bounds is None:
+            out_of_bounds = Color()
         dll.pixie_image_blur(self, radius, out_of_bounds)
         if check_error():
             raise PixieError(take_error())
@@ -372,12 +386,20 @@ class Image(Structure):
             raise PixieError(take_error())
         return result
 
-    def mask_draw(self, mask, transform, blend_mode):
+    def mask_draw(self, mask, transform = None, blend_mode = None):
+        if transform is None:
+            transform = Matrix3()
+        if blend_mode is None:
+            blend_mode = BM_MASK
         dll.pixie_image_mask_draw(self, mask, transform, blend_mode)
         if check_error():
             raise PixieError(take_error())
 
-    def image_draw(self, b, transform, blend_mode):
+    def image_draw(self, b, transform = None, blend_mode = None):
+        if transform is None:
+            transform = Matrix3()
+        if blend_mode is None:
+            blend_mode = BM_NORMAL
         dll.pixie_image_image_draw(self, b, transform, blend_mode)
         if check_error():
             raise PixieError(take_error())
@@ -387,32 +409,88 @@ class Image(Structure):
         if check_error():
             raise PixieError(take_error())
 
-    def arrangement_fill_text(self, arrangement, transform):
+    def arrangement_fill_text(self, arrangement, transform = None):
+        if transform is None:
+            transform = Matrix3()
         dll.pixie_image_arrangement_fill_text(self, arrangement, transform)
         if check_error():
             raise PixieError(take_error())
 
-    def font_fill_text(self, font, text, transform, bounds, h_align, v_align):
+    def font_fill_text(self, font, text, transform = None, bounds = None, h_align = None, v_align = None):
+        if transform is None:
+            transform = Matrix3()
+        if bounds is None:
+            bounds = Vector2(0, 0)
+        if h_align is None:
+            h_align = HA_LEFT
+        if v_align is None:
+            v_align = VA_TOP
         dll.pixie_image_font_fill_text(self, font, text.encode("utf8"), transform, bounds, h_align, v_align)
         if check_error():
             raise PixieError(take_error())
 
-    def arrangement_stroke_text(self, arrangement, transform, stroke_width, line_cap, line_join, miter_limit, dashes):
+    def arrangement_stroke_text(self, arrangement, transform = None, stroke_width = None, line_cap = None, line_join = None, miter_limit = None, dashes = None):
+        if transform is None:
+            transform = Matrix3()
+        if stroke_width is None:
+            stroke_width = 1.0
+        if line_cap is None:
+            line_cap = LC_BUTT
+        if line_join is None:
+            line_join = LJ_MITER
+        if miter_limit is None:
+            miter_limit = DEFAULT_MITER_LIMIT
+        if dashes is None:
+            dashes = SeqFloat32()
         dll.pixie_image_arrangement_stroke_text(self, arrangement, transform, stroke_width, line_cap, line_join, miter_limit, dashes)
         if check_error():
             raise PixieError(take_error())
 
-    def font_stroke_text(self, font, text, transform, stroke_width, bounds, h_align, v_align, line_cap, line_join, miter_limit, dashes):
+    def font_stroke_text(self, font, text, transform = None, stroke_width = None, bounds = None, h_align = None, v_align = None, line_cap = None, line_join = None, miter_limit = None, dashes = None):
+        if transform is None:
+            transform = Matrix3()
+        if stroke_width is None:
+            stroke_width = 1.0
+        if bounds is None:
+            bounds = Vector2(0, 0)
+        if h_align is None:
+            h_align = HA_LEFT
+        if v_align is None:
+            v_align = VA_TOP
+        if line_cap is None:
+            line_cap = LC_BUTT
+        if line_join is None:
+            line_join = LJ_MITER
+        if miter_limit is None:
+            miter_limit = DEFAULT_MITER_LIMIT
+        if dashes is None:
+            dashes = SeqFloat32()
         dll.pixie_image_font_stroke_text(self, font, text.encode("utf8"), transform, stroke_width, bounds, h_align, v_align, line_cap, line_join, miter_limit, dashes)
         if check_error():
             raise PixieError(take_error())
 
-    def fill_path(self, path, paint, transform, winding_rule):
+    def fill_path(self, path, paint, transform = None, winding_rule = None):
+        if transform is None:
+            transform = Matrix3()
+        if winding_rule is None:
+            winding_rule = WR_NON_ZERO
         dll.pixie_image_fill_path(self, path, paint, transform, winding_rule)
         if check_error():
             raise PixieError(take_error())
 
-    def stroke_path(self, path, paint, transform, stroke_width, line_cap, line_join, miter_limit, dashes):
+    def stroke_path(self, path, paint, transform = None, stroke_width = None, line_cap = None, line_join = None, miter_limit = None, dashes = None):
+        if transform is None:
+            transform = Matrix3()
+        if stroke_width is None:
+            stroke_width = 1.0
+        if line_cap is None:
+            line_cap = LC_BUTT
+        if line_join is None:
+            line_join = LJ_MITER
+        if miter_limit is None:
+            miter_limit = DEFAULT_MITER_LIMIT
+        if dashes is None:
+            dashes = SeqFloat32()
         dll.pixie_image_stroke_path(self, path, paint, transform, stroke_width, line_cap, line_join, miter_limit, dashes)
         if check_error():
             raise PixieError(take_error())
@@ -480,7 +558,9 @@ class Mask(Structure):
     def fill(self, value):
         dll.pixie_mask_fill(self, value)
 
-    def minify_by_2(self, power):
+    def minify_by_2(self, power = None):
+        if power is None:
+            power = 1
         result = dll.pixie_mask_minify_by_2(self, power)
         if check_error():
             raise PixieError(take_error())
@@ -506,47 +586,117 @@ class Mask(Structure):
     def invert(self):
         dll.pixie_mask_invert(self)
 
-    def blur(self, radius, out_of_bounds):
+    def blur(self, radius, out_of_bounds = None):
+        if out_of_bounds is None:
+            out_of_bounds = 0
         dll.pixie_mask_blur(self, radius, out_of_bounds)
         if check_error():
             raise PixieError(take_error())
 
-    def mask_draw(self, b, transform, blend_mode):
+    def mask_draw(self, b, transform = None, blend_mode = None):
+        if transform is None:
+            transform = Matrix3()
+        if blend_mode is None:
+            blend_mode = BM_MASK
         dll.pixie_mask_mask_draw(self, b, transform, blend_mode)
         if check_error():
             raise PixieError(take_error())
 
-    def image_draw(self, image, transform, blend_mode):
+    def image_draw(self, image, transform = None, blend_mode = None):
+        if transform is None:
+            transform = Matrix3()
+        if blend_mode is None:
+            blend_mode = BM_MASK
         dll.pixie_mask_image_draw(self, image, transform, blend_mode)
         if check_error():
             raise PixieError(take_error())
 
-    def arrangement_fill_text(self, arrangement, transform):
+    def arrangement_fill_text(self, arrangement, transform = None):
+        if transform is None:
+            transform = Matrix3()
         dll.pixie_mask_arrangement_fill_text(self, arrangement, transform)
         if check_error():
             raise PixieError(take_error())
 
-    def font_fill_text(self, font, text, transform, bounds, h_align, v_align):
+    def font_fill_text(self, font, text, transform = None, bounds = None, h_align = None, v_align = None):
+        if transform is None:
+            transform = Matrix3()
+        if bounds is None:
+            bounds = Vector2(0, 0)
+        if h_align is None:
+            h_align = HA_LEFT
+        if v_align is None:
+            v_align = VA_TOP
         dll.pixie_mask_font_fill_text(self, font, text.encode("utf8"), transform, bounds, h_align, v_align)
         if check_error():
             raise PixieError(take_error())
 
-    def arrangement_stroke_text(self, arrangement, transform, stroke_width, line_cap, line_join, miter_limit, dashes):
+    def arrangement_stroke_text(self, arrangement, transform = None, stroke_width = None, line_cap = None, line_join = None, miter_limit = None, dashes = None):
+        if transform is None:
+            transform = Matrix3()
+        if stroke_width is None:
+            stroke_width = 1.0
+        if line_cap is None:
+            line_cap = LC_BUTT
+        if line_join is None:
+            line_join = LJ_MITER
+        if miter_limit is None:
+            miter_limit = DEFAULT_MITER_LIMIT
+        if dashes is None:
+            dashes = SeqFloat32()
         dll.pixie_mask_arrangement_stroke_text(self, arrangement, transform, stroke_width, line_cap, line_join, miter_limit, dashes)
         if check_error():
             raise PixieError(take_error())
 
-    def font_stroke_text(self, font, text, transform, stroke_width, bounds, h_align, v_align, line_cap, line_join, miter_limit, dashes):
+    def font_stroke_text(self, font, text, transform = None, stroke_width = None, bounds = None, h_align = None, v_align = None, line_cap = None, line_join = None, miter_limit = None, dashes = None):
+        if transform is None:
+            transform = Matrix3()
+        if stroke_width is None:
+            stroke_width = 1.0
+        if bounds is None:
+            bounds = Vector2(0, 0)
+        if h_align is None:
+            h_align = HA_LEFT
+        if v_align is None:
+            v_align = VA_TOP
+        if line_cap is None:
+            line_cap = LC_BUTT
+        if line_join is None:
+            line_join = LJ_MITER
+        if miter_limit is None:
+            miter_limit = DEFAULT_MITER_LIMIT
+        if dashes is None:
+            dashes = SeqFloat32()
         dll.pixie_mask_font_stroke_text(self, font, text.encode("utf8"), transform, stroke_width, bounds, h_align, v_align, line_cap, line_join, miter_limit, dashes)
         if check_error():
             raise PixieError(take_error())
 
-    def fill_path(self, path, transform, winding_rule, blend_mode):
+    def fill_path(self, path, transform = None, winding_rule = None, blend_mode = None):
+        if transform is None:
+            transform = Matrix3()
+        if winding_rule is None:
+            winding_rule = WR_NON_ZERO
+        if blend_mode is None:
+            blend_mode = BM_NORMAL
         dll.pixie_mask_fill_path(self, path, transform, winding_rule, blend_mode)
         if check_error():
             raise PixieError(take_error())
 
-    def stroke_path(self, path, transform, stroke_width, line_cap, line_join, miter_limit, dashes, blend_mode):
+    def stroke_path(self, path, transform = None, stroke_width = None, line_cap = None, line_join = None, miter_limit = None, dashes = None, blend_mode = None):
+        if transform is None:
+            transform = Matrix3()
+        if stroke_width is None:
+            stroke_width = 1.0
+        if line_cap is None:
+            line_cap = LC_BUTT
+        if line_join is None:
+            line_join = LJ_MITER
+        if miter_limit is None:
+            miter_limit = DEFAULT_MITER_LIMIT
+        if dashes is None:
+            dashes = SeqFloat32()
+        if blend_mode is None:
+            blend_mode = BM_NORMAL
         dll.pixie_mask_stroke_path(self, path, transform, stroke_width, line_cap, line_join, miter_limit, dashes, blend_mode)
         if check_error():
             raise PixieError(take_error())
@@ -698,19 +848,37 @@ class Path(Structure):
     def close_path(self):
         dll.pixie_path_close_path(self)
 
-    def compute_bounds(self, transform):
+    def compute_bounds(self, transform = None):
+        if transform is None:
+            transform = Matrix3()
         result = dll.pixie_path_compute_bounds(self, transform)
         if check_error():
             raise PixieError(take_error())
         return result
 
-    def fill_overlaps(self, test, transform, winding_rule):
+    def fill_overlaps(self, test, transform = None, winding_rule = None):
+        if transform is None:
+            transform = Matrix3()
+        if winding_rule is None:
+            winding_rule = WR_NON_ZERO
         result = dll.pixie_path_fill_overlaps(self, test, transform, winding_rule)
         if check_error():
             raise PixieError(take_error())
         return result
 
-    def stroke_overlaps(self, test, transform, stroke_width, line_cap, line_join, miter_limit, dashes):
+    def stroke_overlaps(self, test, transform = None, stroke_width = None, line_cap = None, line_join = None, miter_limit = None, dashes = None):
+        if transform is None:
+            transform = Matrix3()
+        if stroke_width is None:
+            stroke_width = 1.0
+        if line_cap is None:
+            line_cap = LC_BUTT
+        if line_join is None:
+            line_join = LJ_MITER
+        if miter_limit is None:
+            miter_limit = DEFAULT_MITER_LIMIT
+        if dashes is None:
+            dashes = SeqFloat32()
         result = dll.pixie_path_stroke_overlaps(self, test, transform, stroke_width, line_cap, line_join, miter_limit, dashes)
         if check_error():
             raise PixieError(take_error())
@@ -741,10 +909,14 @@ class Path(Structure):
         if check_error():
             raise PixieError(take_error())
 
-    def rect(self, x, y, w, h, clockwise):
+    def rect(self, x, y, w, h, clockwise = None):
+        if clockwise is None:
+            clockwise = True
         dll.pixie_path_rect(self, x, y, w, h, clockwise)
 
-    def rounded_rect(self, x, y, w, h, nw, ne, se, sw, clockwise):
+    def rounded_rect(self, x, y, w, h, nw, ne, se, sw, clockwise = None):
+        if clockwise is None:
+            clockwise = True
         dll.pixie_path_rounded_rect(self, x, y, w, h, nw, ne, se, sw, clockwise)
 
     def ellipse(self, cx, cy, rx, ry):
@@ -913,7 +1085,15 @@ class Font(Structure):
         result = dll.pixie_font_default_line_height(self)
         return result
 
-    def typeset(self, text, bounds, h_align, v_align, wrap):
+    def typeset(self, text, bounds = None, h_align = None, v_align = None, wrap = None):
+        if bounds is None:
+            bounds = Vector2(0, 0)
+        if h_align is None:
+            h_align = HA_LEFT
+        if v_align is None:
+            v_align = VA_TOP
+        if wrap is None:
+            wrap = True
         result = dll.pixie_font_typeset(self, text.encode("utf8"), bounds, h_align, v_align, wrap)
         return result
 
@@ -1096,22 +1276,30 @@ class Context(Structure):
     def close_path(self):
         dll.pixie_context_close_path(self)
 
-    def path_fill(self, path, winding_rule):
+    def path_fill(self, path, winding_rule = None):
+        if winding_rule is None:
+            winding_rule = WR_NON_ZERO
         dll.pixie_context_path_fill(self, path, winding_rule)
         if check_error():
             raise PixieError(take_error())
 
-    def fill(self, winding_rule):
+    def fill(self, winding_rule = None):
+        if winding_rule is None:
+            winding_rule = WR_NON_ZERO
         dll.pixie_context_winding_rule_fill(self, winding_rule)
         if check_error():
             raise PixieError(take_error())
 
-    def path_clip(self, path, winding_rule):
+    def path_clip(self, path, winding_rule = None):
+        if winding_rule is None:
+            winding_rule = WR_NON_ZERO
         dll.pixie_context_path_clip(self, path, winding_rule)
         if check_error():
             raise PixieError(take_error())
 
-    def clip(self, winding_rule):
+    def clip(self, winding_rule = None):
+        if winding_rule is None:
+            winding_rule = WR_NON_ZERO
         dll.pixie_context_winding_rule_clip(self, winding_rule)
         if check_error():
             raise PixieError(take_error())
@@ -1172,7 +1360,9 @@ class Context(Structure):
     def quadratic_curve_to(self, cpx, cpy, x, y):
         dll.pixie_context_quadratic_curve_to(self, cpx, cpy, x, y)
 
-    def arc(self, x, y, r, a_0, a_1, ccw):
+    def arc(self, x, y, r, a_0, a_1, ccw = None):
+        if ccw is None:
+            ccw = False
         dll.pixie_context_arc(self, x, y, r, a_0, a_1, ccw)
         if check_error():
             raise PixieError(take_error())
@@ -1231,7 +1421,9 @@ class Context(Structure):
     def rotate(self, angle):
         dll.pixie_context_rotate(self, angle)
 
-    def is_point_in_path(self, x, y, winding_rule):
+    def is_point_in_path(self, x, y, winding_rule = None):
+        if winding_rule is None:
+            winding_rule = WR_NON_ZERO
         result = dll.pixie_context_is_point_in_path(self, x, y, winding_rule)
         if check_error():
             raise PixieError(take_error())
@@ -2018,4 +2210,3 @@ dll.pixie_miter_limit_to_angle.restype = c_float
 
 dll.pixie_angle_to_miter_limit.argtypes = [c_float]
 dll.pixie_angle_to_miter_limit.restype = c_float
-
