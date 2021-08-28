@@ -17,4 +17,10 @@ task docs, "Generate API documents":
   exec "nim doc --index:on --project --out:docs --hints:off src/pixie.nim"
 
 task bindings, "Generate bindings":
-  exec "nim c -f -d:release --app:lib --gc:arc --tlsEmulation:off --out:pixie --outdir:bindings/generated bindings/bindings.nim"
+  when defined(windows):
+    const libName = "pixie.dll"
+  elif defined(macosx):
+    const libName = "libpixie.dylib"
+  else:
+    const libName = "libpixie.so"
+  exec "nim c -f -d:release --app:lib --gc:arc --tlsEmulation:off --out:" & libName & " --outdir:bindings/generated bindings/bindings.nim"

@@ -3,7 +3,7 @@ import bumpy, chroma, common, os, pixie/fontformats/opentype,
     pixie/paths, strutils, unicode, vmath
 
 const
-  AutoLineHeight* = -1.float32 ## Use default line height for the font size
+  autoLineHeight*: float32 = -1 ## Use default line height for the font size
   LF = Rune(10)
   SP = Rune(32)
 
@@ -16,7 +16,7 @@ type
   Font* = ref object
     typeface*: Typeface
     size*: float32              ## Font size in pixels.
-    lineHeight*: float32 ## The line height in pixels or AutoLineHeight for the font's default line height.
+    lineHeight*: float32 ## The line height in pixels or autoLineHeight for the font's default line height.
     paints*: seq[Paint]
     textCase*: TextCase
     underline*: bool            ## Apply an underline.
@@ -142,7 +142,7 @@ proc newFont*(typeface: Typeface): Font {.raises: [].} =
   result = Font()
   result.typeface = typeface
   result.size = 12
-  result.lineHeight = AutoLineHeight
+  result.lineHeight = autoLineHeight
   result.paint = newPaint(pkSolid)
   result.paint.color = color(0, 0, 0, 1)
 

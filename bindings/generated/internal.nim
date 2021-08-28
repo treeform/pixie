@@ -4,6 +4,15 @@ proc pixie_check_error*(): bool {.raises: [], cdecl, exportc, dynlib.} =
 proc pixie_take_error*(): cstring {.raises: [], cdecl, exportc, dynlib.} =
   takeError().cstring
 
+proc pixie_vector_2*(x: float32, y: float32): Vector2 {.raises: [], cdecl, exportc, dynlib.} =
+  vector2(x, y)
+
+proc pixie_matrix_3*(): Matrix3 {.raises: [], cdecl, exportc, dynlib.} =
+  matrix3()
+
+proc pixie_color_stop*(color: Color, position: float32): ColorStop {.raises: [], cdecl, exportc, dynlib.} =
+  colorStop(color, position)
+
 type SeqFloat32* = ref object
   s: seq[float32]
 
@@ -22,7 +31,7 @@ proc pixie_seq_float_32_get*(s: SeqFloat32, i: int): float32 {.raises: [], cdecl
 proc pixie_seq_float_32_set*(s: SeqFloat32, i: int, v: float32) {.raises: [], cdecl, exportc, dynlib.} =
   s.s[i] = v
 
-proc pixie_seq_float_32_remove*(s: SeqFloat32, i: int) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_seq_float_32_delete*(s: SeqFloat32, i: int) {.raises: [], cdecl, exportc, dynlib.} =
   s.s.delete(i)
 
 proc pixie_seq_float_32_clear*(s: SeqFloat32) {.raises: [], cdecl, exportc, dynlib.} =
@@ -49,7 +58,7 @@ proc pixie_seq_span_get*(s: SeqSpan, i: int): Span {.raises: [], cdecl, exportc,
 proc pixie_seq_span_set*(s: SeqSpan, i: int, v: Span) {.raises: [], cdecl, exportc, dynlib.} =
   s.s[i] = v
 
-proc pixie_seq_span_remove*(s: SeqSpan, i: int) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_seq_span_delete*(s: SeqSpan, i: int) {.raises: [], cdecl, exportc, dynlib.} =
   s.s.delete(i)
 
 proc pixie_seq_span_clear*(s: SeqSpan) {.raises: [], cdecl, exportc, dynlib.} =
@@ -406,7 +415,7 @@ proc pixie_paint_gradient_handle_positions_get*(paint: Paint, i: int): Vec2 {.ra
 proc pixie_paint_gradient_handle_positions_set*(paint: Paint, i: int, v: Vec2) {.raises: [], cdecl, exportc, dynlib.} =
   paint.gradientHandlePositions[i] = v
 
-proc pixie_paint_gradient_handle_positions_remove*(paint: Paint, i: int) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_paint_gradient_handle_positions_delete*(paint: Paint, i: int) {.raises: [], cdecl, exportc, dynlib.} =
   paint.gradientHandlePositions.delete(i)
 
 proc pixie_paint_gradient_handle_positions_clear*(paint: Paint) {.raises: [], cdecl, exportc, dynlib.} =
@@ -424,7 +433,7 @@ proc pixie_paint_gradient_stops_get*(paint: Paint, i: int): ColorStop {.raises: 
 proc pixie_paint_gradient_stops_set*(paint: Paint, i: int, v: ColorStop) {.raises: [], cdecl, exportc, dynlib.} =
   paint.gradientStops[i] = v
 
-proc pixie_paint_gradient_stops_remove*(paint: Paint, i: int) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_paint_gradient_stops_delete*(paint: Paint, i: int) {.raises: [], cdecl, exportc, dynlib.} =
   paint.gradientStops.delete(i)
 
 proc pixie_paint_gradient_stops_clear*(paint: Paint) {.raises: [], cdecl, exportc, dynlib.} =
@@ -577,7 +586,7 @@ proc pixie_font_paints_get*(font: Font, i: int): Paint {.raises: [], cdecl, expo
 proc pixie_font_paints_set*(font: Font, i: int, v: Paint) {.raises: [], cdecl, exportc, dynlib.} =
   font.paints[i] = v
 
-proc pixie_font_paints_remove*(font: Font, i: int) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_font_paints_delete*(font: Font, i: int) {.raises: [], cdecl, exportc, dynlib.} =
   font.paints.delete(i)
 
 proc pixie_font_paints_clear*(font: Font) {.raises: [], cdecl, exportc, dynlib.} =

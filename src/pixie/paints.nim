@@ -64,6 +64,9 @@ converter parseSomePaint*(
   elif type(paint) is Paint:
     paint
 
+proc colorStop*(color: Color, position: float32): ColorStop =
+  ColorStop(color: color, position: position)
+
 proc toLineSpace(at, to, point: Vec2): float32 {.inline.} =
   ## Convert position on to where it would fall on a line between at and to.
   let

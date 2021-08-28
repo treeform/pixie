@@ -1,12 +1,5 @@
 import bindy, pixie, unicode
 
-type
-  Vector2 = object
-    x*, y*: float32
-
-  Matrix3 = object
-    a*, b*, c*, d*, e*, f*, g*, h*, i*: float32
-
 var lastError*: ref PixieError
 
 proc takeError*(): string =
@@ -15,6 +8,19 @@ proc takeError*(): string =
 
 proc checkError*(): bool  =
   result = lastError != nil
+
+type
+  Vector2* = object
+    x*, y*: float32
+
+  Matrix3* = object
+    a*, b*, c*, d*, e*, f*, g*, h*, i*: float32
+
+proc vector2*(x, y: float32): Vector2 =
+  Vector2(x: x, y: y)
+
+proc matrix3*(): Matrix3 =
+  Matrix3(a: 1, b: 0, c: 0, d: 0, e: 1, f: 0, g: 0, h: 0, i: 1)
 
 proc drawImage1*(
   ctx: Context, image: Image, dx, dy: float32
@@ -34,6 +40,11 @@ proc drawImage3*(
 ) {.raises: [PixieError].} =
   ctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)
 
+exportConsts:
+  export
+    defaultMiterLimit,
+    autoLineHeight
+
 exportEnums:
   export
     FileFormat,
@@ -46,19 +57,28 @@ exportEnums:
     VerticalAlignment,
     TextCase
 
-exportObjects:
-  export
-    Vector2,
-    Matrix3,
-    Rect,
-    Color,
-    ColorStop,
-    TextMetrics
-
 exportProcs:
   export
     bindings.checkError,
     bindings.takeError
+
+exportObject Vector2:
+  discard vector2(0, 0)
+
+exportObject Matrix3:
+  discard matrix3()
+
+exportObject Rect:
+  discard
+
+exportObject Color:
+  discard
+
+exportObject ColorStop:
+  discard colorStop(Color(), 0)
+
+exportObject TextMetrics:
+  discard
 
 exportSeq seq[float32]:
   discard
