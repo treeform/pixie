@@ -1139,7 +1139,7 @@ proc parsePairPos(buf: string, offset: int): PairPos =
     else:
       failUnsupported()
 
-proc parseLookup(buf: string, offset: int, gpos: GposTable): Lookup =
+proc parseLookup(buf: string, offset: int, pairPosTables: var seq[PairPos]): Lookup =
   var i = offset
 
   buf.eofCheck(i + 6)
@@ -1163,9 +1163,9 @@ proc parseLookup(buf: string, offset: int, gpos: GposTable): Lookup =
       let pairPos = parsePairPos(buf, offset + subTableOffset.int)
       if pairPos.glyphPairAdjustments.len > 0 or
         pairPos.classPairAdjustments.len > 0:
-        gpos.lookupList.pairPosTables.add(pairPos)
+        pairPosTables.add(pairPos)
 
-proc parseLookupList(buf: string, offset: int, gpos: GposTable): LookupList =
+proc parseLookupList(buf: string, offset: int): LookupList =
   var i = offset
 
   buf.eofCheck(i + 2)
@@ -1177,8 +1177,12 @@ proc parseLookupList(buf: string, offset: int, gpos: GposTable): LookupList =
 
   result.lookupOffsets = buf.readUint16Seq(i, result.lookupCount.int)
 
+  var pairPosTables: seq[PairPos]
+
   for lookupOffset in result.lookupoffsets:
-    result.lookups.add(parseLookup(buf, offset + lookupOffset.int, gpos))
+    result.lookups.add(parseLookup(buf, offset + lookupOffset.int, pairPosTables))
+
+  result.pairPosTables = pairPosTables
 
 proc parseGposTable(buf: string, offset: int): GPOSTable =
   var i = offset
@@ -1208,8 +1212,9 @@ proc parseGposTable(buf: string, offset: int): GPOSTable =
   # result.scriptList = parseScriptList(buf, offset + result.scriptListOffset.int)
   # result.featureList =
   #   parseFeatureList(buf, offset + result.featureListOffset.int)
+
   result.lookupList =
-    parseLookupList(buf, offset + result.lookupListOffset.int, result)
+    parseLookupList(buf, offset + result.lookupListOffset.int)
 
 proc parsePostTable(buf: string, offset: int): PostTable =
   buf.eofCheck(offset + 14)
@@ -1456,9 +1461,7 @@ proc parseCompositeGlyph(opentype: OpenType, offset: int): Path =
 
     moreComponents = (flags and 0b100000) != 0
 
-proc parseGlyph(
-  opentype: OpenType, glyphId: uint16
-): Path =
+proc parseGlyph(opentype: OpenType, glyphId: uint16): Path =
   if glyphId.int >= opentype.glyf.offsets.len:
     raise newException(PixieError, "Invalid glyph ID " & $glyphId)
 
@@ -1486,9 +1489,7 @@ proc parseGlyph(
   else:
     parseGlyphPath(opentype.buf, i, numberOfContours)
 
-proc parseGlyph(
-  opentype: OpenType, rune: Rune
-): Path {.inline.} =
+proc parseGlyph(opentype: OpenType, rune: Rune): Path {.inline.} =
   opentype.parseGlyph(opentype.getGlyphId(rune))
 
 proc getGlyphPath*(
