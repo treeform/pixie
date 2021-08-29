@@ -1,4 +1,4 @@
-import pixie, pixie/fileformats/png, strformat
+import pixie, pixie/fileformats/png, strformat, unicode
 
 proc doDiff(rendered: Image, name: string) =
   rendered.writeFile(&"tests/fonts/rendered/{name}.png")
@@ -990,3 +990,7 @@ block:
   )
 
   doDiff(image, "paints1")
+
+block:
+  var typeface = readTypeface("tests/fonts/Roboto-Regular_1.ttf")
+  doAssert typeface.getKerningAdjustment('T'.Rune, 'e'.Rune) == -99.0
