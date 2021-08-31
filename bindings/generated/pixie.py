@@ -101,9 +101,8 @@ class Vector2(Structure):
     ]
 
     def __init__(self, x, y):
-        tmp = dll.pixie_vector_2(x, y)
-        self.x = tmp.x
-        self.y = tmp.y
+        self.x = x
+        self.y = y
 
     def __eq__(self, obj):
         self.x == obj.x and self.y == obj.y
@@ -144,6 +143,12 @@ class Rect(Structure):
         ("h", c_float)
     ]
 
+    def __init__(self, x, y, w, h):
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+
     def __eq__(self, obj):
         self.x == obj.x and self.y == obj.y and self.w == obj.w and self.h == obj.h
 
@@ -155,6 +160,12 @@ class Color(Structure):
         ("a", c_float)
     ]
 
+    def __init__(self, r, g, b, a):
+        self.r = r
+        self.g = g
+        self.b = b
+        self.a = a
+
     def __eq__(self, obj):
         self.r == obj.r and self.g == obj.g and self.b == obj.b and self.a == obj.a
 
@@ -165,9 +176,8 @@ class ColorStop(Structure):
     ]
 
     def __init__(self, color, position):
-        tmp = dll.pixie_color_stop(color, position)
-        self.color = tmp.color
-        self.position = tmp.position
+        self.color = color
+        self.position = position
 
     def __eq__(self, obj):
         self.color == obj.color and self.position == obj.position
@@ -176,6 +186,9 @@ class TextMetrics(Structure):
     _fields_ = [
         ("width", c_float)
     ]
+
+    def __init__(self, width):
+        self.width = width
 
     def __eq__(self, obj):
         self.width == obj.width
@@ -1339,14 +1352,8 @@ dll.pixie_check_error.restype = c_bool
 dll.pixie_take_error.argtypes = []
 dll.pixie_take_error.restype = c_char_p
 
-dll.pixie_vector_2.argtypes = [c_float, c_float]
-dll.pixie_vector_2.restype = Vector2
-
 dll.pixie_matrix_3.argtypes = []
 dll.pixie_matrix_3.restype = Matrix3
-
-dll.pixie_color_stop.argtypes = [Color, c_float]
-dll.pixie_color_stop.restype = ColorStop
 
 dll.pixie_seq_float_32_unref.argtypes = [SeqFloat32]
 dll.pixie_seq_float_32_unref.restype = None
