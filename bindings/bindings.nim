@@ -6,7 +6,7 @@ proc takeError*(): string =
   result = lastError.msg
   lastError = nil
 
-proc checkError*(): bool  =
+proc checkError*(): bool =
   result = lastError != nil
 
 type
