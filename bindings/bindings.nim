@@ -16,9 +16,6 @@ type
   Matrix3* = object
     a*, b*, c*, d*, e*, f*, g*, h*, i*: float32
 
-proc vector2*(x, y: float32): Vector2 =
-  Vector2(x: x, y: y)
-
 proc matrix3*(): Matrix3 =
   Matrix3(a: 1, b: 0, c: 0, d: 0, e: 1, f: 0, g: 0, h: 0, i: 1)
 
@@ -63,7 +60,7 @@ exportProcs:
     bindings.takeError
 
 exportObject Vector2:
-  discard vector2(0, 0)
+  discard
 
 exportObject Matrix3:
   discard matrix3()
@@ -75,7 +72,7 @@ exportObject Color:
   discard
 
 exportObject ColorStop:
-  discard colorStop(Color(), 0)
+  discard
 
 exportObject TextMetrics:
   discard

@@ -87,8 +87,15 @@ type ColorStop* = object
   color*: Color
   position*: float32
 
+proc colorStop*(color: Color, position: float32): ColorStop =
+  result.color = color
+  result.position = position
+
 type TextMetrics* = object
   width*: float32
+
+proc textMetrics*(width: float32): TextMetrics =
+  result.width = width
 
 type SeqFloat32Obj = object
   reference: pointer
@@ -209,11 +216,6 @@ proc pixie_take_error(): cstring {.importc: "pixie_take_error", cdecl.}
 
 proc takeError*(): cstring {.inline.} =
   result = pixie_take_error()
-
-proc pixie_color_stop(color: Color, position: float32): ColorStop {.importc: "pixie_color_stop", cdecl.}
-
-proc colorStop*(color: Color, position: float32): ColorStop {.inline.} =
-  result = pixie_color_stop(color, position)
 
 proc pixie_seq_float_32_len(s: SeqFloat32): int {.importc: "pixie_seq_float_32_len", cdecl.}
 
