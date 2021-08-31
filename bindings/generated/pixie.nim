@@ -401,7 +401,7 @@ proc invert*(target: Image) {.inline.} =
 
 proc pixie_image_blur(image: Image, radius: float32, out_of_bounds: Color) {.importc: "pixie_image_blur", cdecl.}
 
-proc blur*(image: Image, radius: float32, outOfBounds: Color) {.inline.} =
+proc blur*(image: Image, radius: float32, outOfBounds: Color = Color()) {.inline.} =
   pixie_image_blur(image, radius, outOfBounds)
   if checkError():
     raise newException(PixieError, $takeError())
@@ -434,17 +434,17 @@ proc superImage*(image: Image, x: int, y: int, w: int, h: int): Image {.inline.}
   if checkError():
     raise newException(PixieError, $takeError())
 
+proc pixie_image_draw(a: Image, b: Image, transform: Mat3, blend_mode: BlendMode) {.importc: "pixie_image_draw", cdecl.}
+
+proc draw*(a: Image, b: Image, transform: Mat3 = mat3(), blendMode: BlendMode = bmNormal) {.inline.} =
+  pixie_image_draw(a, b, transform, blendMode)
+  if checkError():
+    raise newException(PixieError, $takeError())
+
 proc pixie_image_mask_draw(image: Image, mask: Mask, transform: Mat3, blend_mode: BlendMode) {.importc: "pixie_image_mask_draw", cdecl.}
 
 proc draw*(image: Image, mask: Mask, transform: Mat3 = mat3(), blendMode: BlendMode = bmMask) {.inline.} =
   pixie_image_mask_draw(image, mask, transform, blendMode)
-  if checkError():
-    raise newException(PixieError, $takeError())
-
-proc pixie_image_image_draw(a: Image, b: Image, transform: Mat3, blend_mode: BlendMode) {.importc: "pixie_image_image_draw", cdecl.}
-
-proc draw*(a: Image, b: Image, transform: Mat3 = mat3(), blendMode: BlendMode = bmNormal) {.inline.} =
-  pixie_image_image_draw(a, b, transform, blendMode)
   if checkError():
     raise newException(PixieError, $takeError())
 
@@ -455,6 +455,13 @@ proc fillGradient*(image: Image, paint: Paint) {.inline.} =
   if checkError():
     raise newException(PixieError, $takeError())
 
+proc pixie_image_fill_text(target: Image, font: Font, text: cstring, transform: Mat3, bounds: Vec2, h_align: HorizontalAlignment, v_align: VerticalAlignment) {.importc: "pixie_image_fill_text", cdecl.}
+
+proc fillText*(target: Image, font: Font, text: string, transform: Mat3 = mat3(), bounds: Vec2 = vec2(0, 0), hAlign: HorizontalAlignment = haLeft, vAlign: VerticalAlignment = vaTop) {.inline.} =
+  pixie_image_fill_text(target, font, text.cstring, transform, bounds, hAlign, vAlign)
+  if checkError():
+    raise newException(PixieError, $takeError())
+
 proc pixie_image_arrangement_fill_text(target: Image, arrangement: Arrangement, transform: Mat3) {.importc: "pixie_image_arrangement_fill_text", cdecl.}
 
 proc fillText*(target: Image, arrangement: Arrangement, transform: Mat3 = mat3()) {.inline.} =
@@ -462,10 +469,10 @@ proc fillText*(target: Image, arrangement: Arrangement, transform: Mat3 = mat3()
   if checkError():
     raise newException(PixieError, $takeError())
 
-proc pixie_image_font_fill_text(target: Image, font: Font, text: cstring, transform: Mat3, bounds: Vec2, h_align: HorizontalAlignment, v_align: VerticalAlignment) {.importc: "pixie_image_font_fill_text", cdecl.}
+proc pixie_image_stroke_text(target: Image, font: Font, text: cstring, transform: Mat3, stroke_width: float32, bounds: Vec2, h_align: HorizontalAlignment, v_align: VerticalAlignment, line_cap: LineCap, line_join: LineJoin, miter_limit: float32, dashes: SeqFloat32) {.importc: "pixie_image_stroke_text", cdecl.}
 
-proc fillText*(target: Image, font: Font, text: string, transform: Mat3 = mat3(), bounds: Vec2 = vec2(0, 0), hAlign: HorizontalAlignment = haLeft, vAlign: VerticalAlignment = vaTop) {.inline.} =
-  pixie_image_font_fill_text(target, font, text.cstring, transform, bounds, hAlign, vAlign)
+proc strokeText*(target: Image, font: Font, text: string, transform: Mat3 = mat3(), strokeWidth: float32 = 1.0, bounds: Vec2 = vec2(0, 0), hAlign: HorizontalAlignment = haLeft, vAlign: VerticalAlignment = vaTop, lineCap: LineCap = lcButt, lineJoin: LineJoin = ljMiter, miterLimit: float32 = defaultMiterLimit, dashes: SeqFloat32) {.inline.} =
+  pixie_image_stroke_text(target, font, text.cstring, transform, strokeWidth, bounds, hAlign, vAlign, lineCap, lineJoin, miterLimit, dashes)
   if checkError():
     raise newException(PixieError, $takeError())
 
@@ -473,13 +480,6 @@ proc pixie_image_arrangement_stroke_text(target: Image, arrangement: Arrangement
 
 proc strokeText*(target: Image, arrangement: Arrangement, transform: Mat3 = mat3(), strokeWidth: float32 = 1.0, lineCap: LineCap = lcButt, lineJoin: LineJoin = ljMiter, miterLimit: float32 = defaultMiterLimit, dashes: SeqFloat32) {.inline.} =
   pixie_image_arrangement_stroke_text(target, arrangement, transform, strokeWidth, lineCap, lineJoin, miterLimit, dashes)
-  if checkError():
-    raise newException(PixieError, $takeError())
-
-proc pixie_image_font_stroke_text(target: Image, font: Font, text: cstring, transform: Mat3, stroke_width: float32, bounds: Vec2, h_align: HorizontalAlignment, v_align: VerticalAlignment, line_cap: LineCap, line_join: LineJoin, miter_limit: float32, dashes: SeqFloat32) {.importc: "pixie_image_font_stroke_text", cdecl.}
-
-proc strokeText*(target: Image, font: Font, text: string, transform: Mat3 = mat3(), strokeWidth: float32 = 1.0, bounds: Vec2 = vec2(0, 0), hAlign: HorizontalAlignment = haLeft, vAlign: VerticalAlignment = vaTop, lineCap: LineCap = lcButt, lineJoin: LineJoin = ljMiter, miterLimit: float32 = defaultMiterLimit, dashes: SeqFloat32) {.inline.} =
-  pixie_image_font_stroke_text(target, font, text.cstring, transform, strokeWidth, bounds, hAlign, vAlign, lineCap, lineJoin, miterLimit, dashes)
   if checkError():
     raise newException(PixieError, $takeError())
 
@@ -606,10 +606,10 @@ proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) {.inline.} =
   if checkError():
     raise newException(PixieError, $takeError())
 
-proc pixie_mask_mask_draw(a: Mask, b: Mask, transform: Mat3, blend_mode: BlendMode) {.importc: "pixie_mask_mask_draw", cdecl.}
+proc pixie_mask_draw(a: Mask, b: Mask, transform: Mat3, blend_mode: BlendMode) {.importc: "pixie_mask_draw", cdecl.}
 
 proc draw*(a: Mask, b: Mask, transform: Mat3 = mat3(), blendMode: BlendMode = bmMask) {.inline.} =
-  pixie_mask_mask_draw(a, b, transform, blendMode)
+  pixie_mask_draw(a, b, transform, blendMode)
   if checkError():
     raise newException(PixieError, $takeError())
 
@@ -620,6 +620,13 @@ proc draw*(mask: Mask, image: Image, transform: Mat3 = mat3(), blendMode: BlendM
   if checkError():
     raise newException(PixieError, $takeError())
 
+proc pixie_mask_fill_text(target: Mask, font: Font, text: cstring, transform: Mat3, bounds: Vec2, h_align: HorizontalAlignment, v_align: VerticalAlignment) {.importc: "pixie_mask_fill_text", cdecl.}
+
+proc fillText*(target: Mask, font: Font, text: string, transform: Mat3 = mat3(), bounds: Vec2 = vec2(0, 0), hAlign: HorizontalAlignment = haLeft, vAlign: VerticalAlignment = vaTop) {.inline.} =
+  pixie_mask_fill_text(target, font, text.cstring, transform, bounds, hAlign, vAlign)
+  if checkError():
+    raise newException(PixieError, $takeError())
+
 proc pixie_mask_arrangement_fill_text(target: Mask, arrangement: Arrangement, transform: Mat3) {.importc: "pixie_mask_arrangement_fill_text", cdecl.}
 
 proc fillText*(target: Mask, arrangement: Arrangement, transform: Mat3 = mat3()) {.inline.} =
@@ -627,10 +634,10 @@ proc fillText*(target: Mask, arrangement: Arrangement, transform: Mat3 = mat3())
   if checkError():
     raise newException(PixieError, $takeError())
 
-proc pixie_mask_font_fill_text(target: Mask, font: Font, text: cstring, transform: Mat3, bounds: Vec2, h_align: HorizontalAlignment, v_align: VerticalAlignment) {.importc: "pixie_mask_font_fill_text", cdecl.}
+proc pixie_mask_stroke_text(target: Mask, font: Font, text: cstring, transform: Mat3, stroke_width: float32, bounds: Vec2, h_align: HorizontalAlignment, v_align: VerticalAlignment, line_cap: LineCap, line_join: LineJoin, miter_limit: float32, dashes: SeqFloat32) {.importc: "pixie_mask_stroke_text", cdecl.}
 
-proc fillText*(target: Mask, font: Font, text: string, transform: Mat3 = mat3(), bounds: Vec2 = vec2(0, 0), hAlign: HorizontalAlignment = haLeft, vAlign: VerticalAlignment = vaTop) {.inline.} =
-  pixie_mask_font_fill_text(target, font, text.cstring, transform, bounds, hAlign, vAlign)
+proc strokeText*(target: Mask, font: Font, text: string, transform: Mat3 = mat3(), strokeWidth: float32 = 1.0, bounds: Vec2 = vec2(0, 0), hAlign: HorizontalAlignment = haLeft, vAlign: VerticalAlignment = vaTop, lineCap: LineCap = lcButt, lineJoin: LineJoin = ljMiter, miterLimit: float32 = defaultMiterLimit, dashes: SeqFloat32) {.inline.} =
+  pixie_mask_stroke_text(target, font, text.cstring, transform, strokeWidth, bounds, hAlign, vAlign, lineCap, lineJoin, miterLimit, dashes)
   if checkError():
     raise newException(PixieError, $takeError())
 
@@ -638,13 +645,6 @@ proc pixie_mask_arrangement_stroke_text(target: Mask, arrangement: Arrangement, 
 
 proc strokeText*(target: Mask, arrangement: Arrangement, transform: Mat3 = mat3(), strokeWidth: float32 = 1.0, lineCap: LineCap = lcButt, lineJoin: LineJoin = ljMiter, miterLimit: float32 = defaultMiterLimit, dashes: SeqFloat32) {.inline.} =
   pixie_mask_arrangement_stroke_text(target, arrangement, transform, strokeWidth, lineCap, lineJoin, miterLimit, dashes)
-  if checkError():
-    raise newException(PixieError, $takeError())
-
-proc pixie_mask_font_stroke_text(target: Mask, font: Font, text: cstring, transform: Mat3, stroke_width: float32, bounds: Vec2, h_align: HorizontalAlignment, v_align: VerticalAlignment, line_cap: LineCap, line_join: LineJoin, miter_limit: float32, dashes: SeqFloat32) {.importc: "pixie_mask_font_stroke_text", cdecl.}
-
-proc strokeText*(target: Mask, font: Font, text: string, transform: Mat3 = mat3(), strokeWidth: float32 = 1.0, bounds: Vec2 = vec2(0, 0), hAlign: HorizontalAlignment = haLeft, vAlign: VerticalAlignment = vaTop, lineCap: LineCap = lcButt, lineJoin: LineJoin = ljMiter, miterLimit: float32 = defaultMiterLimit, dashes: SeqFloat32) {.inline.} =
-  pixie_mask_font_stroke_text(target, font, text.cstring, transform, strokeWidth, bounds, hAlign, vAlign, lineCap, lineJoin, miterLimit, dashes)
   if checkError():
     raise newException(PixieError, $takeError())
 
@@ -1265,6 +1265,13 @@ proc pixie_context_close_path(ctx: Context) {.importc: "pixie_context_close_path
 proc closePath*(ctx: Context) {.inline.} =
   pixie_context_close_path(ctx)
 
+proc pixie_context_fill(ctx: Context, winding_rule: WindingRule) {.importc: "pixie_context_fill", cdecl.}
+
+proc fill*(ctx: Context, windingRule: WindingRule = wrNonZero) {.inline.} =
+  pixie_context_fill(ctx, windingRule)
+  if checkError():
+    raise newException(PixieError, $takeError())
+
 proc pixie_context_path_fill(ctx: Context, path: Path, winding_rule: WindingRule) {.importc: "pixie_context_path_fill", cdecl.}
 
 proc fill*(ctx: Context, path: Path, windingRule: WindingRule = wrNonZero) {.inline.} =
@@ -1272,10 +1279,10 @@ proc fill*(ctx: Context, path: Path, windingRule: WindingRule = wrNonZero) {.inl
   if checkError():
     raise newException(PixieError, $takeError())
 
-proc pixie_context_winding_rule_fill(ctx: Context, winding_rule: WindingRule) {.importc: "pixie_context_winding_rule_fill", cdecl.}
+proc pixie_context_clip(ctx: Context, winding_rule: WindingRule) {.importc: "pixie_context_clip", cdecl.}
 
-proc fill*(ctx: Context, windingRule: WindingRule = wrNonZero) {.inline.} =
-  pixie_context_winding_rule_fill(ctx, windingRule)
+proc clip*(ctx: Context, windingRule: WindingRule = wrNonZero) {.inline.} =
+  pixie_context_clip(ctx, windingRule)
   if checkError():
     raise newException(PixieError, $takeError())
 
@@ -1286,10 +1293,10 @@ proc clip*(ctx: Context, path: Path, windingRule: WindingRule = wrNonZero) {.inl
   if checkError():
     raise newException(PixieError, $takeError())
 
-proc pixie_context_winding_rule_clip(ctx: Context, winding_rule: WindingRule) {.importc: "pixie_context_winding_rule_clip", cdecl.}
+proc pixie_context_stroke(ctx: Context) {.importc: "pixie_context_stroke", cdecl.}
 
-proc clip*(ctx: Context, windingRule: WindingRule = wrNonZero) {.inline.} =
-  pixie_context_winding_rule_clip(ctx, windingRule)
+proc stroke*(ctx: Context) {.inline.} =
+  pixie_context_stroke(ctx)
   if checkError():
     raise newException(PixieError, $takeError())
 
@@ -1297,13 +1304,6 @@ proc pixie_context_path_stroke(ctx: Context, path: Path) {.importc: "pixie_conte
 
 proc stroke*(ctx: Context, path: Path) {.inline.} =
   pixie_context_path_stroke(ctx, path)
-  if checkError():
-    raise newException(PixieError, $takeError())
-
-proc pixie_context_stroke(ctx: Context) {.importc: "pixie_context_stroke", cdecl.}
-
-proc stroke*(ctx: Context) {.inline.} =
-  pixie_context_stroke(ctx)
   if checkError():
     raise newException(PixieError, $takeError())
 
@@ -1471,10 +1471,24 @@ proc isPointInPath*(ctx: Context, x: float32, y: float32, windingRule: WindingRu
   if checkError():
     raise newException(PixieError, $takeError())
 
+proc pixie_context_path_is_point_in_path(ctx: Context, path: Path, x: float32, y: float32, winding_rule: WindingRule): bool {.importc: "pixie_context_path_is_point_in_path", cdecl.}
+
+proc isPointInPath*(ctx: Context, path: Path, x: float32, y: float32, windingRule: WindingRule = wrNonZero): bool {.inline.} =
+  result = pixie_context_path_is_point_in_path(ctx, path, x, y, windingRule)
+  if checkError():
+    raise newException(PixieError, $takeError())
+
 proc pixie_context_is_point_in_stroke(ctx: Context, x: float32, y: float32): bool {.importc: "pixie_context_is_point_in_stroke", cdecl.}
 
 proc isPointInStroke*(ctx: Context, x: float32, y: float32): bool {.inline.} =
   result = pixie_context_is_point_in_stroke(ctx, x, y)
+  if checkError():
+    raise newException(PixieError, $takeError())
+
+proc pixie_context_path_is_point_in_stroke(ctx: Context, path: Path, x: float32, y: float32): bool {.importc: "pixie_context_path_is_point_in_stroke", cdecl.}
+
+proc isPointInStroke*(ctx: Context, path: Path, x: float32, y: float32): bool {.inline.} =
+  result = pixie_context_path_is_point_in_stroke(ctx, path, x, y)
   if checkError():
     raise newException(PixieError, $takeError())
 
@@ -1522,4 +1536,3 @@ proc pixie_angle_to_miter_limit(angle: float32): float32 {.importc: "pixie_angle
 
 proc angleToMiterLimit*(angle: float32): float32 {.inline.} =
   result = pixie_angle_to_miter_limit(angle)
-

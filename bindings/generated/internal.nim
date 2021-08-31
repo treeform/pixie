@@ -172,15 +172,15 @@ proc pixie_image_super_image*(image: Image, x: int, y: int, w: int, h: int): Ima
   except PixieError as e:
     lastError = e
 
-proc pixie_image_mask_draw*(image: Image, mask: Mask, transform: Mat3, blend_mode: BlendMode) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_image_draw*(a: Image, b: Image, transform: Mat3, blend_mode: BlendMode) {.raises: [], cdecl, exportc, dynlib.} =
   try:
-    draw(image, mask, transform, blend_mode)
+    draw(a, b, transform, blend_mode)
   except PixieError as e:
     lastError = e
 
-proc pixie_image_image_draw*(a: Image, b: Image, transform: Mat3, blend_mode: BlendMode) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_image_mask_draw*(image: Image, mask: Mask, transform: Mat3, blend_mode: BlendMode) {.raises: [], cdecl, exportc, dynlib.} =
   try:
-    draw(a, b, transform, blend_mode)
+    draw(image, mask, transform, blend_mode)
   except PixieError as e:
     lastError = e
 
@@ -190,27 +190,27 @@ proc pixie_image_fill_gradient*(image: Image, paint: Paint) {.raises: [], cdecl,
   except PixieError as e:
     lastError = e
 
+proc pixie_image_fill_text*(target: Image, font: Font, text: cstring, transform: Mat3, bounds: Vec2, h_align: HorizontalAlignment, v_align: VerticalAlignment) {.raises: [], cdecl, exportc, dynlib.} =
+  try:
+    fillText(target, font, text.`$`, transform, bounds, h_align, v_align)
+  except PixieError as e:
+    lastError = e
+
 proc pixie_image_arrangement_fill_text*(target: Image, arrangement: Arrangement, transform: Mat3) {.raises: [], cdecl, exportc, dynlib.} =
   try:
     fillText(target, arrangement, transform)
   except PixieError as e:
     lastError = e
 
-proc pixie_image_font_fill_text*(target: Image, font: Font, text: cstring, transform: Mat3, bounds: Vec2, h_align: HorizontalAlignment, v_align: VerticalAlignment) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_image_stroke_text*(target: Image, font: Font, text: cstring, transform: Mat3, stroke_width: float32, bounds: Vec2, h_align: HorizontalAlignment, v_align: VerticalAlignment, line_cap: LineCap, line_join: LineJoin, miter_limit: float32, dashes: SeqFloat32) {.raises: [], cdecl, exportc, dynlib.} =
   try:
-    fillText(target, font, text.`$`, transform, bounds, h_align, v_align)
+    strokeText(target, font, text.`$`, transform, stroke_width, bounds, h_align, v_align, line_cap, line_join, miter_limit, dashes.s)
   except PixieError as e:
     lastError = e
 
 proc pixie_image_arrangement_stroke_text*(target: Image, arrangement: Arrangement, transform: Mat3, stroke_width: float32, line_cap: LineCap, line_join: LineJoin, miter_limit: float32, dashes: SeqFloat32) {.raises: [], cdecl, exportc, dynlib.} =
   try:
     strokeText(target, arrangement, transform, stroke_width, line_cap, line_join, miter_limit, dashes.s)
-  except PixieError as e:
-    lastError = e
-
-proc pixie_image_font_stroke_text*(target: Image, font: Font, text: cstring, transform: Mat3, stroke_width: float32, bounds: Vec2, h_align: HorizontalAlignment, v_align: VerticalAlignment, line_cap: LineCap, line_join: LineJoin, miter_limit: float32, dashes: SeqFloat32) {.raises: [], cdecl, exportc, dynlib.} =
-  try:
-    strokeText(target, font, text.`$`, transform, stroke_width, bounds, h_align, v_align, line_cap, line_join, miter_limit, dashes.s)
   except PixieError as e:
     lastError = e
 
@@ -307,7 +307,7 @@ proc pixie_mask_blur*(mask: Mask, radius: float32, out_of_bounds: uint8) {.raise
   except PixieError as e:
     lastError = e
 
-proc pixie_mask_mask_draw*(a: Mask, b: Mask, transform: Mat3, blend_mode: BlendMode) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_mask_draw*(a: Mask, b: Mask, transform: Mat3, blend_mode: BlendMode) {.raises: [], cdecl, exportc, dynlib.} =
   try:
     draw(a, b, transform, blend_mode)
   except PixieError as e:
@@ -319,27 +319,27 @@ proc pixie_mask_image_draw*(mask: Mask, image: Image, transform: Mat3, blend_mod
   except PixieError as e:
     lastError = e
 
+proc pixie_mask_fill_text*(target: Mask, font: Font, text: cstring, transform: Mat3, bounds: Vec2, h_align: HorizontalAlignment, v_align: VerticalAlignment) {.raises: [], cdecl, exportc, dynlib.} =
+  try:
+    fillText(target, font, text.`$`, transform, bounds, h_align, v_align)
+  except PixieError as e:
+    lastError = e
+
 proc pixie_mask_arrangement_fill_text*(target: Mask, arrangement: Arrangement, transform: Mat3) {.raises: [], cdecl, exportc, dynlib.} =
   try:
     fillText(target, arrangement, transform)
   except PixieError as e:
     lastError = e
 
-proc pixie_mask_font_fill_text*(target: Mask, font: Font, text: cstring, transform: Mat3, bounds: Vec2, h_align: HorizontalAlignment, v_align: VerticalAlignment) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_mask_stroke_text*(target: Mask, font: Font, text: cstring, transform: Mat3, stroke_width: float32, bounds: Vec2, h_align: HorizontalAlignment, v_align: VerticalAlignment, line_cap: LineCap, line_join: LineJoin, miter_limit: float32, dashes: SeqFloat32) {.raises: [], cdecl, exportc, dynlib.} =
   try:
-    fillText(target, font, text.`$`, transform, bounds, h_align, v_align)
+    strokeText(target, font, text.`$`, transform, stroke_width, bounds, h_align, v_align, line_cap, line_join, miter_limit, dashes.s)
   except PixieError as e:
     lastError = e
 
 proc pixie_mask_arrangement_stroke_text*(target: Mask, arrangement: Arrangement, transform: Mat3, stroke_width: float32, line_cap: LineCap, line_join: LineJoin, miter_limit: float32, dashes: SeqFloat32) {.raises: [], cdecl, exportc, dynlib.} =
   try:
     strokeText(target, arrangement, transform, stroke_width, line_cap, line_join, miter_limit, dashes.s)
-  except PixieError as e:
-    lastError = e
-
-proc pixie_mask_font_stroke_text*(target: Mask, font: Font, text: cstring, transform: Mat3, stroke_width: float32, bounds: Vec2, h_align: HorizontalAlignment, v_align: VerticalAlignment, line_cap: LineCap, line_join: LineJoin, miter_limit: float32, dashes: SeqFloat32) {.raises: [], cdecl, exportc, dynlib.} =
-  try:
-    strokeText(target, font, text.`$`, transform, stroke_width, bounds, h_align, v_align, line_cap, line_join, miter_limit, dashes.s)
   except PixieError as e:
     lastError = e
 
@@ -745,15 +745,21 @@ proc pixie_context_begin_path*(ctx: Context) {.raises: [], cdecl, exportc, dynli
 proc pixie_context_close_path*(ctx: Context) {.raises: [], cdecl, exportc, dynlib.} =
   closePath(ctx)
 
+proc pixie_context_fill*(ctx: Context, winding_rule: WindingRule) {.raises: [], cdecl, exportc, dynlib.} =
+  try:
+    fill(ctx, winding_rule)
+  except PixieError as e:
+    lastError = e
+
 proc pixie_context_path_fill*(ctx: Context, path: Path, winding_rule: WindingRule) {.raises: [], cdecl, exportc, dynlib.} =
   try:
     fill(ctx, path, winding_rule)
   except PixieError as e:
     lastError = e
 
-proc pixie_context_winding_rule_fill*(ctx: Context, winding_rule: WindingRule) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_context_clip*(ctx: Context, winding_rule: WindingRule) {.raises: [], cdecl, exportc, dynlib.} =
   try:
-    fill(ctx, winding_rule)
+    clip(ctx, winding_rule)
   except PixieError as e:
     lastError = e
 
@@ -763,21 +769,15 @@ proc pixie_context_path_clip*(ctx: Context, path: Path, winding_rule: WindingRul
   except PixieError as e:
     lastError = e
 
-proc pixie_context_winding_rule_clip*(ctx: Context, winding_rule: WindingRule) {.raises: [], cdecl, exportc, dynlib.} =
+proc pixie_context_stroke*(ctx: Context) {.raises: [], cdecl, exportc, dynlib.} =
   try:
-    clip(ctx, winding_rule)
+    stroke(ctx)
   except PixieError as e:
     lastError = e
 
 proc pixie_context_path_stroke*(ctx: Context, path: Path) {.raises: [], cdecl, exportc, dynlib.} =
   try:
     stroke(ctx, path)
-  except PixieError as e:
-    lastError = e
-
-proc pixie_context_stroke*(ctx: Context) {.raises: [], cdecl, exportc, dynlib.} =
-  try:
-    stroke(ctx)
   except PixieError as e:
     lastError = e
 
@@ -901,9 +901,21 @@ proc pixie_context_is_point_in_path*(ctx: Context, x: float32, y: float32, windi
   except PixieError as e:
     lastError = e
 
+proc pixie_context_path_is_point_in_path*(ctx: Context, path: Path, x: float32, y: float32, winding_rule: WindingRule): bool {.raises: [], cdecl, exportc, dynlib.} =
+  try:
+    result = isPointInPath(ctx, path, x, y, winding_rule)
+  except PixieError as e:
+    lastError = e
+
 proc pixie_context_is_point_in_stroke*(ctx: Context, x: float32, y: float32): bool {.raises: [], cdecl, exportc, dynlib.} =
   try:
     result = isPointInStroke(ctx, x, y)
+  except PixieError as e:
+    lastError = e
+
+proc pixie_context_path_is_point_in_stroke*(ctx: Context, path: Path, x: float32, y: float32): bool {.raises: [], cdecl, exportc, dynlib.} =
+  try:
+    result = isPointInStroke(ctx, path, x, y)
   except PixieError as e:
     lastError = e
 

@@ -360,8 +360,6 @@ proc fill*(
   ## Fills the current path with the current fillStyle.
   ctx.fill(ctx.path, windingRule)
 
-proc clip*(ctx: Context, windingRule = wrNonZero) {.inline, raises: [PixieError].}
-
 proc clip*(
   ctx: Context, path: Path, windingRule = wrNonZero
 ) {.raises: [PixieError].} =
@@ -381,8 +379,6 @@ proc clip*(
   ## clipping region, if any, is intersected with the current or given path
   ## to create the new clipping region.
   ctx.clip(ctx.path, windingRule)
-
-proc stroke*(ctx: Context) {.inline, raises: [PixieError].}
 
 proc stroke*(ctx: Context, path: Path) {.raises: [PixieError].} =
   ## Strokes (outlines) the current or given path with the current strokeStyle.

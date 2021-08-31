@@ -6,7 +6,7 @@ proc takeError*(): string =
   result = lastError.msg
   lastError = nil
 
-proc checkError*(): bool  =
+proc checkError*(): bool =
   result = lastError != nil
 
 type
@@ -38,32 +38,30 @@ proc drawImage3*(
   ctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)
 
 exportConsts:
-  export
-    defaultMiterLimit,
-    autoLineHeight
+  defaultMiterLimit
+  autoLineHeight
 
 exportEnums:
-  export
-    FileFormat,
-    BlendMode,
-    PaintKind,
-    WindingRule,
-    LineCap,
-    LineJoin,
-    HorizontalAlignment,
-    VerticalAlignment,
-    TextCase
+  FileFormat
+  BlendMode
+  PaintKind
+  WindingRule
+  LineCap
+  LineJoin
+  HorizontalAlignment
+  VerticalAlignment
+  TextCase
 
 exportProcs:
-  export
-    bindings.checkError,
-    bindings.takeError
+  checkError
+  takeError
 
 exportObject Vector2:
   discard
 
 exportObject Matrix3:
-  discard matrix3()
+  constructor:
+    matrix3
 
 exportObject Rect:
   discard
@@ -81,175 +79,220 @@ exportSeq seq[float32]:
   discard
 
 exportSeq seq[Span]:
-  export
-    pixie.typeset,
-    pixie.computeBounds
+  procs:
+    typeset(seq[Span], Vec2, HorizontalAlignment, VerticalAlignment, bool)
+    computeBounds(seq[Span])
 
-exportRefObject Image, ["width", "height"]:
-  discard newImage(0, 0)
-  export
-    pixie.writeFile,
-    pixie.wh,
-    pixie.copy,
-    pixie.getColor,
-    pixie.setColor,
-    pixie.fill,
-    pixie.flipHorizontal,
-    pixie.flipVertical,
-    pixie.subImage,
-    pixie.minifyBy2,
-    pixie.magnifyBy2,
-    pixie.applyOpacity,
-    pixie.invert,
-    pixie.blur,
-    pixie.newMask,
-    pixie.resize,
-    pixie.shadow,
-    pixie.superImage,
-    pixie.draw,
-    pixie.fillGradient,
-    pixie.fillText,
-    pixie.strokeText,
-    pixie.fillPath,
-    pixie.strokePath,
-    pixie.newContext
+exportRefObject Image:
+  fields:
+    width
+    height
+  constructor:
+    newImage(int, int)
+  procs:
+    writeFile(Image, string)
+    wh(Image)
+    copy(Image)
+    getColor
+    setColor
+    fill(Image, Color)
+    flipHorizontal
+    flipVertical
+    subImage
+    minifyBy2(Image, int)
+    magnifyBy2
+    applyOpacity(Image, float32)
+    invert(Image)
+    blur(Image, float32, Color)
+    newMask(Image)
+    resize(Image, int, int)
+    shadow(Image, Vec2, float32, float32, Color)
+    superImage
+    draw(Image, Image, Mat3, BlendMode)
+    draw(Image, Mask, Mat3, BlendMode)
+    fillGradient
+    fillText(Image, Font, string, Mat3, Vec2, HorizontalAlignment, VerticalAlignment)
+    fillText(Image, Arrangement, Mat3)
+    strokeText(Image, Font, string, Mat3, float32, Vec2, HorizontalAlignment, VerticalAlignment, LineCap, LineJoin, float32, seq[float32])
+    strokeText(Image, Arrangement, Mat3, float32, LineCap, LineJoin, float32, seq[float32])
+    fillPath(Image, Path, Paint, Mat3, WindingRule)
+    strokePath(Image, Path, Paint, Mat3, float32, LineCap, LineJoin, float32, seq[float32])
+    newContext(Image)
 
-exportRefObject Mask, ["width", "height"]:
-  discard newMask(0, 0)
-  export
-    pixie.writeFile,
-    pixie.wh,
-    pixie.copy,
-    pixie.getValue,
-    pixie.setValue,
-    pixie.fill,
-    pixie.minifyBy2,
-    pixie.spread,
-    pixie.ceil,
-    pixie.newImage,
-    pixie.applyOpacity,
-    pixie.invert,
-    pixie.blur,
-    pixie.draw,
-    pixie.fillText,
-    pixie.strokeText,
-    pixie.fillPath,
-    pixie.strokePath
+exportRefObject Mask:
+  fields:
+    width
+    height
+  constructor:
+    newMask(int, int)
+  procs:
+    writeFile(Mask, string)
+    wh(Mask)
+    copy(Mask)
+    getValue
+    setValue
+    fill(Mask, uint8)
+    minifyBy2(Mask, int)
+    spread
+    ceil(Mask)
+    newImage(Mask)
+    applyOpacity(Mask, float32)
+    invert(Mask)
+    blur(Mask, float32, uint8)
+    draw(Mask, Mask, Mat3, BlendMode)
+    draw(Mask, Image, Mat3, BlendMode)
+    fillText(Mask, Font, string, Mat3, Vec2, HorizontalAlignment, VerticalAlignment)
+    fillText(Mask, Arrangement, Mat3)
+    strokeText(Mask, Font, string, Mat3, float32, Vec2, HorizontalAlignment, VerticalAlignment, LineCap, LineJoin, float32, seq[float32])
+    strokeText(Mask, Arrangement, Mat3, float32, LineCap, LineJoin, float32, seq[float32])
+    fillPath(Mask, Path, Mat3, WindingRule)
+    strokePath(Mask, Path, Mat3, float32, LineCap, LineJoin, float32, seq[float32])
 
-exportRefObject Paint, ["*"]:
-  discard newPaint(pkSolid)
-  export
-    pixie.newPaint
+exportRefObject Paint:
+  fields:
+    kind
+    blendMode
+    opacity
+    color
+    image
+    imageMat
+    gradientHandlePositions
+    gradientStops
+  constructor:
+    newPaint(PaintKind)
+  procs:
+    newPaint(Paint)
 
-exportRefObject Path, ["*"]:
-  discard newPath()
-  export
-    pixie.transform,
-    pixie.addPath,
-    pixie.closePath,
-    pixie.computeBounds,
-    pixie.fillOverlaps,
-    pixie.strokeOverlaps
+exportRefObject Path:
+  constructor:
+    newPath
+  procs:
+    transform(Path, Mat3)
+    addPath(Path, Path)
+    closePath(Path)
+    computeBounds(Path)
+    fillOverlaps
+    strokeOverlaps
+    moveTo(Path, float32, float32)
+    lineTo(Path, float32, float32)
+    bezierCurveTo(Path, float32, float32, float32, float32, float32, float32)
+    quadraticCurveTo(Path, float32, float32, float32, float32)
+    ellipticalArcTo(Path, float32, float32, float32, bool, bool, float32, float32)
+    arc(Path, float32, float32, float32, float32, float32, bool)
+    arcTo(Path, float32, float32, float32, float32, float32)
+    rect(Path, float32, float32, float32, float32)
+    roundedRect(Path, float32, float32, float32, float32, float32, float32, float32, float32, bool)
+    ellipse(Path, float32, float32, float32, float32)
+    circle(Path, float32, float32, float32)
+    polygon(Path, float32, float32, float32, int)
 
-  toggleBasicOnly()
+exportRefObject Typeface:
+  fields:
+    filePath
+  procs:
+    ascent
+    descent
+    lineGap
+    lineHeight
+    getGlyphPath
+    getAdvance
+    getKerningAdjustment
+    newFont
 
-  export
-    pixie.moveTo,
-    pixie.lineTo,
-    pixie.bezierCurveTo,
-    pixie.quadraticCurveTo,
-    pixie.ellipticalArcTo,
-    pixie.arc,
-    pixie.arcTo,
-    pixie.rect,
-    pixie.roundedRect,
-    pixie.ellipse,
-    pixie.circle,
-    pixie.polygon
+exportRefObject Font:
+  fields:
+    typeface
+    size
+    lineHeight
+    paints
+    textCase
+    underline
+    strikethrough
+    noKerningAdjustments
+  procs:
+    scale(Font)
+    defaultLineHeight
+    typeset(Font, string, Vec2, HorizontalAlignment, VerticalAlignment, bool)
+    computeBounds(Font, string)
 
-exportRefObject Typeface, ["*"]:
-  discard
-  export
-    pixie.ascent,
-    pixie.descent,
-    pixie.lineGap,
-    pixie.lineHeight,
-    pixie.getGlyphPath,
-    pixie.getAdvance,
-    pixie.getKerningAdjustment,
-    pixie.newFont
+exportRefObject Span:
+  fields:
+    text
+    font
+  constructor:
+    newSpan
 
-exportRefObject Font, ["*"]:
-  discard
-  export
-    pixie.scale,
-    pixie.defaultLineHeight,
-    pixie.typeset,
-    pixie.computeBounds
+exportRefObject Arrangement:
+  procs:
+    computeBounds(Arrangement)
 
-exportRefObject Span, ["*"]:
-  discard newSpan("", Font())
-
-exportRefObject Arrangement, []:
-  discard
-  export
-    pixie.computeBounds
-
-exportRefObject Context, ["*"]:
-  discard newContext(0, 0)
-  export
-    pixie.save,
-    pixie.saveLayer,
-    pixie.restore,
-    pixie.beginPath,
-    pixie.closePath,
-    pixie.fill,
-    pixie.clip,
-    pixie.stroke,
-    pixie.measureText,
-    pixie.getTransform,
-    pixie.setTransform,
-    pixie.transform,
-    pixie.resetTransform,
-    bindings.drawImage1,
-    bindings.drawImage2,
-    bindings.drawImage3
-
-  toggleBasicOnly()
-
-  export
-    pixie.moveTo,
-    pixie.lineTo,
-    pixie.bezierCurveTo,
-    pixie.quadraticCurveTo,
-    pixie.ellipticalArcTo,
-    pixie.arc,
-    pixie.arcTo,
-    pixie.rect,
-    pixie.roundedRect,
-    pixie.ellipse,
-    pixie.circle,
-    pixie.polygon,
-    pixie.clearRect,
-    pixie.fillRect,
-    pixie.strokeRect,
-    pixie.fillText,
-    pixie.strokeText,
-    pixie.translate,
-    pixie.scale,
-    pixie.rotate,
-    pixie.isPointInPath,
-    pixie.isPointInStroke
+exportRefObject Context:
+  fields:
+    image
+    fillStyle
+    strokeStyle
+    globalAlpha
+    lineWidth
+    miterLimit
+    lineCap
+    lineJoin
+    font
+    fontSize
+    textAlign
+  constructor:
+    newContext(int, int)
+  procs:
+    save
+    saveLayer
+    restore
+    beginPath
+    closePath(Context)
+    fill(Context, WindingRule)
+    fill(Context, Path, WindingRule)
+    clip(Context, WindingRule)
+    clip(Context, Path, WindingRule)
+    stroke(Context)
+    stroke(Context, Path)
+    measureText
+    getTransform
+    setTransform
+    transform(Context, Mat3)
+    resetTransform
+    drawImage1
+    drawImage2
+    drawImage3
+    moveTo(Context, float32, float32)
+    lineTo(Context, float32, float32)
+    bezierCurveTo(Context, float32, float32, float32, float32, float32, float32)
+    quadraticCurveTo(Context, float32, float32, float32, float32)
+    arc(Context, float32, float32, float32, float32, float32, bool)
+    arcTo(Context, float32, float32, float32, float32, float32)
+    rect(Context, float32, float32, float32, float32)
+    roundedRect(Context, float32, float32, float32, float32, float32, float32, float32, float32)
+    ellipse(Context, float32, float32, float32, float32)
+    circle(Context, float32, float32, float32)
+    polygon(Context, float32, float32, float32, int)
+    clearRect(Context, float32, float32, float32, float32)
+    fillRect(Context, float32, float32, float32, float32)
+    strokeRect(Context, float32, float32, float32, float32)
+    fillText(Context, string, float32, float32)
+    strokeText(Context, string, float32, float32)
+    translate(Context, float32, float32)
+    scale(Context, float32, float32)
+    rotate(Context, float32)
+    isPointInPath(Context, float32, float32, WindingRule)
+    isPointInPath(Context, Path, float32, float32, WindingRule)
+    isPointInStroke(Context, float32, float32)
+    isPointInStroke(Context, Path, float32, float32)
 
 exportProcs:
-  export
-    pixie.readImage,
-    pixie.readmask,
-    pixie.readTypeface,
-    pixie.readFont,
-    pixie.parsePath,
-    pixie.miterLimitToAngle,
-    pixie.angleToMiterLimit
+  readImage
+  readmask
+  readTypeface
+  readFont
+  parsePath
+  miterLimitToAngle
+  angleToMiterLimit
 
 writeFiles("bindings/generated", "pixie")
 
