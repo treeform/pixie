@@ -11,5 +11,4 @@ nimcache
 .*
 *.dll
 __pycache__
-node_modules
-package-lock.json
+bindings/generated
