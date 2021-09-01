@@ -11,3 +11,4 @@ nimcache
 .*
 *.dll
 __pycache__
+bindings/generated
