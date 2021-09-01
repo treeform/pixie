@@ -83,7 +83,7 @@ proc minifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
 
   var src = mask
   for i in 1 .. power:
-    result = newMask(mask.width div 2, mask.height div 2)
+    result = newMask(src.width div 2, src.height div 2)
     for y in 0 ..< result.height:
       var x: int
       when defined(amd64) and not defined(pixieNoSimd):
