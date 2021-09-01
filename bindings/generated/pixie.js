@@ -1418,9 +1418,7 @@ dll = ffi.Library(dllPath, {
 });
 
 exports.DEFAULT_MITER_LIMIT = 4.0
-
 exports.AUTO_LINE_HEIGHT = -1.0
-
 exports.FileFormat = FileFormat
 exports.FF_PNG = 0
 exports.FF_BMP = 1
