@@ -402,7 +402,7 @@ proc ellipticalArcTo*(
   path.at = vec2(x, y)
 
 proc arc*(
-  path: Path, x, y, r, a0, a1: float32, ccw: bool
+  path: Path, x, y, r, a0, a1: float32, ccw: bool = false
 ) {.raises: [PixieError].} =
   ## Adds a circular arc to the current sub-path.
   if r == 0: # When radius is zero, do nothing.
