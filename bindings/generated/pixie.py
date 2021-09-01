@@ -1424,7 +1424,7 @@ dll.pixie_seq_span_compute_bounds.restype = Vector2
 dll.pixie_image_unref.argtypes = [Image]
 dll.pixie_image_unref.restype = None
 
-dll.pixie_new_image.argtypes = []
+dll.pixie_new_image.argtypes = [c_longlong, c_longlong]
 dll.pixie_new_image.restype = c_ulonglong
 
 dll.pixie_image_get_width.argtypes = [Image]
@@ -1526,7 +1526,7 @@ dll.pixie_image_new_context.restype = Context
 dll.pixie_mask_unref.argtypes = [Mask]
 dll.pixie_mask_unref.restype = None
 
-dll.pixie_new_mask.argtypes = []
+dll.pixie_new_mask.argtypes = [c_longlong, c_longlong]
 dll.pixie_new_mask.restype = c_ulonglong
 
 dll.pixie_mask_get_width.argtypes = [Mask]
@@ -1607,7 +1607,7 @@ dll.pixie_mask_stroke_path.restype = None
 dll.pixie_paint_unref.argtypes = [Paint]
 dll.pixie_paint_unref.restype = None
 
-dll.pixie_new_paint.argtypes = []
+dll.pixie_new_paint.argtypes = [PaintKind]
 dll.pixie_new_paint.restype = c_ulonglong
 
 dll.pixie_paint_get_kind.argtypes = [Paint]
@@ -1856,7 +1856,7 @@ dll.pixie_font_compute_bounds.restype = Vector2
 dll.pixie_span_unref.argtypes = [Span]
 dll.pixie_span_unref.restype = None
 
-dll.pixie_new_span.argtypes = []
+dll.pixie_new_span.argtypes = [c_char_p, Font]
 dll.pixie_new_span.restype = c_ulonglong
 
 dll.pixie_span_get_text.argtypes = [Span]
@@ -1880,7 +1880,7 @@ dll.pixie_arrangement_compute_bounds.restype = Vector2
 dll.pixie_context_unref.argtypes = [Context]
 dll.pixie_context_unref.restype = None
 
-dll.pixie_new_context.argtypes = []
+dll.pixie_new_context.argtypes = [c_longlong, c_longlong]
 dll.pixie_new_context.restype = c_ulonglong
 
 dll.pixie_context_get_image.argtypes = [Context]
