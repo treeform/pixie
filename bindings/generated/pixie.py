@@ -197,10 +197,10 @@ class SeqFloat32(Structure):
     _fields_ = [("ref", c_ulonglong)]
 
     def __bool__(self):
-        self.ref != None
+        return self.ref != None
 
     def __eq__(self, obj):
-        self.ref == obj.ref
+        return self.ref == obj.ref
 
     def __del__(self):
         dll.pixie_seq_float_32_unref(self)
@@ -230,10 +230,10 @@ class SeqSpan(Structure):
     _fields_ = [("ref", c_ulonglong)]
 
     def __bool__(self):
-        self.ref != None
+        return self.ref != None
 
     def __eq__(self, obj):
-        self.ref == obj.ref
+        return self.ref == obj.ref
 
     def __del__(self):
         dll.pixie_seq_span_unref(self)
@@ -273,10 +273,10 @@ class Image(Structure):
     _fields_ = [("ref", c_ulonglong)]
 
     def __bool__(self):
-        self.ref != None
+        return self.ref != None
 
     def __eq__(self, obj):
-        self.ref == obj.ref
+        return self.ref == obj.ref
 
     def __del__(self):
         dll.pixie_image_unref(self)
@@ -462,10 +462,10 @@ class Mask(Structure):
     _fields_ = [("ref", c_ulonglong)]
 
     def __bool__(self):
-        self.ref != None
+        return self.ref != None
 
     def __eq__(self, obj):
-        self.ref == obj.ref
+        return self.ref == obj.ref
 
     def __del__(self):
         dll.pixie_mask_unref(self)
@@ -612,10 +612,10 @@ class Paint(Structure):
     _fields_ = [("ref", c_ulonglong)]
 
     def __bool__(self):
-        self.ref != None
+        return self.ref != None
 
     def __eq__(self, obj):
-        self.ref == obj.ref
+        return self.ref == obj.ref
 
     def __del__(self):
         dll.pixie_paint_unref(self)
@@ -734,10 +734,10 @@ class Path(Structure):
     _fields_ = [("ref", c_ulonglong)]
 
     def __bool__(self):
-        self.ref != None
+        return self.ref != None
 
     def __eq__(self, obj):
-        self.ref == obj.ref
+        return self.ref == obj.ref
 
     def __del__(self):
         dll.pixie_path_unref(self)
@@ -823,10 +823,10 @@ class Typeface(Structure):
     _fields_ = [("ref", c_ulonglong)]
 
     def __bool__(self):
-        self.ref != None
+        return self.ref != None
 
     def __eq__(self, obj):
-        self.ref == obj.ref
+        return self.ref == obj.ref
 
     def __del__(self):
         dll.pixie_typeface_unref(self)
@@ -877,10 +877,10 @@ class Font(Structure):
     _fields_ = [("ref", c_ulonglong)]
 
     def __bool__(self):
-        self.ref != None
+        return self.ref != None
 
     def __eq__(self, obj):
-        self.ref == obj.ref
+        return self.ref == obj.ref
 
     def __del__(self):
         dll.pixie_font_unref(self)
@@ -990,10 +990,10 @@ class Span(Structure):
     _fields_ = [("ref", c_ulonglong)]
 
     def __bool__(self):
-        self.ref != None
+        return self.ref != None
 
     def __eq__(self, obj):
-        self.ref == obj.ref
+        return self.ref == obj.ref
 
     def __del__(self):
         dll.pixie_span_unref(self)
@@ -1022,10 +1022,10 @@ class Arrangement(Structure):
     _fields_ = [("ref", c_ulonglong)]
 
     def __bool__(self):
-        self.ref != None
+        return self.ref != None
 
     def __eq__(self, obj):
-        self.ref == obj.ref
+        return self.ref == obj.ref
 
     def __del__(self):
         dll.pixie_arrangement_unref(self)
@@ -1038,10 +1038,10 @@ class Context(Structure):
     _fields_ = [("ref", c_ulonglong)]
 
     def __bool__(self):
-        self.ref != None
+        return self.ref != None
 
     def __eq__(self, obj):
-        self.ref == obj.ref
+        return self.ref == obj.ref
 
     def __del__(self):
         dll.pixie_context_unref(self)
