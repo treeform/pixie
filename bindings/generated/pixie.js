@@ -46,6 +46,9 @@ vector2 = function(x, y){
   v.y = y
   return v;
 }
+Vector2.prototype.isEqual = function(other){
+  return self.x == other.x && self.y == other.y;
+};
 
 const Matrix3 = Struct({
   'a':'float',
@@ -61,6 +64,9 @@ const Matrix3 = Struct({
 matrix3 = function(){
   return dll.pixie_matrix_3();
 }
+Matrix3.prototype.isEqual = function(other){
+  return self.a == other.a && self.b == other.b && self.c == other.c && self.d == other.d && self.e == other.e && self.f == other.f && self.g == other.g && self.h == other.h && self.i == other.i;
+};
 
 const Rect = Struct({
   'x':'float',
@@ -76,6 +82,9 @@ rect = function(x, y, w, h){
   v.h = h
   return v;
 }
+Rect.prototype.isEqual = function(other){
+  return self.x == other.x && self.y == other.y && self.w == other.w && self.h == other.h;
+};
 
 const Color = Struct({
   'r':'float',
@@ -91,6 +100,9 @@ color = function(r, g, b, a){
   v.a = a
   return v;
 }
+Color.prototype.isEqual = function(other){
+  return self.r == other.r && self.g == other.g && self.b == other.b && self.a == other.a;
+};
 
 const ColorStop = Struct({
   'color':Color,
@@ -102,6 +114,9 @@ colorStop = function(color, position){
   v.position = position
   return v;
 }
+ColorStop.prototype.isEqual = function(other){
+  return self.color == other.color && self.position == other.position;
+};
 
 const TextMetrics = Struct({
   'width':'float'
@@ -111,8 +126,17 @@ textMetrics = function(width){
   v.width = width
   return v;
 }
+TextMetrics.prototype.isEqual = function(other){
+  return self.width == other.width;
+};
 
 SeqFloat32 = Struct({'nimRef': 'uint64'});
+SeqFloat32.prototype.isNull = function(){
+  return this.nimRef == 0;
+};
+SeqFloat32.prototype.isEqual = function(other){
+  return this.nimRef == other.nimRef;
+};
 SeqFloat32.prototype.unref = function(){
   return dll.pixie_seq_float_32_unref(this)
 };
@@ -138,6 +162,12 @@ SeqFloat32.prototype.clear = function(){
   dll.pixie_seq_float_32_clear(this)
 };
 SeqSpan = Struct({'nimRef': 'uint64'});
+SeqSpan.prototype.isNull = function(){
+  return this.nimRef == 0;
+};
+SeqSpan.prototype.isEqual = function(other){
+  return this.nimRef == other.nimRef;
+};
 SeqSpan.prototype.unref = function(){
   return dll.pixie_seq_span_unref(this)
 };
@@ -173,6 +203,12 @@ SeqSpan.prototype.computeBounds = function(){
 }
 
 Image = Struct({'nimRef': 'uint64'});
+Image.prototype.isNull = function(){
+  return this.nimRef == 0;
+};
+Image.prototype.isEqual = function(other){
+  return this.nimRef == other.nimRef;
+};
 Image.prototype.unref = function(){
   return dll.pixie_image_unref(this)
 };
@@ -333,6 +369,12 @@ Image.prototype.newContext = function(){
 }
 
 Mask = Struct({'nimRef': 'uint64'});
+Mask.prototype.isNull = function(){
+  return this.nimRef == 0;
+};
+Mask.prototype.isEqual = function(other){
+  return this.nimRef == other.nimRef;
+};
 Mask.prototype.unref = function(){
   return dll.pixie_mask_unref(this)
 };
@@ -454,6 +496,12 @@ Mask.prototype.strokePath = function(path, transform = Matrix3(), stroke_width =
 }
 
 Paint = Struct({'nimRef': 'uint64'});
+Paint.prototype.isNull = function(){
+  return this.nimRef == 0;
+};
+Paint.prototype.isEqual = function(other){
+  return this.nimRef == other.nimRef;
+};
 Paint.prototype.unref = function(){
   return dll.pixie_paint_unref(this)
 };
@@ -540,6 +588,12 @@ Paint.prototype.newPaint = function(){
 }
 
 Path = Struct({'nimRef': 'uint64'});
+Path.prototype.isNull = function(){
+  return this.nimRef == 0;
+};
+Path.prototype.isEqual = function(other){
+  return this.nimRef == other.nimRef;
+};
 Path.prototype.unref = function(){
   return dll.pixie_path_unref(this)
 };
@@ -629,6 +683,12 @@ Path.prototype.polygon = function(x, y, size, sides){
 }
 
 Typeface = Struct({'nimRef': 'uint64'});
+Typeface.prototype.isNull = function(){
+  return this.nimRef == 0;
+};
+Typeface.prototype.isEqual = function(other){
+  return this.nimRef == other.nimRef;
+};
 Typeface.prototype.unref = function(){
   return dll.pixie_typeface_unref(this)
 };
@@ -679,6 +739,12 @@ Typeface.prototype.newFont = function(){
 }
 
 Font = Struct({'nimRef': 'uint64'});
+Font.prototype.isNull = function(){
+  return this.nimRef == 0;
+};
+Font.prototype.isEqual = function(other){
+  return this.nimRef == other.nimRef;
+};
 Font.prototype.unref = function(){
   return dll.pixie_font_unref(this)
 };
@@ -756,6 +822,12 @@ Font.prototype.computeBounds = function(text){
 }
 
 Span = Struct({'nimRef': 'uint64'});
+Span.prototype.isNull = function(){
+  return this.nimRef == 0;
+};
+Span.prototype.isEqual = function(other){
+  return this.nimRef == other.nimRef;
+};
 Span.prototype.unref = function(){
   return dll.pixie_span_unref(this)
 };
@@ -773,6 +845,12 @@ Object.defineProperty(Span.prototype, 'font', {
 });
 
 Arrangement = Struct({'nimRef': 'uint64'});
+Arrangement.prototype.isNull = function(){
+  return this.nimRef == 0;
+};
+Arrangement.prototype.isEqual = function(other){
+  return this.nimRef == other.nimRef;
+};
 Arrangement.prototype.unref = function(){
   return dll.pixie_arrangement_unref(this)
 };
@@ -783,6 +861,12 @@ Arrangement.prototype.computeBounds = function(){
 }
 
 Context = Struct({'nimRef': 'uint64'});
+Context.prototype.isNull = function(){
+  return this.nimRef == 0;
+};
+Context.prototype.isEqual = function(other){
+  return this.nimRef == other.nimRef;
+};
 Context.prototype.unref = function(){
   return dll.pixie_context_unref(this)
 };
