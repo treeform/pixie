@@ -14,6 +14,10 @@ type
     width, height: int
     bitDepth, colorType, compressionMethod, filterMethod, interlaceMethod: uint8
 
+  Png* = ref object
+    width*, height*, channels*: int
+    data*: seq[ColorRGBA]
+
 template failInvalid() =
   raise newException(PixieError, "Invalid PNG buffer, unable to load")
 
@@ -316,9 +320,8 @@ proc decodeImageData(
   else:
     discard # Not possible, parseHeader validates
 
-proc decodePng*(data: string): Image {.raises: [PixieError].} =
-  ## Decodes the PNG data into an Image.
-
+proc decodePngRaw*(data: string): Png {.raises: [PixieError].} =
+  ## Decodes the PNG data.
   if data.len < (8 + (8 + 13 + 4) + 4): # Magic bytes + IHDR + IEND
     failInvalid()
 
@@ -420,11 +423,19 @@ proc decodePng*(data: string): Image {.raises: [PixieError].} =
   if prevChunkType != "IEND":
     failInvalid()
 
-  var pixels = decodeImageData(header, palette, transparency, imageData)
-  pixels.toPremultipliedAlpha()
+  result = Png()
+  result.width = header.width
+  result.height = header.height
+  result.channels = 4
+  result.data = decodeImageData(header, palette, transparency, imageData)
 
-  result = newImage(header.width, header.height)
-  copyMem(result.data[0].addr, pixels[0].addr, pixels.len * 4)
+proc decodePng*(data: string): Image {.raises: [PixieError].} =
+  ## Decodes the PNG data into an Image.
+  let png = decodePngRaw(data)
+  png.data.toPremultipliedAlpha()
+
+  result = newImage(png.width, png.height)
+  copyMem(result.data[0].addr, png.data[0].addr, png.data.len * 4)
 
 proc encodePng*(
   width, height, channels: int, data: pointer, len: int
