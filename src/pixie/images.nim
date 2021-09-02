@@ -450,7 +450,7 @@ proc invert*(target: Image | Mask) {.raises: [].} =
       target.data[j] = (255 - target.data[j]).uint8
 
 proc blur*(
-  image: Image, radius: float32, outOfBounds: SomeColor = Color()
+  image: Image, radius: float32, outOfBounds: SomeColor = color(0, 0, 0, 0)
 ) {.raises: [PixieError].} =
   ## Applies Gaussian blur to the image given a radius.
   let radius = round(radius).int
