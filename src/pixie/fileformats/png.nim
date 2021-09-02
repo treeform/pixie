@@ -320,6 +320,11 @@ proc decodeImageData(
   else:
     discard # Not possible, parseHeader validates
 
+proc newImage*(png: Png): Image {.raises: [PixieError].} =
+  result = newImage(png.width, png.height)
+  copyMem(result.data[0].addr, png.data[0].addr, png.data.len * 4)
+  result.data.toPremultipliedAlpha()
+
 proc decodePngRaw*(data: string): Png {.raises: [PixieError].} =
   ## Decodes the PNG data.
   if data.len < (8 + (8 + 13 + 4) + 4): # Magic bytes + IHDR + IEND
@@ -431,11 +436,7 @@ proc decodePngRaw*(data: string): Png {.raises: [PixieError].} =
 
 proc decodePng*(data: string): Image {.raises: [PixieError].} =
   ## Decodes the PNG data into an Image.
-  let png = decodePngRaw(data)
-  png.data.toPremultipliedAlpha()
-
-  result = newImage(png.width, png.height)
-  copyMem(result.data[0].addr, png.data[0].addr, png.data.len * 4)
+  newImage(decodePngRaw(data))
 
 proc encodePng*(
   width, height, channels: int, data: pointer, len: int
@@ -517,6 +518,9 @@ proc encodePng*(
   result.addUint32(0)
   result.add("IEND")
   result.addUint32(crc32(result[result.len - 4 ..< result.len]).swap())
+
+proc encodePng*(png: Png): string {.raises: [PixieError].} =
+  encodePng(png.width, png.height, 4, png.data[0].addr, png.data.len * 4)
 
 proc encodePng*(image: Image): string {.raises: [PixieError].} =
   ## Encodes the image data into the PNG file format.
