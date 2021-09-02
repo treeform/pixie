@@ -520,7 +520,7 @@ proc parseHheaTable(buf: string, offset: int): HheaTable =
   # discard buf.readUint16(offset + 30).swap() # Reserved
   result.metricDataFormat = buf.readInt16(offset + 32).swap()
   if result.metricDataFormat != 0:
-    failUnsupported("Hhea glyph data format")
+    failUnsupported("Hhea metric data format")
   result.numberOfHMetrics = buf.readUint16(offset + 34).swap()
 
 proc parseMaxpTable(buf: string, offset: int): MaxpTable =
