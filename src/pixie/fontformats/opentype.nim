@@ -359,6 +359,17 @@ proc readLongDateTime(buf: string, offset: int): float64 =
   ## January 1, 1904, UTC.
   buf.readInt64(offset).swap().float64 - 2082844800
 
+proc readVersion16Dot16(buf: string, offset: int): float32 =
+  ## Version16Dot16 is a packed value: the upper 16 bits comprise a major
+  ## version number, and the lower 16 bits, a minor version
+  let
+    data = buf.readUint32(offset + 0).swap()
+    majorDigit = (data and 0x000F0000) shr 16
+    minorDigit = (data and 0x0000F000) shr 12
+  if majorDigit > 9 or minorDigit > 9:
+    failUnsupported("invalid version format")
+  majorDigit.float32 + minorDigit.float32 / 10
+
 proc parseCmapTable(buf: string, offset: int): CmapTable =
   var i = offset
   buf.eofCheck(i + 4)
@@ -516,23 +527,27 @@ proc parseMaxpTable(buf: string, offset: int): MaxpTable =
   buf.eofCheck(offset + 32)
 
   result = MaxpTable()
-  result.version = buf.readFixed32(offset + 0)
-  if result.version != 1.0:
+  result.version = buf.readVersion16Dot16(offset + 0)
+  case result.version
+  of 0.5:
+    result.numGlyphs = buf.readUint16(offset + 4).swap()
+  of 1.0:
+    result.numGlyphs = buf.readUint16(offset + 4).swap()
+    result.maxPoints = buf.readUint16(offset + 6).swap()
+    result.maxContours = buf.readUint16(offset + 8).swap()
+    result.maxCompositePoints = buf.readUint16(offset + 10).swap()
+    result.maxCompositeContours = buf.readUint16(offset + 12).swap()
+    result.maxZones = buf.readUint16(offset + 14).swap()
+    result.maxTwilightPoints = buf.readUint16(offset + 16).swap()
+    result.maxStorage = buf.readUint16(offset + 18).swap()
+    result.maxFunctionDefs = buf.readUint16(offset + 20).swap()
+    result.maxInstructionDefs = buf.readUint16(offset + 22).swap()
+    result.maxStackElements = buf.readUint16(offset + 24).swap()
+    result.maxSizeOfInstructions = buf.readUint16(offset + 26).swap()
+    result.maxComponentElements = buf.readUint16(offset + 28).swap()
+    result.maxComponentDepth = buf.readUint16(offset + 30).swap()
+  else:
     failUnsupported("Maxp version")
-  result.numGlyphs = buf.readUint16(offset + 4).swap()
-  result.maxPoints = buf.readUint16(offset + 6).swap()
-  result.maxContours = buf.readUint16(offset + 8).swap()
-  result.maxCompositePoints = buf.readUint16(offset + 10).swap()
-  result.maxCompositeContours = buf.readUint16(offset + 12).swap()
-  result.maxZones = buf.readUint16(offset + 14).swap()
-  result.maxTwilightPoints = buf.readUint16(offset + 16).swap()
-  result.maxStorage = buf.readUint16(offset + 18).swap()
-  result.maxFunctionDefs = buf.readUint16(offset + 20).swap()
-  result.maxInstructionDefs = buf.readUint16(offset + 22).swap()
-  result.maxStackElements = buf.readUint16(offset + 24).swap()
-  result.maxSizeOfInstructions = buf.readUint16(offset + 26).swap()
-  result.maxComponentElements = buf.readUint16(offset + 28).swap()
-  result.maxComponentDepth = buf.readUint16(offset + 30).swap()
 
 proc parseHmtxTable(
   buf: string, offset: int, hhea: HheaTable, maxp: MaxpTable
@@ -1220,7 +1235,7 @@ proc parsePostTable(buf: string, offset: int): PostTable =
   buf.eofCheck(offset + 14)
 
   result = PostTable()
-  result.version = buf.readFixed32(offset + 0)
+  result.version = buf.readVersion16Dot16(offset + 0)
   result.italicAngle = buf.readFixed32(offset + 4)
   result.underlinePosition = buf.readInt16(offset + 8).swap()
   result.underlineThickness = buf.readInt16(offset + 10).swap()
