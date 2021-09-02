@@ -338,8 +338,8 @@ template eofCheck(buf: string, readTo: int) =
   if readTo > buf.len:
     raise newException(PixieError, "Unexpected error reading font data, EOF")
 
-template failUnsupported() =
-  raise newException(PixieError, "Unsupported font data")
+template failUnsupported(msg: string) =
+  raise newException(PixieError, "Unsupported font " & msg)
 
 proc readUint16Seq(buf: string, offset, len: int): seq[uint16] =
   result = newSeq[uint16](len)
@@ -460,10 +460,10 @@ proc parseHeadTable(buf: string, offset: int): HeadTable =
   result = HeadTable()
   result.majorVersion = buf.readUint16(offset + 0).swap()
   if result.majorVersion != 1:
-    failUnsupported()
+    failUnsupported("Head major version")
   result.minorVersion = buf.readUint16(offset + 2).swap()
   if result.minorVersion != 0:
-    failUnsupported()
+    failUnsupported("Head minor version")
   result.fontRevision = buf.readFixed32(offset + 4)
   result.checkSumAdjustment = buf.readUint32(offset + 8).swap()
   result.magicNumber = buf.readUint32(offset + 12).swap()
@@ -481,7 +481,7 @@ proc parseHeadTable(buf: string, offset: int): HeadTable =
   result.indexToLocFormat = buf.readInt16(offset + 50).swap()
   result.glyphDataFormat = buf.readInt16(offset + 52).swap()
   if result.glyphDataFormat != 0:
-    failUnsupported()
+    failUnsupported("Head glyph data format")
 
 proc parseHheaTable(buf: string, offset: int): HheaTable =
   buf.eofCheck(offset + 36)
@@ -489,10 +489,10 @@ proc parseHheaTable(buf: string, offset: int): HheaTable =
   result = HheaTable()
   result.majorVersion = buf.readUint16(offset + 0).swap()
   if result.majorVersion != 1:
-    failUnsupported()
+    failUnsupported("Hhea major version")
   result.minorVersion = buf.readUint16(offset + 2).swap()
   if result.minorVersion != 0:
-    failUnsupported()
+    failUnsupported("Hhea minor version")
   result.ascender = buf.readInt16(offset + 4).swap()
   result.descender = buf.readInt16(offset + 6).swap()
   result.lineGap = buf.readInt16(offset + 8).swap()
@@ -509,7 +509,7 @@ proc parseHheaTable(buf: string, offset: int): HheaTable =
   # discard buf.readUint16(offset + 30).swap() # Reserved
   result.metricDataFormat = buf.readInt16(offset + 32).swap()
   if result.metricDataFormat != 0:
-    failUnsupported()
+    failUnsupported("Hhea glyph data format")
   result.numberOfHMetrics = buf.readUint16(offset + 34).swap()
 
 proc parseMaxpTable(buf: string, offset: int): MaxpTable =
@@ -518,7 +518,7 @@ proc parseMaxpTable(buf: string, offset: int): MaxpTable =
   result = MaxpTable()
   result.version = buf.readFixed32(offset + 0)
   if result.version != 1.0:
-    failUnsupported()
+    failUnsupported("Maxp version")
   result.numGlyphs = buf.readUint16(offset + 4).swap()
   result.maxPoints = buf.readUint16(offset + 6).swap()
   result.maxContours = buf.readUint16(offset + 8).swap()
@@ -565,7 +565,7 @@ proc parseNameTable(buf: string, offset: int): NameTable =
   result = NameTable()
   result.format = buf.readUint16(i + 0).swap()
   if result.format != 0:
-    failUnsupported()
+    failUnsupported("Name format")
   result.count = buf.readUint16(i + 2).swap()
   result.stringOffset = buf.readUint16(i + 4).swap()
 
@@ -694,11 +694,11 @@ proc parseKernTable(buf: string, offset: int): KernTable =
       var subTable: KernSubTable
       subtable.version = buf.readUint16(i + 0).swap()
       if subTable.version != 0:
-        failUnsupported()
+        failUnsupported("Kern subtable version")
       subTable.length = buf.readUint16(i + 2).swap()
       subTable.coverage = buf.readUint16(i + 4).swap()
       if subTable.coverage shr 8 != 0:
-        failUnsupported()
+        failUnsupported("Kern subtable coverage")
       subTable.nPairs = buf.readUint16(i + 6).swap()
       subTable.searchRange = buf.readUint16(i + 8).swap()
       subTable.entrySelector = buf.readUint16(i + 10).swap()
@@ -732,7 +732,7 @@ proc parseKernTable(buf: string, offset: int): KernTable =
   elif version == 1:
     discard # Mac format
   else:
-    failUnsupported()
+    failUnsupported("Kern version")
 
 # proc parseLangSys(buf: string, offset: int): LangSys =
 #   var i = offset
@@ -865,7 +865,7 @@ proc parseCoverage(buf: string, offset: int): Coverage =
           inc ci
 
     else:
-      failUnsupported()
+      failUnsupported("coverage format")
 
 proc valueFormatSize(valueFormat: uint16): int =
   # countSetBits(valueFormat) * 2
@@ -1004,7 +1004,7 @@ proc parseClassDef(buf: string, offset: int): ClassDef =
         result.classRangeRecords[j] = parseClassRangeRecord(buf, i)
         i += 6
     else:
-      failUnsupported()
+      failUnsupported("class format")
 
 proc parsePairPos(buf: string, offset: int): PairPos =
   var i = offset
@@ -1045,10 +1045,10 @@ proc parsePairPos(buf: string, offset: int): PairPos =
         case result.coverage.coverageFormat:
           of 1:
             if result.coverage.glyphCount != result.pairSetCount:
-              failUnsupported()
+              failUnsupported("pair set count")
             for ci, glyphId in result.coverage.glyphArray:
               if ci < 0 or ci >= result.pairSets.len:
-                failUnsupported()
+                failUnsupported("pair set length")
               for pairValueRecord in result.pairSets[ci].pairValueRecords:
                 if pairValueRecord.valueRecord1.xAdvance != 0:
                   let glyphPair = (glyphId, pairValueRecord.secondGlyph)
@@ -1059,7 +1059,7 @@ proc parsePairPos(buf: string, offset: int): PairPos =
               var ci = rangeRecord.startCoverageIndex.int
               for glyphId in rangeRecord.startGlyphID .. rangeRecord.endGlyphID:
                 if ci < 0 or ci >= result.pairSets.len:
-                  failUnsupported()
+                  failUnsupported("pair set length")
                 for pairValueRecord in result.pairSets[ci].pairValueRecords:
                   if pairValueRecord.valueRecord1.xAdvance != 0:
                     let glyphPair = (glyphId, pairValueRecord.secondGlyph)
@@ -1109,7 +1109,7 @@ proc parsePairPos(buf: string, offset: int): PairPos =
       ) =
         for record in classDef.classRangeRecords:
           if record.startGlyphID > record.endGlyphID:
-            failUnsupported()
+            failUnsupported("glyph out of bounds")
           if record.class != 0:
             for glyphId in record.startGlyphID .. record.endGlyphID:
               table[glyphId] = record.class
@@ -1137,7 +1137,7 @@ proc parsePairPos(buf: string, offset: int): PairPos =
               result.classPairAdjustments[(class1.uint16, class2.uint16)] =
                 class2Record.valueRecord1.xAdvance
     else:
-      failUnsupported()
+      failUnsupported("pair pos format")
 
 proc parseLookup(buf: string, offset: int, pairPosTables: var seq[PairPos]): Lookup =
   var i = offset
@@ -1198,7 +1198,7 @@ proc parseGposTable(buf: string, offset: int): GPOSTable =
   i += 10
 
   if result.majorVersion != 1:
-    failUnsupported()
+    failUnsupported("Gpos major version")
 
   if result.minorVersion == 0:
     discard
@@ -1207,7 +1207,7 @@ proc parseGposTable(buf: string, offset: int): GPOSTable =
     result.featureVariationsOffset = buf.readUint32(i + 0).swap()
     i += 4
   else:
-    failUnsupported()
+    failUnsupported("Gpos minor version")
 
   # result.scriptList = parseScriptList(buf, offset + result.scriptListOffset.int)
   # result.featureList =
@@ -1304,7 +1304,7 @@ proc parseGlyphPath(
         i += 2
     prevX += x
     if point >= points.len:
-      failUnsupported()
+      failUnsupported("point out of bounds")
     points[point].x = prevX.float32
     points[point].isOnCurve = (flag and 1) != 0
 
