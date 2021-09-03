@@ -316,9 +316,6 @@ type
     size: uint8
     offsetSize: uint8
 
-  CFFIndex = ref object
-    objects: seq[string]
-
   CFFTopDict = ref object
     charStrings: int
     charset: int
@@ -330,8 +327,12 @@ type
     copyright: string
     encoding: int
     familyName: string
-    fdArray: pointer
-    fdSelect: pointer
+
+    fdArray: int
+    fdSelect: int
+    fdArraySeq: seq[CFFTopDict]
+    fdSelectSeq: seq[int]
+
     fontBBox: array[4, float32]
     fontMatrix: array[6, float32]
     fontName: string
@@ -342,9 +343,11 @@ type
     paintType: int
     private: array[2, float32]
     subrs: int
+    subrsBias: int
+    subrIndex: seq[string]
     defaultWidthX: int
     nominalWidthX: int
-    ros: array[3, float32]
+    ros: array[3, string]
     strokeWidth: int
     uidBase: pointer
     underlinePosition: int
@@ -356,18 +359,16 @@ type
   CFFTable = ref object
     ## Contains the glyph outlines in PostScript format.
     header: CFFHeader
-    nameIndex: CFFIndex
-    topDictIndex: CFFIndex
-    stringIndex: CFFIndex
-    globalSubrIndex: CFFIndex
+    nameIndex: seq[string]
+    topDictIndex: seq[string]
+    stringIndex: seq[string]
+    globalSubrIndex: seq[string]
     topDict: CFFTopDict
-    subrsBias: int
-    subrIndex: CFFIndex
-    charIndex: CFFIndex
+    charIndex: seq[string]
     #charsets*: CFF..
     #charStringsIndex*: CFF..
     #privateDict*: CFF..
-
+    isCID: bool
 
   OpenType* = ref object
     buf*: string
@@ -810,7 +811,7 @@ proc parseKernTable(buf: string, offset: int): KernTable =
   else:
     failUnsupported("Kern version")
 
-proc parseCFFIndex(buf: string, start: var int, stripZero = false): CFFIndex =
+proc parseCFFIndex(buf: string, start: var int, stripZero = false): seq[string] =
 
   proc getOffset(buf: string, offset, offSize: int): int =
     var v = 0
@@ -821,7 +822,6 @@ proc parseCFFIndex(buf: string, start: var int, stripZero = false): CFFIndex =
 
   # Compute all of the offsets first.
   var offsets: seq[int]
-  result = CFFIndex()
   let count = buf.readUint16(start).swap().int
   var endOffset = 0
   var objectOffset = 0
@@ -844,7 +844,7 @@ proc parseCFFIndex(buf: string, start: var int, stripZero = false): CFFIndex =
     var value = buf[objectOffset + offsets[i] ..< objectOffset + offsets[i + 1]]
     if stripZero:
       value = value[0..^1] # ignore 0 at the end
-    result.objects.add(value)
+    result.add(value)
   start = endOffset
 
 const cffStandardStrings = [
@@ -935,23 +935,57 @@ proc shift[T](s: var seq[T]): T =
   ## Pops from the front.
   result = s[0]
   s.delete(0)
+import print
 
-proc parseCFFCharstring(cff: CffTable, code: string): Path =
+proc calcCFFSubroutineBias(subrs: seq[string]): int =
+  if subrs.len < 1240:
+    107
+  elif subrs.len < 33900:
+    1131
+  else:
+    32768
+
+proc parseCFFCharstring(cff: CffTable, code: string, glyphIndex: int): Path =
 
   var p = newPath()
   var stack: seq[float32]
-  # var nStems = 0
+  var nStems = 0
   var haveWidth = false
   var x = 0f
   var y = 0f
 
-  let
-    subrs = cff.topDict.subrs
-    subrsBias = cff.subrsBias
+  var
+    subrs: seq[string]
+    subrsBias: int
+    defaultWidthX: int
+    nominalWidthX: int
+
+  if cff.isCID:
+    print cff.isCID
+    let fdIndex = cff.topDict.fdSelectSeq[glyphIndex]
+    print fdIndex
+    let fdDict = cff.topDict.fdArraySeq[fdIndex]
+    subrs = fdDict.subrIndex
+    subrsBias = calcCFFSubroutineBias(subrs)
+    defaultWidthX = fdDict.defaultWidthX
+    nominalWidthX = fdDict.nominalWidthX
+  else:
+    subrs = cff.topDict.subrIndex
+    subrsBias = cff.topDict.subrsBias
     defaultWidthX = cff.topDict.defaultWidthX
     nominalWidthX = cff.topDict.nominalWidthX
 
   var width = defaultWidthX.float32
+
+  proc parseStems() =
+    # The number of stem operators on the stack is always even.
+    # If the value is uneven, that means a width is specified.
+    print "parseStems", stack
+    if stack.len mod 2 != 0 and not haveWidth:
+      width = stack.shift() + nominalWidthX.float32
+    nStems += stack.len shr 1
+    stack.setLen(0)
+    haveWidth = true
 
   proc parse(code: string) =
 
@@ -960,6 +994,9 @@ proc parseCFFCharstring(cff: CffTable, code: string): Path =
       var v = code.readUint8(i).int
       inc i
       case v:
+
+      of 1, 3: # hstem vstem
+        parseStems()
 
       of 4: # vmoveto
         if stack.len > 1 and not haveWidth:
@@ -1005,7 +1042,8 @@ proc parseCFFCharstring(cff: CffTable, code: string): Path =
 
       of 10: # callsubr
         let codeIndex = stack.pop().int + subrsBias
-        let subrCode = cff.subrIndex.objects[codeIndex]
+        #print codeIndex, cff.subrIndex
+        let subrCode = subrs[codeIndex]
         if subrCode.len > 0:
           parse(subrCode)
 
@@ -1017,6 +1055,13 @@ proc parseCFFCharstring(cff: CffTable, code: string): Path =
           width = stack.shift() + nominalWidthX.float32
           haveWidth = true
         p.closePath()
+
+      of 18: # hstemhm
+        parseStems()
+
+      of 19, 20: # hintmask, cntrmask
+        parseStems()
+        i += (nStems + 7) shr 3
 
       of 21: # rmoveto
         if stack.len > 2 and not haveWidth:
@@ -1093,8 +1138,8 @@ proc parseCFFCharstring(cff: CffTable, code: string): Path =
         i += 2
 
       of 29: # callgsubr
-        let codeIndex = stack.pop().int + subrsBias
-        let subrCode = cff.globalSubrIndex.objects[codeIndex]
+        let codeIndex = stack.pop().int + calcCFFSubroutineBias(cff.globalSubrIndex)
+        let subrCode = cff.globalSubrIndex[codeIndex]
         if subrCode.len > 0:
           parse(subrCode)
 
@@ -1158,7 +1203,7 @@ proc parseCFFCharstring(cff: CffTable, code: string): Path =
           i += 1
           stack.add(float32(-(v - 251) * 256 - b1 - 108))
         else:
-          failUnsupported("test me")
+          #failUnsupported("test me")
           let
             b1 = code.readUint8(i + 0).int
             b2 = code.readUint8(i + 1).int
@@ -1169,9 +1214,10 @@ proc parseCFFCharstring(cff: CffTable, code: string): Path =
             ((b1 shl 24) or (b2 shl 16) or (b3 shl 8) or b4).float32 / 65536f)
 
   parse(code)
+  print $p
   return p
 
-proc parseCFFTable(buf: string, offset: int): CFFTable =
+proc parseCFFTable(buf: string, offset: int, maxp: MaxpTable): CFFTable =
   buf.eofCheck(offset + 32)
 
   result = CFFTable()
@@ -1189,16 +1235,6 @@ proc parseCFFTable(buf: string, offset: int): CFFTable =
   result.stringIndex = buf.parseCFFIndex(indexOffset, true)
   # contains binary glyphs
   result.globalSubrIndex = buf.parseCFFIndex(indexOffset)
-
-  # Subroutines are encoded using the negative half of the number space.
-  # See type 2 chapter 4.7 "Subroutine operators".
-  result.subrsBias =
-    if result.globalSubrIndex.objects.len < 1240:
-      107
-    elif result.globalSubrIndex.objects.len < 33900:
-      1131
-    else:
-      32768
 
   # Parse a `CFF` DICT object.
   # A dictionary contains key-value pairs in a compact tokenized format.
@@ -1335,12 +1371,12 @@ proc parseCFFTable(buf: string, offset: int): CFFTable =
   # "Top DICT"s found using an INDEX list.
   proc gatherCFFTopDicts(
     cff: CFFTable,
+    maxp: MaxpTable,
     data: string,
     start: int,
     cffIndex,
     strings: seq[string]
   ): seq[CFFTopDict] =
-
     for iTopDict in 0 ..< cffIndex.len:
       let
         cffTopDict = CFFTopDict()
@@ -1378,6 +1414,20 @@ proc parseCFFTable(buf: string, offset: int): CFFTable =
             result[i] = topDict[key][i].float32
         else:
           return default
+
+      proc getArrStr[N: int](
+        topDict: Table[string, seq[float64]],
+        key: string,
+        default: array[N, string],
+        strings: seq[string]
+      ): array[N, string] =
+        if key in topDict:
+          for i in 0 ..< result.len:
+            let index = topDict[key][i].int
+            result[i] = getCFFString(strings, index)
+        else:
+          return default
+
       cffTopDict.charStrings = topDict.getInt("charStrings", 0)
       cffTopDict.charset = topDict.getInt("charset", 0)
       cffTopDict.charstringType = topDict.getInt("charstringType", 2)
@@ -1388,8 +1438,8 @@ proc parseCFFTable(buf: string, offset: int): CFFTable =
       cffTopDict.copyright = topDict.getStr("copyright", "")
       cffTopDict.encoding = topDict.getInt("encoding", 0)
       cffTopDict.familyName = topDict.getStr("familyName", "")
-      # cffTopDict.fdArray: pointer
-      # cffTopDict.fdSelect: pointer
+      cffTopDict.fdArray = topDict.getInt("fdArray", 0)
+      cffTopDict.fdSelect = topDict.getInt("fdSelect", 0)
       cffTopDict.fontBBox = topDict.getArr("fontBBox", [0f, 0f, 0f, 0f])
       cffTopDict.fontMatrix = topDict.getArr("fontMatrix",
         [0.001f, 0f, 0f, 0.001f, 0f, 0f])
@@ -1402,14 +1452,20 @@ proc parseCFFTable(buf: string, offset: int): CFFTable =
       cffTopDict.private = topDict.getArr("private", [0f, 0f])
       var privateSize = cffTopDict.private[0].int
       var privateOffset = cffTopDict.private[1].int
-      var privateDict = parseCFFPrivateDict(
-        buf[privateOffset + start ..< privateOffset + start + privateSize],
-        strings
-      )
-      cffTopDict.defaultWidthX = privateDict.getInt("defaultWidthX", 0)
-      cffTopDict.nominalWidthX = privateDict.getInt("nominalWidthX", 0)
-      cffTopDict.subrs = privateDict.getInt("subrs", 0)
-      # cffTopDict.ros: array[3, float32]
+      if privateOffset != 0:
+        var privateDict = parseCFFPrivateDict(
+          buf[privateOffset + start ..< privateOffset + start + privateSize],
+          strings
+        )
+        cffTopDict.defaultWidthX = privateDict.getInt("defaultWidthX", 0)
+        cffTopDict.nominalWidthX = privateDict.getInt("nominalWidthX", 0)
+        cffTopDict.subrs = privateDict.getInt("subrs", 0)
+        if cffTopDict.subrs > 0:
+          var subrOffset = cffTopDict.private[1].int + cffTopDict.subrs
+          var subrOffset2 = subrOffset + offset
+          cffTopDict.subrIndex = buf.parseCFFIndex(subrOffset2)
+
+      cffTopDict.ros = topDict.getArrStr("ros", ["", "", ""], strings)
       cffTopDict.strokeWidth = topDict.getInt("strokeWidth", 0)
       # cffTopDict.uidBase: pointer
       cffTopDict.underlinePosition = topDict.getInt("underlinePosition", -100)
@@ -1419,20 +1475,95 @@ proc parseCFFTable(buf: string, offset: int): CFFTable =
       cffTopDict.weight = topDict.getStr("weight", "")
       result.add(cffTopDict)
 
-  let topDicts = result.gatherCFFTopDicts(
-    buf, offset, result.topDictIndex.objects, result.stringIndex.objects)
+  let topDicts = result.gatherCFFTopDicts(maxp,
+    buf, offset, result.topDictIndex, result.stringIndex)
   if topDicts.len == 0:
     failUnsupported("CFF no topDict")
   if topDicts.len > 1:
     failUnsupported("CFF multiple topDict")
   result.topDict = topDicts[0]
 
-  # TODO: isCIDFont?
+  # Subroutines are encoded using the negative half of the number space.
+  # See type 2 chapter 4.7 "Subroutine operators".
+  result.topDict.subrsBias =
+    if result.globalSubrIndex.len < 1240:
+      107
+    elif result.globalSubrIndex.len < 33900:
+      1131
+    else:
+      32768
 
+  if result.topDict.ros[0] != "" and result.topDict.ros[1] != "":
+    result.isCID = true
+
+    var fdArrayOffset = result.topDict.fdArray + offset
+    var fdSelectOffset = result.topDict.fdSelect + offset
+    if fdArrayOffset == 0 or fdSelectOffset == 0:
+        failUnsupported("CFF CID tables are missing")
+
+    var fdArrayIndex = parseCFFIndex(buf, fdArrayOffset)
+    result.topDict.fdArraySeq = result.gatherCFFTopDicts(maxp, buf, offset, fdArrayIndex, result.stringIndex)
+
+    proc parseCFFFDSelect(buf: string, start, nGlyphs, fdArrayCount: int): seq[int] =
+      print "here", buf.len, start, nGlyphs, fdArrayCount
+
+      var at = start
+      var format = buf.readUint8(at)
+      inc at
+      print format
+
+      #     if (format === 0) {
+      #         // Simple list of nGlyphs elements
+      #         for (var iGid = 0; iGid < nGlyphs; iGid++) {
+      #             fdIndex = parser.parseCard8();
+      #             if (fdIndex >= fdArrayCount) {
+      #                 throw new Error('CFF table CID Font FDSelect has bad FD index value ' + fdIndex + ' (FD count ' + fdArrayCount + ')');
+      #             }
+      #             fdSelect.push(fdIndex);
+      #         }
+      if format == 3:
+        # Ranges
+        var nRanges = buf.readUint16(at).swap().int
+        at += 2
+        var first = buf.readUint16(at).swap().int
+        at += 2
+        print nRanges, first
+        if first != 0:
+          failUnsupported("CFF Table CID Font FDSelect format 3 range has bad initial GID")
+
+        var next = 0
+        for iRange in 0 ..< nRanges:
+          var fdIndex = buf.readUint8(at).int
+          inc at
+          next = buf.readUint16(at).swap().int
+          at += 2
+          if fdIndex >= fdArrayCount:
+            failUnsupported("CFF table CID Font FDSelect has bad FD index value")
+          if next > nGlyphs:
+            failUnsupported("CFF Table CID Font FDSelect format 3 range has bad GID")
+
+          while first < next:
+            result.add(fdIndex)
+            inc first
+
+          first = next
+
+        if next != nGlyphs:
+          failUnsupported("CFF Table CID Font FDSelect format 3 range has bad final GID")
+
+      else:
+        failUnsupported("CFF Table CID Font FDSelect format")
+
+    result.topDict.fdSelectSeq = parseCFFFDSelect(buf, fdSelectOffset, maxp.numGlyphs.int, result.topDict.fdArraySeq.len)
+    print result.topDict.fdSelectSeq.len
+
+
+  print result.topDict.subrs
   if result.topDict.subrs != 0:
     var subrOffset =
       offset + result.topDict.private[1].int + result.topDict.subrs
-    result.subrIndex = buf.parseCFFIndex(subrOffset)
+    result.topDict.subrIndex = buf.parseCFFIndex(subrOffset)
+    result.topDict.subrsBias = calcCFFSubroutineBias(result.topDict.subrIndex)
 
   proc parseCFFIndexLowMemory(buf: string, offset: int): seq[int] =
     proc getOffset(dataView: string, offset, offSize: int): int =
@@ -1482,11 +1613,11 @@ proc parseCFFTable(buf: string, offset: int): CFFTable =
             break
           sid += 1
     else:
-      failUnsupported("CFF charset format")
+      failUnsupported("CFF charset format: " & $format)
 
   # Why do we need this anyways?
-  var charset = parseCFFCharset(
-    buf, offset + result.topDict.charset, nGlyphs, result.stringIndex.objects)
+  #var charset = parseCFFCharset(
+  #  buf, offset + result.topDict.charset, nGlyphs, result.stringIndex.objects)
   var start = offset + result.topDict.charStrings
   result.charIndex = buf.parseCFFIndex(start)
 
@@ -2251,11 +2382,12 @@ proc parseGlyfGlyph(opentype: OpenType, glyphId: uint16): Path =
   else:
     parseGlyphPath(opentype.buf, i, numberOfContours)
 
-
+import print
 proc parseCffGlyph(opentype: OpenType, glyphId: uint16): Path =
   let cff = opentype.cff
-  let charstring = cff.charIndex.objects[glyphId]
-  return cff.parseCFFCharstring(charstring)
+  let charstring = cff.charIndex[glyphId]
+  print glyphId
+  return cff.parseCFFCharstring(charstring, glyphId.int)
 
 proc parseGlyph(opentype: OpenType, rune: Rune): Path {.inline.} =
   if opentype.glyf != nil:
@@ -2371,7 +2503,7 @@ proc parseOpenType*(buf: string): OpenType {.raises: [PixieError].} =
       result.glyf =
         parseGlyfTable(buf, result.tableRecords["glyf"].offset.int, result.loca)
     elif "CFF " in result.tableRecords:
-      result.cff = parseCFFTable(buf, result.tableRecords["CFF "].offset.int)
+      result.cff = parseCFFTable(buf, result.tableRecords["CFF "].offset.int, result.maxp)
 
     else:
       failUnsupported("glyph outlines")
