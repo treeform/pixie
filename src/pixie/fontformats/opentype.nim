@@ -1,4 +1,5 @@
-import flatty/binny, math, pixie/common, pixie/paths, sets, tables, unicode, vmath
+import flatty/binny, math, pixie/common, pixie/paths, sets, tables, unicode,
+    vmath, strutils
 
 ## See https://docs.microsoft.com/en-us/typography/opentype/spec/
 
@@ -809,8 +810,6 @@ proc parseKernTable(buf: string, offset: int): KernTable =
   else:
     failUnsupported("Kern version")
 
-import print, strutils
-
 proc parseCFFIndex(buf: string, start: var int, stripZero = false): CFFIndex =
 
   proc getOffset(buf: string, offset, offSize: int): int =
@@ -891,7 +890,7 @@ const cffStandardStrings = [
   "Igravesmall", "Iacutesmall", "Icircumflexsmall", "Idieresissmall", "Ethsmall", "Ntildesmall", "Ogravesmall",
   "Oacutesmall", "Ocircumflexsmall", "Otildesmall", "Odieresissmall", "OEsmall", "Oslashsmall", "Ugravesmall",
   "Uacutesmall", "Ucircumflexsmall", "Udieresissmall", "Yacutesmall", "Thornsmall", "Ydieresissmall", "001.000",
-  "001.001", "001.002", "001.003", "Black", "Bold", "Book", "Light", "Medium", "Regular", "Roman", "Semibold"];
+  "001.001", "001.002", "001.003", "Black", "Bold", "Book", "Light", "Medium", "Regular", "Roman", "Semibold"]
 
 let TOP_DICT_META = {
   0: "version",
@@ -939,25 +938,12 @@ proc shift[T](s: var seq[T]): T =
 
 proc parseCFFCharstring(cff: CffTable, code: string): Path =
 
-  #print code
-
-  var c1x: float32
-  var c1y: float32
-  var c2x: float32
-  var c2y: float32
   var p = newPath()
-  var stack: seq[float32];
-  # var nStems = 0;
-  var haveWidth = false;
-  # var open = false;
+  var stack: seq[float32]
+  # var nStems = 0
+  var haveWidth = false
   var x = 0f
   var y = 0f
-  # var subrs;
-  # var subrsBias;
-  # var defaultWidthX;
-  # var nominalWidthX;
-
-  # TODO: isCIDFon
 
   let
     subrs = cff.topDict.subrs
@@ -967,23 +953,8 @@ proc parseCFFCharstring(cff: CffTable, code: string): Path =
 
   var width = defaultWidthX.float32
 
-  var breakOneMe = false
-
-  #print subrs, subrsBias, defaultWidthX, nominalWidthX
-
   proc parse(code: string) =
-    var b1: int
-    var b2: int
-    var b3: int
-    var b4: int
-    # var codeIndex;
-    # var subrCode;
-    # var jpx;
-    # var jpy;
-    # var c3x;
-    # var c3y;
-    # var c4x;
-    # var c4y;
+
     var i = 0
     while i < code.len:
       var v = code.readUint8(i).int
@@ -994,8 +965,8 @@ proc parseCFFCharstring(cff: CffTable, code: string): Path =
         if stack.len > 1 and not haveWidth:
           width = stack.shift() + nominalWidthX.float32
           haveWidth = true
-        y += stack.pop();
-        p.moveTo(x, y);
+        y += stack.pop()
+        p.moveTo(x, y)
 
       of 5: # rlineto
         while stack.len > 0:
@@ -1010,26 +981,27 @@ proc parseCFFCharstring(cff: CffTable, code: string): Path =
           if stack.len == 0:
             break
           y += stack.shift()
-          p.lineTo(x, y);
+          p.lineTo(x, y)
 
       of 7: # vlineto
         while stack.len > 0:
-          y += stack.shift();
-          p.lineTo(x, y);
+          y += stack.shift()
+          p.lineTo(x, y)
           if stack.len == 0:
-              break;
-          x += stack.shift();
-          p.lineTo(x, y);
+              break
+          x += stack.shift()
+          p.lineTo(x, y)
 
       of 8: # rrcurveto
         while stack.len > 0:
-          c1x = x + stack.shift();
-          c1y = y + stack.shift();
-          c2x = c1x + stack.shift();
-          c2y = c1y + stack.shift();
-          x = c2x + stack.shift();
-          y = c2y + stack.shift();
-          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+          let
+            c1x = x + stack.shift()
+            c1y = y + stack.shift()
+            c2x = c1x + stack.shift()
+            c2y = c1y + stack.shift()
+          x = c2x + stack.shift()
+          y = c2y + stack.shift()
+          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
 
       of 10: # callsubr
         let codeIndex = stack.pop().int + subrsBias
@@ -1050,7 +1022,6 @@ proc parseCFFCharstring(cff: CffTable, code: string): Path =
         if stack.len > 2 and not haveWidth:
           width = stack.shift() + nominalWidthX.float32
           haveWidth = true
-
         y += stack.pop()
         x += stack.pop()
         p.moveTo(x, y)
@@ -1059,63 +1030,61 @@ proc parseCFFCharstring(cff: CffTable, code: string): Path =
         if stack.len > 1 and not haveWidth:
           width = stack.shift() + nominalWidthX.float32
           haveWidth = true
-
         x += stack.pop()
         p.moveTo(x, y)
 
       of 24: # rcurveline
         while stack.len > 2:
-          c1x = x + stack.shift();
-          c1y = y + stack.shift();
-          c2x = c1x + stack.shift();
-          c2y = c1y + stack.shift();
-          x = c2x + stack.shift();
-          y = c2y + stack.shift();
-          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
-        x += stack.shift();
-        y += stack.shift();
-        p.lineTo(x, y);
+          let
+            c1x = x + stack.shift()
+            c1y = y + stack.shift()
+            c2x = c1x + stack.shift()
+            c2y = c1y + stack.shift()
+          x = c2x + stack.shift()
+          y = c2y + stack.shift()
+          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
+        x += stack.shift()
+        y += stack.shift()
+        p.lineTo(x, y)
 
       of 25: # rlinecurve
         while stack.len > 6:
-          x += stack.shift();
-          y += stack.shift();
-          p.lineTo(x, y);
-
-        c1x = x + stack.shift();
-        c1y = y + stack.shift();
-        c2x = c1x + stack.shift();
-        c2y = c1y + stack.shift();
-        x = c2x + stack.shift();
-        y = c2y + stack.shift();
+          x += stack.shift()
+          y += stack.shift()
+          p.lineTo(x, y)
+        let
+          c1x = x + stack.shift()
+          c1y = y + stack.shift()
+          c2x = c1x + stack.shift()
+          c2y = c1y + stack.shift()
+        x = c2x + stack.shift()
+        y = c2y + stack.shift()
         p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
 
       of 26: # vvcurveto
         if stack.len mod 2 != 0:
           x += stack.shift()
-
         while stack.len > 0:
-          if stack.len < 4:
-            breakOneMe = true
-          c1x = x;
-          c1y = y + stack.shift();
-          c2x = c1x + stack.shift();
-          c2y = c1y + stack.shift();
-          x = c2x;
-          y = c2y + stack.shift();
-          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+          let
+            c1x = x
+            c1y = y + stack.shift()
+            c2x = c1x + stack.shift()
+            c2y = c1y + stack.shift()
+          x = c2x
+          y = c2y + stack.shift()
+          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
 
       of 27: # hhcurveto
         if stack.len mod 2 != 0:
           y += stack.shift()
-
         while stack.len > 0:
-          c1x = x + stack.shift()
-          c1y = y;
-          c2x = c1x + stack.shift()
-          c2y = c1y + stack.shift()
+          let
+            c1x = x + stack.shift()
+            c1y = y
+            c2x = c1x + stack.shift()
+            c2y = c1y + stack.shift()
           x = c2x + stack.shift()
-          y = c2y;
+          y = c2y
           p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
 
       of 28: # shortint
@@ -1131,43 +1100,49 @@ proc parseCFFCharstring(cff: CffTable, code: string): Path =
 
       of 30: # vhcurveto
         while stack.len > 0:
-          c1x = x;
-          c1y = y + stack.shift();
-          c2x = c1x + stack.shift();
-          c2y = c1y + stack.shift();
-          x = c2x + stack.shift();
-          y = c2y + (if stack.len == 1: stack.shift() else: 0)
-          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+          block:
+            let
+              c1x = x
+              c1y = y + stack.shift()
+              c2x = c1x + stack.shift()
+              c2y = c1y + stack.shift()
+            x = c2x + stack.shift()
+            y = c2y + (if stack.len == 1: stack.shift() else: 0)
+            p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
           if stack.len == 0:
             break
-
-          c1x = x + stack.shift();
-          c1y = y;
-          c2x = c1x + stack.shift();
-          c2y = c1y + stack.shift();
-          y = c2y + stack.shift();
-          x = c2x + (if stack.len == 1: stack.shift() else: 0)
-          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+          block:
+            let
+              c1x = x + stack.shift()
+              c1y = y
+              c2x = c1x + stack.shift()
+              c2y = c1y + stack.shift()
+            y = c2y + stack.shift()
+            x = c2x + (if stack.len == 1: stack.shift() else: 0)
+            p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
 
       of 31: # hvcurveto
         while stack.len > 0:
-          c1x = x + stack.shift();
-          c1y = y;
-          c2x = c1x + stack.shift();
-          c2y = c1y + stack.shift();
-          y = c2y + stack.shift();
-          x = c2x + (if stack.len == 1: stack.shift() else: 0)
-          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+          block:
+            let
+              c1x = x + stack.shift()
+              c1y = y
+              c2x = c1x + stack.shift()
+              c2y = c1y + stack.shift()
+            y = c2y + stack.shift()
+            x = c2x + (if stack.len == 1: stack.shift() else: 0)
+            p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
           if stack.len == 0:
             break
-
-          c1x = x;
-          c1y = y + stack.shift();
-          c2x = c1x + stack.shift();
-          c2y = c1y + stack.shift();
-          x = c2x + stack.shift();
-          y = c2y + (if stack.len == 1: stack.shift() else: 0)
-          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+          block:
+            let
+              c1x = x
+              c1y = y + stack.shift()
+              c2x = c1x + stack.shift()
+              c2y = c1y + stack.shift()
+            x = c2x + stack.shift()
+            y = c2y + (if stack.len == 1: stack.shift() else: 0)
+            p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
 
       else:
         if v < 32:
@@ -1175,28 +1150,26 @@ proc parseCFFCharstring(cff: CffTable, code: string): Path =
         elif v < 247:
           stack.add(float32(v - 139))
         elif v < 251:
-          b1 = code.readUint8(i).int;
-          i += 1;
+          let b1 = code.readUint8(i).int
+          i += 1
           stack.add(float32((v - 247) * 256 + b1 + 108))
         elif v < 255:
-          b1 = code.readUint8(i).int;
-          i += 1;
+          let b1 = code.readUint8(i).int
+          i += 1
           stack.add(float32(-(v - 251) * 256 - b1 - 108))
         else:
-          b1 = code.readUint8(i + 0).int
-          b2 = code.readUint8(i + 1).int
-          b3 = code.readUint8(i + 2).int
-          b4 = code.readUint8(i + 3).int
-          i += 4;
-          stack.add(((b1 shl 24) or (b2 shl 16) or (b3 shl 8) or b4).float32 / 65536f)
+          failUnsupported("test me")
+          let
+            b1 = code.readUint8(i + 0).int
+            b2 = code.readUint8(i + 1).int
+            b3 = code.readUint8(i + 2).int
+            b4 = code.readUint8(i + 3).int
+          i += 4
+          stack.add(
+            ((b1 shl 24) or (b2 shl 16) or (b3 shl 8) or b4).float32 / 65536f)
 
   parse(code)
-
-  if breakOneMe:
-    quit()
-
   return p
-
 
 proc parseCFFTable(buf: string, offset: int): CFFTable =
   buf.eofCheck(offset + 32)
@@ -1245,18 +1218,21 @@ proc parseCFFTable(buf: string, offset: int): CFFTable =
         entries.add((op, operands))
         operands.setLen(0)
       else:
-        # Since the operands (values) come before the operators (keys), we store all operands in a list
-        # until we encounter an operator.
+        # Since the operands (values) come before the operators (keys), we store
+        # all operands in a list until we encounter an operator.
 
         proc parseFloatOperand(): float64 =
           var s = ""
           var eof = 15
-          var lookup = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "E", "E-", "null", "-"]
+          var lookup = [
+            "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+            ".", "E", "E-", "null", "-"
+          ]
           while true:
             var b = data.readUint8(relativeOffset).int
             inc relativeOffset
-            var n1 = b shr 4;
-            var n2 = b and 15;
+            var n1 = b shr 4
+            var n2 = b and 15
             if n1 == eof:
               break
             s.add lookup[n1]
@@ -1289,13 +1265,14 @@ proc parseCFFTable(buf: string, offset: int): CFFTable =
             inc relativeOffset
             b4 = data.readUint8(relativeOffset).int
             inc relativeOffset
-            return float64(cast[int32](b1 shl 24 or b2 shl 16 or b3 shl 8 or b4))
+            return float64(cast[int32](
+              b1 shl 24 or b2 shl 16 or b3 shl 8 or b4))
 
           if b0 == 30:
               return parseFloatOperand()
 
           if b0 >= 32 and b0 <= 246:
-              return float64(b0 - 139);
+              return float64(b0 - 139)
 
           if b0 >= 247 and b0 <= 250:
               b1 = data.readUint8(relativeOffset).int
@@ -1314,22 +1291,12 @@ proc parseCFFTable(buf: string, offset: int): CFFTable =
         operands.add(operand)
 
     return entries
-    # # Convert the entries returned by `parseDict` to a proper dictionary.
-    # # If a value is a list of one, it is unpacked.
-    # proc entriesToObject(entries: seq[(int, seq[float64])]): Table[int, seq[float64]] =
-    #   var o: Table[int, seq[float64]]
-    #   for i in 0 ..< entries.len:
-    #       var key = entries[i][0]
-    #       var values = entries[i][1]
-    #       if key in o:
-    #         failUnsupported("CFF duplicate key error " & $key)
-    #       o[key] = values
-    #   return o
-    # var dict = entriesToObject(entries)
-    # return dict
 
-
-  proc interpretDict(entries: seq[(int, seq[float64])], meta: Table[int, string], strings: seq[string]): Table[string, seq[float64]] =
+  proc interpretDict(
+    entries: seq[(int, seq[float64])],
+    meta: Table[int, string],
+    strings: seq[string]
+  ): Table[string, seq[float64]] =
     for e in entries:
       if e[0] notin meta:
         #failUnsupported("CFF unknown op: " & $e[0])
@@ -1339,19 +1306,26 @@ proc parseCFFTable(buf: string, offset: int): CFFTable =
         failUnsupported("CFF duplicate key: " & key)
       result[key] = e[1]
 
-  # Parse the CFF top dictionary. A CFF table can contain multiple fonts, each with their own top dictionary.
-  # The top dictionary contains the essential metadata for the font, together with the private dictionary.
-  proc parseCFFTopDict(data: string, strings: seq[string]): Table[string, seq[float64]] =
+  # Parse the CFF top dictionary. A CFF table can contain multiple fonts, each
+  # with their own top dictionary. The top dictionary contains the essential
+  # metadata for the font, together with the private dictionary.
+  proc parseCFFTopDict(
+    data: string,
+    strings: seq[string]
+  ): Table[string, seq[float64]] =
     var entries = parseCFFDict(data, 0, data.len)
     return interpretDict(entries, TOP_DICT_META, strings)
 
-  proc parseCFFPrivateDict(data: string, strings: seq[string]): Table[string, seq[float64]] =
+  proc parseCFFPrivateDict(
+    data: string,
+    strings: seq[string]
+  ): Table[string, seq[float64]] =
     var entries = parseCFFDict(data, 0, data.len)
     return interpretDict(entries, PRIVATE_DICT_META, strings)
 
   proc getCFFString(strings: seq[string], index: int): string =
     if index <= 390:
-      cffStandardStrings[index];
+      cffStandardStrings[index]
     else:
       if index - 391 < strings.len:
         strings[index - 391]
@@ -1359,7 +1333,13 @@ proc parseCFFTable(buf: string, offset: int): CFFTable =
         ""
 
   # "Top DICT"s found using an INDEX list.
-  proc gatherCFFTopDicts(cff: CFFTable, data: string, start: int, cffIndex, strings: seq[string]): seq[CFFTopDict] =
+  proc gatherCFFTopDicts(
+    cff: CFFTable,
+    data: string,
+    start: int,
+    cffIndex,
+    strings: seq[string]
+  ): seq[CFFTopDict] =
 
     for iTopDict in 0 ..< cffIndex.len:
       let
@@ -1398,7 +1378,6 @@ proc parseCFFTable(buf: string, offset: int): CFFTable =
             result[i] = topDict[key][i].float32
         else:
           return default
-
       cffTopDict.charStrings = topDict.getInt("charStrings", 0)
       cffTopDict.charset = topDict.getInt("charset", 0)
       cffTopDict.charstringType = topDict.getInt("charstringType", 2)
@@ -1430,7 +1409,6 @@ proc parseCFFTable(buf: string, offset: int): CFFTable =
       cffTopDict.defaultWidthX = privateDict.getInt("defaultWidthX", 0)
       cffTopDict.nominalWidthX = privateDict.getInt("nominalWidthX", 0)
       cffTopDict.subrs = privateDict.getInt("subrs", 0)
-
       # cffTopDict.ros: array[3, float32]
       cffTopDict.strokeWidth = topDict.getInt("strokeWidth", 0)
       # cffTopDict.uidBase: pointer
@@ -1451,22 +1429,18 @@ proc parseCFFTable(buf: string, offset: int): CFFTable =
 
   # TODO: isCIDFont?
 
-  # print result.topDict.subrs
-  # print result.topDict.defaultWidthX
-  # print result.topDict.nominalWidthX
   if result.topDict.subrs != 0:
-    var subrOffset = offset + result.topDict.private[1].int + result.topDict.subrs
+    var subrOffset =
+      offset + result.topDict.private[1].int + result.topDict.subrs
     result.subrIndex = buf.parseCFFIndex(subrOffset)
 
   proc parseCFFIndexLowMemory(buf: string, offset: int): seq[int] =
-
     proc getOffset(dataView: string, offset, offSize: int): int =
       var v = 0
       for i in 0 ..< offSize:
         v = v shl 8
         v += dataView.readUint8(offset + i).int
       return v
-
     let count = buf.readUint16(offset).swap().int
     var objectOffset = 0
     if count != 0:
@@ -1478,11 +1452,16 @@ proc parseCFFTable(buf: string, offset: int): CFFTable =
         result.add offsetValue
         pos += offsetSize
 
-  let charStringsIndex = parseCFFIndexLowMemory(buf, offset + result.topDict.charStrings);
+  let charStringsIndex = parseCFFIndexLowMemory(
+    buf, offset + result.topDict.charStrings)
   let nGlyphs = charStringsIndex.len
 
-  proc parseCFFCharset(buf: string, offset: int, nGlyphs: int, stringIndex: seq[string]): seq[string] =
-
+  proc parseCFFCharset(
+    buf: string,
+    offset: int,
+    nGlyphs: int,
+    stringIndex: seq[string]
+  ): seq[string] =
     # The .notdef glyph is implied
     var charset = @[".notdef"]
     var nGlyphs = nGlyphs - 1
@@ -1506,31 +1485,18 @@ proc parseCFFTable(buf: string, offset: int): CFFTable =
       failUnsupported("CFF charset format")
 
   # Why do we need this anyways?
-  var charset = parseCFFCharset(buf, offset + result.topDict.charset, nGlyphs, result.stringIndex.objects);
-  # if topDict.encoding == 0:
-  #   discard
-  # else:
-  #   failUnsupported("CFF top dict encoding")
-
-
+  var charset = parseCFFCharset(
+    buf, offset + result.topDict.charset, nGlyphs, result.stringIndex.objects)
   var start = offset + result.topDict.charStrings
-  #print start
-  # for i in 0 ..< nGlyphs:
-  #   print i
-  #   var charString = parseCFFIndex(buf, start);
-
-
   result.charIndex = buf.parseCFFIndex(start)
-  #print charIndex
 
 
   # let glyphIndex = 2539
   # let charstring = charIndex.objects[glyphIndex]
   # var path = parseCFFCharstring(result, charstring)
-
-  for glyphIndex in 0 ..< result.charIndex.objects.len:
-    let charstring = result.charIndex.objects[glyphIndex]
-    var path = parseCFFCharstring(result, charstring)
+  # for glyphIndex in 0 ..< result.charIndex.objects.len:
+  #   let charstring = result.charIndex.objects[glyphIndex]
+  #   var path = parseCFFCharstring(result, charstring)
 
 
 # proc parseLangSys(buf: string, offset: int): LangSys =
@@ -2028,7 +1994,7 @@ proc parsePostTable(buf: string, offset: int): PostTable =
 proc getGlyphId(opentype: OpenType, rune: Rune): uint16 =
   result = opentype.cmap.runeToGlyphId.getOrDefault(rune, 0)
 
-proc parseGlyph(opentype: OpenType, glyphId: uint16): Path {.raises: [PixieError].}
+proc parseGlyfGlyph(opentype: OpenType, glyphId: uint16): Path {.raises: [PixieError].}
 
 proc parseGlyphPath(
   buf: string, offset, numberOfContours: int
@@ -2249,7 +2215,7 @@ proc parseCompositeGlyph(opentype: OpenType, offset: int): Path =
     # elif (flags and 0b1000000000000) != 0: # UNSCALED_COMPONENT_OFFSET
     #   discard
 
-    var subPath = opentype.parseGlyph(component.glyphId)
+    var subPath = opentype.parseGlyfGlyph(component.glyphId)
     subPath.transform(mat3(
       component.xScale, component.scale10, 0.0,
       component.scale01, component.yScale, 0.0,
@@ -2260,7 +2226,7 @@ proc parseCompositeGlyph(opentype: OpenType, offset: int): Path =
 
     moreComponents = (flags and 0b100000) != 0
 
-proc parseGlyph(opentype: OpenType, glyphId: uint16): Path =
+proc parseGlyfGlyph(opentype: OpenType, glyphId: uint16): Path =
 
   if glyphId.int >= opentype.glyf.offsets.len:
     raise newException(PixieError, "Invalid glyph ID " & $glyphId)
@@ -2277,10 +2243,6 @@ proc parseGlyph(opentype: OpenType, glyphId: uint16): Path =
 
   let
     numberOfContours = opentype.buf.readInt16(i + 0).swap().int
-    # xMin = opentype.buf.readInt16(i + 2).swap()
-    # yMin = opentype.buf.readInt16(i + 4).swap()
-    # xMax = opentype.buf.readInt16(i + 6).swap()
-    # yMax = opentype.buf.readInt16(i + 8).swap()
 
   i += 10
 
@@ -2297,7 +2259,7 @@ proc parseCffGlyph(opentype: OpenType, glyphId: uint16): Path =
 
 proc parseGlyph(opentype: OpenType, rune: Rune): Path {.inline.} =
   if opentype.glyf != nil:
-    opentype.parseGlyph(opentype.getGlyphId(rune))
+    opentype.parseGlyfGlyph(opentype.getGlyphId(rune))
   elif opentype.cff != nil:
     opentype.parseCffGlyph(opentype.getGlyphId(rune))
   else:
