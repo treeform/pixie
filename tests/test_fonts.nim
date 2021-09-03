@@ -1003,3 +1003,13 @@ block:
   image.fillText(font, "Grumpy wizards make toxic brew for the evil Queen and Jack.")
 
   doDiff(image, "cff")
+
+
+block:
+  var font = readFont("tests/fonts/NotoSansJP-Regular.ttf")
+  font.size = 26
+  let image = newImage(800, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(font, "仰コソ会票カク帰了ノ終準港みせス議徳モチタ提請ルまつ力路お")
+
+  doDiff(image, "cff_jp")

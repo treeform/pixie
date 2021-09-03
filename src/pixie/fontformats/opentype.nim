@@ -935,7 +935,6 @@ proc shift[T](s: var seq[T]): T =
   ## Pops from the front.
   result = s[0]
   s.delete(0)
-import print
 
 proc calcCFFSubroutineBias(subrs: seq[string]): int =
   if subrs.len < 1240:
@@ -961,9 +960,7 @@ proc parseCFFCharstring(cff: CffTable, code: string, glyphIndex: int): Path =
     nominalWidthX: int
 
   if cff.isCID:
-    print cff.isCID
     let fdIndex = cff.topDict.fdSelectSeq[glyphIndex]
-    print fdIndex
     let fdDict = cff.topDict.fdArraySeq[fdIndex]
     subrs = fdDict.subrIndex
     subrsBias = calcCFFSubroutineBias(subrs)
@@ -980,7 +977,6 @@ proc parseCFFCharstring(cff: CffTable, code: string, glyphIndex: int): Path =
   proc parseStems() =
     # The number of stem operators on the stack is always even.
     # If the value is uneven, that means a width is specified.
-    print "parseStems", stack
     if stack.len mod 2 != 0 and not haveWidth:
       width = stack.shift() + nominalWidthX.float32
     nStems += stack.len shr 1
@@ -1042,7 +1038,6 @@ proc parseCFFCharstring(cff: CffTable, code: string, glyphIndex: int): Path =
 
       of 10: # callsubr
         let codeIndex = stack.pop().int + subrsBias
-        #print codeIndex, cff.subrIndex
         let subrCode = subrs[codeIndex]
         if subrCode.len > 0:
           parse(subrCode)
@@ -1214,7 +1209,6 @@ proc parseCFFCharstring(cff: CffTable, code: string, glyphIndex: int): Path =
             ((b1 shl 24) or (b2 shl 16) or (b3 shl 8) or b4).float32 / 65536f)
 
   parse(code)
-  print $p
   return p
 
 proc parseCFFTable(buf: string, offset: int, maxp: MaxpTable): CFFTable =
@@ -1505,12 +1499,10 @@ proc parseCFFTable(buf: string, offset: int, maxp: MaxpTable): CFFTable =
     result.topDict.fdArraySeq = result.gatherCFFTopDicts(maxp, buf, offset, fdArrayIndex, result.stringIndex)
 
     proc parseCFFFDSelect(buf: string, start, nGlyphs, fdArrayCount: int): seq[int] =
-      print "here", buf.len, start, nGlyphs, fdArrayCount
 
       var at = start
       var format = buf.readUint8(at)
       inc at
-      print format
 
       #     if (format === 0) {
       #         // Simple list of nGlyphs elements
@@ -1527,7 +1519,6 @@ proc parseCFFTable(buf: string, offset: int, maxp: MaxpTable): CFFTable =
         at += 2
         var first = buf.readUint16(at).swap().int
         at += 2
-        print nRanges, first
         if first != 0:
           failUnsupported("CFF Table CID Font FDSelect format 3 range has bad initial GID")
 
@@ -1555,10 +1546,7 @@ proc parseCFFTable(buf: string, offset: int, maxp: MaxpTable): CFFTable =
         failUnsupported("CFF Table CID Font FDSelect format")
 
     result.topDict.fdSelectSeq = parseCFFFDSelect(buf, fdSelectOffset, maxp.numGlyphs.int, result.topDict.fdArraySeq.len)
-    print result.topDict.fdSelectSeq.len
 
-
-  print result.topDict.subrs
   if result.topDict.subrs != 0:
     var subrOffset =
       offset + result.topDict.private[1].int + result.topDict.subrs
@@ -2382,11 +2370,9 @@ proc parseGlyfGlyph(opentype: OpenType, glyphId: uint16): Path =
   else:
     parseGlyphPath(opentype.buf, i, numberOfContours)
 
-import print
 proc parseCffGlyph(opentype: OpenType, glyphId: uint16): Path =
   let cff = opentype.cff
   let charstring = cff.charIndex[glyphId]
-  print glyphId
   return cff.parseCFFCharstring(charstring, glyphId.int)
 
 proc parseGlyph(opentype: OpenType, rune: Rune): Path {.inline.} =
