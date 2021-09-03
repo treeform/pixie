@@ -309,6 +309,65 @@ type
     underlineThickness*: int16
     isFixedPitch*: uint32
 
+  CFFHeader = ref object
+    formatMajor: uint8
+    formatMinor: uint8
+    size: uint8
+    offsetSize: uint8
+
+  CFFIndex = ref object
+    objects: seq[string]
+
+  CFFTopDict = ref object
+    charStrings: int
+    charset: int
+    charstringType: int
+    cidCount: int
+    cidFontRevision: int
+    cidFontType: int
+    cidFontVersion: int
+    copyright: string
+    encoding: int
+    familyName: string
+    fdArray: pointer
+    fdSelect: pointer
+    fontBBox: array[4, float32]
+    fontMatrix: array[6, float32]
+    fontName: string
+    fullName: string
+    isFixedPitch: int
+    italicAngle: int
+    notice: string
+    paintType: int
+    private: array[2, float32]
+    subrs: int
+    defaultWidthX: int
+    nominalWidthX: int
+    ros: array[3, float32]
+    strokeWidth: int
+    uidBase: pointer
+    underlinePosition: int
+    underlineThickness: int
+    uniqueId: pointer
+    version: string
+    weight: string
+
+  CFFTable = ref object
+    ## Contains the glyph outlines in PostScript format.
+    header: CFFHeader
+    nameIndex: CFFIndex
+    topDictIndex: CFFIndex
+    stringIndex: CFFIndex
+    globalSubrIndex: CFFIndex
+    topDict: CFFTopDict
+    subrsBias: int
+    subrIndex: CFFIndex
+    charIndex: CFFIndex
+    #charsets*: CFF..
+    #charStringsIndex*: CFF..
+    #privateDict*: CFF..
+
+
   OpenType* = ref object
     buf*: string
     version*: uint32
@@ -329,6 +388,7 @@ type
     kern*: KernTable
     gpos*: GposTable
     post*: PostTable
+    cff*: CFFTable
     glyphPaths: Table[Rune, Path]
 
 when defined(release):
@@ -748,6 +808,730 @@ proc parseKernTable(buf: string, offset: int): KernTable =
     discard # Mac format
   else:
     failUnsupported("Kern version")
+
+import print, strutils
+
+proc parseCFFIndex(buf: string, start: var int, stripZero = false): CFFIndex =
+
+  proc getOffset(buf: string, offset, offSize: int): int =
+    var v = 0
+    for i in 0 ..< offSize:
+      v = v shl 8
+      v += buf.readUint8(offset + i).int
+    return v
+
+  # Compute all of the offsets first.
+  var offsets: seq[int]
+  result = CFFIndex()
+  let count = buf.readUint16(start).swap().int
+  var endOffset = 0
+  var objectOffset = 0
+  if count != 0:
+    var offsetSize = buf.readUint8(start + 2).int
+    objectOffset = start + ((count.int + 1) * offsetSize.int) + 2
+    var pos = start + 3
+    for i in 0 .. count.int:
+      offsets.add(buf.getOffset(pos, offsetSize.int))
+
+      pos += offsetSize
+    endOffset = objectOffset + offsets[count]
+  else:
+    endOffset = start + 2
+
+  # Using the offsets get the objects, which are:
+  # * binary strings
+  # * null terminate ascii strings
+  for i in 0 ..< offsets.len - 1:
+    var value = buf[objectOffset + offsets[i] ..< objectOffset + offsets[i + 1]]
+    if stripZero:
+      value = value[0..^1] # ignore 0 at the end
+    result.objects.add(value)
+  start = endOffset
+
+const cffStandardStrings = [
+  ".notdef", "space", "exclam", "quotedbl", "numbersign", "dollar", "percent", "ampersand", "quoteright",
+  "parenleft", "parenright", "asterisk", "plus", "comma", "hyphen", "period", "slash", "zero", "one", "two",
+  "three", "four", "five", "six", "seven", "eight", "nine", "colon", "semicolon", "less", "equal", "greater",
+  "question", "at", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S",
+  "T", "U", "V", "W", "X", "Y", "Z", "bracketleft", "backslash", "bracketright", "asciicircum", "underscore",
+  "quoteleft", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t",
+  "u", "v", "w", "x", "y", "z", "braceleft", "bar", "braceright", "asciitilde", "exclamdown", "cent", "sterling",
+  "fraction", "yen", "florin", "section", "currency", "quotesingle", "quotedblleft", "guillemotleft",
+  "guilsinglleft", "guilsinglright", "fi", "fl", "endash", "dagger", "daggerdbl", "periodcentered", "paragraph",
+  "bullet", "quotesinglbase", "quotedblbase", "quotedblright", "guillemotright", "ellipsis", "perthousand",
+  "questiondown", "grave", "acute", "circumflex", "tilde", "macron", "breve", "dotaccent", "dieresis", "ring",
+  "cedilla", "hungarumlaut", "ogonek", "caron", "emdash", "AE", "ordfeminine", "Lslash", "Oslash", "OE",
+  "ordmasculine", "ae", "dotlessi", "lslash", "oslash", "oe", "germandbls", "onesuperior", "logicalnot", "mu",
+  "trademark", "Eth", "onehalf", "plusminus", "Thorn", "onequarter", "divide", "brokenbar", "degree", "thorn",
+  "threequarters", "twosuperior", "registered", "minus", "eth", "multiply", "threesuperior", "copyright",
+  "Aacute", "Acircumflex", "Adieresis", "Agrave", "Aring", "Atilde", "Ccedilla", "Eacute", "Ecircumflex",
+  "Edieresis", "Egrave", "Iacute", "Icircumflex", "Idieresis", "Igrave", "Ntilde", "Oacute", "Ocircumflex",
+  "Odieresis", "Ograve", "Otilde", "Scaron", "Uacute", "Ucircumflex", "Udieresis", "Ugrave", "Yacute",
+  "Ydieresis", "Zcaron", "aacute", "acircumflex", "adieresis", "agrave", "aring", "atilde", "ccedilla", "eacute",
+  "ecircumflex", "edieresis", "egrave", "iacute", "icircumflex", "idieresis", "igrave", "ntilde", "oacute",
+  "ocircumflex", "odieresis", "ograve", "otilde", "scaron", "uacute", "ucircumflex", "udieresis", "ugrave",
+  "yacute", "ydieresis", "zcaron", "exclamsmall", "Hungarumlautsmall", "dollaroldstyle", "dollarsuperior",
+  "ampersandsmall", "Acutesmall", "parenleftsuperior", "parenrightsuperior", "266 ff", "onedotenleader",
+  "zerooldstyle", "oneoldstyle", "twooldstyle", "threeoldstyle", "fouroldstyle", "fiveoldstyle", "sixoldstyle",
+  "sevenoldstyle", "eightoldstyle", "nineoldstyle", "commasuperior", "threequartersemdash", "periodsuperior",
+  "questionsmall", "asuperior", "bsuperior", "centsuperior", "dsuperior", "esuperior", "isuperior", "lsuperior",
+  "msuperior", "nsuperior", "osuperior", "rsuperior", "ssuperior", "tsuperior", "ff", "ffi", "ffl",
+  "parenleftinferior", "parenrightinferior", "Circumflexsmall", "hyphensuperior", "Gravesmall", "Asmall",
+  "Bsmall", "Csmall", "Dsmall", "Esmall", "Fsmall", "Gsmall", "Hsmall", "Ismall", "Jsmall", "Ksmall", "Lsmall",
+  "Msmall", "Nsmall", "Osmall", "Psmall", "Qsmall", "Rsmall", "Ssmall", "Tsmall", "Usmall", "Vsmall", "Wsmall",
+  "Xsmall", "Ysmall", "Zsmall", "colonmonetary", "onefitted", "rupiah", "Tildesmall", "exclamdownsmall",
+  "centoldstyle", "Lslashsmall", "Scaronsmall", "Zcaronsmall", "Dieresissmall", "Brevesmall", "Caronsmall",
+  "Dotaccentsmall", "Macronsmall", "figuredash", "hypheninferior", "Ogoneksmall", "Ringsmall", "Cedillasmall",
+  "questiondownsmall", "oneeighth", "threeeighths", "fiveeighths", "seveneighths", "onethird", "twothirds",
+  "zerosuperior", "foursuperior", "fivesuperior", "sixsuperior", "sevensuperior", "eightsuperior", "ninesuperior",
+  "zeroinferior", "oneinferior", "twoinferior", "threeinferior", "fourinferior", "fiveinferior", "sixinferior",
+  "seveninferior", "eightinferior", "nineinferior", "centinferior", "dollarinferior", "periodinferior",
+  "commainferior", "Agravesmall", "Aacutesmall", "Acircumflexsmall", "Atildesmall", "Adieresissmall",
+  "Aringsmall", "AEsmall", "Ccedillasmall", "Egravesmall", "Eacutesmall", "Ecircumflexsmall", "Edieresissmall",
+  "Igravesmall", "Iacutesmall", "Icircumflexsmall", "Idieresissmall", "Ethsmall", "Ntildesmall", "Ogravesmall",
+  "Oacutesmall", "Ocircumflexsmall", "Otildesmall", "Odieresissmall", "OEsmall", "Oslashsmall", "Ugravesmall",
+  "Uacutesmall", "Ucircumflexsmall", "Udieresissmall", "Yacutesmall", "Thornsmall", "Ydieresissmall", "001.000",
+  "001.001", "001.002", "001.003", "Black", "Bold", "Book", "Light", "Medium", "Regular", "Roman", "Semibold"];
+
+let TOP_DICT_META = {
+  0: "version",
+  1: "notice",
+  1200: "copyright",
+  2: "fullName",
+  3: "familyName",
+  4: "weight",
+  1201: "isFixedPitch",
+  1202: "italicAngle",
+  1203: "underlinePosition",
+  1204: "underlineThickness",
+  1205: "paintType",
+  1206: "charstringType",
+  1207: "fontMatrix",
+  13: "uniqueId",
+  5: "fontBBox",
+  1208: "strokeWidth",
+  14: "xuid",
+  15: "charset",
+  16: "encoding",
+  17: "charStrings",
+  18: "private",
+  1230: "ros",
+  1231: "cidFontVersion",
+  1232: "cidFontRevision",
+  1233: "cidFontType",
+  1234: "cidCount",
+  1235: "uidBase",
+  1236: "fdArray",
+  1237: "fdSelect",
+  1238: "fontName",
+}.toTable
+
+let PRIVATE_DICT_META = {
+  19: "subrs",
+  20: "defaultWidthX",
+  21: "nominalWidthX",
+}.toTable
+
+proc shift[T](s: var seq[T]): T =
+  ## Pops from the front.
+  result = s[0]
+  s.delete(0)
+
+proc parseCFFCharstring(cff: CffTable, code: string): Path =
+
+  #print code
+
+  var c1x: float32
+  var c1y: float32
+  var c2x: float32
+  var c2y: float32
+  var p = newPath()
+  var stack: seq[float32];
+  # var nStems = 0;
+  var haveWidth = false;
+  # var open = false;
+  var x = 0f
+  var y = 0f
+  # var subrs;
+  # var subrsBias;
+  # var defaultWidthX;
+  # var nominalWidthX;
+
+  # TODO: isCIDFon
+
+  let
+    subrs = cff.topDict.subrs
+    subrsBias = cff.subrsBias
+    defaultWidthX = cff.topDict.defaultWidthX
+    nominalWidthX = cff.topDict.nominalWidthX
+
+  var width = defaultWidthX.float32
+
+  var breakOneMe = false
+
+  #print subrs, subrsBias, defaultWidthX, nominalWidthX
+
+  proc parse(code: string) =
+    var b1: int
+    var b2: int
+    var b3: int
+    var b4: int
+    # var codeIndex;
+    # var subrCode;
+    # var jpx;
+    # var jpy;
+    # var c3x;
+    # var c3y;
+    # var c4x;
+    # var c4y;
+    var i = 0
+    while i < code.len:
+      var v = code.readUint8(i).int
+      inc i
+      case v:
+
+      of 4: # vmoveto
+        if stack.len > 1 and not haveWidth:
+          width = stack.shift() + nominalWidthX.float32
+          haveWidth = true
+        y += stack.pop();
+        p.moveTo(x, y);
+
+      of 5: # rlineto
+        while stack.len > 0:
+          x += stack.shift()
+          y += stack.shift()
+          p.lineTo(x, y)
+
+      of 6: # hlineto
+        while stack.len > 0:
+          x += stack.shift()
+          p.lineTo(x, y)
+          if stack.len == 0:
+            break
+          y += stack.shift()
+          p.lineTo(x, y);
+
+      of 7: # vlineto
+        while stack.len > 0:
+          y += stack.shift();
+          p.lineTo(x, y);
+          if stack.len == 0:
+              break;
+          x += stack.shift();
+          p.lineTo(x, y);
+
+      of 8: # rrcurveto
+        while stack.len > 0:
+          c1x = x + stack.shift();
+          c1y = y + stack.shift();
+          c2x = c1x + stack.shift();
+          c2y = c1y + stack.shift();
+          x = c2x + stack.shift();
+          y = c2y + stack.shift();
+          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+
+      of 10: # callsubr
+        let codeIndex = stack.pop().int + subrsBias
+        let subrCode = cff.subrIndex.objects[codeIndex]
+        if subrCode.len > 0:
+          parse(subrCode)
+
+      of 11: # return
+        return
+
+      of 14: # endchar
+        if stack.len > 2 and not haveWidth:
+          width = stack.shift() + nominalWidthX.float32
+          haveWidth = true
+        p.closePath()
+
+      of 21: # rmoveto
+        if stack.len > 2 and not haveWidth:
+          width = stack.shift() + nominalWidthX.float32
+          haveWidth = true
+
+        y += stack.pop()
+        x += stack.pop()
+        p.moveTo(x, y)
+
+      of 22: # hmoveto
+        if stack.len > 1 and not haveWidth:
+          width = stack.shift() + nominalWidthX.float32
+          haveWidth = true
+
+        x += stack.pop()
+        p.moveTo(x, y)
+
+      of 24: # rcurveline
+        while stack.len > 2:
+          c1x = x + stack.shift();
+          c1y = y + stack.shift();
+          c2x = c1x + stack.shift();
+          c2y = c1y + stack.shift();
+          x = c2x + stack.shift();
+          y = c2y + stack.shift();
+          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+        x += stack.shift();
+        y += stack.shift();
+        p.lineTo(x, y);
+
+      of 25: # rlinecurve
+        while stack.len > 6:
+          x += stack.shift();
+          y += stack.shift();
+          p.lineTo(x, y);
+
+        c1x = x + stack.shift();
+        c1y = y + stack.shift();
+        c2x = c1x + stack.shift();
+        c2y = c1y + stack.shift();
+        x = c2x + stack.shift();
+        y = c2y + stack.shift();
+        p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
+
+      of 26: # vvcurveto
+        if stack.len mod 2 != 0:
+          x += stack.shift()
+
+        while stack.len > 0:
+          if stack.len < 4:
+            breakOneMe = true
+          c1x = x;
+          c1y = y + stack.shift();
+          c2x = c1x + stack.shift();
+          c2y = c1y + stack.shift();
+          x = c2x;
+          y = c2y + stack.shift();
+          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+
+      of 27: # hhcurveto
+        if stack.len mod 2 != 0:
+          y += stack.shift()
+
+        while stack.len > 0:
+          c1x = x + stack.shift()
+          c1y = y;
+          c2x = c1x + stack.shift()
+          c2y = c1y + stack.shift()
+          x = c2x + stack.shift()
+          y = c2y;
+          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
+
+      of 28: # shortint
+        let value = code.readInt16(i).swap().float32
+        stack.add(value)
+        i += 2
+
+      of 29: # callgsubr
+        let codeIndex = stack.pop().int + subrsBias
+        let subrCode = cff.globalSubrIndex.objects[codeIndex]
+        if subrCode.len > 0:
+          parse(subrCode)
+
+      of 30: # vhcurveto
+        while stack.len > 0:
+          c1x = x;
+          c1y = y + stack.shift();
+          c2x = c1x + stack.shift();
+          c2y = c1y + stack.shift();
+          x = c2x + stack.shift();
+          y = c2y + (if stack.len == 1: stack.shift() else: 0)
+          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+          if stack.len == 0:
+            break
+
+          c1x = x + stack.shift();
+          c1y = y;
+          c2x = c1x + stack.shift();
+          c2y = c1y + stack.shift();
+          y = c2y + stack.shift();
+          x = c2x + (if stack.len == 1: stack.shift() else: 0)
+          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+
+      of 31: # hvcurveto
+        while stack.len > 0:
+          c1x = x + stack.shift();
+          c1y = y;
+          c2x = c1x + stack.shift();
+          c2y = c1y + stack.shift();
+          y = c2y + stack.shift();
+          x = c2x + (if stack.len == 1: stack.shift() else: 0)
+          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+          if stack.len == 0:
+            break
+
+          c1x = x;
+          c1y = y + stack.shift();
+          c2x = c1x + stack.shift();
+          c2y = c1y + stack.shift();
+          x = c2x + stack.shift();
+          y = c2y + (if stack.len == 1: stack.shift() else: 0)
+          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y);
+
+      else:
+        if v < 32:
+          failUnsupported("CFF unknown operator: " & $v)
+        elif v < 247:
+          stack.add(float32(v - 139))
+        elif v < 251:
+          b1 = code.readUint8(i).int;
+          i += 1;
+          stack.add(float32((v - 247) * 256 + b1 + 108))
+        elif v < 255:
+          b1 = code.readUint8(i).int;
+          i += 1;
+          stack.add(float32(-(v - 251) * 256 - b1 - 108))
+        else:
+          b1 = code.readUint8(i + 0).int
+          b2 = code.readUint8(i + 1).int
+          b3 = code.readUint8(i + 2).int
+          b4 = code.readUint8(i + 3).int
+          i += 4;
+          stack.add(((b1 shl 24) or (b2 shl 16) or (b3 shl 8) or b4).float32 / 65536f)
+
+  parse(code)
+
+  if breakOneMe:
+    quit()
+
+  return p
+
+
+proc parseCFFTable(buf: string, offset: int): CFFTable =
+  buf.eofCheck(offset + 32)
+
+  result = CFFTable()
+  result.header = CFFHeader()
+  result.header.formatMajor = buf.readUint8(offset + 0)
+  result.header.formatMinor = buf.readUint8(offset + 1)
+  result.header.size = buf.readUint8(offset + 2)
+  result.header.offsetSize = buf.readUint8(offset + 3)
+
+  var indexOffset = offset + 4
+  # contains names of the fonts
+  result.nameIndex = buf.parseCFFIndex(indexOffset, true)
+  result.topDictIndex = buf.parseCFFIndex(indexOffset)
+  # contains names of glyphs
+  result.stringIndex = buf.parseCFFIndex(indexOffset, true)
+  # contains binary glyphs
+  result.globalSubrIndex = buf.parseCFFIndex(indexOffset)
+
+  # Subroutines are encoded using the negative half of the number space.
+  # See type 2 chapter 4.7 "Subroutine operators".
+  result.subrsBias =
+    if result.globalSubrIndex.objects.len < 1240:
+      107
+    elif result.globalSubrIndex.objects.len < 33900:
+      1131
+    else:
+      32768
+
+  # Parse a `CFF` DICT object.
+  # A dictionary contains key-value pairs in a compact tokenized format.
+  proc parseCFFDict(data: string, start, stop: int): seq[(int, seq[float64])] =
+    var entries: seq[(int, seq[float64])]
+    var operands: seq[float64]
+    var relativeOffset = start
+    var size = data.len
+    while relativeOffset < size:
+      var op = data.readUint8(relativeOffset).int
+      inc relativeOffset
+      if op <= 21:
+        # Two-byte operators have an initial escape byte of 12.
+        if op == 12:
+          op = 1200 + data.readUint8(relativeOffset).int
+          inc relativeOffset
+        entries.add((op, operands))
+        operands.setLen(0)
+      else:
+        # Since the operands (values) come before the operators (keys), we store all operands in a list
+        # until we encounter an operator.
+
+        proc parseFloatOperand(): float64 =
+          var s = ""
+          var eof = 15
+          var lookup = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "E", "E-", "null", "-"]
+          while true:
+            var b = data.readUint8(relativeOffset).int
+            inc relativeOffset
+            var n1 = b shr 4;
+            var n2 = b and 15;
+            if n1 == eof:
+              break
+            s.add lookup[n1]
+            if n2 == eof:
+              break
+            s.add lookup[n2]
+          try:
+            return parseFloat(s)
+          except ValueError:
+            failUnsupported("float " & s)
+
+        proc parseOperand(b0: int): float64 =
+          var b1: int
+          var b2: int
+          var b3: int
+          var b4: int
+          if b0 == 28:
+            b1 = data.readUint8(relativeOffset).int
+            inc relativeOffset
+            b2 = data.readUint8(relativeOffset).int
+            inc relativeOffset
+            return float64(b1 shl 8 or b2)
+
+          if b0 == 29:
+            b1 = data.readUint8(relativeOffset).int
+            inc relativeOffset
+            b2 = data.readUint8(relativeOffset).int
+            inc relativeOffset
+            b3 = data.readUint8(relativeOffset).int
+            inc relativeOffset
+            b4 = data.readUint8(relativeOffset).int
+            inc relativeOffset
+            return float64(cast[int32](b1 shl 24 or b2 shl 16 or b3 shl 8 or b4))
+
+          if b0 == 30:
+              return parseFloatOperand()
+
+          if b0 >= 32 and b0 <= 246:
+              return float64(b0 - 139);
+
+          if b0 >= 247 and b0 <= 250:
+              b1 = data.readUint8(relativeOffset).int
+              inc relativeOffset
+              return float64((b0 - 247) * 256 + b1 + 108)
+
+          if b0 >= 251 and b0 <= 254:
+              b1 = data.readUint8(relativeOffset).int
+              inc relativeOffset
+              return float64(-(b0 - 251) * 256 - b1 - 108)
+
+          failUnsupported("Invalid b0 " & $b0)
+
+        let operand = parseOperand(op)
+        if operand == 4294965216.0: quit()
+        operands.add(operand)
+
+    return entries
+    # # Convert the entries returned by `parseDict` to a proper dictionary.
+    # # If a value is a list of one, it is unpacked.
+    # proc entriesToObject(entries: seq[(int, seq[float64])]): Table[int, seq[float64]] =
+    #   var o: Table[int, seq[float64]]
+    #   for i in 0 ..< entries.len:
+    #       var key = entries[i][0]
+    #       var values = entries[i][1]
+    #       if key in o:
+    #         failUnsupported("CFF duplicate key error " & $key)
+    #       o[key] = values
+    #   return o
+    # var dict = entriesToObject(entries)
+    # return dict
+
+
+  proc interpretDict(entries: seq[(int, seq[float64])], meta: Table[int, string], strings: seq[string]): Table[string, seq[float64]] =
+    for e in entries:
+      if e[0] notin meta:
+        #failUnsupported("CFF unknown op: " & $e[0])
+        continue
+      let key = meta[e[0]]
+      if key in result:
+        failUnsupported("CFF duplicate key: " & key)
+      result[key] = e[1]
+
+  # Parse the CFF top dictionary. A CFF table can contain multiple fonts, each with their own top dictionary.
+  # The top dictionary contains the essential metadata for the font, together with the private dictionary.
+  proc parseCFFTopDict(data: string, strings: seq[string]): Table[string, seq[float64]] =
+    var entries = parseCFFDict(data, 0, data.len)
+    return interpretDict(entries, TOP_DICT_META, strings)
+
+  proc parseCFFPrivateDict(data: string, strings: seq[string]): Table[string, seq[float64]] =
+    var entries = parseCFFDict(data, 0, data.len)
+    return interpretDict(entries, PRIVATE_DICT_META, strings)
+
+  proc getCFFString(strings: seq[string], index: int): string =
+    if index <= 390:
+      cffStandardStrings[index];
+    else:
+      if index - 391 < strings.len:
+        strings[index - 391]
+      else:
+        ""
+
+  # "Top DICT"s found using an INDEX list.
+  proc gatherCFFTopDicts(cff: CFFTable, data: string, start: int, cffIndex, strings: seq[string]): seq[CFFTopDict] =
+
+    for iTopDict in 0 ..< cffIndex.len:
+      let
+        cffTopDict = CFFTopDict()
+        topDictData = cffIndex[iTopDict]
+        topDict = parseCFFTopDict(topDictData, strings)
+
+      proc getInt(
+        topDict: Table[string, seq[float64]],
+        key: string,
+        default: int
+      ): int =
+        if key in topDict:
+          topDict[key][0].int
+        else:
+          default
+
+      proc getStr(
+        topDict: Table[string, seq[float64]],
+        key: string,
+        default: string
+      ): string =
+        if key in topDict:
+          let index = topDict[key][0].int
+          strings.getCFFString(index)
+        else:
+          default
+
+      proc getArr[N: int](
+        topDict: Table[string, seq[float64]],
+        key: string,
+        default: array[N, float32]
+      ): array[N, float32] =
+        if key in topDict:
+          for i in 0 ..< result.len:
+            result[i] = topDict[key][i].float32
+        else:
+          return default
+
+      cffTopDict.charStrings = topDict.getInt("charStrings", 0)
+      cffTopDict.charset = topDict.getInt("charset", 0)
+      cffTopDict.charstringType = topDict.getInt("charstringType", 2)
+      cffTopDict.cidCount = topDict.getInt("cidCount", 8720)
+      cffTopDict.cidFontRevision = topDict.getInt("cidCount", 0)
+      cffTopDict.cidFontType = topDict.getInt("cidFontType", 0)
+      cffTopDict.cidFontVersion = topDict.getInt("cidFontType", 0)
+      cffTopDict.copyright = topDict.getStr("copyright", "")
+      cffTopDict.encoding = topDict.getInt("encoding", 0)
+      cffTopDict.familyName = topDict.getStr("familyName", "")
+      # cffTopDict.fdArray: pointer
+      # cffTopDict.fdSelect: pointer
+      cffTopDict.fontBBox = topDict.getArr("fontBBox", [0f, 0f, 0f, 0f])
+      cffTopDict.fontMatrix = topDict.getArr("fontMatrix",
+        [0.001f, 0f, 0f, 0.001f, 0f, 0f])
+      cffTopDict.fontName = topDict.getStr("fontName", "")
+      cffTopDict.fullName = topDict.getStr("fullName", "")
+      cffTopDict.isFixedPitch = topDict.getInt("isFixedPitch", 0)
+      cffTopDict.italicAngle = topDict.getInt("isFixedPitch", 0)
+      cffTopDict.notice = topDict.getStr("notice", "")
+      cffTopDict.paintType = topDict.getInt("paintType", 0)
+      cffTopDict.private = topDict.getArr("private", [0f, 0f])
+      var privateSize = cffTopDict.private[0].int
+      var privateOffset = cffTopDict.private[1].int
+      var privateDict = parseCFFPrivateDict(
+        buf[privateOffset + start ..< privateOffset + start + privateSize],
+        strings
+      )
+      cffTopDict.defaultWidthX = privateDict.getInt("defaultWidthX", 0)
+      cffTopDict.nominalWidthX = privateDict.getInt("nominalWidthX", 0)
+      cffTopDict.subrs = privateDict.getInt("subrs", 0)
+
+      # cffTopDict.ros: array[3, float32]
+      cffTopDict.strokeWidth = topDict.getInt("strokeWidth", 0)
+      # cffTopDict.uidBase: pointer
+      cffTopDict.underlinePosition = topDict.getInt("underlinePosition", -100)
+      cffTopDict.underlineThickness = topDict.getInt("underlineThickness", 50)
+      # cffTopDict.uniqueId: pointer
+      cffTopDict.version = topDict.getStr("version", "")
+      cffTopDict.weight = topDict.getStr("weight", "")
+      result.add(cffTopDict)
+
+  let topDicts = result.gatherCFFTopDicts(
+    buf, offset, result.topDictIndex.objects, result.stringIndex.objects)
+  if topDicts.len == 0:
+    failUnsupported("CFF no topDict")
+  if topDicts.len > 1:
+    failUnsupported("CFF multiple topDict")
+  result.topDict = topDicts[0]
+
+  # TODO: isCIDFont?
+
+  # print result.topDict.subrs
+  # print result.topDict.defaultWidthX
+  # print result.topDict.nominalWidthX
+  if result.topDict.subrs != 0:
+    var subrOffset = offset + result.topDict.private[1].int + result.topDict.subrs
+    result.subrIndex = buf.parseCFFIndex(subrOffset)
+
+  proc parseCFFIndexLowMemory(buf: string, offset: int): seq[int] =
+
+    proc getOffset(dataView: string, offset, offSize: int): int =
+      var v = 0
+      for i in 0 ..< offSize:
+        v = v shl 8
+        v += dataView.readUint8(offset + i).int
+      return v
+
+    let count = buf.readUint16(offset).swap().int
+    var objectOffset = 0
+    if count != 0:
+      var offsetSize = buf.readUint8(offset + 2).int
+      objectOffset = offset + ((count + 1) * offsetSize) + 2
+      var pos = offset + 3
+      for i in 0 .. count:
+        let offsetValue = buf.getOffset(pos, offsetSize)
+        result.add offsetValue
+        pos += offsetSize
+
+  let charStringsIndex = parseCFFIndexLowMemory(buf, offset + result.topDict.charStrings);
+  let nGlyphs = charStringsIndex.len
+
+  proc parseCFFCharset(buf: string, offset: int, nGlyphs: int, stringIndex: seq[string]): seq[string] =
+
+    # The .notdef glyph is implied
+    var charset = @[".notdef"]
+    var nGlyphs = nGlyphs - 1
+    var pos = offset
+    var format = buf.readUint8(pos)
+    inc pos
+    if format == 2:
+      while charset.len <= nGlyphs:
+        var
+          sid = buf.readUint16(pos).swap().int
+        pos += 2
+        var
+          count = buf.readUint16(pos).swap().int
+        pos += 2
+        for i in 0 .. count:
+          charset.add(getCFFString(stringIndex, sid))
+          if charset.len >= nGlyphs:
+            break
+          sid += 1
+    else:
+      failUnsupported("CFF charset format")
+
+  # Why do we need this anyways?
+  var charset = parseCFFCharset(buf, offset + result.topDict.charset, nGlyphs, result.stringIndex.objects);
+  # if topDict.encoding == 0:
+  #   discard
+  # else:
+  #   failUnsupported("CFF top dict encoding")
+
+
+  var start = offset + result.topDict.charStrings
+  #print start
+  # for i in 0 ..< nGlyphs:
+  #   print i
+  #   var charString = parseCFFIndex(buf, start);
+
+
+  result.charIndex = buf.parseCFFIndex(start)
+  #print charIndex
+
+
+  # let glyphIndex = 2539
+  # let charstring = charIndex.objects[glyphIndex]
+  # var path = parseCFFCharstring(result, charstring)
+
+  for glyphIndex in 0 ..< result.charIndex.objects.len:
+    let charstring = result.charIndex.objects[glyphIndex]
+    var path = parseCFFCharstring(result, charstring)
+
 
 # proc parseLangSys(buf: string, offset: int): LangSys =
 #   var i = offset
@@ -1477,6 +2261,7 @@ proc parseCompositeGlyph(opentype: OpenType, offset: int): Path =
     moreComponents = (flags and 0b100000) != 0
 
 proc parseGlyph(opentype: OpenType, glyphId: uint16): Path =
+
   if glyphId.int >= opentype.glyf.offsets.len:
     raise newException(PixieError, "Invalid glyph ID " & $glyphId)
 
@@ -1504,8 +2289,19 @@ proc parseGlyph(opentype: OpenType, glyphId: uint16): Path =
   else:
     parseGlyphPath(opentype.buf, i, numberOfContours)
 
+
+proc parseCffGlyph(opentype: OpenType, glyphId: uint16): Path =
+  let cff = opentype.cff
+  let charstring = cff.charIndex.objects[glyphId]
+  return cff.parseCFFCharstring(charstring)
+
 proc parseGlyph(opentype: OpenType, rune: Rune): Path {.inline.} =
-  opentype.parseGlyph(opentype.getGlyphId(rune))
+  if opentype.glyf != nil:
+    opentype.parseGlyph(opentype.getGlyphId(rune))
+  elif opentype.cff != nil:
+    opentype.parseCffGlyph(opentype.getGlyphId(rune))
+  else:
+    raise newException(PixieError, "Invalid glyph storage")
 
 proc getGlyphPath*(
   opentype: OpenType, rune: Rune
@@ -1605,11 +2401,19 @@ proc parseOpenType*(buf: string): OpenType {.raises: [PixieError].} =
     )
     result.name = parseNameTable(buf, result.tableRecords["name"].offset.int)
     result.os2 = parseOS2Table(buf, result.tableRecords["OS/2"].offset.int)
-    result.loca = parseLocaTable(
-      buf, result.tableRecords["loca"].offset.int, result.head, result.maxp
-    )
-    result.glyf =
-      parseGlyfTable(buf, result.tableRecords["glyf"].offset.int, result.loca)
+
+    if "loca" in result.tableRecords and "glyf" in result.tableRecords:
+      result.loca = parseLocaTable(
+        buf, result.tableRecords["loca"].offset.int, result.head, result.maxp
+      )
+      result.glyf =
+        parseGlyfTable(buf, result.tableRecords["glyf"].offset.int, result.loca)
+    elif "CFF " in result.tableRecords:
+      result.cff = parseCFFTable(buf, result.tableRecords["CFF "].offset.int)
+
+    else:
+      failUnsupported("glyph outlines")
+
 
     if "kern" in result.tableRecords:
       result.kern = parseKernTable(buf, result.tableRecords["kern"].offset.int)
