@@ -349,10 +349,10 @@ type
     nominalWidthX: int
     ros: array[3, string]
     strokeWidth: int
-    uidBase: pointer
+    uidBase: int
     underlinePosition: int
     underlineThickness: int
-    uniqueId: pointer
+    uniqueId: int
     version: string
     weight: string
 
@@ -365,9 +365,6 @@ type
     globalSubrIndex: seq[string]
     topDict: CFFTopDict
     charIndex: seq[string]
-    #charsets*: CFF..
-    #charStringsIndex*: CFF..
-    #privateDict*: CFF..
     isCID: bool
 
   OpenType* = ref object
@@ -1461,10 +1458,10 @@ proc parseCFFTable(buf: string, offset: int, maxp: MaxpTable): CFFTable =
 
       cffTopDict.ros = topDict.getArrStr("ros", ["", "", ""], strings)
       cffTopDict.strokeWidth = topDict.getInt("strokeWidth", 0)
-      # cffTopDict.uidBase: pointer
+      cffTopDict.uidBase = topDict.getInt("uidBase", 0)
       cffTopDict.underlinePosition = topDict.getInt("underlinePosition", -100)
       cffTopDict.underlineThickness = topDict.getInt("underlineThickness", 50)
-      # cffTopDict.uniqueId: pointer
+      cffTopDict.uniqueId = topDict.getInt("uniqueId", 0)
       cffTopDict.version = topDict.getStr("version", "")
       cffTopDict.weight = topDict.getStr("weight", "")
       result.add(cffTopDict)
@@ -1476,16 +1473,6 @@ proc parseCFFTable(buf: string, offset: int, maxp: MaxpTable): CFFTable =
   if topDicts.len > 1:
     failUnsupported("CFF multiple topDict")
   result.topDict = topDicts[0]
-
-  # Subroutines are encoded using the negative half of the number space.
-  # See type 2 chapter 4.7 "Subroutine operators".
-  result.topDict.subrsBias =
-    if result.globalSubrIndex.len < 1240:
-      107
-    elif result.globalSubrIndex.len < 33900:
-      1131
-    else:
-      32768
 
   if result.topDict.ros[0] != "" and result.topDict.ros[1] != "":
     result.isCID = true
@@ -1504,15 +1491,6 @@ proc parseCFFTable(buf: string, offset: int, maxp: MaxpTable): CFFTable =
       var format = buf.readUint8(at)
       inc at
 
-      #     if (format === 0) {
-      #         // Simple list of nGlyphs elements
-      #         for (var iGid = 0; iGid < nGlyphs; iGid++) {
-      #             fdIndex = parser.parseCard8();
-      #             if (fdIndex >= fdArrayCount) {
-      #                 throw new Error('CFF table CID Font FDSelect has bad FD index value ' + fdIndex + ' (FD count ' + fdArrayCount + ')');
-      #             }
-      #             fdSelect.push(fdIndex);
-      #         }
       if format == 3:
         # Ranges
         var nRanges = buf.readUint16(at).swap().int
@@ -1536,7 +1514,6 @@ proc parseCFFTable(buf: string, offset: int, maxp: MaxpTable): CFFTable =
           while first < next:
             result.add(fdIndex)
             inc first
-
           first = next
 
         if next != nGlyphs:
@@ -1545,7 +1522,8 @@ proc parseCFFTable(buf: string, offset: int, maxp: MaxpTable): CFFTable =
       else:
         failUnsupported("CFF Table CID Font FDSelect format")
 
-    result.topDict.fdSelectSeq = parseCFFFDSelect(buf, fdSelectOffset, maxp.numGlyphs.int, result.topDict.fdArraySeq.len)
+    result.topDict.fdSelectSeq = parseCFFFDSelect(
+      buf, fdSelectOffset, maxp.numGlyphs.int, result.topDict.fdArraySeq.len)
 
   if result.topDict.subrs != 0:
     var subrOffset =
@@ -1553,69 +1531,62 @@ proc parseCFFTable(buf: string, offset: int, maxp: MaxpTable): CFFTable =
     result.topDict.subrIndex = buf.parseCFFIndex(subrOffset)
     result.topDict.subrsBias = calcCFFSubroutineBias(result.topDict.subrIndex)
 
-  proc parseCFFIndexLowMemory(buf: string, offset: int): seq[int] =
-    proc getOffset(dataView: string, offset, offSize: int): int =
-      var v = 0
-      for i in 0 ..< offSize:
-        v = v shl 8
-        v += dataView.readUint8(offset + i).int
-      return v
-    let count = buf.readUint16(offset).swap().int
-    var objectOffset = 0
-    if count != 0:
-      var offsetSize = buf.readUint8(offset + 2).int
-      objectOffset = offset + ((count + 1) * offsetSize) + 2
-      var pos = offset + 3
-      for i in 0 .. count:
-        let offsetValue = buf.getOffset(pos, offsetSize)
-        result.add offsetValue
-        pos += offsetSize
+  # proc parseCFFIndexLowMemory(buf: string, offset: int): seq[int] =
+  #   proc getOffset(dataView: string, offset, offSize: int): int =
+  #     var v = 0
+  #     for i in 0 ..< offSize:
+  #       v = v shl 8
+  #       v += dataView.readUint8(offset + i).int
+  #     return v
+  #   let count = buf.readUint16(offset).swap().int
+  #   var objectOffset = 0
+  #   if count != 0:
+  #     var offsetSize = buf.readUint8(offset + 2).int
+  #     objectOffset = offset + ((count + 1) * offsetSize) + 2
+  #     var pos = offset + 3
+  #     for i in 0 .. count:
+  #       let offsetValue = buf.getOffset(pos, offsetSize)
+  #       result.add offsetValue
+  #       pos += offsetSize
 
-  let charStringsIndex = parseCFFIndexLowMemory(
-    buf, offset + result.topDict.charStrings)
-  let nGlyphs = charStringsIndex.len
+  # let charStringsIndex = parseCFFIndexLowMemory(
+  #   buf, offset + result.topDict.charStrings)
+  # proc parseCFFCharset(
+  #   buf: string,
+  #   offset: int,
+  #   nGlyphs: int,
+  #   stringIndex: seq[string]
+  # ): seq[string] =
+  #   # The .notdef glyph is implied
+  #   var charset = @[".notdef"]
+  #   var nGlyphs = nGlyphs - 1
+  #   var pos = offset
+  #   var format = buf.readUint8(pos)
+  #   inc pos
+  #   if format == 2:
+  #     while charset.len <= nGlyphs:
+  #       var
+  #         sid = buf.readUint16(pos).swap().int
+  #       pos += 2
+  #       var
+  #         count = buf.readUint16(pos).swap().int
+  #       pos += 2
+  #       for i in 0 .. count:
+  #         charset.add(getCFFString(stringIndex, sid))
+  #         if charset.len >= nGlyphs:
+  #           break
+  #         sid += 1
+  #   else:
+  #     failUnsupported("CFF charset format: " & $format)
 
-  proc parseCFFCharset(
-    buf: string,
-    offset: int,
-    nGlyphs: int,
-    stringIndex: seq[string]
-  ): seq[string] =
-    # The .notdef glyph is implied
-    var charset = @[".notdef"]
-    var nGlyphs = nGlyphs - 1
-    var pos = offset
-    var format = buf.readUint8(pos)
-    inc pos
-    if format == 2:
-      while charset.len <= nGlyphs:
-        var
-          sid = buf.readUint16(pos).swap().int
-        pos += 2
-        var
-          count = buf.readUint16(pos).swap().int
-        pos += 2
-        for i in 0 .. count:
-          charset.add(getCFFString(stringIndex, sid))
-          if charset.len >= nGlyphs:
-            break
-          sid += 1
-    else:
-      failUnsupported("CFF charset format: " & $format)
+  # # Why do we need this anyways?
+  # # let nGlyphs = charStringsIndex.len
+  # #var charset = parseCFFCharset(
+  # #  buf, offset + result.topDict.charset, nGlyphs, result.stringIndex.objects)
 
-  # Why do we need this anyways?
-  #var charset = parseCFFCharset(
-  #  buf, offset + result.topDict.charset, nGlyphs, result.stringIndex.objects)
   var start = offset + result.topDict.charStrings
   result.charIndex = buf.parseCFFIndex(start)
 
-
-  # let glyphIndex = 2539
-  # let charstring = charIndex.objects[glyphIndex]
-  # var path = parseCFFCharstring(result, charstring)
-  # for glyphIndex in 0 ..< result.charIndex.objects.len:
-  #   let charstring = result.charIndex.objects[glyphIndex]
-  #   var path = parseCFFCharstring(result, charstring)
 
 
 # proc parseLangSys(buf: string, offset: int): LangSys =
