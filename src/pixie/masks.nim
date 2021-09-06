@@ -22,10 +22,6 @@ proc newMask*(width, height: int): Mask {.raises: [PixieError].} =
   result.height = height
   result.data = newSeq[uint8](width * height)
 
-proc wh*(mask: Mask): Vec2 {.inline, raises: [].} =
-  ## Return with and height as a size vector.
-  vec2(mask.width.float32, mask.height.float32)
-
 proc copy*(mask: Mask): Mask {.raises: [PixieError].} =
   ## Copies the image data into a new image.
   result = newMask(mask.width, mask.height)

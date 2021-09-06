@@ -1,4 +1,5 @@
-import flatty/binny, math, pixie/common, pixie/paths, sets, tables, unicode, vmath
+import flatty/binny, math, pixie/common, pixie/paths, sets, tables, unicode,
+    vmath, strutils
 
 ## See https://docs.microsoft.com/en-us/typography/opentype/spec/
 
@@ -309,6 +310,63 @@ type
     underlineThickness*: int16
     isFixedPitch*: uint32
 
+  CFFHeader = ref object
+    formatMajor: uint8
+    formatMinor: uint8
+    size: uint8
+    offsetSize: uint8
+
+  CFFTopDict = ref object
+    charStrings: int
+    charset: int
+    charstringType: int
+    cidCount: int
+    cidFontRevision: int
+    cidFontType: int
+    cidFontVersion: int
+    copyright: string
+    encoding: int
+    familyName: string
+
+    fdArray: int
+    fdSelect: int
+    fdArraySeq: seq[CFFTopDict]
+    fdSelectSeq: seq[int]
+
+    fontBBox: array[4, float32]
+    fontMatrix: array[6, float32]
+    fontName: string
+    fullName: string
+    isFixedPitch: int
+    italicAngle: int
+    notice: string
+    paintType: int
+    private: array[2, float32]
+    subrs: int
+    subrsBias: int
+    subrIndex: seq[string]
+    defaultWidthX: int
+    nominalWidthX: int
+    ros: array[3, string]
+    strokeWidth: int
+    uidBase: int
+    underlinePosition: int
+    underlineThickness: int
+    uniqueId: int
+    version: string
+    weight: string
+
+  CFFTable = ref object
+    ## Contains the glyph outlines in PostScript format.
+    header: CFFHeader
+    nameIndex: seq[string]
+    topDictIndex: seq[string]
+    stringIndex: seq[string]
+    globalSubrIndex: seq[string]
+    topDict: CFFTopDict
+    charIndex: seq[string]
+    isCID: bool
+
   OpenType* = ref object
     buf*: string
     version*: uint32
@@ -329,6 +387,7 @@ type
     kern*: KernTable
     gpos*: GposTable
     post*: PostTable
+    cff*: CFFTable
     glyphPaths: Table[Rune, Path]
 
 when defined(release):
@@ -338,8 +397,8 @@ template eofCheck(buf: string, readTo: int) =
   if readTo > buf.len:
     raise newException(PixieError, "Unexpected error reading font data, EOF")
 
-template failUnsupported() =
-  raise newException(PixieError, "Unsupported font data")
+template failUnsupported(msg: string) =
+  raise newException(PixieError, "Unsupported font " & msg)
 
 proc readUint16Seq(buf: string, offset, len: int): seq[uint16] =
   result = newSeq[uint16](len)
@@ -358,6 +417,17 @@ proc readLongDateTime(buf: string, offset: int): float64 =
   ## Date and time represented in number of seconds since 12:00 midnight,
   ## January 1, 1904, UTC.
   buf.readInt64(offset).swap().float64 - 2082844800
+
+proc readVersion16Dot16(buf: string, offset: int): float32 =
+  ## Version16Dot16 is a packed value: the upper 16 bits comprise a major
+  ## version number, and the lower 16 bits, a minor version
+  let
+    data = buf.readUint32(offset + 0).swap()
+    majorDigit = (data and 0x000F0000) shr 16
+    minorDigit = (data and 0x0000F000) shr 12
+  if majorDigit > 9 or minorDigit > 9:
+    failUnsupported("invalid version format")
+  majorDigit.float32 + minorDigit.float32 / 10
 
 proc parseCmapTable(buf: string, offset: int): CmapTable =
   var i = offset
@@ -460,10 +530,10 @@ proc parseHeadTable(buf: string, offset: int): HeadTable =
   result = HeadTable()
   result.majorVersion = buf.readUint16(offset + 0).swap()
   if result.majorVersion != 1:
-    failUnsupported()
+    failUnsupported("Head major version")
   result.minorVersion = buf.readUint16(offset + 2).swap()
   if result.minorVersion != 0:
-    failUnsupported()
+    failUnsupported("Head minor version")
   result.fontRevision = buf.readFixed32(offset + 4)
   result.checkSumAdjustment = buf.readUint32(offset + 8).swap()
   result.magicNumber = buf.readUint32(offset + 12).swap()
@@ -481,7 +551,7 @@ proc parseHeadTable(buf: string, offset: int): HeadTable =
   result.indexToLocFormat = buf.readInt16(offset + 50).swap()
   result.glyphDataFormat = buf.readInt16(offset + 52).swap()
   if result.glyphDataFormat != 0:
-    failUnsupported()
+    failUnsupported("Head glyph data format")
 
 proc parseHheaTable(buf: string, offset: int): HheaTable =
   buf.eofCheck(offset + 36)
@@ -489,10 +559,10 @@ proc parseHheaTable(buf: string, offset: int): HheaTable =
   result = HheaTable()
   result.majorVersion = buf.readUint16(offset + 0).swap()
   if result.majorVersion != 1:
-    failUnsupported()
+    failUnsupported("Hhea major version")
   result.minorVersion = buf.readUint16(offset + 2).swap()
   if result.minorVersion != 0:
-    failUnsupported()
+    failUnsupported("Hhea minor version")
   result.ascender = buf.readInt16(offset + 4).swap()
   result.descender = buf.readInt16(offset + 6).swap()
   result.lineGap = buf.readInt16(offset + 8).swap()
@@ -509,30 +579,34 @@ proc parseHheaTable(buf: string, offset: int): HheaTable =
   # discard buf.readUint16(offset + 30).swap() # Reserved
   result.metricDataFormat = buf.readInt16(offset + 32).swap()
   if result.metricDataFormat != 0:
-    failUnsupported()
+    failUnsupported("Hhea metric data format")
   result.numberOfHMetrics = buf.readUint16(offset + 34).swap()
 
 proc parseMaxpTable(buf: string, offset: int): MaxpTable =
   buf.eofCheck(offset + 32)
 
   result = MaxpTable()
-  result.version = buf.readFixed32(offset + 0)
-  if result.version != 1.0:
-    failUnsupported()
-  result.numGlyphs = buf.readUint16(offset + 4).swap()
-  result.maxPoints = buf.readUint16(offset + 6).swap()
-  result.maxContours = buf.readUint16(offset + 8).swap()
-  result.maxCompositePoints = buf.readUint16(offset + 10).swap()
-  result.maxCompositeContours = buf.readUint16(offset + 12).swap()
-  result.maxZones = buf.readUint16(offset + 14).swap()
-  result.maxTwilightPoints = buf.readUint16(offset + 16).swap()
-  result.maxStorage = buf.readUint16(offset + 18).swap()
-  result.maxFunctionDefs = buf.readUint16(offset + 20).swap()
-  result.maxInstructionDefs = buf.readUint16(offset + 22).swap()
-  result.maxStackElements = buf.readUint16(offset + 24).swap()
-  result.maxSizeOfInstructions = buf.readUint16(offset + 26).swap()
-  result.maxComponentElements = buf.readUint16(offset + 28).swap()
-  result.maxComponentDepth = buf.readUint16(offset + 30).swap()
+  result.version = buf.readVersion16Dot16(offset + 0)
+  case result.version
+  of 0.5:
+    result.numGlyphs = buf.readUint16(offset + 4).swap()
+  of 1.0:
+    result.numGlyphs = buf.readUint16(offset + 4).swap()
+    result.maxPoints = buf.readUint16(offset + 6).swap()
+    result.maxContours = buf.readUint16(offset + 8).swap()
+    result.maxCompositePoints = buf.readUint16(offset + 10).swap()
+    result.maxCompositeContours = buf.readUint16(offset + 12).swap()
+    result.maxZones = buf.readUint16(offset + 14).swap()
+    result.maxTwilightPoints = buf.readUint16(offset + 16).swap()
+    result.maxStorage = buf.readUint16(offset + 18).swap()
+    result.maxFunctionDefs = buf.readUint16(offset + 20).swap()
+    result.maxInstructionDefs = buf.readUint16(offset + 22).swap()
+    result.maxStackElements = buf.readUint16(offset + 24).swap()
+    result.maxSizeOfInstructions = buf.readUint16(offset + 26).swap()
+    result.maxComponentElements = buf.readUint16(offset + 28).swap()
+    result.maxComponentDepth = buf.readUint16(offset + 30).swap()
+  else:
+    failUnsupported("Maxp version")
 
 proc parseHmtxTable(
   buf: string, offset: int, hhea: HheaTable, maxp: MaxpTable
@@ -565,7 +639,7 @@ proc parseNameTable(buf: string, offset: int): NameTable =
   result = NameTable()
   result.format = buf.readUint16(i + 0).swap()
   if result.format != 0:
-    failUnsupported()
+    failUnsupported("Name format")
   result.count = buf.readUint16(i + 2).swap()
   result.stringOffset = buf.readUint16(i + 4).swap()
 
@@ -694,11 +768,11 @@ proc parseKernTable(buf: string, offset: int): KernTable =
       var subTable: KernSubTable
       subtable.version = buf.readUint16(i + 0).swap()
       if subTable.version != 0:
-        failUnsupported()
+        failUnsupported("Kern subtable version")
       subTable.length = buf.readUint16(i + 2).swap()
       subTable.coverage = buf.readUint16(i + 4).swap()
       if subTable.coverage shr 8 != 0:
-        failUnsupported()
+        failUnsupported("Kern subtable coverage")
       subTable.nPairs = buf.readUint16(i + 6).swap()
       subTable.searchRange = buf.readUint16(i + 8).swap()
       subTable.entrySelector = buf.readUint16(i + 10).swap()
@@ -732,7 +806,788 @@ proc parseKernTable(buf: string, offset: int): KernTable =
   elif version == 1:
     discard # Mac format
   else:
-    failUnsupported()
+    failUnsupported("Kern version")
+
+proc parseCFFIndex(buf: string, start: var int, stripZero = false): seq[string] =
+
+  proc getOffset(buf: string, offset, offSize: int): int =
+    var v = 0
+    for i in 0 ..< offSize:
+      v = v shl 8
+      v += buf.readUint8(offset + i).int
+    return v
+
+  # Compute all of the offsets first.
+  var offsets: seq[int]
+  let count = buf.readUint16(start).swap().int
+  var endOffset = 0
+  var objectOffset = 0
+  if count != 0:
+    var offsetSize = buf.readUint8(start + 2).int
+    objectOffset = start + ((count.int + 1) * offsetSize.int) + 2
+    var pos = start + 3
+    for i in 0 .. count.int:
+      offsets.add(buf.getOffset(pos, offsetSize.int))
+
+      pos += offsetSize
+    endOffset = objectOffset + offsets[count]
+  else:
+    endOffset = start + 2
+
+  # Using the offsets get the objects, which are:
+  # * binary strings
+  # * null terminate ascii strings
+  for i in 0 ..< offsets.len - 1:
+    var value = buf[objectOffset + offsets[i] ..< objectOffset + offsets[i + 1]]
+    if stripZero:
+      value = value[0..^1] # ignore 0 at the end
+    result.add(value)
+  start = endOffset
+
+const cffStandardStrings = [
+  ".notdef", "space", "exclam", "quotedbl", "numbersign", "dollar", "percent", "ampersand", "quoteright",
+  "parenleft", "parenright", "asterisk", "plus", "comma", "hyphen", "period", "slash", "zero", "one", "two",
+  "three", "four", "five", "six", "seven", "eight", "nine", "colon", "semicolon", "less", "equal", "greater",
+  "question", "at", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S",
+  "T", "U", "V", "W", "X", "Y", "Z", "bracketleft", "backslash", "bracketright", "asciicircum", "underscore",
+  "quoteleft", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t",
+  "u", "v", "w", "x", "y", "z", "braceleft", "bar", "braceright", "asciitilde", "exclamdown", "cent", "sterling",
+  "fraction", "yen", "florin", "section", "currency", "quotesingle", "quotedblleft", "guillemotleft",
+  "guilsinglleft", "guilsinglright", "fi", "fl", "endash", "dagger", "daggerdbl", "periodcentered", "paragraph",
+  "bullet", "quotesinglbase", "quotedblbase", "quotedblright", "guillemotright", "ellipsis", "perthousand",
+  "questiondown", "grave", "acute", "circumflex", "tilde", "macron", "breve", "dotaccent", "dieresis", "ring",
+  "cedilla", "hungarumlaut", "ogonek", "caron", "emdash", "AE", "ordfeminine", "Lslash", "Oslash", "OE",
+  "ordmasculine", "ae", "dotlessi", "lslash", "oslash", "oe", "germandbls", "onesuperior", "logicalnot", "mu",
+  "trademark", "Eth", "onehalf", "plusminus", "Thorn", "onequarter", "divide", "brokenbar", "degree", "thorn",
+  "threequarters", "twosuperior", "registered", "minus", "eth", "multiply", "threesuperior", "copyright",
+  "Aacute", "Acircumflex", "Adieresis", "Agrave", "Aring", "Atilde", "Ccedilla", "Eacute", "Ecircumflex",
+  "Edieresis", "Egrave", "Iacute", "Icircumflex", "Idieresis", "Igrave", "Ntilde", "Oacute", "Ocircumflex",
+  "Odieresis", "Ograve", "Otilde", "Scaron", "Uacute", "Ucircumflex", "Udieresis", "Ugrave", "Yacute",
+  "Ydieresis", "Zcaron", "aacute", "acircumflex", "adieresis", "agrave", "aring", "atilde", "ccedilla", "eacute",
+  "ecircumflex", "edieresis", "egrave", "iacute", "icircumflex", "idieresis", "igrave", "ntilde", "oacute",
+  "ocircumflex", "odieresis", "ograve", "otilde", "scaron", "uacute", "ucircumflex", "udieresis", "ugrave",
+  "yacute", "ydieresis", "zcaron", "exclamsmall", "Hungarumlautsmall", "dollaroldstyle", "dollarsuperior",
+  "ampersandsmall", "Acutesmall", "parenleftsuperior", "parenrightsuperior", "266 ff", "onedotenleader",
+  "zerooldstyle", "oneoldstyle", "twooldstyle", "threeoldstyle", "fouroldstyle", "fiveoldstyle", "sixoldstyle",
+  "sevenoldstyle", "eightoldstyle", "nineoldstyle", "commasuperior", "threequartersemdash", "periodsuperior",
+  "questionsmall", "asuperior", "bsuperior", "centsuperior", "dsuperior", "esuperior", "isuperior", "lsuperior",
+  "msuperior", "nsuperior", "osuperior", "rsuperior", "ssuperior", "tsuperior", "ff", "ffi", "ffl",
+  "parenleftinferior", "parenrightinferior", "Circumflexsmall", "hyphensuperior", "Gravesmall", "Asmall",
+  "Bsmall", "Csmall", "Dsmall", "Esmall", "Fsmall", "Gsmall", "Hsmall", "Ismall", "Jsmall", "Ksmall", "Lsmall",
+  "Msmall", "Nsmall", "Osmall", "Psmall", "Qsmall", "Rsmall", "Ssmall", "Tsmall", "Usmall", "Vsmall", "Wsmall",
+  "Xsmall", "Ysmall", "Zsmall", "colonmonetary", "onefitted", "rupiah", "Tildesmall", "exclamdownsmall",
+  "centoldstyle", "Lslashsmall", "Scaronsmall", "Zcaronsmall", "Dieresissmall", "Brevesmall", "Caronsmall",
+  "Dotaccentsmall", "Macronsmall", "figuredash", "hypheninferior", "Ogoneksmall", "Ringsmall", "Cedillasmall",
+  "questiondownsmall", "oneeighth", "threeeighths", "fiveeighths", "seveneighths", "onethird", "twothirds",
+  "zerosuperior", "foursuperior", "fivesuperior", "sixsuperior", "sevensuperior", "eightsuperior", "ninesuperior",
+  "zeroinferior", "oneinferior", "twoinferior", "threeinferior", "fourinferior", "fiveinferior", "sixinferior",
+  "seveninferior", "eightinferior", "nineinferior", "centinferior", "dollarinferior", "periodinferior",
+  "commainferior", "Agravesmall", "Aacutesmall", "Acircumflexsmall", "Atildesmall", "Adieresissmall",
+  "Aringsmall", "AEsmall", "Ccedillasmall", "Egravesmall", "Eacutesmall", "Ecircumflexsmall", "Edieresissmall",
+  "Igravesmall", "Iacutesmall", "Icircumflexsmall", "Idieresissmall", "Ethsmall", "Ntildesmall", "Ogravesmall",
+  "Oacutesmall", "Ocircumflexsmall", "Otildesmall", "Odieresissmall", "OEsmall", "Oslashsmall", "Ugravesmall",
+  "Uacutesmall", "Ucircumflexsmall", "Udieresissmall", "Yacutesmall", "Thornsmall", "Ydieresissmall", "001.000",
+  "001.001", "001.002", "001.003", "Black", "Bold", "Book", "Light", "Medium", "Regular", "Roman", "Semibold"]
+
+const TOP_DICT_META = {
+  0: "version",
+  1: "notice",
+  1200: "copyright",
+  2: "fullName",
+  3: "familyName",
+  4: "weight",
+  1201: "isFixedPitch",
+  1202: "italicAngle",
+  1203: "underlinePosition",
+  1204: "underlineThickness",
+  1205: "paintType",
+  1206: "charstringType",
+  1207: "fontMatrix",
+  13: "uniqueId",
+  5: "fontBBox",
+  1208: "strokeWidth",
+  14: "xuid",
+  15: "charset",
+  16: "encoding",
+  17: "charStrings",
+  18: "private",
+  1230: "ros",
+  1231: "cidFontVersion",
+  1232: "cidFontRevision",
+  1233: "cidFontType",
+  1234: "cidCount",
+  1235: "uidBase",
+  1236: "fdArray",
+  1237: "fdSelect",
+  1238: "fontName",
+}.toTable
+
+const PRIVATE_DICT_META = {
+  19: "subrs",
+  20: "defaultWidthX",
+  21: "nominalWidthX",
+}.toTable
+
+proc shift[T](s: var seq[T]): T =
+  ## Pops from the front.
+  result = s[0]
+  s.delete(0)
+
+proc calcCFFSubroutineBias(subrs: seq[string]): int =
+  if subrs.len < 1240:
+    107
+  elif subrs.len < 33900:
+    1131
+  else:
+    32768
+
+proc parseCFFCharstring(cff: CffTable, code: string, glyphIndex: int): Path =
+
+  var p = newPath()
+  var stack: seq[float32]
+  var nStems = 0
+  var haveWidth = false
+  var x = 0f
+  var y = 0f
+
+  var
+    subrs: seq[string]
+    subrsBias: int
+    defaultWidthX: int
+    nominalWidthX: int
+
+  if cff.isCID:
+    let fdIndex = cff.topDict.fdSelectSeq[glyphIndex]
+    let fdDict = cff.topDict.fdArraySeq[fdIndex]
+    subrs = fdDict.subrIndex
+    subrsBias = calcCFFSubroutineBias(subrs)
+    defaultWidthX = fdDict.defaultWidthX
+    nominalWidthX = fdDict.nominalWidthX
+  else:
+    subrs = cff.topDict.subrIndex
+    subrsBias = cff.topDict.subrsBias
+    defaultWidthX = cff.topDict.defaultWidthX
+    nominalWidthX = cff.topDict.nominalWidthX
+
+  var width = defaultWidthX.float32
+
+  proc parseStems() =
+    # The number of stem operators on the stack is always even.
+    # If the value is uneven, that means a width is specified.
+    if stack.len mod 2 != 0 and not haveWidth:
+      width = stack.shift() + nominalWidthX.float32
+    nStems += stack.len shr 1
+    stack.setLen(0)
+    haveWidth = true
+
+  proc parse(code: string) =
+
+    var i = 0
+    while i < code.len:
+      var v = code.readUint8(i).int
+      inc i
+      case v:
+
+      of 1, 3: # hstem vstem
+        parseStems()
+
+      of 4: # vmoveto
+        if stack.len > 1 and not haveWidth:
+          width = stack.shift() + nominalWidthX.float32
+          haveWidth = true
+        y += stack.pop()
+        p.moveTo(x, y)
+
+      of 5: # rlineto
+        while stack.len > 0:
+          x += stack.shift()
+          y += stack.shift()
+          p.lineTo(x, y)
+
+      of 6: # hlineto
+        while stack.len > 0:
+          x += stack.shift()
+          p.lineTo(x, y)
+          if stack.len == 0:
+            break
+          y += stack.shift()
+          p.lineTo(x, y)
+
+      of 7: # vlineto
+        while stack.len > 0:
+          y += stack.shift()
+          p.lineTo(x, y)
+          if stack.len == 0:
+              break
+          x += stack.shift()
+          p.lineTo(x, y)
+
+      of 8: # rrcurveto
+        while stack.len > 0:
+          let
+            c1x = x + stack.shift()
+            c1y = y + stack.shift()
+            c2x = c1x + stack.shift()
+            c2y = c1y + stack.shift()
+          x = c2x + stack.shift()
+          y = c2y + stack.shift()
+          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
+
+      of 10: # callsubr
+        let codeIndex = stack.pop().int + subrsBias
+        let subrCode = subrs[codeIndex]
+        if subrCode.len > 0:
+          parse(subrCode)
+
+      of 11: # return
+        return
+
+      of 14: # endchar
+        if stack.len > 2 and not haveWidth:
+          width = stack.shift() + nominalWidthX.float32
+          haveWidth = true
+        p.closePath()
+
+      of 18: # hstemhm
+        parseStems()
+
+      of 19, 20: # hintmask, cntrmask
+        parseStems()
+        i += (nStems + 7) shr 3
+
+      of 21: # rmoveto
+        if stack.len > 2 and not haveWidth:
+          width = stack.shift() + nominalWidthX.float32
+          haveWidth = true
+        y += stack.pop()
+        x += stack.pop()
+        p.moveTo(x, y)
+
+      of 22: # hmoveto
+        if stack.len > 1 and not haveWidth:
+          width = stack.shift() + nominalWidthX.float32
+          haveWidth = true
+        x += stack.pop()
+        p.moveTo(x, y)
+
+      of 24: # rcurveline
+        while stack.len > 2:
+          let
+            c1x = x + stack.shift()
+            c1y = y + stack.shift()
+            c2x = c1x + stack.shift()
+            c2y = c1y + stack.shift()
+          x = c2x + stack.shift()
+          y = c2y + stack.shift()
+          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
+        x += stack.shift()
+        y += stack.shift()
+        p.lineTo(x, y)
+
+      of 25: # rlinecurve
+        while stack.len > 6:
+          x += stack.shift()
+          y += stack.shift()
+          p.lineTo(x, y)
+        let
+          c1x = x + stack.shift()
+          c1y = y + stack.shift()
+          c2x = c1x + stack.shift()
+          c2y = c1y + stack.shift()
+        x = c2x + stack.shift()
+        y = c2y + stack.shift()
+        p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
+
+      of 26: # vvcurveto
+        if stack.len mod 2 != 0:
+          x += stack.shift()
+        while stack.len > 0:
+          let
+            c1x = x
+            c1y = y + stack.shift()
+            c2x = c1x + stack.shift()
+            c2y = c1y + stack.shift()
+          x = c2x
+          y = c2y + stack.shift()
+          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
+
+      of 27: # hhcurveto
+        if stack.len mod 2 != 0:
+          y += stack.shift()
+        while stack.len > 0:
+          let
+            c1x = x + stack.shift()
+            c1y = y
+            c2x = c1x + stack.shift()
+            c2y = c1y + stack.shift()
+          x = c2x + stack.shift()
+          y = c2y
+          p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
+
+      of 28: # shortint
+        let value = code.readInt16(i).swap().float32
+        stack.add(value)
+        i += 2
+
+      of 29: # callgsubr
+        let codeIndex = stack.pop().int + calcCFFSubroutineBias(cff.globalSubrIndex)
+        let subrCode = cff.globalSubrIndex[codeIndex]
+        if subrCode.len > 0:
+          parse(subrCode)
+
+      of 30: # vhcurveto
+        while stack.len > 0:
+          block:
+            let
+              c1x = x
+              c1y = y + stack.shift()
+              c2x = c1x + stack.shift()
+              c2y = c1y + stack.shift()
+            x = c2x + stack.shift()
+            y = c2y + (if stack.len == 1: stack.shift() else: 0)
+            p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
+          if stack.len == 0:
+            break
+          block:
+            let
+              c1x = x + stack.shift()
+              c1y = y
+              c2x = c1x + stack.shift()
+              c2y = c1y + stack.shift()
+            y = c2y + stack.shift()
+            x = c2x + (if stack.len == 1: stack.shift() else: 0)
+            p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
+
+      of 31: # hvcurveto
+        while stack.len > 0:
+          block:
+            let
+              c1x = x + stack.shift()
+              c1y = y
+              c2x = c1x + stack.shift()
+              c2y = c1y + stack.shift()
+            y = c2y + stack.shift()
+            x = c2x + (if stack.len == 1: stack.shift() else: 0)
+            p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
+          if stack.len == 0:
+            break
+          block:
+            let
+              c1x = x
+              c1y = y + stack.shift()
+              c2x = c1x + stack.shift()
+              c2y = c1y + stack.shift()
+            x = c2x + stack.shift()
+            y = c2y + (if stack.len == 1: stack.shift() else: 0)
+            p.bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
+
+      else:
+        if v < 32:
+          failUnsupported("CFF unknown operator: " & $v)
+        elif v < 247:
+          stack.add(float32(v - 139))
+        elif v < 251:
+          let b1 = code.readUint8(i).int
+          i += 1
+          stack.add(float32((v - 247) * 256 + b1 + 108))
+        elif v < 255:
+          let b1 = code.readUint8(i).int
+          i += 1
+          stack.add(float32(-(v - 251) * 256 - b1 - 108))
+        else:
+          #failUnsupported("test me")
+          let
+            b1 = code.readUint8(i + 0).int
+            b2 = code.readUint8(i + 1).int
+            b3 = code.readUint8(i + 2).int
+            b4 = code.readUint8(i + 3).int
+          i += 4
+          stack.add(
+            ((b1 shl 24) or (b2 shl 16) or (b3 shl 8) or b4).float32 / 65536f)
+
+  parse(code)
+  return p
+
+proc parseCFFTable(buf: string, offset: int, maxp: MaxpTable): CFFTable =
+  buf.eofCheck(offset + 32)
+
+  result = CFFTable()
+  result.header = CFFHeader()
+  result.header.formatMajor = buf.readUint8(offset + 0)
+  result.header.formatMinor = buf.readUint8(offset + 1)
+  result.header.size = buf.readUint8(offset + 2)
+  result.header.offsetSize = buf.readUint8(offset + 3)
+
+  var indexOffset = offset + 4
+  # contains names of the fonts
+  result.nameIndex = buf.parseCFFIndex(indexOffset, true)
+  result.topDictIndex = buf.parseCFFIndex(indexOffset)
+  # contains names of glyphs
+  result.stringIndex = buf.parseCFFIndex(indexOffset, true)
+  # contains binary glyphs
+  result.globalSubrIndex = buf.parseCFFIndex(indexOffset)
+
+  # Parse a `CFF` DICT object.
+  # A dictionary contains key-value pairs in a compact tokenized format.
+  proc parseCFFDict(data: string, start, stop: int): seq[(int, seq[float64])] =
+    var entries: seq[(int, seq[float64])]
+    var operands: seq[float64]
+    var relativeOffset = start
+    var size = data.len
+    while relativeOffset < size:
+      var op = data.readUint8(relativeOffset).int
+      inc relativeOffset
+      if op <= 21:
+        # Two-byte operators have an initial escape byte of 12.
+        if op == 12:
+          op = 1200 + data.readUint8(relativeOffset).int
+          inc relativeOffset
+        entries.add((op, operands))
+        operands.setLen(0)
+      else:
+        # Since the operands (values) come before the operators (keys), we store
+        # all operands in a list until we encounter an operator.
+
+        proc parseFloatOperand(): float64 =
+          var s = ""
+          var eof = 15
+          var lookup = [
+            "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+            ".", "E", "E-", "null", "-"
+          ]
+          while true:
+            var b = data.readUint8(relativeOffset).int
+            inc relativeOffset
+            var n1 = b shr 4
+            var n2 = b and 15
+            if n1 == eof:
+              break
+            s.add lookup[n1]
+            if n2 == eof:
+              break
+            s.add lookup[n2]
+          try:
+            return parseFloat(s)
+          except ValueError:
+            failUnsupported("float " & s)
+
+        proc parseOperand(b0: int): float64 =
+          var b1: int
+          var b2: int
+          var b3: int
+          var b4: int
+          if b0 == 28:
+            b1 = data.readUint8(relativeOffset).int
+            inc relativeOffset
+            b2 = data.readUint8(relativeOffset).int
+            inc relativeOffset
+            return float64(b1 shl 8 or b2)
+
+          if b0 == 29:
+            b1 = data.readUint8(relativeOffset).int
+            inc relativeOffset
+            b2 = data.readUint8(relativeOffset).int
+            inc relativeOffset
+            b3 = data.readUint8(relativeOffset).int
+            inc relativeOffset
+            b4 = data.readUint8(relativeOffset).int
+            inc relativeOffset
+            return float64(cast[int32](
+              b1 shl 24 or b2 shl 16 or b3 shl 8 or b4))
+
+          if b0 == 30:
+              return parseFloatOperand()
+
+          if b0 >= 32 and b0 <= 246:
+              return float64(b0 - 139)
+
+          if b0 >= 247 and b0 <= 250:
+              b1 = data.readUint8(relativeOffset).int
+              inc relativeOffset
+              return float64((b0 - 247) * 256 + b1 + 108)
+
+          if b0 >= 251 and b0 <= 254:
+              b1 = data.readUint8(relativeOffset).int
+              inc relativeOffset
+              return float64(-(b0 - 251) * 256 - b1 - 108)
+
+          failUnsupported("Invalid b0 " & $b0)
+
+        let operand = parseOperand(op)
+        if operand == 4294965216.0: quit()
+        operands.add(operand)
+
+    return entries
+
+  proc interpretDict(
+    entries: seq[(int, seq[float64])],
+    meta: Table[int, string],
+    strings: seq[string]
+  ): Table[string, seq[float64]] =
+    for e in entries:
+      if e[0] notin meta:
+        #failUnsupported("CFF unknown op: " & $e[0])
+        continue
+      let key = meta[e[0]]
+      if key in result:
+        failUnsupported("CFF duplicate key: " & key)
+      result[key] = e[1]
+
+  # Parse the CFF top dictionary. A CFF table can contain multiple fonts, each
+  # with their own top dictionary. The top dictionary contains the essential
+  # metadata for the font, together with the private dictionary.
+  proc parseCFFTopDict(
+    data: string,
+    strings: seq[string]
+  ): Table[string, seq[float64]] =
+    var entries = parseCFFDict(data, 0, data.len)
+    return interpretDict(entries, TOP_DICT_META, strings)
+
+  proc parseCFFPrivateDict(
+    data: string,
+    strings: seq[string]
+  ): Table[string, seq[float64]] =
+    var entries = parseCFFDict(data, 0, data.len)
+    return interpretDict(entries, PRIVATE_DICT_META, strings)
+
+  proc getCFFString(strings: seq[string], index: int): string =
+    if index <= 390:
+      cffStandardStrings[index]
+    else:
+      if index - 391 < strings.len:
+        strings[index - 391]
+      else:
+        ""
+
+  # "Top DICT"s found using an INDEX list.
+  proc gatherCFFTopDicts(
+    cff: CFFTable,
+    maxp: MaxpTable,
+    data: string,
+    start: int,
+    cffIndex,
+    strings: seq[string]
+  ): seq[CFFTopDict] =
+    for iTopDict in 0 ..< cffIndex.len:
+      let
+        cffTopDict = CFFTopDict()
+        topDictData = cffIndex[iTopDict]
+        topDict = parseCFFTopDict(topDictData, strings)
+
+      proc getInt(
+        topDict: Table[string, seq[float64]],
+        key: string,
+        default: int
+      ): int =
+        if key in topDict:
+          topDict[key][0].int
+        else:
+          default
+
+      proc getStr(
+        topDict: Table[string, seq[float64]],
+        key: string,
+        default: string
+      ): string =
+        if key in topDict:
+          let index = topDict[key][0].int
+          strings.getCFFString(index)
+        else:
+          default
+
+      proc getArr[N: int](
+        topDict: Table[string, seq[float64]],
+        key: string,
+        default: array[N, float32]
+      ): array[N, float32] =
+        if key in topDict:
+          for i in 0 ..< result.len:
+            result[i] = topDict[key][i].float32
+        else:
+          return default
+
+      proc getArrStr[N: int](
+        topDict: Table[string, seq[float64]],
+        key: string,
+        default: array[N, string],
+        strings: seq[string]
+      ): array[N, string] =
+        if key in topDict:
+          for i in 0 ..< result.len:
+            let index = topDict[key][i].int
+            result[i] = getCFFString(strings, index)
+        else:
+          return default
+
+      cffTopDict.charStrings = topDict.getInt("charStrings", 0)
+      cffTopDict.charset = topDict.getInt("charset", 0)
+      cffTopDict.charstringType = topDict.getInt("charstringType", 2)
+      cffTopDict.cidCount = topDict.getInt("cidCount", 8720)
+      cffTopDict.cidFontRevision = topDict.getInt("cidCount", 0)
+      cffTopDict.cidFontType = topDict.getInt("cidFontType", 0)
+      cffTopDict.cidFontVersion = topDict.getInt("cidFontType", 0)
+      cffTopDict.copyright = topDict.getStr("copyright", "")
+      cffTopDict.encoding = topDict.getInt("encoding", 0)
+      cffTopDict.familyName = topDict.getStr("familyName", "")
+      cffTopDict.fdArray = topDict.getInt("fdArray", 0)
+      cffTopDict.fdSelect = topDict.getInt("fdSelect", 0)
+      cffTopDict.fontBBox = topDict.getArr("fontBBox", [0f, 0f, 0f, 0f])
+      cffTopDict.fontMatrix = topDict.getArr("fontMatrix",
+        [0.001f, 0f, 0f, 0.001f, 0f, 0f])
+      cffTopDict.fontName = topDict.getStr("fontName", "")
+      cffTopDict.fullName = topDict.getStr("fullName", "")
+      cffTopDict.isFixedPitch = topDict.getInt("isFixedPitch", 0)
+      cffTopDict.italicAngle = topDict.getInt("isFixedPitch", 0)
+      cffTopDict.notice = topDict.getStr("notice", "")
+      cffTopDict.paintType = topDict.getInt("paintType", 0)
+      cffTopDict.private = topDict.getArr("private", [0f, 0f])
+      var privateSize = cffTopDict.private[0].int
+      var privateOffset = cffTopDict.private[1].int
+      if privateOffset != 0:
+        var privateDict = parseCFFPrivateDict(
+          buf[privateOffset + start ..< privateOffset + start + privateSize],
+          strings
+        )
+        cffTopDict.defaultWidthX = privateDict.getInt("defaultWidthX", 0)
+        cffTopDict.nominalWidthX = privateDict.getInt("nominalWidthX", 0)
+        cffTopDict.subrs = privateDict.getInt("subrs", 0)
+        if cffTopDict.subrs > 0:
+          var subrOffset = cffTopDict.private[1].int + cffTopDict.subrs
+          var subrOffset2 = subrOffset + offset
+          cffTopDict.subrIndex = buf.parseCFFIndex(subrOffset2)
+
+      cffTopDict.ros = topDict.getArrStr("ros", ["", "", ""], strings)
+      cffTopDict.strokeWidth = topDict.getInt("strokeWidth", 0)
+      cffTopDict.uidBase = topDict.getInt("uidBase", 0)
+      cffTopDict.underlinePosition = topDict.getInt("underlinePosition", -100)
+      cffTopDict.underlineThickness = topDict.getInt("underlineThickness", 50)
+      cffTopDict.uniqueId = topDict.getInt("uniqueId", 0)
+      cffTopDict.version = topDict.getStr("version", "")
+      cffTopDict.weight = topDict.getStr("weight", "")
+      result.add(cffTopDict)
+
+  let topDicts = result.gatherCFFTopDicts(maxp,
+    buf, offset, result.topDictIndex, result.stringIndex)
+  if topDicts.len == 0:
+    failUnsupported("CFF no topDict")
+  if topDicts.len > 1:
+    failUnsupported("CFF multiple topDict")
+  result.topDict = topDicts[0]
+
+  if result.topDict.ros[0] != "" and result.topDict.ros[1] != "":
+    result.isCID = true
+
+    var fdArrayOffset = result.topDict.fdArray + offset
+    var fdSelectOffset = result.topDict.fdSelect + offset
+    if fdArrayOffset == 0 or fdSelectOffset == 0:
+        failUnsupported("CFF CID tables are missing")
+
+    var fdArrayIndex = parseCFFIndex(buf, fdArrayOffset)
+    result.topDict.fdArraySeq = result.gatherCFFTopDicts(maxp, buf, offset, fdArrayIndex, result.stringIndex)
+
+    proc parseCFFFDSelect(buf: string, start, nGlyphs, fdArrayCount: int): seq[int] =
+
+      var at = start
+      var format = buf.readUint8(at)
+      inc at
+
+      if format == 3:
+        # Ranges
+        var nRanges = buf.readUint16(at).swap().int
+        at += 2
+        var first = buf.readUint16(at).swap().int
+        at += 2
+        if first != 0:
+          failUnsupported("CFF Table CID Font FDSelect format 3 range has bad initial GID")
+
+        var next = 0
+        for iRange in 0 ..< nRanges:
+          var fdIndex = buf.readUint8(at).int
+          inc at
+          next = buf.readUint16(at).swap().int
+          at += 2
+          if fdIndex >= fdArrayCount:
+            failUnsupported("CFF table CID Font FDSelect has bad FD index value")
+          if next > nGlyphs:
+            failUnsupported("CFF Table CID Font FDSelect format 3 range has bad GID")
+
+          while first < next:
+            result.add(fdIndex)
+            inc first
+          first = next
+
+        if next != nGlyphs:
+          failUnsupported("CFF Table CID Font FDSelect format 3 range has bad final GID")
+
+      else:
+        failUnsupported("CFF Table CID Font FDSelect format")
+
+    result.topDict.fdSelectSeq = parseCFFFDSelect(
+      buf, fdSelectOffset, maxp.numGlyphs.int, result.topDict.fdArraySeq.len)
+
+  if result.topDict.subrs != 0:
+    var subrOffset =
+      offset + result.topDict.private[1].int + result.topDict.subrs
+    result.topDict.subrIndex = buf.parseCFFIndex(subrOffset)
+    result.topDict.subrsBias = calcCFFSubroutineBias(result.topDict.subrIndex)
+
+  # proc parseCFFIndexLowMemory(buf: string, offset: int): seq[int] =
+  #   proc getOffset(dataView: string, offset, offSize: int): int =
+  #     var v = 0
+  #     for i in 0 ..< offSize:
+  #       v = v shl 8
+  #       v += dataView.readUint8(offset + i).int
+  #     return v
+  #   let count = buf.readUint16(offset).swap().int
+  #   var objectOffset = 0
+  #   if count != 0:
+  #     var offsetSize = buf.readUint8(offset + 2).int
+  #     objectOffset = offset + ((count + 1) * offsetSize) + 2
+  #     var pos = offset + 3
+  #     for i in 0 .. count:
+  #       let offsetValue = buf.getOffset(pos, offsetSize)
+  #       result.add offsetValue
+  #       pos += offsetSize
+
+  # let charStringsIndex = parseCFFIndexLowMemory(
+  #   buf, offset + result.topDict.charStrings)
+  # proc parseCFFCharset(
+  #   buf: string,
+  #   offset: int,
+  #   nGlyphs: int,
+  #   stringIndex: seq[string]
+  # ): seq[string] =
+  #   # The .notdef glyph is implied
+  #   var charset = @[".notdef"]
+  #   var nGlyphs = nGlyphs - 1
+  #   var pos = offset
+  #   var format = buf.readUint8(pos)
+  #   inc pos
+  #   if format == 2:
+  #     while charset.len <= nGlyphs:
+  #       var
+  #         sid = buf.readUint16(pos).swap().int
+  #       pos += 2
+  #       var
+  #         count = buf.readUint16(pos).swap().int
+  #       pos += 2
+  #       for i in 0 .. count:
+  #         charset.add(getCFFString(stringIndex, sid))
+  #         if charset.len >= nGlyphs:
+  #           break
+  #         sid += 1
+  #   else:
+  #     failUnsupported("CFF charset format: " & $format)
+
+  # # Why do we need this anyways?
+  # # let nGlyphs = charStringsIndex.len
+  # #var charset = parseCFFCharset(
+  # #  buf, offset + result.topDict.charset, nGlyphs, result.stringIndex.objects)
+
+  var start = offset + result.topDict.charStrings
+  result.charIndex = buf.parseCFFIndex(start)
+
+
 
 # proc parseLangSys(buf: string, offset: int): LangSys =
 #   var i = offset
@@ -865,7 +1720,7 @@ proc parseCoverage(buf: string, offset: int): Coverage =
           inc ci
 
     else:
-      failUnsupported()
+      failUnsupported("coverage format")
 
 proc valueFormatSize(valueFormat: uint16): int =
   # countSetBits(valueFormat) * 2
@@ -1004,7 +1859,7 @@ proc parseClassDef(buf: string, offset: int): ClassDef =
         result.classRangeRecords[j] = parseClassRangeRecord(buf, i)
         i += 6
     else:
-      failUnsupported()
+      failUnsupported("class format")
 
 proc parsePairPos(buf: string, offset: int): PairPos =
   var i = offset
@@ -1045,10 +1900,10 @@ proc parsePairPos(buf: string, offset: int): PairPos =
         case result.coverage.coverageFormat:
           of 1:
             if result.coverage.glyphCount != result.pairSetCount:
-              failUnsupported()
+              failUnsupported("pair set count")
             for ci, glyphId in result.coverage.glyphArray:
               if ci < 0 or ci >= result.pairSets.len:
-                failUnsupported()
+                failUnsupported("pair set length")
               for pairValueRecord in result.pairSets[ci].pairValueRecords:
                 if pairValueRecord.valueRecord1.xAdvance != 0:
                   let glyphPair = (glyphId, pairValueRecord.secondGlyph)
@@ -1059,7 +1914,7 @@ proc parsePairPos(buf: string, offset: int): PairPos =
               var ci = rangeRecord.startCoverageIndex.int
               for glyphId in rangeRecord.startGlyphID .. rangeRecord.endGlyphID:
                 if ci < 0 or ci >= result.pairSets.len:
-                  failUnsupported()
+                  failUnsupported("pair set length")
                 for pairValueRecord in result.pairSets[ci].pairValueRecords:
                   if pairValueRecord.valueRecord1.xAdvance != 0:
                     let glyphPair = (glyphId, pairValueRecord.secondGlyph)
@@ -1109,7 +1964,7 @@ proc parsePairPos(buf: string, offset: int): PairPos =
       ) =
         for record in classDef.classRangeRecords:
           if record.startGlyphID > record.endGlyphID:
-            failUnsupported()
+            failUnsupported("glyph out of bounds")
           if record.class != 0:
             for glyphId in record.startGlyphID .. record.endGlyphID:
               table[glyphId] = record.class
@@ -1137,7 +1992,7 @@ proc parsePairPos(buf: string, offset: int): PairPos =
               result.classPairAdjustments[(class1.uint16, class2.uint16)] =
                 class2Record.valueRecord1.xAdvance
     else:
-      failUnsupported()
+      failUnsupported("pair pos format")
 
 proc parseLookup(buf: string, offset: int, pairPosTables: var seq[PairPos]): Lookup =
   var i = offset
@@ -1198,7 +2053,7 @@ proc parseGposTable(buf: string, offset: int): GPOSTable =
   i += 10
 
   if result.majorVersion != 1:
-    failUnsupported()
+    failUnsupported("Gpos major version")
 
   if result.minorVersion == 0:
     discard
@@ -1207,7 +2062,7 @@ proc parseGposTable(buf: string, offset: int): GPOSTable =
     result.featureVariationsOffset = buf.readUint32(i + 0).swap()
     i += 4
   else:
-    failUnsupported()
+    failUnsupported("Gpos minor version")
 
   # result.scriptList = parseScriptList(buf, offset + result.scriptListOffset.int)
   # result.featureList =
@@ -1220,7 +2075,7 @@ proc parsePostTable(buf: string, offset: int): PostTable =
   buf.eofCheck(offset + 14)
 
   result = PostTable()
-  result.version = buf.readFixed32(offset + 0)
+  result.version = buf.readVersion16Dot16(offset + 0)
   result.italicAngle = buf.readFixed32(offset + 4)
   result.underlinePosition = buf.readInt16(offset + 8).swap()
   result.underlineThickness = buf.readInt16(offset + 10).swap()
@@ -1229,7 +2084,7 @@ proc parsePostTable(buf: string, offset: int): PostTable =
 proc getGlyphId(opentype: OpenType, rune: Rune): uint16 =
   result = opentype.cmap.runeToGlyphId.getOrDefault(rune, 0)
 
-proc parseGlyph(opentype: OpenType, glyphId: uint16): Path {.raises: [PixieError].}
+proc parseGlyfGlyph(opentype: OpenType, glyphId: uint16): Path {.raises: [PixieError].}
 
 proc parseGlyphPath(
   buf: string, offset, numberOfContours: int
@@ -1304,7 +2159,7 @@ proc parseGlyphPath(
         i += 2
     prevX += x
     if point >= points.len:
-      failUnsupported()
+      failUnsupported("point out of bounds")
     points[point].x = prevX.float32
     points[point].isOnCurve = (flag and 1) != 0
 
@@ -1450,7 +2305,7 @@ proc parseCompositeGlyph(opentype: OpenType, offset: int): Path =
     # elif (flags and 0b1000000000000) != 0: # UNSCALED_COMPONENT_OFFSET
     #   discard
 
-    var subPath = opentype.parseGlyph(component.glyphId)
+    var subPath = opentype.parseGlyfGlyph(component.glyphId)
     subPath.transform(mat3(
       component.xScale, component.scale10, 0.0,
       component.scale01, component.yScale, 0.0,
@@ -1461,7 +2316,8 @@ proc parseCompositeGlyph(opentype: OpenType, offset: int): Path =
 
     moreComponents = (flags and 0b100000) != 0
 
-proc parseGlyph(opentype: OpenType, glyphId: uint16): Path =
+proc parseGlyfGlyph(opentype: OpenType, glyphId: uint16): Path =
+
   if glyphId.int >= opentype.glyf.offsets.len:
     raise newException(PixieError, "Invalid glyph ID " & $glyphId)
 
@@ -1477,10 +2333,6 @@ proc parseGlyph(opentype: OpenType, glyphId: uint16): Path =
 
   let
     numberOfContours = opentype.buf.readInt16(i + 0).swap().int
-    # xMin = opentype.buf.readInt16(i + 2).swap()
-    # yMin = opentype.buf.readInt16(i + 4).swap()
-    # xMax = opentype.buf.readInt16(i + 6).swap()
-    # yMax = opentype.buf.readInt16(i + 8).swap()
 
   i += 10
 
@@ -1489,8 +2341,18 @@ proc parseGlyph(opentype: OpenType, glyphId: uint16): Path =
   else:
     parseGlyphPath(opentype.buf, i, numberOfContours)
 
+proc parseCffGlyph(opentype: OpenType, glyphId: uint16): Path =
+  let cff = opentype.cff
+  let charstring = cff.charIndex[glyphId]
+  return cff.parseCFFCharstring(charstring, glyphId.int)
+
 proc parseGlyph(opentype: OpenType, rune: Rune): Path {.inline.} =
-  opentype.parseGlyph(opentype.getGlyphId(rune))
+  if opentype.glyf != nil:
+    opentype.parseGlyfGlyph(opentype.getGlyphId(rune))
+  elif opentype.cff != nil:
+    opentype.parseCffGlyph(opentype.getGlyphId(rune))
+  else:
+    raise newException(PixieError, "Invalid glyph storage")
 
 proc getGlyphPath*(
   opentype: OpenType, rune: Rune
@@ -1590,11 +2452,19 @@ proc parseOpenType*(buf: string): OpenType {.raises: [PixieError].} =
     )
     result.name = parseNameTable(buf, result.tableRecords["name"].offset.int)
     result.os2 = parseOS2Table(buf, result.tableRecords["OS/2"].offset.int)
-    result.loca = parseLocaTable(
-      buf, result.tableRecords["loca"].offset.int, result.head, result.maxp
-    )
-    result.glyf =
-      parseGlyfTable(buf, result.tableRecords["glyf"].offset.int, result.loca)
+
+    if "loca" in result.tableRecords and "glyf" in result.tableRecords:
+      result.loca = parseLocaTable(
+        buf, result.tableRecords["loca"].offset.int, result.head, result.maxp
+      )
+      result.glyf =
+        parseGlyfTable(buf, result.tableRecords["glyf"].offset.int, result.loca)
+    elif "CFF " in result.tableRecords:
+      result.cff = parseCFFTable(buf, result.tableRecords["CFF "].offset.int, result.maxp)
+
+    else:
+      failUnsupported("glyph outlines")
+
 
     if "kern" in result.tableRecords:
       result.kern = parseKernTable(buf, result.tableRecords["kern"].offset.int)

@@ -1,5 +1,9 @@
 import pixie, pixie/fileformats/png, strformat, unicode
 
+proc wh(image: Image): Vec2 =
+  ## Return with and height as a size vector.
+  vec2(image.width.float32, image.height.float32)
+
 proc doDiff(rendered: Image, name: string) =
   rendered.writeFile(&"tests/fonts/rendered/{name}.png")
   let
@@ -994,3 +998,41 @@ block:
 block:
   var typeface = readTypeface("tests/fonts/Roboto-Regular_1.ttf")
   doAssert typeface.getKerningAdjustment('T'.Rune, 'e'.Rune) == -99.0
+
+block:
+  var font = readFont("tests/fonts/Inter-Regular.ttf")
+  font.size = 26
+  let image = newImage(800, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(font, "Grumpy wizards make toxic brew for the evil Queen and Jack.")
+
+  doDiff(image, "cff")
+
+block:
+  var font = readFont("tests/fonts/NotoSansJP-Regular.ttf")
+  font.size = 26
+  let image = newImage(800, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(font, "仰コソ会票カク帰了ノ終準港みせス議徳モチタ提請ルまつ力路お")
+
+  doDiff(image, "cff_jp")
+
+block:
+  var font = readFont("tests/fonts/Inter-Regular.ttf")
+  font.size = 26
+  font.underline = true
+  let image = newImage(800, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(font, "Grumpy wizards make toxic brew for the evil Queen and Jack.")
+
+  doDiff(image, "cff_underline")
+
+block:
+  var font = readFont("tests/fonts/Inter-Regular.ttf")
+  font.size = 26
+  font.strikethrough = true
+  let image = newImage(800, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(font, "Grumpy wizards make toxic brew for the evil Queen and Jack.")
+
+  doDiff(image, "cff_strikethrough")
