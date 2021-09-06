@@ -39,10 +39,6 @@ proc newImage*(mask: Mask): Image {.raises: [PixieError].} =
     let v = mask.data[i]
     result.data[i] = rgbx(v, v, v, v)
 
-proc wh*(image: Image): Vec2 {.inline, raises: [].} =
-  ## Return with and height as a size vector.
-  vec2(image.width.float32, image.height.float32)
-
 proc copy*(image: Image): Image {.raises: [PixieError].} =
   ## Copies the image data into a new image.
   result = newImage(image.width, image.height)

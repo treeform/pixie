@@ -1149,7 +1149,7 @@ iterator walk(
   numHits: int,
   windingRule: WindingRule,
   y: int,
-  size: Vec2
+  width: float32
 ): (float32, float32, int32) =
   var
     prevAt: float32
@@ -1170,14 +1170,14 @@ iterator walk(
     count += winding
 
   when defined(pixieLeakCheck):
-    if prevAt != size.x and count != 0:
+    if prevAt != width and count != 0:
       echo "Leak detected: ", count, " @ (", prevAt, ", ", y, ")"
 
 proc computeCoverages(
   coverages: var seq[uint8],
   hits: var seq[(float32, int16)],
   numHits: var int,
-  size: Vec2,
+  width: float32,
   y, startX: int,
   aa: bool,
   partitioning: Partitioning,
@@ -1196,7 +1196,7 @@ proc computeCoverages(
   let partitionIndex = partitioning.getIndexForY(y)
   var
     yLine = y.float32 + initialOffset - offset
-    scanline = line(vec2(0, yLine), vec2(size.x, yLine))
+    scanline = line(vec2(0, yLine), vec2(width, yLine))
   for m in 0 ..< quality:
     yLine += offset
     scanline.a.y = yLine
@@ -1212,13 +1212,13 @@ proc computeCoverages(
           if segment.to != at:
             if numHits == hits.len:
               hits.setLen(hits.len * 2)
-            hits[numHits] = (min(at.x, size.x), winding)
+            hits[numHits] = (min(at.x, width), winding)
             inc numHits
 
     sort(hits, 0, numHits - 1)
 
     if aa:
-      for (prevAt, at, count) in hits.walk(numHits, windingRule, y, size):
+      for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
         var fillStart = prevAt.int
 
         let
@@ -1403,7 +1403,7 @@ proc fillHits(
 ) =
   let blender = blendMode.blender()
   var filledTo: int
-  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, image.wh):
+  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, image.width.float32):
     let
       fillStart = prevAt.int
       fillLen = at.int - fillStart
@@ -1451,7 +1451,7 @@ proc fillHits(
 ) =
   let masker = blendMode.masker()
   var filledTo: int
-  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, mask.wh):
+  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, mask.width.float32):
     let
       fillStart = prevAt.int
       fillLen = at.int - fillStart
@@ -1515,7 +1515,7 @@ proc fillShapes(
       coverages,
       hits,
       numHits,
-      image.wh,
+      image.width.float32,
       y,
       startX,
       aa,
@@ -1572,7 +1572,7 @@ proc fillShapes(
       coverages,
       hits,
       numHits,
-      mask.wh,
+      mask.width.float32,
       y,
       startX,
       aa,

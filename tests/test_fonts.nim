@@ -1,5 +1,9 @@
 import pixie, pixie/fileformats/png, strformat, unicode
 
+proc wh(image: Image): Vec2 =
+  ## Return with and height as a size vector.
+  vec2(image.width.float32, image.height.float32)
+
 proc doDiff(rendered: Image, name: string) =
   rendered.writeFile(&"tests/fonts/rendered/{name}.png")
   let
