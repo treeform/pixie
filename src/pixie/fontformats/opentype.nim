@@ -889,7 +889,7 @@ const cffStandardStrings = [
   "Uacutesmall", "Ucircumflexsmall", "Udieresissmall", "Yacutesmall", "Thornsmall", "Ydieresissmall", "001.000",
   "001.001", "001.002", "001.003", "Black", "Bold", "Book", "Light", "Medium", "Regular", "Roman", "Semibold"]
 
-let TOP_DICT_META = {
+const TOP_DICT_META = {
   0: "version",
   1: "notice",
   1200: "copyright",
@@ -922,7 +922,7 @@ let TOP_DICT_META = {
   1238: "fontName",
 }.toTable
 
-let PRIVATE_DICT_META = {
+const PRIVATE_DICT_META = {
   19: "subrs",
   20: "defaultWidthX",
   21: "nominalWidthX",
