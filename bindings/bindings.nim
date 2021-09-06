@@ -91,7 +91,6 @@ exportRefObject Image:
     newImage(int, int)
   procs:
     writeFile(Image, string)
-    wh(Image)
     copy(Image)
     getColor
     setColor
@@ -127,7 +126,6 @@ exportRefObject Mask:
     newMask(int, int)
   procs:
     writeFile(Mask, string)
-    wh(Mask)
     copy(Mask)
     getValue
     setValue
