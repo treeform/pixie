@@ -11,6 +11,9 @@ type SvgFont* = ref object
 proc getGlyphPath*(svgFont: SvgFont, rune: Rune): Path {.raises: [].} =
   svgFont.glyphPaths.getOrDefault(rune, svgFont.missingGlyphPath)
 
+proc hasGlyph*(svgFont: SvgFont, rune: Rune): bool =
+  rune in svgFont.glyphPaths
+
 proc getAdvance*(svgFont: SvgFont, rune: Rune): float32 {.raises: [].} =
   svgFont.advances.getOrDefault(rune, svgFont.missingGlyphAdvance)
 
