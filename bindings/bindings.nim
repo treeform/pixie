@@ -192,6 +192,7 @@ exportRefObject Typeface:
     descent
     lineGap
     lineHeight
+    hasGlyph
     getGlyphPath
     getAdvance
     getKerningAdjustment
