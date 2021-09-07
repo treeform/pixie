@@ -92,6 +92,12 @@ proc strikeoutThickness(typeface: Typeface): float32 =
   if typeface.opentype != nil:
     result = typeface.opentype.os2.yStrikeoutSize.float32
 
+proc getWindingOrder(typeface: Typeface): bool =
+  ## Returns the expected winding order of a font.
+  if typeface.opentype != nil:
+    return typeface.opentype.getWindingOrder()
+  return true
+
 proc getGlyphPath*(
   typeface: Typeface, rune: Rune
 ): Path {.inline, raises: [PixieError].} =
@@ -478,14 +484,16 @@ proc textUber(
             arrangement.selectionRects[runeIndex].x,
             position.y - underlinePosition + underlineThickness / 2,
             arrangement.selectionRects[runeIndex].w,
-            underlineThickness
+            underlineThickness,
+            font.typeface.getWindingOrder()
           )
         if font.strikethrough:
           path.rect(
             arrangement.selectionRects[runeIndex].x,
             position.y - strikeoutPosition,
             arrangement.selectionRects[runeIndex].w,
-            strikeoutThickness
+            strikeoutThickness,
+            font.typeface.getWindingOrder()
           )
 
       when stroke:

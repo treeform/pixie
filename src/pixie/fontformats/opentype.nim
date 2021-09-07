@@ -2415,6 +2415,12 @@ proc getKerningAdjustment*(
   elif opentype.kern != nil:
     result = opentype.kern.kerningPairs.getOrDefault(glyphPair, 0)
 
+proc getWindingOrder*(opentype: OpenType): bool =
+  ## Returns the expected winding order of a font.
+  ## Gyph - false - clockwise
+  ## CFF - true - counterclockwise
+  return opentype.cff == nil
+
 proc parseOpenType*(buf: string): OpenType {.raises: [PixieError].} =
   result = OpenType()
   result.buf = buf
