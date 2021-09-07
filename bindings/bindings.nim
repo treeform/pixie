@@ -14,15 +14,42 @@ type
     x*, y*: float32
 
   Matrix3* = object
-    a*, b*, c*, d*, e*, f*, g*, h*, i*: float32
+    values*: array[9, float32]
 
 proc matrix3*(): Matrix3 =
-  Matrix3(a: 1, b: 0, c: 0, d: 0, e: 1, f: 0, g: 0, h: 0, i: 1)
+  result.values[0] = 1
+  result.values[4] = 1
+  result.values[8] = 1
 
-proc drawImage1*(
-  ctx: Context, image: Image, dx, dy: float32
-) {.raises: [PixieError].} =
-  ctx.drawImage(image, dx, dy)
+proc mul*(a, b: Matrix3): Matrix3 =
+  cast[Matrix3](cast[Mat3](a) * cast[Mat3](b))
+
+proc translate*(x, y: float32): Matrix3 =
+  result = matrix3()
+  result.values[6] = x
+  result.values[7] = y
+
+proc rotate*(angle: float32): Matrix3 =
+  let
+    sin = sin(angle)
+    cos = cos(angle)
+  result = matrix3()
+  result.values[0] = cos
+  result.values[1] = -sin
+  result.values[3] = sin
+  result.values[4] = cos
+
+proc scale*(x, y: float32): Matrix3 =
+  result = matrix3()
+  result.values[0] = x
+  result.values[4] = y
+
+proc parseColor*(s: string): Color {.raises: [PixieError]} =
+  try:
+    result = parseHtmlColor(s)
+  except:
+    let e = getCurrentException()
+    raise newException(PixieError, e.msg, e)
 
 proc drawImage2*(
   ctx: Context, image: Image, dx, dy, dWidth, dHeight: float32
@@ -62,6 +89,8 @@ exportObject Vector2:
 exportObject Matrix3:
   constructor:
     matrix3
+  procs:
+    mul(Matrix3, Matrix3)
 
 exportObject Rect:
   discard
@@ -257,7 +286,7 @@ exportRefObject Context:
     setTransform
     transform(Context, Mat3)
     resetTransform
-    drawImage1
+    drawImage(Context, Image, float32, float32)
     drawImage2
     drawImage3
     moveTo(Context, float32, float32)
@@ -274,6 +303,7 @@ exportRefObject Context:
     clearRect(Context, float32, float32, float32, float32)
     fillRect(Context, float32, float32, float32, float32)
     strokeRect(Context, float32, float32, float32, float32)
+    strokeSegment(Context, float32, float32, float32, float32)
     fillText(Context, string, float32, float32)
     strokeText(Context, string, float32, float32)
     translate(Context, float32, float32)
@@ -292,6 +322,10 @@ exportProcs:
   parsePath
   miterLimitToAngle
   angleToMiterLimit
+  parseColor
+  translate(float32, float32)
+  rotate(float32)
+  scale(float32, float32)
 
 writeFiles("bindings/generated", "pixie")
 

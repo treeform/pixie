@@ -679,6 +679,19 @@ proc polygon*(
   ## Adds an n-sided regular polygon at (x, y) of size to the current path.
   ctx.path.polygon(pos, size, sides)
 
+proc strokeSegment*(ctx: Context, segment: Segment) {.raises: [PixieError].} =
+  ## Strokes a segment (draws a line from segment.at to segment.to) according
+  ## to the current strokeStyle and other context settings.
+  let path = newPath()
+  path.moveTo(segment.at)
+  path.lineTo(segment.to)
+  ctx.stroke(path)
+
+proc strokeSegment*(ctx: Context, ax, ay, bx, by: float32) {.raises: [PixieError].} =
+  ## Strokes a segment (draws a line from ax, ay to bx, by) according
+  ## to the current strokeStyle and other context settings.
+  ctx.strokeSegment(segment(vec2(ax, ay), vec2(bx, by)))
+
 proc fillRoundedRect*(
   ctx: Context, rect: Rect, nw, ne, se, sw: float32
 ) {.raises: [PixieError].} =
@@ -708,14 +721,6 @@ proc strokeRoundedRect*(
   ## Draws a rounded rectangle that is stroked (outlined) according to the
   ## current strokeStyle and other context settings.
   ctx.strokeRoundedRect(rect, radius, radius, radius, radius)
-
-proc strokeSegment*(ctx: Context, segment: Segment) {.raises: [PixieError].} =
-  ## Strokes a segment (draws a line from segment.at to segment.to) according
-  ## to the current strokeStyle and other context settings.
-  let path = newPath()
-  path.moveTo(segment.at)
-  path.lineTo(segment.to)
-  ctx.stroke(path)
 
 proc fillEllipse*(
   ctx: Context, center: Vec2, rx, ry: float32
