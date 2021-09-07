@@ -25,24 +25,13 @@ proc mul*(a, b: Matrix3): Matrix3 =
   cast[Matrix3](cast[Mat3](a) * cast[Mat3](b))
 
 proc translate*(x, y: float32): Matrix3 =
-  result = matrix3()
-  result.values[6] = x
-  result.values[7] = y
+  cast[Matrix3](translate(vec2(x, y)))
 
 proc rotate*(angle: float32): Matrix3 =
-  let
-    sin = sin(angle)
-    cos = cos(angle)
-  result = matrix3()
-  result.values[0] = cos
-  result.values[1] = -sin
-  result.values[3] = sin
-  result.values[4] = cos
+  cast[Matrix3](rotate(angle))
 
 proc scale*(x, y: float32): Matrix3 =
-  result = matrix3()
-  result.values[0] = x
-  result.values[4] = y
+  cast[Matrix3](scale(vec2(x, y)))
 
 proc parseColor*(s: string): Color {.raises: [PixieError]} =
   try:
