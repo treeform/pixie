@@ -92,11 +92,10 @@ proc strikeoutThickness(typeface: Typeface): float32 =
   if typeface.opentype != nil:
     result = typeface.opentype.os2.yStrikeoutSize.float32
 
-proc getWindingOrder(typeface: Typeface): bool =
+proc isCCW(typeface: Typeface): bool {.inline.} =
   ## Returns the expected winding order of a font.
   if typeface.opentype != nil:
-    return typeface.opentype.getWindingOrder()
-  return true
+    return typeface.opentype.isCCW()
 
 proc getGlyphPath*(
   typeface: Typeface, rune: Rune
@@ -108,6 +107,16 @@ proc getGlyphPath*(
       result.addPath(typeface.opentype.getGlyphPath(rune))
     else:
       result.addPath(typeface.svgFont.getGlyphPath(rune))
+
+proc hasGlyph*(typeface: Typeface, rune: Rune): bool {.inline.} =
+  ## Returns if there is a glyph for this rune.
+  if rune.uint32 > SP.uint32: # Empty paths for control runes (not tofu)
+    if typeface.opentype != nil:
+      typeface.opentype.hasGlyph(rune)
+    else:
+      typeface.svgFont.hasGlyph(rune)
+  else:
+    false
 
 proc getAdvance*(typeface: Typeface, rune: Rune): float32 {.inline, raises: [].} =
   ## The advance for the rune in pixels.
@@ -485,7 +494,7 @@ proc textUber(
             position.y - underlinePosition + underlineThickness / 2,
             arrangement.selectionRects[runeIndex].w,
             underlineThickness,
-            font.typeface.getWindingOrder()
+            font.typeface.isCCW()
           )
         if font.strikethrough:
           path.rect(
@@ -493,7 +502,7 @@ proc textUber(
             position.y - strikeoutPosition,
             arrangement.selectionRects[runeIndex].w,
             strikeoutThickness,
-            font.typeface.getWindingOrder()
+            font.typeface.isCCW()
           )
 
       when stroke:

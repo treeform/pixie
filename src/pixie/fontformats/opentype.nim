@@ -1070,6 +1070,9 @@ proc parseCFFCharstring(cff: CffTable, code: string, glyphIndex: int): Path =
         x += stack.pop()
         p.moveTo(x, y)
 
+      of 23: # vstemhm
+        parseStems()
+
       of 24: # rcurveline
         while stack.len > 2:
           let
@@ -2084,6 +2087,9 @@ proc parsePostTable(buf: string, offset: int): PostTable =
 proc getGlyphId(opentype: OpenType, rune: Rune): uint16 =
   result = opentype.cmap.runeToGlyphId.getOrDefault(rune, 0)
 
+proc hasGlyph*(opentype: OpenType, rune: Rune): bool =
+  rune in opentype.cmap.runeToGlyphId
+
 proc parseGlyfGlyph(opentype: OpenType, glyphId: uint16): Path {.raises: [PixieError].}
 
 proc parseGlyphPath(
@@ -2415,11 +2421,11 @@ proc getKerningAdjustment*(
   elif opentype.kern != nil:
     result = opentype.kern.kerningPairs.getOrDefault(glyphPair, 0)
 
-proc getWindingOrder*(opentype: OpenType): bool =
+proc isCCW*(opentype: OpenType): bool {.inline.} =
   ## Returns the expected winding order of a font.
   ## Gyph - false - clockwise
   ## CFF - true - counterclockwise
-  return opentype.cff == nil
+  opentype.cff == nil
 
 proc parseOpenType*(buf: string): OpenType {.raises: [PixieError].} =
   result = OpenType()
