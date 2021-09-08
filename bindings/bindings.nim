@@ -17,9 +17,7 @@ type
     values*: array[9, float32]
 
 proc matrix3*(): Matrix3 =
-  result.values[0] = 1
-  result.values[4] = 1
-  result.values[8] = 1
+  cast[Matrix3](mat3())
 
 proc mul*(a, b: Matrix3): Matrix3 =
   cast[Matrix3](cast[Mat3](a) * cast[Mat3](b))
@@ -32,6 +30,9 @@ proc rotate*(angle: float32): Matrix3 =
 
 proc scale*(x, y: float32): Matrix3 =
   cast[Matrix3](scale(vec2(x, y)))
+
+proc inverse*(m: Matrix3): Matrix3 =
+  cast[Matrix3](inverse(cast[Mat3](m)))
 
 proc parseColor*(s: string): Color {.raises: [PixieError]} =
   try:
@@ -315,6 +316,7 @@ exportProcs:
   translate(float32, float32)
   rotate(float32)
   scale(float32, float32)
+  inverse(Matrix3)
 
 writeFiles("bindings/generated", "pixie")
 
