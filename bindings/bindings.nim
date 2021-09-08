@@ -31,6 +31,9 @@ proc rotate*(angle: float32): Matrix3 =
 proc scale*(x, y: float32): Matrix3 =
   cast[Matrix3](scale(vec2(x, y)))
 
+proc inverse*(m: Matrix3): Matrix3 =
+  cast[Matrix3](inverse(cast[Mat3](m)))
+
 proc parseColor*(s: string): Color {.raises: [PixieError]} =
   try:
     result = parseHtmlColor(s)
@@ -313,6 +316,7 @@ exportProcs:
   translate(float32, float32)
   rotate(float32)
   scale(float32, float32)
+  inverse(Matrix3)
 
 writeFiles("bindings/generated", "pixie")
 
