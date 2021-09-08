@@ -3,7 +3,7 @@ import pixie
 let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
 
-let typeface = readTypeface("tests/fonts/Ubuntu-Regular_1.ttf")
+let typeface = readTypeface("examples/data/Ubuntu-Regular_1.ttf")
 
 proc newFont(typeface: Typeface, size: float32, color: Color): Font =
   result = newFont(typeface)

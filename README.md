@@ -115,7 +115,7 @@ Here are some examples of using Pixie for realtime rendering with some popular w
 ### Text
 [examples/text.nim](examples/text.nim)
 ```nim
-var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+var font = readFont("examples/data/Roboto-Regular_1.ttf")
 font.size = 20
 
 let text = "Typesetting is the arrangement and composition of text in graphic design and publishing in both digital and traditional medias."
@@ -127,7 +127,7 @@ image.fillText(font.typeset(text, vec2(180, 180)), translate(vec2(10, 10)))
 ### Text spans
 [examples/text_spans.nim](examples/text_spans.nim)
 ```nim
-let typeface = readTypeface("tests/fonts/Ubuntu-Regular_1.ttf")
+let typeface = readTypeface("examples/data/Ubuntu-Regular_1.ttf")
 
 proc newFont(typeface: Typeface, size: float32, color: Color): Font =
   result = newFont(typeface)
@@ -272,7 +272,7 @@ path.polygon(
 )
 
 let paint = newPaint(pkImageTiled)
-paint.image = readImage("tests/images/png/baboon.png")
+paint.image = readImage("examples/data/baboon.png")
 paint.imageMat = scale(vec2(0.08, 0.08))
 
 image.fillPath(path, paint)
