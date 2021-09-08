@@ -17,9 +17,7 @@ type
     values*: array[9, float32]
 
 proc matrix3*(): Matrix3 =
-  result.values[0] = 1
-  result.values[4] = 1
-  result.values[8] = 1
+  cast[Matrix3](mat3())
 
 proc mul*(a, b: Matrix3): Matrix3 =
   cast[Matrix3](cast[Mat3](a) * cast[Mat3](b))
