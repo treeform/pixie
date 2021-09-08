@@ -3,16 +3,11 @@ import pixie
 let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
 
+let path = newPath()
+path.polygon(vec2(100, 100), 70, sides = 8)
+
 let polygonImage = newImage(200, 200)
-
-let ctx = newContext(polygonImage)
-ctx.fillStyle = rgba(255, 255, 255, 255)
-
-ctx.fillPolygon(
-  vec2(100, 100),
-  70,
-  sides = 8
-)
+polygonImage.fillPath(path, rgba(255, 255, 255, 255))
 
 let shadow = polygonImage.shadow(
   offset = vec2(2, 2),
