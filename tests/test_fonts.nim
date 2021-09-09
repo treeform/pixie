@@ -17,7 +17,7 @@ block:
   font.size = 24
 
   let bounds = font.computeBounds("Word")
-  doAssert bounds == vec2(57, 28)
+  doAssert bounds == vec2(56, 28)
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
