@@ -309,19 +309,6 @@ proc typeset*(
             result.positions[i].x += xAdjustment
             result.selectionRects[i].x += xAdjustment
 
-    block: # Nudge selection rects to pixel grid
-      var at = result.selectionRects[0]
-      at.x = round(at.x)
-      for rect in result.selectionRects.mitems:
-        if rect.y == at.y:
-          rect.x = at.x
-          rect.w = round(rect.w)
-          at.x = rect.x + rect.w
-        else:
-          rect.w = round(rect.w)
-          at.x = rect.w
-          at.y = rect.y
-
   block: # Arrange the lines vertically
     let initialY = block:
       var maxInitialY: float32
@@ -406,6 +393,18 @@ proc typeset*(
         for i in 0 ..< result.positions.len:
           result.positions[i].y += yAdjustment
           result.selectionRects[i].y += yAdjustment
+
+  block: # Nudge selection rects to pixel grid
+    for rect in result.selectionRects.mitems:
+      let
+        minX = round(rect.x)
+        maxX = round(rect.x + rect.w)
+        minY = round(rect.y)
+        maxY = round(rect.y + rect.h)
+      rect.x = minX
+      rect.w = maxX - minX
+      rect.y = minY
+      rect.h = maxY - minY
 
 proc typeset*(
   font: Font,
