@@ -757,24 +757,35 @@ proc drawUber(
           when type(a) is Image:
             if blendMode.hasSimdBlender():
               let blenderSimd = blendMode.blenderSimd()
-              for _ in countup(x, xMax - 4, 4):
+              for _ in countup(x, xMax - 16, 16):
+                # Always take steps of 16 indices since masks will be reading
+                # 16 bytes even if we only use 4 from the last read.
                 let
                   srcPos = p + dx * x.float32 + dy * y.float32
                   sx = srcPos.x.int
                   sy = srcPos.y.int
-                  backdrop = mm_loadu_si128(a.data[a.dataIndex(x, y)].addr)
                 when type(b) is Image:
-                  let source = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
+                  for q in [0, 4, 8, 12]:
+                    let
+                      backdrop = mm_loadu_si128(a.data[a.dataIndex(x + q, y)].addr)
+                      source = mm_loadu_si128(b.data[b.dataIndex(sx + q, sy)].addr)
+                    mm_storeu_si128(
+                      a.data[a.dataIndex(x + q, y)].addr,
+                      blenderSimd(backdrop, source)
+                    )
                 else: # b is a Mask
-                  # Need to move 4 mask values into the alpha slots
-                  var source = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
-                  source = unpackAlphaValues(source)
-
-                mm_storeu_si128(
-                  a.data[a.dataIndex(x, y)].addr,
-                  blenderSimd(backdrop, source)
-                )
-                x += 4
+                  var values = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
+                  for q in [0, 4, 8, 12]:
+                    let
+                      backdrop = mm_loadu_si128(a.data[a.dataIndex(x + q, y)].addr)
+                      source = unpackAlphaValues(values)
+                    mm_storeu_si128(
+                      a.data[a.dataIndex(x + q, y)].addr,
+                      blenderSimd(backdrop, source)
+                    )
+                    # Shuffle 32 bits off for the next iteration
+                    values = mm_srli_si128(values, 4)
+                x += 16
           else: # is a Mask
             if blendMode.hasSimdMasker():
               let maskerSimd = blendMode.maskerSimd()
