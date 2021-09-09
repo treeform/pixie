@@ -1401,9 +1401,11 @@ proc fillHits(
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
-  let blender = blendMode.blender()
+  let
+    blender = blendMode.blender()
+    width = image.width.float32
   var filledTo: int
-  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, image.width.float32):
+  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
     let
       fillStart = prevAt.int
       fillLen = at.int - fillStart
@@ -1449,9 +1451,11 @@ proc fillHits(
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
-  let masker = blendMode.masker()
+  let
+    masker = blendMode.masker()
+    width = mask.width.float32
   var filledTo: int
-  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, mask.width.float32):
+  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
     let
       fillStart = prevAt.int
       fillLen = at.int - fillStart

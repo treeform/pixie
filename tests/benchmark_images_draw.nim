@@ -95,7 +95,7 @@ block:
 
   timeIt "shadow":
     b.fill(rgba(0, 0, 0, 255))
-    a.draw(b, vec2(25, 25))
+    a.draw(b, translate(vec2(25, 25)))
 
     let shadow = a.shadow(
       offset = vec2(0, 0),
