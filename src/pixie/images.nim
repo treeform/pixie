@@ -758,8 +758,6 @@ proc drawUber(
             if blendMode.hasSimdBlender():
               let blenderSimd = blendMode.blenderSimd()
               for _ in countup(x, xMax - 16, 16):
-                # Always take steps of 16 indices since masks will be reading
-                # 16 bytes even if we only use 4 from the last read.
                 let
                   srcPos = p + dx * x.float32 + dy * y.float32
                   sx = srcPos.x.int
