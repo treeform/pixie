@@ -492,7 +492,7 @@ block:
   ctx.font = "tests/fonts/Roboto-Regular_1.ttf"
 
   let metrics = ctx.measureText("Hello world")
-  doAssert metrics.width == 61
+  doAssert metrics.width == 60
 
 block:
   let
