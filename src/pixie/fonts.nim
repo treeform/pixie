@@ -427,10 +427,14 @@ proc computeBounds*(arrangement: Arrangement): Vec2 {.raises: [].} =
   if arrangement.runes.len > 0:
     for i in 0 ..< arrangement.runes.len:
       if arrangement.runes[i] != LF:
+        # Don't add width of a new line rune.
         let rect = arrangement.selectionRects[i]
         result.x = max(result.x, rect.x + rect.w)
     let finalRect = arrangement.selectionRects[^1]
     result.y = finalRect.y + finalRect.h
+    if arrangement.runes[^1] == LF:
+      # If the text ends with a new line, we need add another line height.
+      result.y += finalRect.h
 
 proc computeBounds*(font: Font, text: string): Vec2 {.inline, raises: [].} =
   ## Computes the width and height of the text in pixels.

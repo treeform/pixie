@@ -21,6 +21,13 @@ block:
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 24
+
+  let bounds = font.computeBounds("Word\n")
+  doAssert bounds == vec2(56, 56)
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 64
   let image = newImage(200, 100)
   image.fill(rgba(255, 255, 255, 255))
