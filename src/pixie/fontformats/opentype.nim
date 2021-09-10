@@ -1,5 +1,5 @@
-import flatty/binny, math, pixie/common, pixie/paths, sets, tables, unicode,
-    vmath, strutils
+import flatty/binny, math, pixie/common, pixie/paths, sets, strutils, tables,
+    unicode, vmath
 
 ## See https://docs.microsoft.com/en-us/typography/opentype/spec/
 
@@ -845,49 +845,71 @@ proc parseCFFIndex(buf: string, start: var int, stripZero = false): seq[string] 
   start = endOffset
 
 const cffStandardStrings = [
-  ".notdef", "space", "exclam", "quotedbl", "numbersign", "dollar", "percent", "ampersand", "quoteright",
-  "parenleft", "parenright", "asterisk", "plus", "comma", "hyphen", "period", "slash", "zero", "one", "two",
-  "three", "four", "five", "six", "seven", "eight", "nine", "colon", "semicolon", "less", "equal", "greater",
-  "question", "at", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S",
-  "T", "U", "V", "W", "X", "Y", "Z", "bracketleft", "backslash", "bracketright", "asciicircum", "underscore",
-  "quoteleft", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t",
-  "u", "v", "w", "x", "y", "z", "braceleft", "bar", "braceright", "asciitilde", "exclamdown", "cent", "sterling",
-  "fraction", "yen", "florin", "section", "currency", "quotesingle", "quotedblleft", "guillemotleft",
-  "guilsinglleft", "guilsinglright", "fi", "fl", "endash", "dagger", "daggerdbl", "periodcentered", "paragraph",
-  "bullet", "quotesinglbase", "quotedblbase", "quotedblright", "guillemotright", "ellipsis", "perthousand",
-  "questiondown", "grave", "acute", "circumflex", "tilde", "macron", "breve", "dotaccent", "dieresis", "ring",
-  "cedilla", "hungarumlaut", "ogonek", "caron", "emdash", "AE", "ordfeminine", "Lslash", "Oslash", "OE",
-  "ordmasculine", "ae", "dotlessi", "lslash", "oslash", "oe", "germandbls", "onesuperior", "logicalnot", "mu",
-  "trademark", "Eth", "onehalf", "plusminus", "Thorn", "onequarter", "divide", "brokenbar", "degree", "thorn",
-  "threequarters", "twosuperior", "registered", "minus", "eth", "multiply", "threesuperior", "copyright",
-  "Aacute", "Acircumflex", "Adieresis", "Agrave", "Aring", "Atilde", "Ccedilla", "Eacute", "Ecircumflex",
-  "Edieresis", "Egrave", "Iacute", "Icircumflex", "Idieresis", "Igrave", "Ntilde", "Oacute", "Ocircumflex",
-  "Odieresis", "Ograve", "Otilde", "Scaron", "Uacute", "Ucircumflex", "Udieresis", "Ugrave", "Yacute",
-  "Ydieresis", "Zcaron", "aacute", "acircumflex", "adieresis", "agrave", "aring", "atilde", "ccedilla", "eacute",
-  "ecircumflex", "edieresis", "egrave", "iacute", "icircumflex", "idieresis", "igrave", "ntilde", "oacute",
-  "ocircumflex", "odieresis", "ograve", "otilde", "scaron", "uacute", "ucircumflex", "udieresis", "ugrave",
-  "yacute", "ydieresis", "zcaron", "exclamsmall", "Hungarumlautsmall", "dollaroldstyle", "dollarsuperior",
-  "ampersandsmall", "Acutesmall", "parenleftsuperior", "parenrightsuperior", "266 ff", "onedotenleader",
-  "zerooldstyle", "oneoldstyle", "twooldstyle", "threeoldstyle", "fouroldstyle", "fiveoldstyle", "sixoldstyle",
-  "sevenoldstyle", "eightoldstyle", "nineoldstyle", "commasuperior", "threequartersemdash", "periodsuperior",
-  "questionsmall", "asuperior", "bsuperior", "centsuperior", "dsuperior", "esuperior", "isuperior", "lsuperior",
-  "msuperior", "nsuperior", "osuperior", "rsuperior", "ssuperior", "tsuperior", "ff", "ffi", "ffl",
-  "parenleftinferior", "parenrightinferior", "Circumflexsmall", "hyphensuperior", "Gravesmall", "Asmall",
-  "Bsmall", "Csmall", "Dsmall", "Esmall", "Fsmall", "Gsmall", "Hsmall", "Ismall", "Jsmall", "Ksmall", "Lsmall",
-  "Msmall", "Nsmall", "Osmall", "Psmall", "Qsmall", "Rsmall", "Ssmall", "Tsmall", "Usmall", "Vsmall", "Wsmall",
-  "Xsmall", "Ysmall", "Zsmall", "colonmonetary", "onefitted", "rupiah", "Tildesmall", "exclamdownsmall",
-  "centoldstyle", "Lslashsmall", "Scaronsmall", "Zcaronsmall", "Dieresissmall", "Brevesmall", "Caronsmall",
-  "Dotaccentsmall", "Macronsmall", "figuredash", "hypheninferior", "Ogoneksmall", "Ringsmall", "Cedillasmall",
-  "questiondownsmall", "oneeighth", "threeeighths", "fiveeighths", "seveneighths", "onethird", "twothirds",
-  "zerosuperior", "foursuperior", "fivesuperior", "sixsuperior", "sevensuperior", "eightsuperior", "ninesuperior",
-  "zeroinferior", "oneinferior", "twoinferior", "threeinferior", "fourinferior", "fiveinferior", "sixinferior",
-  "seveninferior", "eightinferior", "nineinferior", "centinferior", "dollarinferior", "periodinferior",
-  "commainferior", "Agravesmall", "Aacutesmall", "Acircumflexsmall", "Atildesmall", "Adieresissmall",
-  "Aringsmall", "AEsmall", "Ccedillasmall", "Egravesmall", "Eacutesmall", "Ecircumflexsmall", "Edieresissmall",
-  "Igravesmall", "Iacutesmall", "Icircumflexsmall", "Idieresissmall", "Ethsmall", "Ntildesmall", "Ogravesmall",
-  "Oacutesmall", "Ocircumflexsmall", "Otildesmall", "Odieresissmall", "OEsmall", "Oslashsmall", "Ugravesmall",
-  "Uacutesmall", "Ucircumflexsmall", "Udieresissmall", "Yacutesmall", "Thornsmall", "Ydieresissmall", "001.000",
-  "001.001", "001.002", "001.003", "Black", "Bold", "Book", "Light", "Medium", "Regular", "Roman", "Semibold"]
+  ".notdef", "space", "exclam", "quotedbl", "numbersign", "dollar", "percent",
+  "ampersand", "quoteright", "parenleft", "parenright", "asterisk", "plus",
+  "comma", "hyphen", "period", "slash", "zero", "one", "two", "three", "four",
+  "five", "six", "seven", "eight", "nine", "colon", "semicolon", "less",
+  "equal", "greater", "question", "at", "A", "B", "C", "D", "E", "F", "G", "H",
+  "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W",
+  "X", "Y", "Z", "bracketleft", "backslash", "bracketright", "asciicircum",
+  "underscore", "quoteleft", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j",
+  "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y",
+  "z", "braceleft", "bar", "braceright", "asciitilde", "exclamdown", "cent",
+  "sterling", "fraction", "yen", "florin", "section", "currency", "quotesingle",
+  "quotedblleft", "guillemotleft", "guilsinglleft", "guilsinglright", "fi",
+  "fl", "endash", "dagger", "daggerdbl", "periodcentered", "paragraph",
+  "bullet", "quotesinglbase", "quotedblbase", "quotedblright", "guillemotright",
+  "ellipsis", "perthousand", "questiondown", "grave", "acute", "circumflex",
+  "tilde", "macron", "breve", "dotaccent", "dieresis", "ring", "cedilla",
+  "hungarumlaut", "ogonek", "caron", "emdash", "AE", "ordfeminine", "Lslash",
+  "Oslash", "OE", "ordmasculine", "ae", "dotlessi", "lslash", "oslash", "oe",
+  "germandbls", "onesuperior", "logicalnot", "mu", "trademark", "Eth",
+  "onehalf", "plusminus", "Thorn", "onequarter", "divide", "brokenbar",
+  "degree", "thorn", "threequarters", "twosuperior", "registered", "minus",
+  "eth", "multiply", "threesuperior", "copyright", "Aacute", "Acircumflex",
+  "Adieresis", "Agrave", "Aring", "Atilde", "Ccedilla", "Eacute", "Ecircumflex",
+  "Edieresis", "Egrave", "Iacute", "Icircumflex", "Idieresis", "Igrave",
+  "Ntilde", "Oacute", "Ocircumflex", "Odieresis", "Ograve", "Otilde", "Scaron",
+  "Uacute", "Ucircumflex", "Udieresis", "Ugrave", "Yacute", "Ydieresis",
+  "Zcaron", "aacute", "acircumflex", "adieresis", "agrave", "aring", "atilde",
+  "ccedilla", "eacute", "ecircumflex", "edieresis", "egrave", "iacute",
+  "icircumflex", "idieresis", "igrave", "ntilde", "oacute", "ocircumflex",
+  "odieresis", "ograve", "otilde", "scaron", "uacute", "ucircumflex",
+  "udieresis", "ugrave", "yacute", "ydieresis", "zcaron", "exclamsmall",
+  "Hungarumlautsmall", "dollaroldstyle", "dollarsuperior", "ampersandsmall",
+  "Acutesmall", "parenleftsuperior", "parenrightsuperior", "266 ff",
+  "onedotenleader", "zerooldstyle", "oneoldstyle", "twooldstyle",
+  "threeoldstyle", "fouroldstyle", "fiveoldstyle", "sixoldstyle",
+  "sevenoldstyle", "eightoldstyle", "nineoldstyle", "commasuperior",
+  "threequartersemdash", "periodsuperior", "questionsmall", "asuperior",
+  "bsuperior", "centsuperior", "dsuperior", "esuperior", "isuperior",
+  "lsuperior", "msuperior", "nsuperior", "osuperior", "rsuperior", "ssuperior",
+  "tsuperior", "ff", "ffi", "ffl", "parenleftinferior", "parenrightinferior",
+  "Circumflexsmall", "hyphensuperior", "Gravesmall", "Asmall", "Bsmall",
+  "Csmall", "Dsmall", "Esmall", "Fsmall", "Gsmall", "Hsmall", "Ismall",
+  "Jsmall", "Ksmall", "Lsmall", "Msmall", "Nsmall", "Osmall", "Psmall",
+  "Qsmall", "Rsmall", "Ssmall", "Tsmall", "Usmall", "Vsmall", "Wsmall",
+  "Xsmall", "Ysmall", "Zsmall", "colonmonetary", "onefitted", "rupiah",
+  "Tildesmall", "exclamdownsmall", "centoldstyle", "Lslashsmall", "Scaronsmall",
+  "Zcaronsmall", "Dieresissmall", "Brevesmall", "Caronsmall", "Dotaccentsmall",
+  "Macronsmall", "figuredash", "hypheninferior", "Ogoneksmall", "Ringsmall",
+  "Cedillasmall", "questiondownsmall", "oneeighth", "threeeighths",
+  "fiveeighths", "seveneighths", "onethird", "twothirds", "zerosuperior",
+  "foursuperior", "fivesuperior", "sixsuperior", "sevensuperior",
+  "eightsuperior", "ninesuperior", "zeroinferior", "oneinferior", "twoinferior",
+  "threeinferior", "fourinferior", "fiveinferior", "sixinferior",
+  "seveninferior", "eightinferior", "nineinferior", "centinferior",
+  "dollarinferior", "periodinferior", "commainferior", "Agravesmall",
+  "Aacutesmall", "Acircumflexsmall", "Atildesmall", "Adieresissmall",
+  "Aringsmall", "AEsmall", "Ccedillasmall", "Egravesmall", "Eacutesmall",
+  "Ecircumflexsmall", "Edieresissmall", "Igravesmall", "Iacutesmall",
+  "Icircumflexsmall", "Idieresissmall", "Ethsmall", "Ntildesmall",
+  "Ogravesmall", "Oacutesmall", "Ocircumflexsmall", "Otildesmall",
+  "Odieresissmall", "OEsmall", "Oslashsmall", "Ugravesmall", "Uacutesmall",
+  "Ucircumflexsmall", "Udieresissmall", "Yacutesmall", "Thornsmall",
+  "Ydieresissmall", "001.000", "001.001", "001.002", "001.003", "Black", "Bold",
+  "Book", "Light", "Medium", "Regular", "Roman", "Semibold"
+]
 
 const TOP_DICT_META = {
   0: "version",
@@ -1018,7 +1040,7 @@ proc parseCFFCharstring(cff: CffTable, code: string, glyphIndex: int): Path =
           y += stack.shift()
           p.lineTo(x, y)
           if stack.len == 0:
-              break
+            break
           x += stack.shift()
           p.lineTo(x, y)
 
@@ -1133,7 +1155,8 @@ proc parseCFFCharstring(cff: CffTable, code: string, glyphIndex: int): Path =
         i += 2
 
       of 29: # callgsubr
-        let codeIndex = stack.pop().int + calcCFFSubroutineBias(cff.globalSubrIndex)
+        let codeIndex =
+          stack.pop().int + calcCFFSubroutineBias(cff.globalSubrIndex)
         let subrCode = cff.globalSubrIndex[codeIndex]
         if subrCode.len > 0:
           parse(subrCode)
@@ -1299,20 +1322,20 @@ proc parseCFFTable(buf: string, offset: int, maxp: MaxpTable): CFFTable =
               b1 shl 24 or b2 shl 16 or b3 shl 8 or b4))
 
           if b0 == 30:
-              return parseFloatOperand()
+            return parseFloatOperand()
 
           if b0 >= 32 and b0 <= 246:
-              return float64(b0 - 139)
+            return float64(b0 - 139)
 
           if b0 >= 247 and b0 <= 250:
-              b1 = data.readUint8(relativeOffset).int
-              inc relativeOffset
-              return float64((b0 - 247) * 256 + b1 + 108)
+            b1 = data.readUint8(relativeOffset).int
+            inc relativeOffset
+            return float64((b0 - 247) * 256 + b1 + 108)
 
           if b0 >= 251 and b0 <= 254:
-              b1 = data.readUint8(relativeOffset).int
-              inc relativeOffset
-              return float64(-(b0 - 251) * 256 - b1 - 108)
+            b1 = data.readUint8(relativeOffset).int
+            inc relativeOffset
+            return float64(-(b0 - 251) * 256 - b1 - 108)
 
           failUnsupported("Invalid b0 " & $b0)
 
@@ -1483,10 +1506,12 @@ proc parseCFFTable(buf: string, offset: int, maxp: MaxpTable): CFFTable =
     var fdArrayOffset = result.topDict.fdArray + offset
     var fdSelectOffset = result.topDict.fdSelect + offset
     if fdArrayOffset == 0 or fdSelectOffset == 0:
-        failUnsupported("CFF CID tables are missing")
+      failUnsupported("CFF CID tables are missing")
 
     var fdArrayIndex = parseCFFIndex(buf, fdArrayOffset)
-    result.topDict.fdArraySeq = result.gatherCFFTopDicts(maxp, buf, offset, fdArrayIndex, result.stringIndex)
+    result.topDict.fdArraySeq = result.gatherCFFTopDicts(
+      maxp, buf, offset, fdArrayIndex, result.stringIndex
+    )
 
     proc parseCFFFDSelect(buf: string, start, nGlyphs, fdArrayCount: int): seq[int] =
 
@@ -1589,8 +1614,6 @@ proc parseCFFTable(buf: string, offset: int, maxp: MaxpTable): CFFTable =
 
   var start = offset + result.topDict.charStrings
   result.charIndex = buf.parseCFFIndex(start)
-
-
 
 # proc parseLangSys(buf: string, offset: int): LangSys =
 #   var i = offset
@@ -1997,7 +2020,9 @@ proc parsePairPos(buf: string, offset: int): PairPos =
     else:
       failUnsupported("pair pos format")
 
-proc parseLookup(buf: string, offset: int, pairPosTables: var seq[PairPos]): Lookup =
+proc parseLookup(
+  buf: string, offset: int, pairPosTables: var seq[PairPos]
+): Lookup =
   var i = offset
 
   buf.eofCheck(i + 6)
@@ -2038,7 +2063,9 @@ proc parseLookupList(buf: string, offset: int): LookupList =
   var pairPosTables: seq[PairPos]
 
   for lookupOffset in result.lookupoffsets:
-    result.lookups.add(parseLookup(buf, offset + lookupOffset.int, pairPosTables))
+    result.lookups.add(parseLookup(
+      buf, offset + lookupOffset.int, pairPosTables)
+    )
 
   result.pairPosTables = pairPosTables
 
@@ -2476,7 +2503,6 @@ proc parseOpenType*(buf: string): OpenType {.raises: [PixieError].} =
 
     else:
       failUnsupported("glyph outlines")
-
 
     if "kern" in result.tableRecords:
       result.kern = parseKernTable(buf, result.tableRecords["kern"].offset.int)
