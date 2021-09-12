@@ -194,7 +194,7 @@ block:
   image.fillText(
     font,
     "Long words: Supercalifragilisticexpialidocious\nAntidisestablishmentarianism",
-    bounds = vec2(100, 100)
+    bounds = vec2(100, 0)
   )
 
   doDiff(image, "basic8b")

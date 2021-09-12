@@ -272,6 +272,7 @@ proc typeset*(
                 result.selectionRects[i].xy = vec2(at.x, at.y)
                 at.x += advance(font, result.runes, i)
                 dec lineStart
+              prevCanWrap = 0
 
             result.lines[^1][1] = lineStart - 1
             result.lines.add((lineStart, 0))
