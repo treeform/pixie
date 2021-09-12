@@ -193,6 +193,20 @@ block:
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(
     font,
+    "Long words: Supercalifragilisticexpialidocious\nAntidisestablishmentarianism",
+    bounds = vec2(100, 100)
+  )
+
+  doDiff(image, "basic8b")
+
+block:
+  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
+  font.size = 24
+
+  let image = newImage(200, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(
+    font,
     "Supercalifragilisticexpialidocious",
     bounds = vec2(200, 0)
   )
