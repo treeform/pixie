@@ -112,8 +112,10 @@ Here are some examples of using Pixie for realtime rendering with some popular w
 
 ## Examples
 
+`git clone https://github.com/treeform/pixie` to run examples.
+
 ### Text
-[examples/text.nim](examples/text.nim)
+nim c -r [examples/text.nim](examples/text.nim)
 ```nim
 var font = readFont("examples/data/Roboto-Regular_1.ttf")
 font.size = 20
@@ -125,7 +127,7 @@ image.fillText(font.typeset(text, vec2(180, 180)), translate(vec2(10, 10)))
 ![example output](examples/text.png)
 
 ### Text spans
-[examples/text_spans.nim](examples/text_spans.nim)
+nim c -r [examples/text_spans.nim](examples/text_spans.nim)
 ```nim
 let typeface = readTypeface("examples/data/Ubuntu-Regular_1.ttf")
 
@@ -148,7 +150,7 @@ image.fillText(typeset(spans, vec2(180, 180)), translate(vec2(10, 10)))
 ![example output](examples/text_spans.png)
 
 ### Square
-[examples/square.nim](examples/square.nim)
+nim c -r [examples/square.nim](examples/square.nim)
 ```nim
 let ctx = newContext(image)
 ctx.fillStyle = rgba(255, 0, 0, 255)
@@ -162,7 +164,7 @@ ctx.fillRect(rect(pos, wh))
 ![example output](examples/square.png)
 
 ### Line
-[examples/line.nim](examples/line.nim)
+nim c -r [examples/line.nim](examples/line.nim)
 ```nim
 let ctx = newContext(image)
 ctx.strokeStyle = "#FF5C00"
@@ -177,7 +179,7 @@ ctx.strokeSegment(segment(start, stop))
 ![example output](examples/line.png)
 
 ### Rounded rectangle
-[examples/rounded_rectangle.nim](examples/rounded_rectangle.nim)
+nim c -r [examples/rounded_rectangle.nim](examples/rounded_rectangle.nim)
 ```nim
 let ctx = newContext(image)
 ctx.fillStyle = rgba(0, 255, 0, 255)
@@ -192,7 +194,7 @@ ctx.fillRoundedRect(rect(pos, wh), r)
 ![example output](examples/rounded_rectangle.png)
 
 ### Heart
-[examples/heart.nim](examples/heart.nim)
+nim c -r [examples/heart.nim](examples/heart.nim)
 ```nim
 image.fillPath(
   """
@@ -209,7 +211,7 @@ image.fillPath(
 ![example output](examples/heart.png)
 
 ### Masking
-[examples/masking.nim](examples/masking.nim)
+nim c -r [examples/masking.nim](examples/masking.nim)
 ```nim
 let ctx = newContext(lines)
 ctx.strokeStyle = "#F8D1DD"
@@ -234,7 +236,7 @@ image.draw(lines)
 ![example output](examples/masking.png)
 
 ### Gradient
-[examples/gradient.nim](examples/gradient.nim)
+nim c -r [examples/gradient.nim](examples/gradient.nim)
 ```nim
 let paint = newPaint(pkGradientRadial)
 paint.gradientHandlePositions = @[
@@ -262,7 +264,7 @@ image.fillPath(
 ![example output](examples/gradient.png)
 
 ### Image tiled
-[examples/image_tiled.nim](examples/image_tiled.nim)
+nim c -r [examples/image_tiled.nim](examples/image_tiled.nim)
 ```nim
 let path = newPath()
 path.polygon(
@@ -280,7 +282,7 @@ image.fillPath(path, paint)
 ![example output](examples/image_tiled.png)
 
 ### Shadow
-[examples/shadow.nim](examples/shadow.nim)
+nim c -r [examples/shadow.nim](examples/shadow.nim)
 ```nim
 let path = newPath()
 path.polygon(vec2(100, 100), 70, sides = 8)
@@ -301,7 +303,7 @@ image.draw(polygonImage)
 ![example output](examples/shadow.png)
 
 ### Blur
-[examples/blur.nim](examples/blur.nim)
+nim c -r [examples/blur.nim](examples/blur.nim)
 ```nim
 let path = newPath()
 path.polygon(vec2(100, 100), 70, sides = 6)
@@ -318,7 +320,7 @@ image.draw(blur)
 ![example output](examples/blur.png)
 
 ### Tiger
-[examples/tiger.nim](examples/tiger.nim)
+nim c -r [examples/tiger.nim](examples/tiger.nim)
 ```nim
 let tiger = readImage("examples/data/tiger.svg")
 
