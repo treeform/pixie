@@ -6,9 +6,16 @@ let
   data = readFile(filePath)
 
 timeIt "pixie decode":
-  keep decodePng(data)
+  keep decodePngRaw(data)
 
 timeIt "pixie encode":
+  let decoded = decodePngRaw(data)
+  keep encodePng(decoded).len
+
+timeIt "pixie decode + alpha":
+  keep decodePng(data)
+
+timeIt "pixie encode + alpha":
   let decoded = decodePng(data)
   keep encodePng(decoded).len
 
