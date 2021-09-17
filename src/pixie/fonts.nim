@@ -12,6 +12,7 @@ type
     opentype: OpenType
     svgFont: SvgFont
     filePath*: string
+    fallbacks*: seq[Typeface]
 
   Font* = ref object
     typeface*: Typeface
@@ -52,6 +53,13 @@ type
     tcTitle
     # tcSmallCaps
     # tcSmallCapsForced
+
+proc scale*(typeface: Typeface): float32 {.inline, raises: [].} =
+  ## The scale factor to transform font units into pixels.
+  if typeface.opentype != nil:
+    typeface.opentype.head.unitsPerEm.float32
+  else:
+    typeface.svgFont.unitsPerEm
 
 proc ascent*(typeface: Typeface): float32 {.raises: [].} =
   ## The font ascender value in font units.
@@ -97,17 +105,6 @@ proc isCCW(typeface: Typeface): bool {.inline.} =
   if typeface.opentype != nil:
     return typeface.opentype.isCCW()
 
-proc getGlyphPath*(
-  typeface: Typeface, rune: Rune
-): Path {.inline, raises: [PixieError].} =
-  ## The glyph path for the rune.
-  result = newPath()
-  if rune.uint32 > SP.uint32: # Empty paths for control runes (not tofu)
-    if typeface.opentype != nil:
-      result.addPath(typeface.opentype.getGlyphPath(rune))
-    else:
-      result.addPath(typeface.svgFont.getGlyphPath(rune))
-
 proc hasGlyph*(typeface: Typeface, rune: Rune): bool {.inline.} =
   ## Returns if there is a glyph for this rune.
   if rune.uint32 > SP.uint32: # Empty paths for control runes (not tofu)
@@ -118,12 +115,44 @@ proc hasGlyph*(typeface: Typeface, rune: Rune): bool {.inline.} =
   else:
     false
 
+proc getGlyphPath*(
+  typeface: Typeface, rune: Rune
+): Path {.inline, raises: [PixieError].} =
+  ## The glyph path for the rune.
+  result = newPath()
+  if rune.uint32 > SP.uint32: # Empty paths for control runes (not tofu)
+    if typeface.hasGlyph(rune):
+      if typeface.opentype != nil:
+        result.addPath(typeface.opentype.getGlyphPath(rune))
+      else:
+        result.addPath(typeface.svgFont.getGlyphPath(rune))
+    else:
+      for fallback in typeface.fallbacks:
+        if fallback.hasGlyph(rune):
+          result = fallback.getGlyphPath(rune)
+          let ratio = typeface.scale / fallback.scale
+          result.transform(scale(vec2(ratio, ratio)))
+
 proc getAdvance*(typeface: Typeface, rune: Rune): float32 {.inline, raises: [].} =
   ## The advance for the rune in pixels.
-  if typeface.opentype != nil:
-    typeface.opentype.getAdvance(rune)
+  if typeface.hasGlyph(rune):
+    if typeface.opentype != nil:
+      return typeface.opentype.getAdvance(rune)
+    else:
+      return typeface.svgFont.getAdvance(rune)
   else:
-    typeface.svgFont.getAdvance(rune)
+    for fallback in typeface.fallbacks:
+      if fallback.hasGlyph(rune):
+        result = fallback.getAdvance(rune)
+        let ratio = typeface.scale / fallback.scale
+        result *= ratio
+        return
+
+    if typeface.opentype != nil:
+      return typeface.opentype.getAdvance(rune)
+    else:
+      return typeface.svgFont.getAdvance(rune)
+
 
 proc getKerningAdjustment*(
   typeface: Typeface, left, right: Rune
@@ -136,10 +165,7 @@ proc getKerningAdjustment*(
 
 proc scale*(font: Font): float32 {.inline, raises: [].} =
   ## The scale factor to transform font units into pixels.
-  if font.typeface.opentype != nil:
-    font.size / font.typeface.opentype.head.unitsPerEm.float32
-  else:
-    font.size / font.typeface.svgFont.unitsPerEm
+  font.size / font.typeface.scale
 
 proc defaultLineHeight*(font: Font): float32 {.inline, raises: [].} =
   ## The default line height in pixels for the current font size.

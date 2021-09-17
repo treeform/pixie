@@ -1057,3 +1057,14 @@ block:
   image.fillText(font, "Grumpy wizards make toxic brew for the evil Queen and Jack.")
 
   doDiff(image, "cff_strikethrough")
+
+block:
+  var font = readFont("tests/fonts/Inter-Regular.ttf")
+  var typeface = readTypeface("tests/fonts/NotoSansJP-Regular.ttf")
+  font.typeface.fallbacks.add(typeface)
+  font.size = 26
+  let image = newImage(800, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(font, "Grumpy ウィザード make 有毒な醸造 for the 悪い女王 and Jack.")
+
+  doDiff(image, "fallback")
