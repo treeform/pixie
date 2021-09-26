@@ -609,7 +609,7 @@ when defined(amd64) and not defined(pixieNoSimd):
     sourceEven = mm_srli_epi16(sourceEven, 8)
     sourceOdd = mm_srli_epi16(sourceOdd, 8)
 
-    var
+    let
       blendedEven = mm_add_epi16(sourceEven, backdropEven)
       blendedOdd = mm_add_epi16(sourceOdd, backdropOdd)
 

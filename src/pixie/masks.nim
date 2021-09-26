@@ -181,14 +181,14 @@ proc getValueSmooth*(mask: Mask, x, y: float32): uint8 {.raises: [].} =
 
   var topMix = x0y0
   if xFractional > 0 and x0y0 != x1y0:
-    topMix = lerp(x0y0, x1y0, xFractional)
+    topMix = mix(x0y0, x1y0, xFractional)
 
   var bottomMix = x0y1
   if xFractional > 0 and x0y1 != x1y1:
-    bottomMix = lerp(x0y1, x1y1, xFractional)
+    bottomMix = mix(x0y1, x1y1, xFractional)
 
   if yFractional != 0 and topMix != bottomMix:
-    lerp(topMix, bottomMix, yFractional)
+    mix(topMix, bottomMix, yFractional)
   else:
     topMix
 

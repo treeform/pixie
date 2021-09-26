@@ -478,7 +478,7 @@ proc textUber(
     for runeIndex in start .. stop:
       let position = arrangement.positions[runeIndex]
 
-      var path = font.typeface.getGlyphPath(arrangement.runes[runeIndex])
+      let path = font.typeface.getGlyphPath(arrangement.runes[runeIndex])
       path.transform(
         translate(position) *
         scale(vec2(font.scale))

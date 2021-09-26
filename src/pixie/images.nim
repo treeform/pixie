@@ -368,7 +368,7 @@ proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
       else:
         let index = i
 
-      var values = mm_loadu_si128(target.data[index].addr)
+      let values = mm_loadu_si128(target.data[index].addr)
 
       let eqZero = mm_cmpeq_epi16(values, mm_setzero_si128())
       if mm_movemask_epi8(eqZero) != 0xffff:
@@ -571,14 +571,14 @@ proc getRgbaSmooth*(
 
   var topMix = x0y0
   if xFractional > 0 and x0y0 != x1y0:
-    topMix = lerp(x0y0, x1y0, xFractional)
+    topMix = mix(x0y0, x1y0, xFractional)
 
   var bottomMix = x0y1
   if xFractional > 0 and x0y1 != x1y1:
-    bottomMix = lerp(x0y1, x1y1, xFractional)
+    bottomMix = mix(x0y1, x1y1, xFractional)
 
   if yFractional != 0 and topMix != bottomMix:
-    lerp(topMix, bottomMix, yFractional)
+    mix(topMix, bottomMix, yFractional)
   else:
     topMix
 
