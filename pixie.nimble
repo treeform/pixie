@@ -25,9 +25,12 @@ task bindings, "Generate bindings":
     compile "pixie.dll"
 
   elif defined(macosx):
-    compile "libpixie.dylib.arm", "-l:'-target arm64-apple-macos11' -t:'-target arm64-apple-macos11'"
-    compile "libpixie.dylib.x64", "-l:'-target x86_64-apple-macos10.12' -t:'-target x86_64-apple-macos10.12'"
-    exec "lipo bindings/generated/libpixie.dylib.arm bindings/generated/libpixie.dylib.x64 -output bindings/generated/libpixie.dylib -create"
+    #compile "libpixie.dylib.arm", "-l:'-target arm64-apple-macos11' -t:'-target arm64-apple-macos11'"
+    #compile "libpixie.dylib.x64", "-l:'-target x86_64-apple-macos10.12' -t:'-target x86_64-apple-macos10.12'"
+    #exec "lipo bindings/generated/libpixie.dylib.arm bindings/generated/libpixie.dylib.x64 -output bindings/generated/libpixie.dylib -create"
+
+    compile "libpixie.dylib"
+
 
   else:
     compile "libpixie.so"

@@ -10,10 +10,10 @@ proc checkError*(): bool =
   result = lastError != nil
 
 type
-  Vector2* = object
+  Vector2* = object {.bycopy.}
     x*, y*: float32
 
-  Matrix3* = object
+  Matrix3* = object {.bycopy.}
     values*: array[9, float32]
 
 proc matrix3*(): Matrix3 =
