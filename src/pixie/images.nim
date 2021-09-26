@@ -368,7 +368,7 @@ proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
       else:
         let index = i
 
-      var values = mm_loadu_si128(target.data[index].addr)
+      let values = mm_loadu_si128(target.data[index].addr)
 
       let eqZero = mm_cmpeq_epi16(values, mm_setzero_si128())
       if mm_movemask_epi8(eqZero) != 0xffff:
