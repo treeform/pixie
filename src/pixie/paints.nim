@@ -95,7 +95,7 @@ proc gradientPut(
     let
       gs1 = stops[index]
       gs2 = stops[index + 1]
-    color = lerp(
+    color = mix(
       gs1.color,
       gs2.color,
       (t - gs1.position) / (gs2.position - gs1.position)
