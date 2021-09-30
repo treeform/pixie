@@ -318,6 +318,6 @@ exportProcs:
   scale(float32, float32)
   inverse(Matrix3)
 
-writeFiles("bindings/generated", "pixie")
+writeFiles("bindings/generated", "Pixie")
 
 include generated/internal
