@@ -112,51 +112,65 @@ proc hasGlyph*(typeface: Typeface, rune: Rune): bool {.inline.} =
   else:
     typeface.svgFont.hasGlyph(rune)
 
+proc fallbackTypeface*(typeface: Typeface, rune: Rune): Typeface =
+  ## Looks through fallback typefaces to find one that has the glyph.
+  if typeface.hasGlyph(rune):
+    return typeface
+  for fallback in typeface.fallbacks:
+    let typeface = fallback.fallbackTypeface(rune)
+    if typeface != nil:
+      return typeface
+
 proc getGlyphPath*(
   typeface: Typeface, rune: Rune
 ): Path {.inline, raises: [PixieError].} =
   ## The glyph path for the rune.
   result = newPath()
-  if typeface.hasGlyph(rune):
-    if typeface.opentype != nil:
-      result.addPath(typeface.opentype.getGlyphPath(rune))
-    else:
-      result.addPath(typeface.svgFont.getGlyphPath(rune))
+
+  let typeface2 = typeface.fallbackTypeface(rune)
+  if typeface2 == nil:
+    return
+
+  if typeface2.opentype != nil:
+    result.addPath(typeface2.opentype.getGlyphPath(rune))
   else:
-    for fallback in typeface.fallbacks:
-      if fallback.hasGlyph(rune):
-        result = fallback.getGlyphPath(rune)
-        let ratio = typeface.scale / fallback.scale
-        result.transform(scale(vec2(ratio, ratio)))
+    result.addPath(typeface2.svgFont.getGlyphPath(rune))
+
+  # Apply typeface ratio.
+  let ratio = typeface.scale / typeface2.scale
+  if ratio != 1.0:
+    result.transform(scale(vec2(ratio, ratio)))
 
 proc getAdvance*(typeface: Typeface, rune: Rune): float32 {.inline, raises: [].} =
   ## The advance for the rune in pixels.
-  if typeface.hasGlyph(rune):
-    if typeface.opentype != nil:
-      return typeface.opentype.getAdvance(rune)
-    else:
-      return typeface.svgFont.getAdvance(rune)
-  else:
-    for fallback in typeface.fallbacks:
-      if fallback.hasGlyph(rune):
-        result = fallback.getAdvance(rune)
-        let ratio = typeface.scale / fallback.scale
-        result *= ratio
-        return
+  let typeface2 = typeface.fallbackTypeface(rune)
+  if typeface2 == nil:
+    return
 
-    if typeface.opentype != nil:
-      return typeface.opentype.getAdvance(rune)
-    else:
-      return typeface.svgFont.getAdvance(rune)
+  if typeface2.opentype != nil:
+    result = typeface2.opentype.getAdvance(rune)
+  else:
+    result = typeface2.svgFont.getAdvance(rune)
+
+  # Apply typeface ratio.
+  result *= typeface.scale / typeface2.scale
 
 proc getKerningAdjustment*(
   typeface: Typeface, left, right: Rune
 ): float32 {.inline, raises: [].} =
   ## The kerning adjustment for the rune pair, in pixels.
-  if typeface.opentype != nil:
-    typeface.opentype.getKerningAdjustment(left, right)
-  else:
-    typeface.svgfont.getKerningAdjustment(left, right)
+  let
+    typefaceRight = typeface.fallbackTypeface(right)
+    typefaceLeft = typeface.fallbackTypeface(left)
+  # Only do kerning if both typefaces are the same.
+  if typefaceRight == typefaceLeft:
+    if typefaceRight.opentype != nil:
+      result = typefaceRight.opentype.getKerningAdjustment(left, right)
+    else:
+      result = typefaceRight.svgfont.getKerningAdjustment(left, right)
+
+    # Apply typeface ratio.
+    result *= typeface.scale / typefaceRight.scale
 
 proc scale*(font: Font): float32 {.inline, raises: [].} =
   ## The scale factor to transform font units into pixels.

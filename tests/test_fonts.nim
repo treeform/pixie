@@ -1068,3 +1068,26 @@ block:
   image.fillText(font, "Grumpy ウィザード make 有毒な醸造 for the 悪い女王 and Jack.")
 
   doDiff(image, "fallback")
+
+block:
+  let
+    font = readFont("tests/fonts/Inter-Regular.ttf")
+    typeface1 = readTypeface("tests/fonts/Aclonica-Regular_1.ttf")
+    typeface2 = readTypeface("tests/fonts/Ubuntu-Regular_1.ttf")
+    typeface3 = readTypeface("tests/fonts/NotoSansJP-Regular.ttf")
+
+  #  font
+  #   |.... typeface1
+  #         |.... typeface2
+  #         |.... typeface3 (with JP)
+
+  font.typeface.fallbacks.add(typeface1)
+  typeface1.fallbacks.add(typeface2)
+  typeface1.fallbacks.add(typeface3)
+
+  font.size = 26
+  let image = newImage(800, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(font, "Grumpy ウィザード make 有毒な醸造 for the 悪い女王 and Jack.")
+
+  doDiff(image, "fallback2")
