@@ -107,31 +107,27 @@ proc isCCW(typeface: Typeface): bool {.inline.} =
 
 proc hasGlyph*(typeface: Typeface, rune: Rune): bool {.inline.} =
   ## Returns if there is a glyph for this rune.
-  if rune.uint32 > SP.uint32: # Empty paths for control runes (not tofu)
-    if typeface.opentype != nil:
-      typeface.opentype.hasGlyph(rune)
-    else:
-      typeface.svgFont.hasGlyph(rune)
+  if typeface.opentype != nil:
+    typeface.opentype.hasGlyph(rune)
   else:
-    false
+    typeface.svgFont.hasGlyph(rune)
 
 proc getGlyphPath*(
   typeface: Typeface, rune: Rune
 ): Path {.inline, raises: [PixieError].} =
   ## The glyph path for the rune.
   result = newPath()
-  if rune.uint32 > SP.uint32: # Empty paths for control runes (not tofu)
-    if typeface.hasGlyph(rune):
-      if typeface.opentype != nil:
-        result.addPath(typeface.opentype.getGlyphPath(rune))
-      else:
-        result.addPath(typeface.svgFont.getGlyphPath(rune))
+  if typeface.hasGlyph(rune):
+    if typeface.opentype != nil:
+      result.addPath(typeface.opentype.getGlyphPath(rune))
     else:
-      for fallback in typeface.fallbacks:
-        if fallback.hasGlyph(rune):
-          result = fallback.getGlyphPath(rune)
-          let ratio = typeface.scale / fallback.scale
-          result.transform(scale(vec2(ratio, ratio)))
+      result.addPath(typeface.svgFont.getGlyphPath(rune))
+  else:
+    for fallback in typeface.fallbacks:
+      if fallback.hasGlyph(rune):
+        result = fallback.getGlyphPath(rune)
+        let ratio = typeface.scale / fallback.scale
+        result.transform(scale(vec2(ratio, ratio)))
 
 proc getAdvance*(typeface: Typeface, rune: Rune): float32 {.inline, raises: [].} =
   ## The advance for the rune in pixels.
@@ -152,7 +148,6 @@ proc getAdvance*(typeface: Typeface, rune: Rune): float32 {.inline, raises: [].}
       return typeface.opentype.getAdvance(rune)
     else:
       return typeface.svgFont.getAdvance(rune)
-
 
 proc getKerningAdjustment*(
   typeface: Typeface, left, right: Rune
