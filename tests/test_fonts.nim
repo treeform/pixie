@@ -1091,3 +1091,13 @@ block:
   image.fillText(font, "Grumpy ウィザード make 有毒な醸造 for the 悪い女王 and Jack.")
 
   doDiff(image, "fallback2")
+
+block:
+  var font = readFont("tests/fonts/Inter-Regular.ttf")
+
+  font.size = 26
+  let image = newImage(800, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(font, "This[]Advance!")
+
+  doDiff(image, "tofu_advance")

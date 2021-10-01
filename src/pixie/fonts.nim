@@ -143,9 +143,10 @@ proc getGlyphPath*(
 
 proc getAdvance*(typeface: Typeface, rune: Rune): float32 {.inline, raises: [].} =
   ## The advance for the rune in pixels.
-  let typeface2 = typeface.fallbackTypeface(rune)
+  var typeface2 = typeface.fallbackTypeface(rune)
   if typeface2 == nil:
-    return
+    # Get tofu advance, see tofu_advance test.
+    typeface2 = typeface
 
   if typeface2.opentype != nil:
     result = typeface2.opentype.getAdvance(rune)
