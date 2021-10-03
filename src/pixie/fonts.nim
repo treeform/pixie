@@ -12,6 +12,7 @@ type
     opentype: OpenType
     svgFont: SvgFont
     filePath*: string
+    fallbacks*: seq[Typeface]
 
   Font* = ref object
     typeface*: Typeface
@@ -52,6 +53,13 @@ type
     tcTitle
     # tcSmallCaps
     # tcSmallCapsForced
+
+proc scale*(typeface: Typeface): float32 {.inline, raises: [].} =
+  ## The scale factor to transform font units into pixels.
+  if typeface.opentype != nil:
+    typeface.opentype.head.unitsPerEm.float32
+  else:
+    typeface.svgFont.unitsPerEm
 
 proc ascent*(typeface: Typeface): float32 {.raises: [].} =
   ## The font ascender value in font units.
@@ -97,49 +105,77 @@ proc isCCW(typeface: Typeface): bool {.inline.} =
   if typeface.opentype != nil:
     return typeface.opentype.isCCW()
 
+proc hasGlyph*(typeface: Typeface, rune: Rune): bool {.inline.} =
+  ## Returns if there is a glyph for this rune.
+  if typeface.opentype != nil:
+    typeface.opentype.hasGlyph(rune)
+  else:
+    typeface.svgFont.hasGlyph(rune)
+
+proc fallbackTypeface*(typeface: Typeface, rune: Rune): Typeface =
+  ## Looks through fallback typefaces to find one that has the glyph.
+  if typeface.hasGlyph(rune):
+    return typeface
+  for fallback in typeface.fallbacks:
+    let typeface = fallback.fallbackTypeface(rune)
+    if typeface != nil:
+      return typeface
+
 proc getGlyphPath*(
   typeface: Typeface, rune: Rune
 ): Path {.inline, raises: [PixieError].} =
   ## The glyph path for the rune.
   result = newPath()
-  if rune.uint32 > SP.uint32: # Empty paths for control runes (not tofu)
-    if typeface.opentype != nil:
-      result.addPath(typeface.opentype.getGlyphPath(rune))
-    else:
-      result.addPath(typeface.svgFont.getGlyphPath(rune))
 
-proc hasGlyph*(typeface: Typeface, rune: Rune): bool {.inline.} =
-  ## Returns if there is a glyph for this rune.
-  if rune.uint32 > SP.uint32: # Empty paths for control runes (not tofu)
-    if typeface.opentype != nil:
-      typeface.opentype.hasGlyph(rune)
-    else:
-      typeface.svgFont.hasGlyph(rune)
+  let typeface2 = typeface.fallbackTypeface(rune)
+  if typeface2 == nil:
+    return
+
+  if typeface2.opentype != nil:
+    result.addPath(typeface2.opentype.getGlyphPath(rune))
   else:
-    false
+    result.addPath(typeface2.svgFont.getGlyphPath(rune))
+
+  # Apply typeface ratio.
+  let ratio = typeface.scale / typeface2.scale
+  if ratio != 1.0:
+    result.transform(scale(vec2(ratio, ratio)))
 
 proc getAdvance*(typeface: Typeface, rune: Rune): float32 {.inline, raises: [].} =
   ## The advance for the rune in pixels.
-  if typeface.opentype != nil:
-    typeface.opentype.getAdvance(rune)
+  var typeface2 = typeface.fallbackTypeface(rune)
+  if typeface2 == nil:
+    # Get tofu advance, see tofu_advance test.
+    typeface2 = typeface
+
+  if typeface2.opentype != nil:
+    result = typeface2.opentype.getAdvance(rune)
   else:
-    typeface.svgFont.getAdvance(rune)
+    result = typeface2.svgFont.getAdvance(rune)
+
+  # Apply typeface ratio.
+  result *= typeface.scale / typeface2.scale
 
 proc getKerningAdjustment*(
   typeface: Typeface, left, right: Rune
 ): float32 {.inline, raises: [].} =
   ## The kerning adjustment for the rune pair, in pixels.
-  if typeface.opentype != nil:
-    typeface.opentype.getKerningAdjustment(left, right)
-  else:
-    typeface.svgfont.getKerningAdjustment(left, right)
+  let
+    typefaceRight = typeface.fallbackTypeface(right)
+    typefaceLeft = typeface.fallbackTypeface(left)
+  # Only do kerning if both typefaces are the same.
+  if typefaceRight == typefaceLeft:
+    if typefaceRight.opentype != nil:
+      result = typefaceRight.opentype.getKerningAdjustment(left, right)
+    else:
+      result = typefaceRight.svgfont.getKerningAdjustment(left, right)
+
+    # Apply typeface ratio.
+    result *= typeface.scale / typefaceRight.scale
 
 proc scale*(font: Font): float32 {.inline, raises: [].} =
   ## The scale factor to transform font units into pixels.
-  if font.typeface.opentype != nil:
-    font.size / font.typeface.opentype.head.unitsPerEm.float32
-  else:
-    font.size / font.typeface.svgFont.unitsPerEm
+  font.size / font.typeface.scale
 
 proc defaultLineHeight*(font: Font): float32 {.inline, raises: [].} =
   ## The default line height in pixels for the current font size.
