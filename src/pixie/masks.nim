@@ -153,6 +153,22 @@ proc minifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
     # Set src as this result for if we do another power
     src = result
 
+proc magnifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
+  ## Scales mask up by 2 ^ power.
+  if power < 0:
+    raise newException(PixieError, "Cannot magnifyBy2 with negative power")
+
+  let scale = 2 ^ power
+  result = newMask(mask.width * scale, mask.height * scale)
+  for y in 0 ..< result.height:
+    for x in 0 ..< mask.width:
+      let
+        value = mask.getValueUnsafe(x, y div scale)
+        scaledX = x * scale
+        idx = result.dataIndex(scaledX, y)
+      for i in 0 ..< scale:
+        result.data[idx + i] = value
+
 proc fillUnsafe*(
   data: var seq[uint8], value: uint8, start, len: int
 ) {.raises: [].} =

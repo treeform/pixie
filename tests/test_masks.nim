@@ -37,6 +37,12 @@ block:
   writeFile("tests/images/masks/maskMinified.png", minified.encodePng())
 
 block:
+  let
+    a = readImage("tests/images/masks/maskMinified.png")
+    b = a.magnifyBy2()
+  b.writeFile("tests/images/masks/maskMagnified.png")
+
+block:
   let image = newImage(100, 100)
   image.fill(rgba(255, 100, 100, 255))
 
