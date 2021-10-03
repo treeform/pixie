@@ -26,10 +26,10 @@ block:
 
   for file in pngSuiteCorruptedFiles:
     try:
-      discard decodePng(readFile(&"tests/images/png/pngsuite/{file}.png"))
+      discard decodePng(readFile(&"tests/fileformats/png/pngsuite/{file}.png"))
       doAssert false
     except PixieError:
       discard
 
 block:
-  discard readImage("tests/images/png/trailing_data.png")
+  discard readImage("tests/fileformats/png/trailing_data.png")

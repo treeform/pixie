@@ -34,13 +34,13 @@ block:
 
   doAssert minified.width == 50 and minified.height == 50
 
-  writeFile("tests/images/masks/maskMinified.png", minified.encodePng())
+  writeFile("tests/masks/maskMinified.png", minified.encodePng())
 
 block:
   let
-    a = readImage("tests/images/masks/maskMinified.png")
+    a = readImage("tests/masks/maskMinified.png")
     b = a.magnifyBy2()
-  b.writeFile("tests/images/masks/maskMagnified.png")
+  b.writeFile("tests/masks/maskMagnified.png")
 
 block:
   let image = newImage(100, 100)
@@ -53,7 +53,7 @@ block:
   mask.fillPath(path)
 
   image.draw(mask)
-  image.writeFile("tests/images/masks/circleMask.png")
+  image.writeFile("tests/masks/circleMask.png")
 
 block:
   let a = newMask(100, 100)
@@ -66,7 +66,7 @@ block:
   b.fillPath(path)
 
   a.draw(b)
-  writeFile("tests/images/masks/maskedMask.png", a.encodePng())
+  writeFile("tests/masks/maskedMask.png", a.encodePng())
 
 block:
   let a = newMask(100, 100)
@@ -79,7 +79,7 @@ block:
   b.fillPath(path, rgba(0, 0, 0, 255))
 
   a.draw(b)
-  writeFile("tests/images/masks/imageMaskedMask.png", a.encodePng())
+  writeFile("tests/masks/imageMaskedMask.png", a.encodePng())
 
 block:
   let path = newPath()
@@ -90,7 +90,7 @@ block:
 
   a.spread(10)
 
-  writeFile("tests/images/masks/spread.png", a.encodePng())
+  writeFile("tests/masks/spread.png", a.encodePng())
 
 block:
   let mask = newMask(100, 100)
@@ -101,7 +101,7 @@ block:
   mask.fillPath(path)
   mask.ceil()
 
-  writeFile("tests/images/masks/circleMaskSharpened.png", mask.encodePng())
+  writeFile("tests/masks/circleMaskSharpened.png", mask.encodePng())
 
 block:
   let path = newPath()
@@ -109,7 +109,7 @@ block:
 
   let mask = newMask(100, 100)
   mask.fillPath(path)
-  writeFile("tests/images/masks/drawRect.png", mask.encodePng())
+  writeFile("tests/masks/drawRect.png", mask.encodePng())
 
 block:
   let path = newPath()
@@ -117,7 +117,7 @@ block:
 
   let mask = newMask(100, 100)
   mask.strokePath(path, strokeWidth = 10)
-  writeFile("tests/images/masks/strokeRect.png", mask.encodePng())
+  writeFile("tests/masks/strokeRect.png", mask.encodePng())
 
 block:
   let path = newPath()
@@ -125,14 +125,14 @@ block:
 
   let mask = newMask(100, 100)
   mask.fillPath(path)
-  writeFile("tests/images/masks/drawRoundedRect.png", mask.encodePng())
+  writeFile("tests/masks/drawRoundedRect.png", mask.encodePng())
 
 block:
   let path = newPath()
   path.roundedRect(rect(vec2(10, 10), vec2(30, 30)), 10, 10, 10, 10)
   let mask = newMask(100, 100)
   mask.strokePath(path, strokeWidth = 10)
-  writeFile("tests/images/masks/strokeRoundedRect.png", mask.encodePng())
+  writeFile("tests/masks/strokeRoundedRect.png", mask.encodePng())
 
 block:
   let path = newPath()
@@ -141,7 +141,7 @@ block:
 
   let mask = newMask(100, 100)
   mask.strokePath(path, strokeWidth = 10)
-  writeFile("tests/images/masks/drawSegment.png", mask.encodePng())
+  writeFile("tests/masks/drawSegment.png", mask.encodePng())
 
 block:
   let path = newPath()
@@ -149,7 +149,7 @@ block:
 
   let mask = newMask(100, 100)
   mask.fillPath(path)
-  writeFile("tests/images/masks/drawEllipse.png", mask.encodePng())
+  writeFile("tests/masks/drawEllipse.png", mask.encodePng())
 
 block:
   let path = newPath()
@@ -157,7 +157,7 @@ block:
 
   let mask = newMask(100, 100)
   mask.strokePath(path, strokeWidth = 10)
-  writeFile("tests/images/masks/strokeEllipse.png", mask.encodePng())
+  writeFile("tests/masks/strokeEllipse.png", mask.encodePng())
 
 block:
   let path = newPath()
@@ -165,7 +165,7 @@ block:
 
   let mask = newMask(100, 100)
   mask.fillPath(path)
-  writeFile("tests/images/masks/drawPolygon.png", mask.encodePng())
+  writeFile("tests/masks/drawPolygon.png", mask.encodePng())
 
 block:
   let path = newPath()
@@ -173,7 +173,7 @@ block:
 
   let mask = newMask(100, 100)
   mask.strokepath(path, strokeWidth = 10)
-  writeFile("tests/images/masks/strokePolygon.png", mask.encodePng())
+  writeFile("tests/masks/strokePolygon.png", mask.encodePng())
 
 block:
   let path = newPath()
@@ -193,4 +193,4 @@ block:
   mask.blur(25)
 
   let minified = mask.minifyBy2()
-  writeFile("tests/images/masks/minifiedBlur.png", minified.encodePng())
+  writeFile("tests/masks/minifiedBlur.png", minified.encodePng())

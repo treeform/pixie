@@ -14,45 +14,45 @@ block:
     heartShape,
     rgba(255, 0, 0, 255)
   )
-  image.writeFile("tests/images/paths/paintSolid.png")
+  image.writeFile("tests/paths/paintSolid.png")
 
 block:
   let paint = newPaint(pkImage)
-  paint.image = decodePng(readFile("tests/images/png/baboon.png"))
+  paint.image = decodePng(readFile("tests/fileformats/png/baboon.png"))
   paint.imageMat = scale(vec2(0.2, 0.2))
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/images/paths/paintImage.png")
+  image.writeFile("tests/paths/paintImage.png")
 
 block:
   let paint = newPaint(pkImage)
-  paint.image = decodePng(readFile("tests/images/png/baboon.png"))
+  paint.image = decodePng(readFile("tests/fileformats/png/baboon.png"))
   paint.imageMat = scale(vec2(0.2, 0.2))
   paint.opacity = 0.5
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/images/paths/paintImageOpacity.png")
+  image.writeFile("tests/paths/paintImageOpacity.png")
 
 block:
   let paint = newPaint(pkImageTiled)
-  paint.image = decodePng(readFile("tests/images/png/baboon.png"))
+  paint.image = decodePng(readFile("tests/fileformats/png/baboon.png"))
   paint.imageMat = scale(vec2(0.02, 0.02))
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/images/paths/paintImageTiled.png")
+  image.writeFile("tests/paths/paintImageTiled.png")
 
 block:
   let paint = newPaint(pkImageTiled)
-  paint.image = decodePng(readFile("tests/images/png/baboon.png"))
+  paint.image = decodePng(readFile("tests/fileformats/png/baboon.png"))
   paint.imageMat = scale(vec2(0.02, 0.02))
   paint.opacity = 0.5
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/images/paths/paintImageTiledOpacity.png")
+  image.writeFile("tests/paths/paintImageTiledOpacity.png")
 
 block:
   let paint = newPaint(pkGradientLinear)
@@ -67,7 +67,7 @@ block:
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/images/paths/gradientLinear.png")
+  image.writeFile("tests/paths/gradientLinear.png")
 
 block:
   let paint = newPaint(pkGradientRadial)
@@ -83,7 +83,7 @@ block:
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/images/paths/gradientRadial.png")
+  image.writeFile("tests/paths/gradientRadial.png")
 
 block:
   let paint = newPaint(pkGradientAngular)
@@ -99,7 +99,7 @@ block:
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/images/paths/gradientAngular.png")
+  image.writeFile("tests/paths/gradientAngular.png")
 
 block:
   let paint = newPaint(pkGradientAngular)
@@ -116,4 +116,4 @@ block:
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/images/paths/gradientAngularOpacity.png")
+  image.writeFile("tests/paths/gradientAngularOpacity.png")

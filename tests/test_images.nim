@@ -113,7 +113,7 @@ block:
 
 block:
   let
-    a = readImage("tests/images/png/baboon.png")
+    a = readImage("tests/fileformats/png/baboon.png")
     b = a.minifyBy2()
   b.writeFile("tests/images/minifiedBaboon.png")
 
