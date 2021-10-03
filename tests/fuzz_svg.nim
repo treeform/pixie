@@ -2,7 +2,7 @@ import pixie/common, pixie/fileformats/svg, random, strformat
 
 randomize()
 
-let original = readFile("tests/images/svg/Ghostscript_Tiger.svg")
+let original = readFile("tests/fileformats/svg/Ghostscript_Tiger.svg")
 
 for i in 0 ..< 10_000:
   var data = original

@@ -2,7 +2,7 @@ import pixie/common, pixie/fileformats/gif, random, strformat
 
 randomize()
 
-let original = readFile("tests/images/gif/sunflower.gif")
+let original = readFile("tests/fileformats/gif/sunflower.gif")
 
 for i in 0 ..< 10_000:
   var data = original

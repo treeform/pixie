@@ -34,7 +34,7 @@ timeIt "ceil":
 reset()
 
 block spread_1:
-  var p: Path
+  let p = newPath()
   p.rect(500, 500, 500, 500)
 
   timeIt "spread_1":
@@ -43,7 +43,7 @@ block spread_1:
     mask.spread(10)
 
 block spread_2:
-  var p: Path
+  let p = newPath()
   p.rect(500, 500, 1000, 1000)
 
   timeIt "spread_2":

@@ -28,11 +28,11 @@ timeIt "blendMultiply":
   for i in 0 ..< backdrop.data.len:
     backdrop.data[i] = blendMultiply(backdrop.data[i], source.data[i])
 
-reset()
+# reset()
 
-timeIt "blendLinearBurn":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendLinearBurn(backdrop.data[i], source.data[i])
+# timeIt "blendLinearBurn":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendLinearBurn(backdrop.data[i], source.data[i])
 
 reset()
 
@@ -52,11 +52,11 @@ timeIt "blendScreen":
   for i in 0 ..< backdrop.data.len:
     backdrop.data[i] = blendScreen(backdrop.data[i], source.data[i])
 
-reset()
+# reset()
 
-timeIt "blendLinearDodge":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendLinearDodge(backdrop.data[i], source.data[i])
+# timeIt "blendLinearDodge":
+#   for i in 0 ..< backdrop.data.len:
+#     backdrop.data[i] = blendLinearDodge(backdrop.data[i], source.data[i])
 
 reset()
 
@@ -129,12 +129,6 @@ reset()
 timeIt "blendSubtractMask":
   for i in 0 ..< backdrop.data.len:
     backdrop.data[i] = blendSubtractMask(backdrop.data[i], source.data[i])
-
-reset()
-
-timeIt "blendIntersectMask":
-  for i in 0 ..< backdrop.data.len:
-    backdrop.data[i] = blendIntersectMask(backdrop.data[i], source.data[i])
 
 reset()
 

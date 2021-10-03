@@ -68,7 +68,7 @@ proc blurSlower*(
 let image = newImage(1920, 1080)
 
 proc reset() =
-  var path: Path
+  let path = newPath()
   path.rect(100, 100, 1720, 880)
   image.fillPath(path, rgba(255, 255, 255, 255))
 

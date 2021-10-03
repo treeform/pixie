@@ -70,7 +70,7 @@ timeIt "toStraightAlpha":
 reset()
 
 block:
-  var path: Path
+  let path = newPath()
   path.ellipse(image.width / 2, image.height / 2, 300, 300)
 
   let mask = newMask(image.width, image.height)

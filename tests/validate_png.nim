@@ -2,8 +2,8 @@ import chroma, pixie/fileformats/png, pngsuite, stb_image/read as stbi, strforma
 
 for file in pngSuiteFiles:
   let
-    data = readFile(&"tests/images/png/pngsuite/{file}.png")
-    pixieLoaded = decodePng(cast[seq[uint8]](data))
+    data = readFile(&"tests/fileformats/png/pngsuite/{file}.png")
+    pixieLoaded = decodePngRaw(data)
 
   var
     width, height, channels: int
