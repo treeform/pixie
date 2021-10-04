@@ -588,21 +588,28 @@ proc drawCorrect(
 
   var
     matInv = mat.inverse()
+    # Compute movement vectors
+    p = matInv * vec2(0 + h, 0 + h)
+    dx = matInv * vec2(1 + h, 0 + h) - p
+    dy = matInv * vec2(0 + h, 1 + h) - p
+    filterBy2 = max(dx.length, dy.length)
     b = b
 
-  block: # Shrink by 2 as needed
-    var
-      p = matInv * vec2(0 + h, 0 + h)
-      dx = matInv * vec2(1 + h, 0 + h) - p
-      dy = matInv * vec2(0 + h, 1 + h) - p
-      minFilterBy2 = max(dx.length, dy.length)
+  while filterBy2 >= 2.0:
+    b = b.minifyBy2()
+    p /= 2
+    dx /= 2
+    dy /= 2
+    filterBy2 /= 2
+    matInv = scale(vec2(1/2, 1/2)) * matInv
 
-    while minFilterBy2 >= 2:
-      b = b.minifyBy2()
-      dx /= 2
-      dy /= 2
-      minFilterBy2 /= 2
-      matInv = matInv * scale(vec2(0.5, 0.5))
+  while filterBy2 <= 0.5:
+    b = b.magnifyBy2()
+    p *= 2
+    dx *= 2
+    dy *= 2
+    filterBy2 *= 2
+    matInv = scale(vec2(2, 2)) * matInv
 
   for y in 0 ..< a.height:
     for x in 0 ..< a.width:
