@@ -10,7 +10,7 @@ var
   frameCount = 0
   image = Image(w, h)
   app = App()
-  frame = Frame()
+  frame = Frame(title="wNim/Pixie")
 
 proc draw() =
   # draw shiny sphere on gradient background
@@ -18,9 +18,9 @@ proc draw() =
   linerGradient.gradientHandlePositions.add(vec2(0, 0))
   linerGradient.gradientHandlePositions.add(vec2(0, 256))
   linerGradient.gradientStops.add(
-    ColorStop(color: rgbx(0, 0, 0, 255), position: 0))
+    ColorStop(color: color(0, 0, 0, 1), position: 0))
   linerGradient.gradientStops.add(
-    ColorStop(color: rgbx(255, 255, 255, 255), position: 1))
+    ColorStop(color: color(1, 1, 1, 1), position: 1))
   ctx.fillStyle = linerGradient
   ctx.fillRect(0, 0, 256, 256)
 
@@ -29,12 +29,14 @@ proc draw() =
   radialGradient.gradientHandlePositions.add(vec2(256, 128))
   radialGradient.gradientHandlePositions.add(vec2(128, 256))
   radialGradient.gradientStops.add(
-    ColorStop(color: rgbx(255, 255, 255, 255), position: 0))
+    ColorStop(color: color(1, 1, 1, 1), position: 0))
   radialGradient.gradientStops.add(
-    ColorStop(color: rgbx(0, 0, 0, 255), position: 1))
+    ColorStop(color: color(0, 0, 0, 1), position: 1))
   ctx.fillStyle = radialGradient
-  ctx.fillCircle(vec2(128.0, 128.0 + sin(float(frameCount)/10.0) * 20), 76.8)
-
+  ctx.fillCircle(circle(
+    vec2(128.0, 128.0 + sin(float32(frameCount)/10.0) * 20),
+    76.8
+  ))
   inc frameCount
 
 proc render() =
