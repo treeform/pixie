@@ -174,6 +174,18 @@ block:
   a.draw(b, translate(vec2(14.64, 50.4)) * rotate(45.toRadians))
   doDiff(a, "smooth2")
 
+# block:
+#   let
+#     a = newImage(100, 100)
+#     b = newImage(100, 100)
+#     path = newPath()
+#   path.rect(-25, -25, 50, 50)
+#   path.transform(rotate(45 * PI.float32 / 180))
+#   b.fillPath(path, rgba(0, 0, 0, 255), translate(vec2(50, 50)))
+#   a.fill(rgba(255, 255, 255, 255))
+#   a.draw(b, translate(vec2(0, 0.4)))
+#   doDiff(a, "smooth2")
+
 block:
   let
     a = newImage(100, 100)
