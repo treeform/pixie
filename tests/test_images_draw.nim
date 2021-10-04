@@ -136,14 +136,6 @@ proc doDiff(rendered: Image, name: string) =
   echo &"{name} score: {diffScore}"
   diffImage.writeFile(&"tests/images/diffs/{name}.png")
 
-# block:
-#   let
-#     image = newImage(100, 100)
-#     path = newPath()
-#   path.rect(0, 0, 99, 99)
-#   image.fillPath(path, rgba(0, 0, 0, 255), translate(vec2(0.5, 0.5)))
-#   doDiff(image, "smooth1")
-
 block:
   let
     a = newImage(100, 100)
@@ -153,18 +145,6 @@ block:
   a.draw(b, translate(vec2(0.5, 0.5)))
   doDiff(a, "smooth1")
 
-# block:
-#   let
-#     a = newImage(100, 100)
-#     b = newImage(100, 100)
-#     path = newPath()
-#   path.rect(-25, -25, 50, 50)
-#   path.transform(rotate(45 * PI.float32 / 180))
-#   b.fillPath(path, rgba(0, 0, 0, 255), translate(vec2(50, 50)))
-#   a.fill(rgba(255, 255, 255, 255))
-#   a.draw(b, translate(vec2(0, 0.4)))
-#   doDiff(a, "smooth2")
-
 block:
   let
     a = newImage(100, 100)
@@ -173,18 +153,6 @@ block:
   b.fill(rgbx(0, 0, 0, 255))
   a.draw(b, translate(vec2(14.64, 50.4)) * rotate(45.toRadians))
   doDiff(a, "smooth2")
-
-# block:
-#   let
-#     a = newImage(100, 100)
-#     b = newImage(100, 100)
-#     path = newPath()
-#   path.rect(-25, -25, 50, 50)
-#   path.transform(rotate(45 * PI.float32 / 180))
-#   b.fillPath(path, rgba(0, 0, 0, 255), translate(vec2(50, 50)))
-#   a.fill(rgba(255, 255, 255, 255))
-#   a.draw(b, translate(vec2(0, 0.4)))
-#   doDiff(a, "smooth2")
 
 block:
   let
