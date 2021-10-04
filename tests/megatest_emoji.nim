@@ -57,7 +57,7 @@ proc renderEmojiSet(index: int) =
         bmOverwrite
       )
 
-  rendered.writeFile(&"tests/images/svg/{emojiSet.name}.png")
+  rendered.writeFile(&"tests/fileformats/svg/{emojiSet.name}.png")
 
 proc main(index = -1) =
   if index >= 0:

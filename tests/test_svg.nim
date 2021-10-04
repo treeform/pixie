@@ -17,12 +17,12 @@ const files = [
 ]
 
 proc doDiff(rendered: Image, name: string) =
-  rendered.writeFile(&"tests/images/svg/rendered/{name}.png")
+  rendered.writeFile(&"tests/fileformats/svg/rendered/{name}.png")
   let
-    master = readImage(&"tests/images/svg/masters/{name}.png")
+    master = readImage(&"tests/fileformats/svg/masters/{name}.png")
     (diffScore, diffImage) = diff(master, rendered)
   echo &"{name} score: {diffScore}"
-  diffImage.writeFile(&"tests/images/svg/diffs/{name}.png")
+  diffImage.writeFile(&"tests/fileformats/svg/diffs/{name}.png")
 
 for file in files:
-  doDiff(decodeSvg(readFile(&"tests/images/svg/{file}.svg")), file)
+  doDiff(decodeSvg(readFile(&"tests/fileformats/svg/{file}.svg")), file)

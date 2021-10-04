@@ -12,14 +12,12 @@ for i in 0 ..< 10_000:
   data[pos] = value
   echo &"{i} {pos} {value.uint8}"
   try:
-    let path = parsePath(data)
-    doAssert path.commands.len >= 0
+    discard parsePath(data)
   except PixieError:
     discard
 
   data = data[0 ..< pos]
   try:
-    let path = parsePath(data)
-    doAssert path.commands.len >= 0
+    discard parsePath(data)
   except PixieError:
     discard

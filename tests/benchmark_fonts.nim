@@ -7,13 +7,13 @@ font.size = 16
 
 let
   image = newImage(500, 300)
-  mask = newMask(500, 300)
+  # mask = newMask(500, 300)
 
 timeIt "typeset":
-  discard font.typeset(text, bounds = image.wh)
+  discard font.typeset(text, bounds = vec2(image.width.float32, 0))
 
 timeIt "rasterize":
   image.fill(rgba(255, 255, 255, 255))
-  image.fillText(font, text, bounds = image.wh)
+  image.fillText(font, text, bounds = vec2(image.width.float32, 0))
   # mask.fill(0)
   # mask.fillText(font, text, bounds = mask.wh)

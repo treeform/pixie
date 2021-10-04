@@ -43,7 +43,7 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   b.fill(rgba(0, 255, 0, 255))
 
-  a.draw(b, translate(vec2(0, 0)))
+  a.draw(b)
 
   a.writeFile("tests/images/flipped1.png")
   a.flipVertical()
@@ -113,7 +113,7 @@ block:
 
 block:
   let
-    a = readImage("tests/images/png/baboon.png")
+    a = readImage("tests/fileformats/png/baboon.png")
     b = a.minifyBy2()
   b.writeFile("tests/images/minifiedBaboon.png")
 

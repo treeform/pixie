@@ -2,7 +2,7 @@ import benchy, cairo, nimPNG, pixie/fileformats/png, stb_image/read as stbi,
     stb_image/write as stbr
 
 let
-  filePath = "tests/images/png/lenna.png"
+  filePath = "tests/fileformats/png/lenna.png"
   data = readFile(filePath)
 
 timeIt "pixie decode":

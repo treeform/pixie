@@ -58,7 +58,7 @@ proc renderIconSet(index: int) =
         bmOverwrite
       )
 
-  rendered.writeFile(&"tests/images/svg/{iconSet.name}.png")
+  rendered.writeFile(&"tests/fileformats/svg/{iconSet.name}.png")
 
 proc main(index = -1) =
   if index >= 0:

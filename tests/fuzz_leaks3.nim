@@ -5,7 +5,7 @@ when not defined(pixieLeakCheck):
 
 randomize()
 
-let data = readFile("tests/images/svg/Ghostscript_Tiger.svg")
+let data = readFile("tests/fileformats/svg/Ghostscript_Tiger.svg")
 
 for i in 0 ..< 100_000:
   var image = decodeSvg(data, rand(300 .. 1800), rand(30 .. 1800))

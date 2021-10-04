@@ -2,7 +2,7 @@ import pixie/common, pixie/fileformats/jpg, random, strformat
 
 randomize()
 
-let original = cast[seq[uint8]](readFile("tests/images/jpg/jpeg420exif.jpg"))
+let original = cast[seq[uint8]](readFile("tests/fileformats/jpg/jpeg420exif.jpg"))
 
 for i in 0 ..< 10_000:
   var data = original
