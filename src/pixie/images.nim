@@ -716,29 +716,26 @@ proc drawUber(
 
     if smooth:
       var srcPos = p + dx * xMin.float32 + dy * y.float32
-      srcPos = vec2(srcPos.x, srcPos.y)
+      srcPos = vec2(srcPos.x - h, srcPos.y - h)
 
       for x in xMin ..< xMax:
-        let
-          xFloat = srcPos.x - h
-          yFloat = srcPos.y - h
         when type(a) is Image:
           let backdrop = a.getRgbaUnsafe(x, y)
           when type(b) is Image:
             let
-              sample = b.getRgbaSmooth(xFloat, yFloat)
+              sample = b.getRgbaSmooth(srcPos.x, srcPos.y)
               blended = blender(backdrop, sample)
           else: # b is a Mask
             let
-              sample = b.getValueSmooth(xFloat, yFloat)
+              sample = b.getValueSmooth(srcPos.x, srcPos.y)
               blended = blender(backdrop, rgbx(0, 0, 0, sample))
           a.setRgbaUnsafe(x, y, blended)
         else: # a is a Mask
           let backdrop = a.getValueUnsafe(x, y)
           when type(b) is Image:
-            let sample = b.getRgbaSmooth(xFloat, yFloat).a
+            let sample = b.getRgbaSmooth(srcPos.x, srcPos.y).a
           else: # b is a Mask
-            let sample = b.getValueSmooth(xFloat, yFloat)
+            let sample = b.getValueSmooth(srcPos.x, srcPos.y)
           a.setValueUnsafe(x, y, masker(backdrop, sample))
 
         srcPos += dx
