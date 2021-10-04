@@ -237,3 +237,15 @@ block:
     scale(vec2(263.86/40, 263.86/40))
   a.draw(b, m)
   doDiff(a, "smooth11")
+
+block:
+  let
+    a = newImage(100, 100)
+    b = readImage(&"tests/images/turtle.png")
+  a.fill(rgba(255, 255, 255, 255))
+  let m = translate(vec2(50, 50)) * rotate(-5.toRadians)
+  a.draw(b, m * translate(vec2(0,0)))
+  a.draw(b, m * translate(vec2(-40,0)))
+  a.draw(b, m * translate(vec2(-40,-40)))
+  a.draw(b, m * translate(vec2(0,-40)))
+  doDiff(a, "smooth12")
