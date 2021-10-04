@@ -199,3 +199,30 @@ block:
   let m = translate(vec2(50, 50)) * rotate(30.toRadians) * scale(vec2(0.1, 0.1))
   a.draw(b, m)
   doDiff(a, "smooth7")
+
+block:
+  let
+    a = newImage(100, 100)
+    b = readImage(&"tests/images/turtle.png")
+  a.fill(rgba(255, 255, 255, 255))
+  let m = scale(vec2(2, 2))
+  a.draw(b, m)
+  doDiff(a, "smooth8")
+
+block:
+  let
+    a = newImage(100, 100)
+    b = readImage(&"tests/images/turtle.png")
+  a.fill(rgba(255, 255, 255, 255))
+  let m = translate(vec2(1, 1)) * scale(vec2(2, 2))
+  a.draw(b, m)
+  doDiff(a, "smooth9")
+
+block:
+  let
+    a = newImage(100, 100)
+    b = readImage(&"tests/images/turtle.png")
+  a.fill(rgba(255, 255, 255, 255))
+  let m = translate(vec2(0.5, 0.5)) * scale(vec2(2, 2))
+  a.draw(b, m)
+  doDiff(a, "smooth10")
