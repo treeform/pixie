@@ -1,4 +1,4 @@
-import pixie
+import pixie, strformat
 
 block:
   let
@@ -127,3 +127,49 @@ block:
 
   a.draw(b, translate(vec2(250, 250)) * scale(vec2(0.5, 0.5)))
   a.writeFile("tests/images/scaleHalf.png")
+
+proc doDiff(rendered: Image, name: string) =
+  rendered.writeFile(&"tests/images/rendered/{name}.png")
+  let
+    master = readImage(&"tests/images/masters/{name}.png")
+    (diffScore, diffImage) = diff(master, rendered)
+  echo &"{name} score: {diffScore}"
+  diffImage.writeFile(&"tests/images/diffs/{name}.png")
+
+block:
+  let
+    image = newImage(100, 100)
+    path = newPath()
+  path.rect(0, 0, 99, 99)
+  image.fillPath(path, rgba(0, 0, 0, 255), translate(vec2(0.5, 0.5)))
+  doDiff(image, "smooth1")
+
+block:
+  let
+    a = newImage(100, 100)
+    b = newImage(100, 100)
+    path = newPath()
+  path.rect(-25, -25, 50, 50)
+  path.transform(rotate(45 * PI.float32 / 180))
+  b.fillPath(path, rgba(0, 0, 0, 255), translate(vec2(50, 50)))
+  a.fill(rgba(255, 255, 255, 255))
+  a.draw(b, translate(vec2(0, 0.4)))
+  doDiff(a, "smooth2")
+
+block:
+  let
+    a = newImage(100, 100)
+    b = newImage(50, 50)
+  a.fill(rgba(255, 255, 255, 255))
+  b.fill(rgba(0, 0, 0, 255))
+  a.draw(b, translate(vec2(25.2, 25)))
+  doDiff(a, "smooth3")
+
+block:
+  let
+    a = newImage(100, 100)
+    b = newImage(50, 50)
+  a.fill(rgba(255, 255, 255, 255))
+  b.fill(rgba(0, 0, 0, 255))
+  a.draw(b, translate(vec2(25.2, 25.6)))
+  doDiff(a, "smooth4")
