@@ -475,10 +475,10 @@ proc blur*(
 
   template rgbx(values: array[4, uint32]): ColorRGBX =
     rgbx(
-      (values[0] div 1024 div 255).uint8,
-      (values[1] div 1024 div 255).uint8,
-      (values[2] div 1024 div 255).uint8,
-      (values[3] div 1024 div 255).uint8
+      (values[0] div 256 div 255).uint8,
+      (values[1] div 256 div 255).uint8,
+      (values[2] div 256 div 255).uint8,
+      (values[3] div 256 div 255).uint8
     )
 
   # Blur in the X direction. Store with dimensions swapped for reading later.
@@ -488,13 +488,10 @@ proc blur*(
       var values: array[4, uint32]
       for xx in x - radius ..< min(x + radius, 0):
         values += outOfBounds * kernel[xx - x + radius]
-
       for xx in max(x - radius, 0) .. min(x + radius, image.width - 1):
         values += image.getRgbaUnsafe(xx, y) * kernel[xx - x + radius]
-
       for xx in max(x - radius, image.width) .. x + radius:
         values += outOfBounds * kernel[xx - x + radius]
-
       blurX.setRgbaUnsafe(y, x, rgbx(values))
 
   # Blur in the Y direction.
@@ -503,13 +500,10 @@ proc blur*(
       var values: array[4, uint32]
       for yy in y - radius ..< min(y + radius, 0):
         values += outOfBounds * kernel[yy - y + radius]
-
       for yy in max(y - radius, 0) .. min(y + radius, image.height - 1):
         values += blurX.getRgbaUnsafe(yy, x) * kernel[yy - y + radius]
-
       for yy in max(y - radius, image.height) .. y + radius:
         values += outOfBounds * kernel[yy - y + radius]
-
       image.setRgbaUnsafe(x, y, rgbx(values))
 
 proc newMask*(image: Image): Mask {.raises: [PixieError].} =

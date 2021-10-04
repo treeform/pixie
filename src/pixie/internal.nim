@@ -3,9 +3,9 @@ import chroma, vmath
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
 
-proc gaussianKernel*(radius: int): seq[uint32] {.raises: [].} =
+proc gaussianKernel*(radius: int): seq[uint16] {.raises: [].} =
   ## Compute lookup table for 1d Gaussian kernel.
-  ## Values are [0, 255] * 1024.
+  ## Values are [0, 255] * 256.
   result.setLen(radius * 2 + 1)
 
   var
@@ -19,9 +19,8 @@ proc gaussianKernel*(radius: int): seq[uint32] {.raises: [].} =
     total += a
   for step in -radius .. radius:
     floats[step + radius] = floats[step + radius] / total
-
   for i, f in floats:
-    result[i] = round(f * 255 * 1024).uint32
+    result[i] = round(f * 255 * 256).uint16
 
 proc applyOpacity*(color: ColorRGBX, opacity: float32): ColorRGBX {.raises: [].} =
   if opacity == 0:
