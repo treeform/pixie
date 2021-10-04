@@ -151,7 +151,7 @@ block:
     b = newImage(50, 50)
   a.fill(rgba(255, 255, 255, 255))
   b.fill(rgbx(0, 0, 0, 255))
-  a.draw(b, translate(vec2(14.64, 50.4)) * rotate(45.toRadians))
+  a.draw(b, translate(vec2(0, 50)) * rotate(45.toRadians))
   doDiff(a, "smooth2")
 
 block:
@@ -226,3 +226,14 @@ block:
   let m = translate(vec2(0.5, 0.5)) * scale(vec2(2, 2))
   a.draw(b, m)
   doDiff(a, "smooth10")
+
+block:
+  let
+    a = newImage(100, 100)
+    b = readImage(&"tests/images/turtle.png")
+  a.fill(rgba(255, 255, 255, 255))
+  let m = translate(vec2(-43.29, -103.87)) *
+    rotate(-15.toRadians) *
+    scale(vec2(263.86/40, 263.86/40))
+  a.draw(b, m)
+  doDiff(a, "smooth11")
