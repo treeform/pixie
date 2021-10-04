@@ -136,24 +136,42 @@ proc doDiff(rendered: Image, name: string) =
   echo &"{name} score: {diffScore}"
   diffImage.writeFile(&"tests/images/diffs/{name}.png")
 
-block:
-  let
-    image = newImage(100, 100)
-    path = newPath()
-  path.rect(0, 0, 99, 99)
-  image.fillPath(path, rgba(0, 0, 0, 255), translate(vec2(0.5, 0.5)))
-  doDiff(image, "smooth1")
+# block:
+#   let
+#     image = newImage(100, 100)
+#     path = newPath()
+#   path.rect(0, 0, 99, 99)
+#   image.fillPath(path, rgba(0, 0, 0, 255), translate(vec2(0.5, 0.5)))
+#   doDiff(image, "smooth1")
 
 block:
   let
     a = newImage(100, 100)
-    b = newImage(100, 100)
-    path = newPath()
-  path.rect(-25, -25, 50, 50)
-  path.transform(rotate(45 * PI.float32 / 180))
-  b.fillPath(path, rgba(0, 0, 0, 255), translate(vec2(50, 50)))
+    b = newImage(99, 99)
   a.fill(rgba(255, 255, 255, 255))
-  a.draw(b, translate(vec2(0, 0.4)))
+  b.fill(rgbx(0, 0, 0, 255))
+  a.draw(b, translate(vec2(0.5, 0.5)))
+  doDiff(a, "smooth1")
+
+# block:
+#   let
+#     a = newImage(100, 100)
+#     b = newImage(100, 100)
+#     path = newPath()
+#   path.rect(-25, -25, 50, 50)
+#   path.transform(rotate(45 * PI.float32 / 180))
+#   b.fillPath(path, rgba(0, 0, 0, 255), translate(vec2(50, 50)))
+#   a.fill(rgba(255, 255, 255, 255))
+#   a.draw(b, translate(vec2(0, 0.4)))
+#   doDiff(a, "smooth2")
+
+block:
+  let
+    a = newImage(100, 100)
+    b = newImage(50, 50)
+  a.fill(rgba(255, 255, 255, 255))
+  b.fill(rgbx(0, 0, 0, 255))
+  a.draw(b, translate(vec2(14.64, 50.4)) * rotate(45.toRadians))
   doDiff(a, "smooth2")
 
 block:
@@ -173,3 +191,31 @@ block:
   b.fill(rgba(0, 0, 0, 255))
   a.draw(b, translate(vec2(25.2, 25.6)))
   doDiff(a, "smooth4")
+
+block:
+  let
+    a = newImage(100, 100)
+    b = newImage(10, 10)
+  a.fill(rgba(255, 255, 255, 255))
+  b.fill(rgbx(255, 0, 0, 255))
+  let m = translate(vec2(50, 50)) * rotate(30.toRadians)
+  a.draw(b, m)
+  doDiff(a, "smooth5")
+
+block:
+  let
+    a = newImage(100, 100)
+    b = readImage(&"tests/images/turtle.png")
+  a.fill(rgba(255, 255, 255, 255))
+  let m = translate(vec2(50, 50)) * rotate(30.toRadians)
+  a.draw(b, m)
+  doDiff(a, "smooth6")
+
+block:
+  let
+    a = newImage(100, 100)
+    b = readImage(&"tests/images/turtle@10x.png")
+  a.fill(rgba(255, 255, 255, 255))
+  let m = translate(vec2(50, 50)) * rotate(30.toRadians) * scale(vec2(0.1, 0.1))
+  a.draw(b, m)
+  doDiff(a, "smooth7")
