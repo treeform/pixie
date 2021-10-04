@@ -544,12 +544,12 @@ proc getRgbaSmooth*(
   ## Gets a interpolated color with float point coordinates.
   ## Pixes outside the image are transparent.
   let
-    x0 = x.int
-    y0 = y.int
+    x0 = x.floor.int
+    y0 = y.floor.int
     x1 = x0 + 1
     y1 = y0 + 1
-    xFractional = x.fractional
-    yFractional = y.fractional
+    xFractional = x - x.floor
+    yFractional = y - y.floor
 
   var x0y0, x1y0, x0y1, x1y1: ColorRGBX
   if wrapped:
@@ -716,7 +716,7 @@ proc drawUber(
 
     if smooth:
       var srcPos = p + dx * xMin.float32 + dy * y.float32
-      srcPos = vec2(max(0, srcPos.x), max(0, srcPos.y))
+      srcPos = vec2(srcPos.x, srcPos.y)
 
       for x in xMin ..< xMax:
         let
