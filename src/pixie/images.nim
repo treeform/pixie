@@ -544,12 +544,12 @@ proc getRgbaSmooth*(
   ## Gets a interpolated color with float point coordinates.
   ## Pixes outside the image are transparent.
   let
-    x0 = x.int
-    y0 = y.int
+    x0 = x.floor.int
+    y0 = y.floor.int
     x1 = x0 + 1
     y1 = y0 + 1
-    xFractional = x.fractional
-    yFractional = y.fractional
+    xFractional = x - x.floor
+    yFractional = y - y.floor
 
   var x0y0, x1y0, x0y1, x1y1: ColorRGBX
   if wrapped:
@@ -588,21 +588,28 @@ proc drawCorrect(
 
   var
     matInv = mat.inverse()
+    # Compute movement vectors
+    p = matInv * vec2(0 + h, 0 + h)
+    dx = matInv * vec2(1 + h, 0 + h) - p
+    dy = matInv * vec2(0 + h, 1 + h) - p
+    filterBy2 = max(dx.length, dy.length)
     b = b
 
-  block: # Shrink by 2 as needed
-    var
-      p = matInv * vec2(0 + h, 0 + h)
-      dx = matInv * vec2(1 + h, 0 + h) - p
-      dy = matInv * vec2(0 + h, 1 + h) - p
-      minFilterBy2 = max(dx.length, dy.length)
+  while filterBy2 >= 2.0:
+    b = b.minifyBy2()
+    p /= 2
+    dx /= 2
+    dy /= 2
+    filterBy2 /= 2
+    matInv = scale(vec2(1/2, 1/2)) * matInv
 
-    while minFilterBy2 >= 2:
-      b = b.minifyBy2()
-      dx /= 2
-      dy /= 2
-      minFilterBy2 /= 2
-      matInv = matInv * scale(vec2(0.5, 0.5))
+  while filterBy2 <= 0.5:
+    b = b.magnifyBy2()
+    p *= 2
+    dx *= 2
+    dy *= 2
+    filterBy2 *= 2
+    matInv = scale(vec2(2, 2)) * matInv
 
   for y in 0 ..< a.height:
     for x in 0 ..< a.width:
@@ -653,16 +660,22 @@ proc drawUber(
     p = matInv * vec2(0 + h, 0 + h)
     dx = matInv * vec2(1 + h, 0 + h) - p
     dy = matInv * vec2(0 + h, 1 + h) - p
-    minFilterBy2 = max(dx.length, dy.length)
+    filterBy2 = max(dx.length, dy.length)
     b = b
 
-  while minFilterBy2 >= 2.0:
+  while filterBy2 >= 2.0:
     b = b.minifyBy2()
     p /= 2
     dx /= 2
     dy /= 2
-    minFilterBy2 /= 2
-    matInv = matInv * scale(vec2(0.5, 0.5))
+    filterBy2 /= 2
+
+  while filterBy2 <= 0.5:
+    b = b.magnifyBy2()
+    p *= 2
+    dx *= 2
+    dy *= 2
+    filterBy2 *= 2
 
   let smooth = not(
     dx.length == 1.0 and
@@ -716,29 +729,26 @@ proc drawUber(
 
     if smooth:
       var srcPos = p + dx * xMin.float32 + dy * y.float32
-      srcPos = vec2(max(0, srcPos.x), max(0, srcPos.y))
+      srcPos = vec2(srcPos.x - h, srcPos.y - h)
 
       for x in xMin ..< xMax:
-        let
-          xFloat = srcPos.x - h
-          yFloat = srcPos.y - h
         when type(a) is Image:
           let backdrop = a.getRgbaUnsafe(x, y)
           when type(b) is Image:
             let
-              sample = b.getRgbaSmooth(xFloat, yFloat)
+              sample = b.getRgbaSmooth(srcPos.x, srcPos.y)
               blended = blender(backdrop, sample)
           else: # b is a Mask
             let
-              sample = b.getValueSmooth(xFloat, yFloat)
+              sample = b.getValueSmooth(srcPos.x, srcPos.y)
               blended = blender(backdrop, rgbx(0, 0, 0, sample))
           a.setRgbaUnsafe(x, y, blended)
         else: # a is a Mask
           let backdrop = a.getValueUnsafe(x, y)
           when type(b) is Image:
-            let sample = b.getRgbaSmooth(xFloat, yFloat).a
+            let sample = b.getRgbaSmooth(srcPos.x, srcPos.y).a
           else: # b is a Mask
-            let sample = b.getValueSmooth(xFloat, yFloat)
+            let sample = b.getValueSmooth(srcPos.x, srcPos.y)
           a.setValueUnsafe(x, y, masker(backdrop, sample))
 
         srcPos += dx
