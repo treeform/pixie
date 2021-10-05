@@ -198,7 +198,6 @@ proc flipVertical*(image: Image) {.raises: [].} =
 
 proc subImage*(image: Image, x, y, w, h: int): Image {.raises: [PixieError].} =
   ## Gets a sub image from this image.
-
   if x < 0 or x + w > image.width:
     raise newException(
       PixieError,
