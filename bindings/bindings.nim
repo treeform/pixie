@@ -118,7 +118,7 @@ exportRefObject Image:
     flipVertical
     subImage
     minifyBy2(Image, int)
-    magnifyBy2
+    magnifyBy2(Image, int)
     applyOpacity(Image, float32)
     invert(Image)
     blur(Image, float32, Color)
@@ -150,6 +150,7 @@ exportRefObject Mask:
     setValue
     fill(Mask, uint8)
     minifyBy2(Mask, int)
+    magnifyBy2(Mask, int)
     spread
     ceil(Mask)
     newImage(Mask)
