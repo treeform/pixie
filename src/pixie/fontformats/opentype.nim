@@ -364,7 +364,7 @@ type
     stringIndex: seq[string]
     globalSubrIndex: seq[string]
     topDict: CFFTopDict
-    charIndex: seq[string]
+    charIndex: seq[(int, int)]
     isCID: bool
 
   OpenType* = ref object
@@ -808,7 +808,7 @@ proc parseKernTable(buf: string, offset: int): KernTable =
   else:
     failUnsupported("Kern version")
 
-proc parseCFFIndex(buf: string, start: var int, stripZero = false): seq[string] =
+proc parseCFFIndexOffsets(buf: string, start: var int, stripZero = false): seq[(int, int)] =
 
   proc getOffset(buf: string, offset, offSize: int): int =
     var v = 0
@@ -838,11 +838,18 @@ proc parseCFFIndex(buf: string, start: var int, stripZero = false): seq[string] 
   # * binary strings
   # * null terminate ascii strings
   for i in 0 ..< offsets.len - 1:
-    var value = buf[objectOffset + offsets[i] ..< objectOffset + offsets[i + 1]]
+    var
+      a = objectOffset + offsets[i]
+      b = objectOffset + offsets[i + 1]
     if stripZero:
-      value = value[0..^1] # ignore 0 at the end
-    result.add(value)
+      dec b # ignore 0 at the end
+    result.add((a, b))
   start = endOffset
+
+proc parseCFFIndex(buf: string, start: var int, stripZero = false): seq[string] =
+  let offsets = parseCFFIndexOffsets(buf, start, stripZero)
+  for (a, b) in offsets:
+    result.add(buf[a ..< b])
 
 const cffStandardStrings = [
   ".notdef", "space", "exclam", "quotedbl", "numbersign", "dollar", "percent",
@@ -1613,7 +1620,7 @@ proc parseCFFTable(buf: string, offset: int, maxp: MaxpTable): CFFTable =
   # #  buf, offset + result.topDict.charset, nGlyphs, result.stringIndex.objects)
 
   var start = offset + result.topDict.charStrings
-  result.charIndex = buf.parseCFFIndex(start)
+  result.charIndex = buf.parseCFFIndexOffsets(start)
 
 # proc parseLangSys(buf: string, offset: int): LangSys =
 #   var i = offset
@@ -2375,8 +2382,10 @@ proc parseGlyfGlyph(opentype: OpenType, glyphId: uint16): Path =
     parseGlyphPath(opentype.buf, i, numberOfContours)
 
 proc parseCffGlyph(opentype: OpenType, glyphId: uint16): Path =
-  let cff = opentype.cff
-  let charstring = cff.charIndex[glyphId]
+  let
+    cff = opentype.cff
+    (a, b) = cff.charIndex[glyphId]
+    charstring = opentype.buf[a ..< b]
   return cff.parseCFFCharstring(charstring, glyphId.int)
 
 proc parseGlyph(opentype: OpenType, rune: Rune): Path {.inline.} =
