@@ -1,12 +1,12 @@
 import genny, pixie, unicode
 
-var lastError*: ref PixieError
+var lastError: ref PixieError
 
-proc takeError*(): string =
+proc takeError(): string =
   result = lastError.msg
   lastError = nil
 
-proc checkError*(): bool =
+proc checkError(): bool =
   result = lastError != nil
 
 type
@@ -16,37 +16,37 @@ type
   Matrix3* = object
     values*: array[9, float32]
 
-proc matrix3*(): Matrix3 =
+proc matrix3(): Matrix3 =
   cast[Matrix3](mat3())
 
-proc mul*(a, b: Matrix3): Matrix3 =
+proc mul(a, b: Matrix3): Matrix3 =
   cast[Matrix3](cast[Mat3](a) * cast[Mat3](b))
 
-proc translate*(x, y: float32): Matrix3 =
+proc translate(x, y: float32): Matrix3 =
   cast[Matrix3](translate(vec2(x, y)))
 
-proc rotate*(angle: float32): Matrix3 =
+proc rotate(angle: float32): Matrix3 =
   cast[Matrix3](rotate(angle))
 
-proc scale*(x, y: float32): Matrix3 =
+proc scale(x, y: float32): Matrix3 =
   cast[Matrix3](scale(vec2(x, y)))
 
-proc inverse*(m: Matrix3): Matrix3 =
+proc inverse(m: Matrix3): Matrix3 =
   cast[Matrix3](inverse(cast[Mat3](m)))
 
-proc parseColor*(s: string): Color {.raises: [PixieError]} =
+proc parseColor(s: string): Color {.raises: [PixieError]} =
   try:
     result = parseHtmlColor(s)
   except:
     let e = getCurrentException()
     raise newException(PixieError, e.msg, e)
 
-proc drawImage2*(
+proc drawImage2(
   ctx: Context, image: Image, dx, dy, dWidth, dHeight: float32
 ) {.raises: [PixieError].} =
   ctx.drawImage(image, dx, dy, dWidth, dHeight)
 
-proc drawImage3*(
+proc drawImage3(
   ctx: Context,
   image: Image,
   sx, sy, sWidth, sHeight,
