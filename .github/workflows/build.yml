@@ -16,3 +16,5 @@ jobs:
     - run: nimble test -d:release -d:pixieNoSimd -y
     - run: nimble test --gc:orc -d:release -y
     - run: nim cpp -d:release -r tests/all.nim
+    - shell: bash
+      run: for nimfile in $(ls examples/*.nim); do nim check $nimfile; done
