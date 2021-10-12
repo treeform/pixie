@@ -540,7 +540,7 @@ proc getRgbaSmooth*(
   image: Image, x, y: float32, wrapped = false
 ): ColorRGBX {.raises: [].} =
   ## Gets a interpolated color with float point coordinates.
-  ## Pixes outside the image are transparent.
+  ## Pixels outside the image are transparent.
   let
     x0 = x.floor.int
     y0 = y.floor.int
