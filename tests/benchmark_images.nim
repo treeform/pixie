@@ -101,18 +101,18 @@ timeIt "blur":
 
 reset()
 
-timeIt "lerp integers":
+timeIt "mix integers":
   for i in 0 ..< 100000:
     let c = image[0, 0]
     var z: int
     for t in 0 .. 100:
-      z += lerp(c, c, t.float32 / 100).a.int
+      z += mix(c, c, t.float32 / 100).a.int
     doAssert z > 0
 
-timeIt "lerp floats":
+timeIt "mix floats":
   for i in 0 ..< 100000:
     let c = image[0, 0]
     var z: int
     for t in 0 .. 100:
-      z += lerp(c.color, c.color, t.float32 / 100).rgba().a.int
+      z += mix(c.color, c.color, t.float32 / 100).rgba().a.int
     doAssert z > 0
