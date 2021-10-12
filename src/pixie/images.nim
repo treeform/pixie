@@ -198,7 +198,6 @@ proc flipVertical*(image: Image) {.raises: [].} =
 
 proc subImage*(image: Image, x, y, w, h: int): Image {.raises: [PixieError].} =
   ## Gets a sub image from this image.
-
   if x < 0 or x + w > image.width:
     raise newException(
       PixieError,
@@ -310,15 +309,14 @@ proc minifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
           b = src.getRgbaUnsafe(x * 2 + 1, y * 2 + 0)
           c = src.getRgbaUnsafe(x * 2 + 1, y * 2 + 1)
           d = src.getRgbaUnsafe(x * 2 + 0, y * 2 + 1)
+          rgba = rgbx(
+            ((a.r.uint32 + b.r + c.r + d.r) div 4).uint8,
+            ((a.g.uint32 + b.g + c.g + d.g) div 4).uint8,
+            ((a.b.uint32 + b.b + c.b + d.b) div 4).uint8,
+            ((a.a.uint32 + b.a + c.a + d.a) div 4).uint8
+          )
 
-        let color = rgbx(
-          ((a.r.uint32 + b.r + c.r + d.r) div 4).uint8,
-          ((a.g.uint32 + b.g + c.g + d.g) div 4).uint8,
-          ((a.b.uint32 + b.b + c.b + d.b) div 4).uint8,
-          ((a.a.uint32 + b.a + c.a + d.a) div 4).uint8
-        )
-
-        result.setRgbaUnsafe(x, y, color)
+        result.setRgbaUnsafe(x, y, rgba)
 
     # Set src as this result for if we do another power
     src = result
@@ -334,10 +332,10 @@ proc magnifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
     for x in 0 ..< image.width:
       let
         rgba = image.getRgbaUnsafe(x, y div scale)
-        scaledX = x * scale
-        idx = result.dataIndex(scaledX, y)
-      for i in 0 ..< scale:
-        result.data[idx + i] = rgba
+        idx = result.dataIndex(x * scale, y)
+      for i in 0 ..< scale div 2:
+        result.data[idx + i * 2 + 0] = rgba
+        result.data[idx + i * 2 + 1] = rgba
 
 proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
   ## Multiplies alpha of the image by opacity.

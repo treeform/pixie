@@ -5,16 +5,13 @@ license     = "MIT"
 
 srcDir = "src"
 
-requires "nim >= 1.2.6"
+requires "nim >= 1.4.0"
 requires "vmath >= 1.0.11"
 requires "chroma >= 0.2.5"
 requires "zippy >= 0.6.2"
 requires "flatty >= 0.2.2"
 requires "nimsimd >= 1.0.0"
 requires "bumpy >= 1.0.3"
-
-task docs, "Generate API documents":
-  exec "nim doc --index:on --project --out:docs --hints:off src/pixie.nim"
 
 task bindings, "Generate bindings":
 
