@@ -224,6 +224,7 @@ exportRefObject Font:
     size
     lineHeight
     paints
+    paint
     textCase
     underline
     strikethrough
