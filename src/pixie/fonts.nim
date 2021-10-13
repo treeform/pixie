@@ -183,7 +183,7 @@ proc defaultLineHeight*(font: Font): float32 {.inline, raises: [].} =
     font.typeface.ascent - font.typeface.descent + font.typeface.lineGap
   round(fontUnits * font.scale)
 
-proc paint*(font: Font): var Paint {.inline, raises: [].} =
+proc paint*(font: Font): Paint {.inline, raises: [].} =
   font.paints[0]
 
 proc `paint=`*(font: Font, paint: Paint) {.inline, raises: [].} =
