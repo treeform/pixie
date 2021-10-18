@@ -49,6 +49,17 @@ block:
     a = newImage(1000, 1000)
     b = newImage(500, 500)
   a.fill(rgba(255, 0, 0, 255))
+  b.fill(rgba(0, 255, 0, 255))
+
+  timeIt "draw [scale 2]":
+    a.draw(b, translate(vec2(25, 25)) * scale(vec2(2, 2)), bmNormal)
+    keep(b)
+
+block:
+  let
+    a = newImage(1000, 1000)
+    b = newImage(500, 500)
+  a.fill(rgba(255, 0, 0, 255))
   b.fill(rgba(0, rand(255).uint8, 0, 255))
 
   timeIt "draw Smooth [x translate]":
