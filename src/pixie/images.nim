@@ -328,14 +328,23 @@ proc magnifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
 
   let scale = 2 ^ power
   result = newImage(image.width * scale, image.height * scale)
-  for y in 0 ..< result.height:
+
+  for y in 0 ..< image.height:
+    # Write one row of pixels duplicated by scale
     for x in 0 ..< image.width:
       let
-        rgba = image.getRgbaUnsafe(x, y div scale)
-        idx = result.dataIndex(x * scale, y)
-      for i in 0 ..< scale div 2:
-        result.data[idx + i * 2 + 0] = rgba
-        result.data[idx + i * 2 + 1] = rgba
+        rgbx = image.getRgbaUnsafe(x, y)
+        idx = result.dataIndex(x * scale, y * scale)
+      for i in 0 ..< scale:
+        result.data[idx + i] = rgbx
+    # Copy that row of pixels into (scale - 1) more rows
+    let rowStart = result.dataIndex(0, y * scale)
+    for i in 1 ..< scale:
+      copyMem(
+        result.data[rowStart + result.width * i].addr,
+        result.data[rowStart].addr,
+        result.width * 4
+      )
 
 proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
   ## Multiplies alpha of the image by opacity.
