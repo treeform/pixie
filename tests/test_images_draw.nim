@@ -1,5 +1,13 @@
 import pixie, strformat
 
+proc doDiff(rendered: Image, name: string) =
+  rendered.writeFile(&"tests/images/rendered/{name}.png")
+  let
+    master = readImage(&"tests/images/masters/{name}.png")
+    (diffScore, diffImage) = diff(master, rendered)
+  echo &"{name} score: {diffScore}"
+  diffImage.writeFile(&"tests/images/diffs/{name}.png")
+
 block:
   let
     a = newImage(1000, 1000)
@@ -128,14 +136,6 @@ block:
   a.draw(b, translate(vec2(250, 250)) * scale(vec2(0.5, 0.5)))
   a.writeFile("tests/images/scaleHalf.png")
 
-proc doDiff(rendered: Image, name: string) =
-  rendered.writeFile(&"tests/images/rendered/{name}.png")
-  let
-    master = readImage(&"tests/images/masters/{name}.png")
-    (diffScore, diffImage) = diff(master, rendered)
-  echo &"{name} score: {diffScore}"
-  diffImage.writeFile(&"tests/images/diffs/{name}.png")
-
 block:
   let
     a = newImage(100, 100)
@@ -249,3 +249,12 @@ block:
   a.draw(b, m * translate(vec2(-40,-40)))
   a.draw(b, m * translate(vec2(0,-40)))
   doDiff(a, "smooth12")
+
+block:
+  let
+    a = newImage(100, 100)
+    b = newImage(99, 99)
+  a.fill(rgba(255, 255, 255, 255))
+  b.fill(rgba(0, 0, 0, 255))
+  a.draw(b, scale(vec2(0.5, 0.5)))
+  doDiff(a, "minify_odd")
