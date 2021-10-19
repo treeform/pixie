@@ -17,13 +17,13 @@ type
     ## Line join type for strokes.
     ljMiter, ljRound, ljBevel
 
-  PathCommandKind = enum
+  PathCommandKind* = enum
     ## Type of path commands
     Close,
     Move, Line, HLine, VLine, Cubic, SCubic, Quad, TQuad, Arc,
     RMove, RLine, RHLine, RVLine, RCubic, RSCubic, RQuad, RTQuad, RArc
 
-  PathCommand = object
+  PathCommand* = object
     ## Binary version of an SVG command.
     kind: PathCommandKind
     numbers: seq[float32]
@@ -633,7 +633,7 @@ proc polygon*(
   ## Adds a n-sided regular polygon at (x, y) with the parameter size.
   path.polygon(pos.x, pos.y, size, sides)
 
-proc commandsToShapes(
+proc commandsToShapes*(
   path: Path, closeSubpaths = false, pixelScale: float32 = 1.0
 ): seq[seq[Vec2]] =
   ## Converts SVG-like commands to sequences of vectors.
