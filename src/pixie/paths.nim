@@ -1020,8 +1020,7 @@ proc requiresAntiAliasing(segments: seq[(Segment, int16)]): bool =
   template hasFractional(v: float32): bool =
     v - trunc(v) != 0
 
-  for i in 0 ..< segments.len: # For gc:arc
-    let segment = segments[i][0]
+  for i, (segment, _) in segments:
     if segment.at.x != segment.to.x or
       segment.at.x.hasFractional() or # at.x and to.x are the same
       segment.at.y.hasFractional() or
@@ -1042,8 +1041,7 @@ proc computeBounds(segments: seq[(Segment, int16)]): Rect =
     xMax = float32.low
     yMin = float32.high
     yMax = float32.low
-  for i in 0 ..< segments.len: # For gc:arc
-    let segment = segments[i][0]
+  for i, (segment, _) in segments:
     xMin = min(xMin, min(segment.at.x, segment.to.x))
     xMax = max(xMax, max(segment.at.x, segment.to.x))
     yMin = min(yMin, segment.at.y)
@@ -1154,7 +1152,7 @@ iterator walk(
   var
     prevAt: float32
     count: int32
-  for i in 0 ..< numHits: # For gc:arc
+  for i in 0 ..< numHits:
     let (at, winding) = hits[i]
     if windingRule == wrNonZero and
       (count != 0) == (count + winding != 0) and
@@ -1202,7 +1200,7 @@ proc computeCoverages(
     scanline.a.y = yLine
     scanline.b.y = yLine
     numHits = 0
-    for i in 0 ..< partitioning.partitions[partitionIndex].len: # For gc:arc
+    for i in 0 ..< partitioning.partitions[partitionIndex].len: # Perf
       let
         segment = partitioning.partitions[partitionIndex][i][0]
         winding = partitioning.partitions[partitionIndex][i][1]
