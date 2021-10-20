@@ -2,24 +2,24 @@ import blends, chroma, common, images, vmath
 
 type
   PaintKind* = enum
-    pkSolid
-    pkImage
-    pkImageTiled
-    pkGradientLinear
-    pkGradientRadial
-    pkGradientAngular
+    Solid
+    ImageMat
+    ImageTiled
+    GradientLinear
+    GradientRadial
+    GradientAngular
 
   Paint* = ref object
     ## Paint used to fill paths.
     kind*: PaintKind
     blendMode*: BlendMode               ## Blend mode.
     opacity*: float32
-    # pkSolid
+    # Solid
     color*: Color                       ## Color to fill with.
-    # pkImage, pkImageTiled:
+    # Image, ImageTiled:
     image*: Image                       ## Image to fill with.
     imageMat*: Mat3                     ## Matrix of the filled image.
-    # pkGradientLinear, pkGradientRadial, pkGradientAngular:
+    # GradientLinear, GradientRadial, GradientAngular:
     gradientHandlePositions*: seq[Vec2] ## Gradient positions (image space).
     gradientStops*: seq[ColorStop]      ## Color stops (gradient space).
 
@@ -50,13 +50,13 @@ converter parseSomePaint*(
 ): Paint {.inline.} =
   ## Given SomePaint, parse it in different ways.
   when type(paint) is string:
-    result = newPaint(pkSolid)
+    result = newPaint(Solid)
     try:
       result.color = parseHtmlColor(paint)
     except:
       raise newException(PixieError, "Unable to parse color " & paint)
   elif type(paint) is SomeColor:
-    result = newPaint(pkSolid)
+    result = newPaint(Solid)
     when type(paint) is Color:
       result.color = paint
     else:
@@ -185,11 +185,11 @@ proc fillGradient*(image: Image, paint: Paint) {.raises: [PixieError].} =
   ## Fills with the Paint gradient.
 
   case paint.kind:
-  of pkGradientLinear:
+  of GradientLinear:
     image.fillGradientLinear(paint)
-  of pkGradientRadial:
+  of GradientRadial:
     image.fillGradientRadial(paint)
-  of pkGradientAngular:
+  of GradientAngular:
     image.fillGradientAngular(paint)
   else:
     raise newException(PixieError, "Paint must be a gradient")

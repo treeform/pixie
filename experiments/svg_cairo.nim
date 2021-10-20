@@ -75,7 +75,7 @@ proc prepare(
   path: Path,
   color: ColorRGBA,
   mat: Mat3,
-  windingRule = wrNonZero
+  windingRule = NonZero
 ) =
   let
     color = color.color()
@@ -90,7 +90,7 @@ proc prepare(
   c.setSourceRgba(color.r, color.g, color.b, color.a)
   c.setMatrix(matrix.unsafeAddr)
   case windingRule:
-  of wrNonZero:
+  of NonZero:
     c.setFillRule(FillRuleWinding)
   else:
     c.setFillRule(FillRuleEvenOdd)
@@ -175,9 +175,9 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
   if fillRule == "":
     discard # Inherit
   elif fillRule == "nonzero":
-    result.fillRule = wrNonZero
+    result.fillRule = NonZero
   elif fillRule == "evenodd":
-    result.fillRule = wrEvenOdd
+    result.fillRule = EvenOdd
   else:
     raise newException(
       PixieError, "Invalid fill-rule value " & fillRule
@@ -216,11 +216,11 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
   else:
     case strokeLineCap:
     of "butt":
-      result.strokeLineCap = lcButt
+      result.strokeLineCap = Butt
     of "round":
-      result.strokeLineCap = lcRound
+      result.strokeLineCap = Round
     of "square":
-      result.strokeLineCap = lcSquare
+      result.strokeLineCap = Square
     of "inherit":
       discard
     else:
@@ -233,11 +233,11 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
   else:
     case strokeLineJoin:
     of "miter":
-      result.strokeLineJoin = ljMiter
+      result.strokeLineJoin = Miter
     of "round":
-      result.strokeLineJoin = ljRound
+      result.strokeLineJoin = Round
     of "bevel":
-      result.strokeLineJoin = ljBevel
+      result.strokeLineJoin = Bevel
     of "inherit":
       discard
     else:
@@ -322,20 +322,20 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
 
 proc cairoLineCap(lineCap: LineCap): cairo.LineCap =
   case lineCap:
-  of lcButt:
+  of Butt:
     LineCapButt
-  of lcRound:
+  of Round:
     LineCapRound
-  of lcSquare:
+  of Square:
     LineCapSquare
 
 proc cairoLineJoin(lineJoin: LineJoin): cairo.LineJoin =
   case lineJoin:
-  of ljMiter:
+  of Miter:
     LineJoinMiter
-  of ljBevel:
+  of Bevel:
     LineJoinBevel
-  of ljRound:
+  of Round:
     LineJoinRound
 
 proc fill(c: ptr Context, ctx: Ctx, path: Path) {.inline.} =

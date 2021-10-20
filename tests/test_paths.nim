@@ -214,7 +214,7 @@ block:
     path = parsePath("M 3 3 L 20 3 L 20 20 L 3 20 Z")
   image.fill(rgba(255, 255, 255, 255))
   image.strokePath(
-    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcRound, ljRound
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, Round, Round
   )
 
   image.writeFile("tests/paths/boxRound.png")
@@ -225,7 +225,7 @@ block:
     path = parsePath("M 3 3 L 20 3 L 20 20 L 3 20 Z")
   image.fill(rgba(255, 255, 255, 255))
   image.strokePath(
-    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcRound, ljBevel
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, Round, Bevel
   )
 
   image.writeFile("tests/paths/boxBevel.png")
@@ -236,7 +236,7 @@ block:
     path = parsePath("M 3 3 L 20 3 L 20 20 L 3 20 Z")
   image.fill(rgba(255, 255, 255, 255))
   image.strokePath(
-    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcRound, ljMiter
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, Round, Miter
   )
 
   image.writeFile("tests/paths/boxMiter.png")
@@ -247,10 +247,10 @@ block:
     path = parsePath("M 3 3 L 20 3 L 20 20 L 3 20")
   image.fill(rgba(255, 255, 255, 255))
   image.strokePath(
-    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcButt, ljBevel
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, Butt, Bevel
   )
 
-  image.writeFile("tests/paths/lcButt.png")
+  image.writeFile("tests/paths/Butt.png")
 
 block:
   let
@@ -258,10 +258,10 @@ block:
     path = parsePath("M 3 3 L 20 3 L 20 20 L 3 20")
   image.fill(rgba(255, 255, 255, 255))
   image.strokePath(
-    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcRound, ljBevel
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, Round, Bevel
   )
 
-  image.writeFile("tests/paths/lcRound.png")
+  image.writeFile("tests/paths/Round.png")
 
 block:
   let
@@ -269,10 +269,10 @@ block:
     path = parsePath("M 3 3 L 20 3 L 20 20 L 3 20")
   image.fill(rgba(255, 255, 255, 255))
   image.strokePath(
-    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcSquare, ljBevel
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, Square, Bevel
   )
 
-  image.writeFile("tests/paths/lcSquare.png")
+  image.writeFile("tests/paths/Square.png")
 
 block:
   let
@@ -281,31 +281,31 @@ block:
   image.fill(rgba(255, 255, 255, 255))
 
   image.strokePath(
-    path, rgba(0, 0, 0, 255), translate(vec2(5, 5)), 10, lcButt, ljBevel,
+    path, rgba(0, 0, 0, 255), translate(vec2(5, 5)), 10, Butt, Bevel,
   )
 
   image.strokePath(
-    path, rgba(0, 0, 0, 255), translate(vec2(5, 25)), 10, lcButt, ljBevel,
+    path, rgba(0, 0, 0, 255), translate(vec2(5, 25)), 10, Butt, Bevel,
     dashes = @[2.float32, 2]
   )
 
   image.strokePath(
-    path, rgba(0, 0, 0, 255), translate(vec2(5, 45)), 10, lcButt, ljBevel,
+    path, rgba(0, 0, 0, 255), translate(vec2(5, 45)), 10, Butt, Bevel,
     dashes = @[4.float32, 4]
   )
 
   image.strokePath(
-    path, rgba(0, 0, 0, 255), translate(vec2(5, 65)), 10, lcButt, ljBevel,
+    path, rgba(0, 0, 0, 255), translate(vec2(5, 65)), 10, Butt, Bevel,
     dashes = @[2.float32, 4, 6, 2]
   )
 
   image.strokePath(
-    path, rgba(0, 0, 0, 255), translate(vec2(5, 85)), 10, lcButt, ljBevel,
+    path, rgba(0, 0, 0, 255), translate(vec2(5, 85)), 10, Butt, Bevel,
     dashes = @[1.float32]
   )
 
   image.strokePath(
-    path, rgba(0, 0, 0, 255), translate(vec2(5, 105)), 10, lcButt, ljBevel,
+    path, rgba(0, 0, 0, 255), translate(vec2(5, 105)), 10, Butt, Bevel,
     dashes = @[1.float32, 2, 3, 4, 5, 6, 7, 8, 9]
   )
 
@@ -323,7 +323,7 @@ block:
     path.lineTo(sin(th)*20, cos(th)*20)
 
     image.strokePath(
-      path, rgba(0, 0, 0, 255), translate(vec2(30, 30)), 8, lcButt, ljMiter,
+      path, rgba(0, 0, 0, 255), translate(vec2(30, 30)), 8, Butt, Miter,
       miterLimit = limit
     )
     image.writeFile(&"tests/paths/miterLimit_{angle.int}deg_{limit:0.2f}num.png")
@@ -353,7 +353,7 @@ block:
     path = parsePath("M 3 3 L 3 3 L 3 3")
   image.fill(rgba(255, 255, 255, 255))
   image.strokePath(
-    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcSquare, ljMiter
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, Square, Miter
   )
 
 block:
@@ -362,7 +362,7 @@ block:
     path = parsePath("L 0 0 L 0 0")
   image.fill(rgba(255, 255, 255, 255))
   image.strokePath(
-    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcSquare, ljMiter
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, Square, Miter
   )
 
 block:
@@ -371,7 +371,7 @@ block:
     path = parsePath("L 1 1")
   image.fill(rgba(255, 255, 255, 255))
   image.strokePath(
-    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcSquare, ljMiter
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, Square, Miter
   )
 
 block:
@@ -380,7 +380,7 @@ block:
     path = parsePath("L 0 0")
   image.fill(rgba(255, 255, 255, 255))
   image.strokePath(
-    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, lcSquare, ljMiter
+    path, rgba(0, 0, 0, 255), translate(vec2(10, 10)), 10, Square, Miter
   )
 
 block:
@@ -390,7 +390,7 @@ block:
     rgbx(255, 0, 0, 255)
   )
 
-  let paint = newPaint(pkSolid)
+  let paint = newPaint(Solid)
   paint.color = color(0, 1, 0, 1)
   paint.blendMode = bmExcludeMask
 
@@ -407,7 +407,7 @@ block:
     rgbx(255, 0, 0, 255)
   )
 
-  let paint = newPaint(pkSolid)
+  let paint = newPaint(Solid)
   paint.color = color(0, 1, 0, 1)
   paint.blendMode = bmExcludeMask
 
@@ -424,7 +424,7 @@ block:
     rgbx(255, 0, 0, 255)
   )
 
-  let paint = newPaint(pkSolid)
+  let paint = newPaint(Solid)
   paint.color = color(0, 1, 0, 1)
   paint.blendMode = bmMask
 
@@ -441,7 +441,7 @@ block:
     rgbx(255, 0, 0, 255)
   )
 
-  let paint = newPaint(pkSolid)
+  let paint = newPaint(Solid)
   paint.color = color(0, 1, 0, 1)
   paint.blendMode = bmMask
 
@@ -613,7 +613,7 @@ block:
   let path = newPath()
   path.circle(50, 50, 30)
 
-  let paint = newPaint(pkSolid)
+  let paint = newPaint(Solid)
   paint.color = color(1, 0, 1, 1)
   paint.opacity = 0.5
 
@@ -626,7 +626,7 @@ block:
   let path = newPath()
   path.circle(50, 50, 30)
 
-  let paint = newPaint(pkSolid)
+  let paint = newPaint(Solid)
   paint.color = color(1, 0, 1, 1)
   paint.opacity = 0.5
 

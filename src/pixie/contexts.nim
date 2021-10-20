@@ -53,9 +53,9 @@ proc newContext*(image: Image): Context {.raises: [].} =
   result.globalAlpha = 1
   result.lineWidth = 1
   result.miterLimit = 10
-  result.fillStyle = newPaint(pkSolid)
+  result.fillStyle = newPaint(Solid)
   result.fillStyle.color = color(0, 0, 0, 1)
-  result.strokeStyle = newPaint(pkSolid)
+  result.strokeStyle = newPaint(Solid)
   result.strokeStyle.color = color(0, 0, 0, 1)
   result.fontSize = 12
 
@@ -342,7 +342,7 @@ proc ellipse*(ctx: Context, x, y, rx, ry: float32) {.inline, raises: [].} =
   ctx.path.ellipse(x, y, rx, ry)
 
 proc fill*(
-  ctx: Context, path: Path, windingRule = wrNonZero
+  ctx: Context, path: Path, windingRule = NonZero
 ) {.raises: [PixieError].} =
   ## Fills the path with the current fillStyle.
   if ctx.mask != nil and ctx.layer == nil:
@@ -355,13 +355,13 @@ proc fill*(
     ctx.fill(ctx.image, path, windingRule)
 
 proc fill*(
-  ctx: Context, windingRule = wrNonZero
+  ctx: Context, windingRule = NonZero
 ) {.inline, raises: [PixieError].} =
   ## Fills the current path with the current fillStyle.
   ctx.fill(ctx.path, windingRule)
 
 proc clip*(
-  ctx: Context, path: Path, windingRule = wrNonZero
+  ctx: Context, path: Path, windingRule = NonZero
 ) {.raises: [PixieError].} =
   ## Turns the path into the current clipping region. The previous clipping
   ## region, if any, is intersected with the current or given path to create
@@ -373,7 +373,7 @@ proc clip*(
     ctx.mask.fillPath(path, windingRule = windingRule, blendMode = bmMask)
 
 proc clip*(
-  ctx: Context, windingRule = wrNonZero
+  ctx: Context, windingRule = NonZero
 ) {.inline, raises: [PixieError].} =
   ## Turns the current path into the current clipping region. The previous
   ## clipping region, if any, is intersected with the current or given path
@@ -397,7 +397,7 @@ proc stroke*(ctx: Context) {.inline, raises: [PixieError].} =
 
 proc clearRect*(ctx: Context, rect: Rect) {.raises: [PixieError].} =
   ## Erases the pixels in a rectangular area.
-  let paint = newPaint(pkSolid)
+  let paint = newPaint(Solid)
   paint.blendMode = bmOverwrite
 
   let path = newPath()
@@ -541,7 +541,7 @@ proc drawImage*(
     ))
     savedFillStyle = ctx.fillStyle
 
-  ctx.fillStyle = newPaint(pkImage)
+  ctx.fillStyle = newPaint(ImageMat)
   ctx.fillStyle.image = image
   ctx.fillStyle.imageMat = imageMat
 
@@ -584,25 +584,25 @@ proc drawImage*(ctx: Context, image: Image, src, dest: Rect) {.raises: [PixieErr
   )
 
 proc isPointInPath*(
-  ctx: Context, path: Path, pos: Vec2, windingRule = wrNonZero
+  ctx: Context, path: Path, pos: Vec2, windingRule = NonZero
 ): bool {.raises: [PixieError].} =
   ## Returns whether or not the specified point is contained in the current path.
   path.fillOverlaps(pos, ctx.mat, windingRule)
 
 proc isPointInPath*(
-  ctx: Context, path: Path, x, y: float32, windingRule = wrNonZero
+  ctx: Context, path: Path, x, y: float32, windingRule = NonZero
 ): bool {.inline, raises: [PixieError].} =
   ## Returns whether or not the specified point is contained in the current path.
   ctx.isPointInPath(path, vec2(x, y), windingRule)
 
 proc isPointInPath*(
-  ctx: Context, pos: Vec2, windingRule = wrNonZero
+  ctx: Context, pos: Vec2, windingRule = NonZero
 ): bool {.inline, raises: [PixieError].} =
   ## Returns whether or not the specified point is contained in the current path.
   ctx.isPointInPath(ctx.path, pos, windingRule)
 
 proc isPointInPath*(
-  ctx: Context, x, y: float32, windingRule = wrNonZero
+  ctx: Context, x, y: float32, windingRule = NonZero
 ): bool {.inline, raises: [PixieError].} =
   ## Returns whether or not the specified point is contained in the current path.
   ctx.isPointInPath(ctx.path, vec2(x, y), windingRule)

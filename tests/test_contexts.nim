@@ -61,7 +61,7 @@ block:
   region.closePath()
 
   ctx.fillStyle = "green"
-  ctx.fill(region, wrEvenOdd)
+  ctx.fill(region, EvenOdd)
 
   ctx.image.writeFile("tests/contexts/fill_1.png")
 
@@ -191,7 +191,7 @@ block:
 block:
   let ctx = newContext(newImage(300, 150))
 
-  ctx.lineJoin = ljBevel
+  ctx.lineJoin = Bevel
   ctx.lineWidth = 15
   ctx.strokeStyle = "#38f"
   ctx.strokeRect(30, 30, 160, 90)
@@ -441,7 +441,7 @@ block:
   let region = newPath()
   region.rect(80, 10, 20, 130)
   region.rect(40, 50, 100, 50)
-  ctx.clip(region, wrEvenOdd)
+  ctx.clip(region, EvenOdd)
 
   ctx.fillStyle = "blue"
   ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
@@ -526,7 +526,7 @@ block:
 
   image.fill(rgba(255, 255, 255, 255))
 
-  let paint = newPaint(pkSolid)
+  let paint = newPaint(Solid)
   paint.color = color(0, 0, 1, 1)
   paint.blendMode = bmExclusion
 

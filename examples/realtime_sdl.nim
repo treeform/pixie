@@ -26,7 +26,7 @@ proc display() =
   ## Called every frame by main while loop
 
   # draw shiny sphere on gradient background
-  let linerGradient = newPaint(pkGradientLinear)
+  let linerGradient = newPaint(GradientLinear)
   linerGradient.gradientHandlePositions.add(vec2(0, 0))
   linerGradient.gradientHandlePositions.add(vec2(0, 256))
   linerGradient.gradientStops.add(
@@ -36,7 +36,7 @@ proc display() =
   ctx.fillStyle = linerGradient
   ctx.fillRect(0, 0, 256, 256)
 
-  let radialGradient = newPaint(pkGradientRadial)
+  let radialGradient = newPaint(GradientRadial)
   radialGradient.gradientHandlePositions.add(vec2(128, 128))
   radialGradient.gradientHandlePositions.add(vec2(256, 128))
   radialGradient.gradientHandlePositions.add(vec2(128, 256))

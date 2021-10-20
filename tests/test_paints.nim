@@ -17,7 +17,7 @@ block:
   image.writeFile("tests/paths/paintSolid.png")
 
 block:
-  let paint = newPaint(pkImage)
+  let paint = newPaint(ImageMat)
   paint.image = decodePng(readFile("tests/fileformats/png/baboon.png"))
   paint.imageMat = scale(vec2(0.2, 0.2))
 
@@ -26,7 +26,7 @@ block:
   image.writeFile("tests/paths/paintImage.png")
 
 block:
-  let paint = newPaint(pkImage)
+  let paint = newPaint(ImageMat)
   paint.image = decodePng(readFile("tests/fileformats/png/baboon.png"))
   paint.imageMat = scale(vec2(0.2, 0.2))
   paint.opacity = 0.5
@@ -36,7 +36,7 @@ block:
   image.writeFile("tests/paths/paintImageOpacity.png")
 
 block:
-  let paint = newPaint(pkImageTiled)
+  let paint = newPaint(ImageTiled)
   paint.image = decodePng(readFile("tests/fileformats/png/baboon.png"))
   paint.imageMat = scale(vec2(0.02, 0.02))
 
@@ -45,7 +45,7 @@ block:
   image.writeFile("tests/paths/paintImageTiled.png")
 
 block:
-  let paint = newPaint(pkImageTiled)
+  let paint = newPaint(ImageTiled)
   paint.image = decodePng(readFile("tests/fileformats/png/baboon.png"))
   paint.imageMat = scale(vec2(0.02, 0.02))
   paint.opacity = 0.5
@@ -55,7 +55,7 @@ block:
   image.writeFile("tests/paths/paintImageTiledOpacity.png")
 
 block:
-  let paint = newPaint(pkGradientLinear)
+  let paint = newPaint(GradientLinear)
   paint.gradientHandlePositions = @[
     vec2(0, 50),
     vec2(100, 50),
@@ -70,7 +70,7 @@ block:
   image.writeFile("tests/paths/gradientLinear.png")
 
 block:
-  let paint = newPaint(pkGradientRadial)
+  let paint = newPaint(GradientRadial)
   paint.gradientHandlePositions = @[
     vec2(50, 50),
     vec2(100, 50),
@@ -86,7 +86,7 @@ block:
   image.writeFile("tests/paths/gradientRadial.png")
 
 block:
-  let paint = newPaint(pkGradientAngular)
+  let paint = newPaint(GradientAngular)
   paint.gradientHandlePositions = @[
     vec2(50, 50),
     vec2(100, 50),
@@ -102,7 +102,7 @@ block:
   image.writeFile("tests/paths/gradientAngular.png")
 
 block:
-  let paint = newPaint(pkGradientAngular)
+  let paint = newPaint(GradientAngular)
   paint.gradientHandlePositions = @[
     vec2(50, 50),
     vec2(100, 50),

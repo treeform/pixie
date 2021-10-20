@@ -54,7 +54,7 @@ proc renderEmojiSet(index: int) =
       rendered.draw(
         icon,
         translate(pos),
-        bmOverwrite
+        Overwrite
       )
 
   rendered.writeFile(&"tests/fileformats/svg/{emojiSet.name}.png")

@@ -10,7 +10,7 @@ path.polygon(
   sides = 8
 )
 
-let paint = newPaint(pkImageTiled)
+let paint = newPaint(ImageTiled)
 paint.image = readImage("examples/data/baboon.png")
 paint.imageMat = scale(vec2(0.08, 0.08))
 

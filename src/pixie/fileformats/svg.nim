@@ -160,9 +160,9 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
   if fillRule == "":
     discard # Inherit
   elif fillRule == "nonzero":
-    result.fillRule = wrNonZero
+    result.fillRule = NonZero
   elif fillRule == "evenodd":
-    result.fillRule = wrEvenOdd
+    result.fillRule = EvenOdd
   else:
     raise newException(
       PixieError, "Invalid fill-rule value " & fillRule
@@ -176,7 +176,7 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
     let id = fill[5 .. ^2]
     if id in result.linearGradients:
       let linearGradient = result.linearGradients[id]
-      result.fill = newPaint(pkGradientLinear)
+      result.fill = newPaint(GradientLinear)
       result.fill.gradientHandlePositions = @[
         result.transform * vec2(linearGradient.x1, linearGradient.y1),
         result.transform * vec2(linearGradient.x2, linearGradient.y2)
@@ -213,11 +213,11 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
   else:
     case strokeLineCap:
     of "butt":
-      result.strokeLineCap = lcButt
+      result.strokeLineCap = Butt
     of "round":
-      result.strokeLineCap = lcRound
+      result.strokeLineCap = Round
     of "square":
-      result.strokeLineCap = lcSquare
+      result.strokeLineCap = Square
     of "inherit":
       discard
     else:
@@ -230,11 +230,11 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
   else:
     case strokeLineJoin:
     of "miter":
-      result.strokeLineJoin = ljMiter
+      result.strokeLineJoin = Miter
     of "round":
-      result.strokeLineJoin = ljRound
+      result.strokeLineJoin = Round
     of "bevel":
-      result.strokeLineJoin = ljBevel
+      result.strokeLineJoin = Bevel
     of "inherit":
       discard
     else:

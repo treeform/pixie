@@ -223,7 +223,7 @@ block:
     font,
     "a b c d e f g h i j k l m n o p",
     bounds = vec2(200, 0),
-    hAlign = haRight
+    hAlign = Right
   )
 
   doDiff(image, "basic10")
@@ -588,72 +588,72 @@ block:
     font,
     "TopLeft",
     bounds = image.wh,
-    hAlign = haLeft,
-    vAlign = vaTop
+    hAlign = Left,
+    vAlign = Top
   )
 
   image.fillText(
     font,
     "TopCenter",
     bounds = image.wh,
-    hAlign = haCenter,
-    vAlign = vaTop
+    hAlign = Center,
+    vAlign = Top
   )
 
   image.fillText(
     font,
     "TopRight",
     bounds = image.wh,
-    hAlign = haRight,
-    vAlign = vaTop
+    hAlign = Right,
+    vAlign = Top
   )
 
   image.fillText(
     font,
     "MiddleLeft",
     bounds = image.wh,
-    hAlign = haLeft,
-    vAlign = vaMiddle
+    hAlign = Left,
+    vAlign = Middle
   )
 
   image.fillText(
     font,
     "MiddleCenter",
     bounds = image.wh,
-    hAlign = haCenter,
-    vAlign = vaMiddle
+    hAlign = Center,
+    vAlign = Middle
   )
 
   image.fillText(
     font,
     "MiddleRight",
     bounds = image.wh,
-    hAlign = haRight,
-    vAlign = vaMiddle
+    hAlign = Right,
+    vAlign = Middle
   )
 
   image.fillText(
     font,
     "BottomLeft",
     bounds = image.wh,
-    hAlign = haLeft,
-    vAlign = vaBottom
+    hAlign = Left,
+    vAlign = Bottom
   )
 
   image.fillText(
     font,
     "BottomCenter",
     bounds = image.wh,
-    hAlign = haCenter,
-    vAlign = vaBottom
+    hAlign = Center,
+    vAlign = Bottom
   )
 
   image.fillText(
     font,
     "BottomRight",
     bounds = image.wh,
-    hAlign = haRight,
-    vAlign = vaBottom
+    hAlign = Right,
+    vAlign = Bottom
   )
 
   doDiff(image, "alignments")
@@ -661,7 +661,7 @@ block:
 block:
   var font = readFont("tests/fonts/IBMPlexSans-Regular_2.ttf")
   font.size = 48
-  font.paint = newPaint(pkGradientLinear)
+  font.paint = newPaint(GradientLinear)
   font.paint.gradientHandlePositions = @[
     vec2(0, 50),
     vec2(100, 50),

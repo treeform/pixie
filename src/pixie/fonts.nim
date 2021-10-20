@@ -37,22 +37,22 @@ type
     selectionRects*: seq[Rect] ## The selection rects for each glyph.
 
   HorizontalAlignment* = enum
-    haLeft
-    haCenter
-    haRight
+    Left
+    Center
+    Right
 
   VerticalAlignment* = enum
-    vaTop
-    vaMiddle
-    vaBottom
+    Top
+    Middle
+    Bottom
 
   TextCase* = enum
-    tcNormal
-    tcUpper
-    tcLower
-    tcTitle
-    # tcSmallCaps
-    # tcSmallCapsForced
+    Normal
+    Upper
+    Lower
+    Title
+    # SmallCaps
+    # SmallCapsForced
 
 proc scale*(typeface: Typeface): float32 {.inline, raises: [].} =
   ## The scale factor to transform font units into pixels.
@@ -194,7 +194,7 @@ proc newFont*(typeface: Typeface): Font {.raises: [].} =
   result.typeface = typeface
   result.size = 12
   result.lineHeight = autoLineHeight
-  result.paint = newPaint(pkSolid)
+  result.paint = newPaint(Solid)
   result.paint.color = color(0, 0, 0, 1)
 
 proc newSpan*(text: string, font: Font): Span {.raises: [].} =
@@ -205,15 +205,15 @@ proc newSpan*(text: string, font: Font): Span {.raises: [].} =
 
 proc convertTextCase(runes: var seq[Rune], textCase: TextCase) =
   case textCase:
-  of tcNormal:
+  of Normal:
     discard
-  of tcUpper:
+  of Upper:
     for rune in runes.mitems:
       rune = rune.toUpper()
-  of tcLower:
+  of Lower:
     for rune in runes.mitems:
       rune = rune.toLower()
-  of tcTitle:
+  of Title:
     var prevRune = SP
     for rune in runes.mitems:
       if prevRune.isWhiteSpace:
@@ -226,8 +226,8 @@ proc canWrap(rune: Rune): bool {.inline.} =
 proc typeset*(
   spans: seq[Span],
   bounds = vec2(0, 0),
-  hAlign = haLeft,
-  vAlign = vaTop,
+  hAlign = Left,
+  vAlign = Top,
   wrap = true
 ): Arrangement {.raises: [].} =
   ## Lays out the character glyphs and returns the arrangement.
@@ -322,7 +322,7 @@ proc typeset*(
 
     result.lines[^1][1] = result.runes.len - 1
 
-    if hAlign != haLeft:
+    if hAlign != Left:
       # Since horizontal alignment adjustments are different for each line,
       # find the start and stop of each line of text.
       for (start, stop) in result.lines:
@@ -334,11 +334,11 @@ proc typeset*(
 
         var xAdjustment: float32
         case hAlign:
-          of haLeft:
+          of Left:
             discard
-          of haCenter:
+          of Center:
             xAdjustment = (bounds.x - furthestX) / 2
-          of haRight:
+          of Right:
             xAdjustment = bounds.x - furthestX
 
         if xAdjustment != 0:
@@ -412,18 +412,18 @@ proc typeset*(
             baseline - round(font.typeface.ascent * font.scale)
           result.selectionRects[runeIndex].h = lineHeight
 
-    if vAlign != vaTop:
+    if vAlign != Top:
       let
         finalSelectionRect = result.selectionRects[^1]
         furthestY = finalSelectionRect.y + finalSelectionRect.h
 
       var yAdjustment: float32
       case vAlign:
-        of vaTop:
+        of Top:
           discard
-        of vaMiddle:
+        of Middle:
           yAdjustment = round((bounds.y - furthestY) / 2)
-        of vaBottom:
+        of Bottom:
           yAdjustment = bounds.y - furthestY
 
       if yAdjustment != 0:
@@ -447,8 +447,8 @@ proc typeset*(
   font: Font,
   text: string,
   bounds = vec2(0, 0),
-  hAlign = haLeft,
-  vAlign = vaTop,
+  hAlign = Left,
+  vAlign = Top,
   wrap = true
 ): Arrangement {.inline, raises: [].} =
   ## Lays out the character glyphs and returns the arrangement.
@@ -497,8 +497,8 @@ proc textUber(
   arrangement: Arrangement,
   transform = mat3(),
   strokeWidth: float32 = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
+  lineCap = Butt,
+  lineJoin = Miter,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[],
   stroke: static[bool] = false
@@ -593,8 +593,8 @@ proc fillText*(
   text: string,
   transform = mat3(),
   bounds = vec2(0, 0),
-  hAlign = haLeft,
-  vAlign = vaTop
+  hAlign = Left,
+  vAlign = Top
 ) {.inline, raises: [PixieError].} =
   ## Typesets and fills the text. Optional parameters:
   ## transform: translation or matrix to apply
@@ -608,8 +608,8 @@ proc strokeText*(
   arrangement: Arrangement,
   transform = mat3(),
   strokeWidth: float32 = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
+  lineCap = Butt,
+  lineJoin = Miter,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[]
 ) {.inline, raises: [PixieError].} =
@@ -633,10 +633,10 @@ proc strokeText*(
   transform = mat3(),
   strokeWidth: float32 = 1.0,
   bounds = vec2(0, 0),
-  hAlign = haLeft,
-  vAlign = vaTop,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
+  hAlign = Left,
+  vAlign = Top,
+  lineCap = Butt,
+  lineJoin = Miter,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[]
 ) {.inline, raises: [PixieError].} =

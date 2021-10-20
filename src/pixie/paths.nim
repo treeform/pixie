@@ -6,16 +6,16 @@ when defined(amd64) and not defined(pixieNoSimd):
 type
   WindingRule* = enum
     ## Winding rules.
-    wrNonZero
-    wrEvenOdd
+    NonZero
+    EvenOdd
 
   LineCap* = enum
     ## Line cap type for strokes.
-    lcButt, lcRound, lcSquare
+    Butt, Round, Square
 
   LineJoin* = enum
     ## Line join type for strokes.
-    ljMiter, ljRound, ljBevel
+    Miter, Round, Bevel
 
   PathCommandKind = enum
     ## Type of path commands
@@ -1137,9 +1137,9 @@ proc shouldFill(
 ): bool {.inline.} =
   ## Should we fill based on the current winding rule and count?
   case windingRule:
-  of wrNonZero:
+  of NonZero:
     count != 0
-  of wrEvenOdd:
+  of EvenOdd:
     count mod 2 != 0
 
 iterator walk(
@@ -1154,7 +1154,7 @@ iterator walk(
     count: int32
   for i in 0 ..< numHits:
     let (at, winding) = hits[i]
-    if windingRule == wrNonZero and
+    if windingRule == NonZero and
       (count != 0) == (count + winding != 0) and
       i < numHits - 1:
       # Shortcut: if nonzero rule, we only care about when the count changes
@@ -1656,11 +1656,11 @@ proc strokeShapes(
         b = vec2(-b.y, b.x)
 
       var lineJoin = lineJoin
-      if lineJoin == ljMiter and abs(angle) < miterAngleLimit:
-        lineJoin = ljBevel
+      if lineJoin == Miter and abs(angle) < miterAngleLimit:
+        lineJoin = Bevel
 
       case lineJoin:
-      of ljMiter:
+      of Miter:
         let
           la = line(prevPos + a, pos + a)
           lb = line(nextPos + b, pos + b)
@@ -1668,10 +1668,10 @@ proc strokeShapes(
         if la.intersects(lb, at):
           return @[pos + a, at, pos + b, pos, pos + a]
 
-      of ljBevel:
+      of Bevel:
         return @[a + pos, b + pos, pos, a + pos]
 
-      of ljRound:
+      of Round:
         return makeCircle(pos)
 
   for shape in shapes:
@@ -1681,11 +1681,11 @@ proc strokeShapes(
       # This shape does not end at the same point it starts so draw the
       # first line cap.
       case lineCap:
-      of lcButt:
+      of Butt:
         discard
-      of lcRound:
+      of Round:
         shapeStroke.add(makeCircle(shape[0]))
-      of lcSquare:
+      of Square:
         let tangent = (shape[1] - shape[0]).normalize()
         shapeStroke.add(makeRect(
           shape[0] - tangent * halfStroke,
@@ -1726,11 +1726,11 @@ proc strokeShapes(
       shapeStroke.add(makeJoin(shape[^2], shape[^1], shape[1]))
     else:
       case lineCap:
-      of lcButt:
+      of Butt:
         discard
-      of lcRound:
+      of Round:
         shapeStroke.add(makeCircle(shape[^1]))
-      of lcSquare:
+      of Square:
         let tangent = (shape[^1] - shape[^2]).normalize()
         shapeStroke.add(makeRect(
           shape[^1] + tangent * halfStroke,
@@ -1752,7 +1752,7 @@ proc fillPath*(
   mask: Mask,
   path: SomePath,
   transform = mat3(),
-  windingRule = wrNonZero,
+  windingRule = NonZero,
   blendMode = bmNormal
 ) {.raises: [PixieError].} =
   ## Fills a path.
@@ -1765,13 +1765,13 @@ proc fillPath*(
   path: SomePath,
   paint: Paint,
   transform = mat3(),
-  windingRule = wrNonZero
+  windingRule = NonZero
 ) {.raises: [PixieError].} =
   ## Fills a path.
   if paint.opacity == 0:
     return
 
-  if paint.kind == pkSolid:
+  if paint.kind == Solid:
     if paint.color.a > 0 or paint.blendMode == bmOverwrite:
       var shapes = parseSomePath(path, true, transform.pixelScale())
       shapes.transform(transform)
@@ -1793,13 +1793,13 @@ proc fillPath*(
   paint.opacity = 1
 
   case paint.kind:
-    of pkSolid:
+    of Solid:
       discard # Handled above
-    of pkImage:
+    of ImageMat:
       fill.draw(paint.image, paint.imageMat)
-    of pkImageTiled:
+    of ImageTiled:
       fill.drawTiled(paint.image, paint.imageMat)
-    of pkGradientLinear, pkGradientRadial, pkGradientAngular:
+    of GradientLinear, GradientRadial, GradientAngular:
       fill.fillGradient(paint)
 
   paint.opacity = savedOpacity
@@ -1815,8 +1815,8 @@ proc strokePath*(
   path: SomePath,
   transform = mat3(),
   strokeWidth: float32 = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
+  lineCap = Butt,
+  lineJoin = Miter,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[],
   blendMode = bmNormal
@@ -1831,7 +1831,7 @@ proc strokePath*(
     dashes
   )
   strokeShapes.transform(transform)
-  mask.fillShapes(strokeShapes, wrNonZero, blendMode)
+  mask.fillShapes(strokeShapes, NonZero, blendMode)
 
 proc strokePath*(
   image: Image,
@@ -1839,8 +1839,8 @@ proc strokePath*(
   paint: Paint,
   transform = mat3(),
   strokeWidth: float32 = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
+  lineCap = Butt,
+  lineJoin = Miter,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[]
 ) {.raises: [PixieError].} =
@@ -1848,7 +1848,7 @@ proc strokePath*(
   if paint.opacity == 0:
     return
 
-  if paint.kind == pkSolid:
+  if paint.kind == Solid:
     if paint.color.a > 0 or paint.blendMode == bmOverwrite:
       var strokeShapes = strokeShapes(
         parseSomePath(path, false, transform.pixelScale()),
@@ -1862,7 +1862,7 @@ proc strokePath*(
       var color = paint.color
       if paint.opacity != 1:
         color.a *= paint.opacity
-      image.fillShapes(strokeShapes, color, wrNonZero, paint.blendMode)
+      image.fillShapes(strokeShapes, color, NonZero, paint.blendMode)
     return
 
   let
@@ -1885,13 +1885,13 @@ proc strokePath*(
   paint.opacity = 1
 
   case paint.kind:
-    of pkSolid:
+    of Solid:
       discard # Handled above
-    of pkImage:
+    of ImageMat:
       fill.draw(paint.image, paint.imageMat)
-    of pkImageTiled:
+    of ImageTiled:
       fill.drawTiled(paint.image, paint.imageMat)
-    of pkGradientLinear, pkGradientRadial, pkGradientAngular:
+    of GradientLinear, GradientRadial, GradientAngular:
       fill.fillGradient(paint)
 
   paint.opacity = savedOpacity
@@ -1935,7 +1935,7 @@ proc fillOverlaps*(
   path: Path,
   test: Vec2,
   transform = mat3(), ## Applied to the path, not the test point.
-  windingRule = wrNonZero
+  windingRule = NonZero
 ): bool {.raises: [PixieError].} =
   ## Returns whether or not the specified point is contained in the current path.
   var shapes = parseSomePath(path, true, transform.pixelScale())
@@ -1947,8 +1947,8 @@ proc strokeOverlaps*(
   test: Vec2,
   transform = mat3(), ## Applied to the path, not the test point.
   strokeWidth: float32 = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
+  lineCap = Butt,
+  lineJoin = Miter,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[],
 ): bool {.raises: [PixieError].} =
@@ -1963,7 +1963,7 @@ proc strokeOverlaps*(
     dashes
   )
   strokeShapes.transform(transform)
-  strokeShapes.overlaps(test, wrNonZero)
+  strokeShapes.overlaps(test, NonZero)
 
 when defined(release):
   {.pop.}

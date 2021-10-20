@@ -55,7 +55,7 @@ proc renderIconSet(index: int) =
       rendered.draw(
         icon,
         translate(pos),
-        bmOverwrite
+        Overwrite
       )
 
   rendered.writeFile(&"tests/fileformats/svg/{iconSet.name}.png")
