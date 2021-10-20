@@ -337,15 +337,13 @@ proc minifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
         result.setRgbaUnsafe(result.width - 1, y, rgbx)
 
     if srcHeightIsOdd:
-      let y = result.height - 1
-
       for x in 0 ..< resultEvenWidth:
         let rgbx = mix(
-          src.getRgbaUnsafe(x * 2 + 0, y),
-          src.getRgbaUnsafe(x * 2 + 1, y),
+          src.getRgbaUnsafe(x * 2 + 0, src.height - 1),
+          src.getRgbaUnsafe(x * 2 + 1, src.height - 1),
           0.5
         ) * 0.5
-        result.setRgbaUnsafe(x, y, rgbx)
+        result.setRgbaUnsafe(x, result.height - 1, rgbx)
 
       if srcWidthIsOdd:
         result.setRgbaUnsafe(

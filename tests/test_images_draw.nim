@@ -258,3 +258,15 @@ block:
   b.fill(rgba(0, 0, 0, 255))
   a.draw(b, scale(vec2(0.5, 0.5)))
   doDiff(a, "minify_odd")
+
+block:
+  let
+    rock = readImage("tests/images/rock.png")
+    minified = rock.minifyBy2()
+  doDiff(minified, "rock_minified")
+
+block:
+  let
+    rock = readImage("tests/images/rock.png")
+    minified = rock.minifyBy2(2)
+  doDiff(minified, "rock_minified2")
