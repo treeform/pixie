@@ -22,7 +22,7 @@ proc gaussianKernel*(radius: int): seq[uint16] {.raises: [].} =
   for i, f in floats:
     result[i] = round(f * 255 * 256).uint16
 
-proc applyOpacity*(color: ColorRGBX, opacity: float32): ColorRGBX {.raises: [].} =
+proc `*`*(color: ColorRGBX, opacity: float32): ColorRGBX {.raises: [].} =
   if opacity == 0:
     rgbx(0, 0, 0, 0)
   else:

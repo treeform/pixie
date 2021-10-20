@@ -256,14 +256,24 @@ proc minifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
 
   var src = image
   for _ in 1 .. power:
-    result = newImage(src.width div 2, src.height div 2)
-    for y in 0 ..< result.height:
+    # When minifying an image of odd size, round the result image size up
+    # so a 99 x 99 src image returns a 50 x 50 image.
+    let
+      srcWidthIsOdd = (src.width mod 2) != 0
+      srcHeightIsOdd = (src.height mod 2) != 0
+      resultEvenWidth = src.width div 2
+      resultEvenHeight = src.height div 2
+    result = newImage(
+      if srcWidthIsOdd: resultEvenWidth + 1 else: resultEvenWidth,
+      if srcHeightIsOdd: resultEvenHeight + 1 else: resultEvenHeight
+    )
+    for y in 0 ..< resultEvenHeight:
       var x: int
       when defined(amd64) and not defined(pixieNoSimd):
         let
           oddMask = mm_set1_epi16(cast[int16](0xff00))
           first32 = cast[M128i]([uint32.high, 0, 0, 0])
-        for _ in countup(0, result.width - 4, 2):
+        for _ in countup(0, resultEvenWidth - 4, 2):
           let
             top = mm_loadu_si128(src.data[src.dataIndex(x * 2, y * 2 + 0)].addr)
             btm = mm_loadu_si128(src.data[src.dataIndex(x * 2, y * 2 + 1)].addr)
@@ -303,7 +313,7 @@ proc minifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
           mm_storeu_si128(result.data[result.dataIndex(x, y)].addr, zeroTwo)
           x += 2
 
-      for x in x ..< result.width:
+      for x in x ..< resultEvenWidth:
         let
           a = src.getRgbaUnsafe(x * 2 + 0, y * 2 + 0)
           b = src.getRgbaUnsafe(x * 2 + 1, y * 2 + 0)
@@ -317,6 +327,32 @@ proc minifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
           )
 
         result.setRgbaUnsafe(x, y, rgba)
+
+      if srcWidthIsOdd:
+        let rgbx = mix(
+          src.getRgbaUnsafe(src.width - 1, y * 2 + 0),
+          src.getRgbaUnsafe(src.width - 1, y * 2 + 1),
+          0.5
+        ) * 0.5
+        result.setRgbaUnsafe(result.width - 1, y, rgbx)
+
+    if srcHeightIsOdd:
+      let y = result.height - 1
+
+      for x in 0 ..< resultEvenWidth:
+        let rgbx = mix(
+          src.getRgbaUnsafe(x * 2 + 0, y),
+          src.getRgbaUnsafe(x * 2 + 1, y),
+          0.5
+        ) * 0.5
+        result.setRgbaUnsafe(x, y, rgbx)
+
+      if srcWidthIsOdd:
+        result.setRgbaUnsafe(
+          result.width - 1,
+          result.height - 1,
+          src.getRgbaUnsafe(src.width - 1, src.height - 1) * 0.25
+        )
 
     # Set src as this result for if we do another power
     src = result
