@@ -179,22 +179,20 @@ proc flipHorizontal*(image: Image) {.raises: [].} =
   let w = image.width div 2
   for y in 0 ..< image.height:
     for x in 0 ..< w:
-      let
-        rgba1 = image.getRgbaUnsafe(x, y)
-        rgba2 = image.getRgbaUnsafe(image.width - x - 1, y)
-      image.setRgbaUnsafe(image.width - x - 1, y, rgba1)
-      image.setRgbaUnsafe(x, y, rgba2)
+      swap(
+        image.data[image.dataIndex(x, y)],
+        image.data[image.dataIndex(image.width - x - 1, y)]
+      )
 
 proc flipVertical*(image: Image) {.raises: [].} =
   ## Flips the image around the X axis.
   let h = image.height div 2
   for y in 0 ..< h:
     for x in 0 ..< image.width:
-      let
-        rgba1 = image.getRgbaUnsafe(x, y)
-        rgba2 = image.getRgbaUnsafe(x, image.height - y - 1)
-      image.setRgbaUnsafe(x, image.height - y - 1, rgba1)
-      image.setRgbaUnsafe(x, y, rgba2)
+      swap(
+        image.data[image.dataIndex(x, y)],
+        image.data[image.dataIndex(x, image.height - y - 1)]
+      )
 
 proc subImage*(image: Image, x, y, w, h: int): Image {.raises: [PixieError].} =
   ## Gets a sub image from this image.
