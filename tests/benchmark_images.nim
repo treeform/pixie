@@ -49,6 +49,16 @@ timeIt "magnifyBy2":
 
 reset()
 
+timeIt "flipHorizontal":
+  image.flipHorizontal()
+
+reset()
+
+timeIt "flipVertical":
+  image.flipVertical()
+
+reset()
+
 timeIt "invert":
   image.invert()
 
