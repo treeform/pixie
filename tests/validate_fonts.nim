@@ -2,10 +2,10 @@ import pixie, stb_truetype, unicode
 
 let fontFiles = [
   # "tests/fonts/Roboto-Regular_1.ttf"
-  # "tests/fonts/Aclonica-Regular_1.ttf"
-  # "tests/fonts/Ubuntu-Regular_1.ttf"
-  # "tests/fonts/IBMPlexSans-Regular_2.ttf"
-  # "tests/fonts/NotoSans-Regular_4.ttf"
+    # "tests/fonts/Aclonica-Regular_1.ttf"
+    # "tests/fonts/Ubuntu-Regular_1.ttf"
+    # "tests/fonts/IBMPlexSans-Regular_2.ttf"
+    # "tests/fonts/NotoSans-Regular_4.ttf"
   "tests/fonts/Pacifico-Regular_4.ttf"
 ]
 
@@ -38,5 +38,5 @@ for fontFile in fontFiles:
         echo "DISAGREE: ", a, " != ", b, " <<<<<<<<<<<<<<<<<<<<<<<<<<<"
         # quit()
 
-  # echo stbtt.getCodepointKernAdvance(Rune('r'), Rune('s')).float32
-  # echo font.typeface.getKerningAdjustment(Rune('r'), Rune('s'))
+      # echo stbtt.getCodepointKernAdvance(Rune('r'), Rune('s')).float32
+      # echo font.typeface.getKerningAdjustment(Rune('r'), Rune('s'))
