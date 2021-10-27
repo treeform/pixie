@@ -808,7 +808,9 @@ proc parseKernTable(buf: string, offset: int): KernTable =
   else:
     failUnsupported("Kern version")
 
-proc parseCFFIndexOffsets(buf: string, start: var int, stripZero = false): seq[(int, int)] =
+proc parseCFFIndexOffsets(
+  buf: string, start: var int, stripZero = false
+): seq[(int, int)] =
 
   proc getOffset(buf: string, offset, offSize: int): int =
     var v = 0

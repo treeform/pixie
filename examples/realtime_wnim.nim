@@ -10,7 +10,7 @@ var
   frameCount = 0
   image = Image(w, h)
   app = App()
-  frame = Frame(title="wNim/Pixie")
+  frame = Frame(title = "wNim/Pixie")
 
 proc draw() =
   # draw shiny sphere on gradient background

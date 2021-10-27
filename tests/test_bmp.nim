@@ -32,6 +32,7 @@ import chroma, pixie, pixie/fileformats/bmp
 
 block:
   for bits in [32, 24]:
-    let image =
-      decodeBmp(readFile("tests/fileformats/bmp/knight." & $bits & ".master.bmp"))
+    let image = decodeBmp(readFile(
+      "tests/fileformats/bmp/knight." & $bits & ".master.bmp"
+    ))
     writeFile("tests/fileformats/bmp/knight." & $bits & ".bmp", encodeBmp(image))
