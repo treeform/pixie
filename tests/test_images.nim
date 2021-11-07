@@ -202,3 +202,16 @@ block:
   let image = newImage(100, 100)
   image.fill(rgba(255, 255, 255, 255))
   doAssert not image.isTransparent()
+
+block:
+  let a = newImage(400, 400)
+  let b = newImage(156, 434)
+  b.fill(rgba(255, 0, 0, 255))
+  a.draw(
+    b,
+    mat3(
+      -0.5, -4.371138828673793e-008, 0.0,
+      -4.371138828673793e-008, 0.5, 0.0,
+      292.0, 45.0, 1.0
+    )
+  )

@@ -881,7 +881,10 @@ proc drawUber(
                 x += 16
 
       var srcPos = p + dx * x.float32 + dy * y.float32
-      srcPos = vec2(max(0, srcPos.x), max(0, srcPos.y))
+      srcPos = vec2(
+        clamp(srcPos.x, 0, b.width.float32),
+        clamp(srcPos.y, 0, b.height.float32)
+      )
 
       for x in x ..< xMax:
         let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
