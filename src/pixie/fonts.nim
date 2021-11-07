@@ -163,6 +163,9 @@ proc getKerningAdjustment*(
   let
     typefaceRight = typeface.fallbackTypeface(right)
     typefaceLeft = typeface.fallbackTypeface(left)
+  # Is there a type face that matches?
+  if typefaceRight == nil or typefaceLeft == nil:
+    return
   # Only do kerning if both typefaces are the same.
   if typefaceRight == typefaceLeft:
     if typefaceRight.opentype != nil:
