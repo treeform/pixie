@@ -1192,26 +1192,28 @@ proc computeCoverages(
 
   # Do scanlines for this row
   let partitionIndex = partitioning.getIndexForY(y)
-  var
-    yLine = y.float32 + initialOffset - offset
-    scanline = line(vec2(0, yLine), vec2(width, yLine))
+  var yLine = y.float32 + initialOffset - offset
   for m in 0 ..< quality:
     yLine += offset
-    scanline.a.y = yLine
-    scanline.b.y = yLine
     numHits = 0
     for i in 0 ..< partitioning.partitions[partitionIndex].len: # Perf
       let
         segment = partitioning.partitions[partitionIndex][i][0]
         winding = partitioning.partitions[partitionIndex][i][1]
-      if segment.at.y <= scanline.a.y and segment.to.y >= scanline.a.y:
-        var at: Vec2
-        if scanline.intersects(segment, at):
-          if segment.to != at:
-            if numHits == hits.len:
-              hits.setLen(hits.len * 2)
-            hits[numHits] = (min(at.x, width), winding)
-            inc numHits
+      if segment.at.y <= yLine and segment.to.y >= yLine:
+        let x =
+          if segment.at.x - segment.to.x == 0:
+            segment.at.x
+          else:
+            let
+              m = (segment.at.y - segment.to.y) / (segment.at.x - segment.to.x)
+              b = segment.at.y - m * segment.at.x
+            (yLine - b) / m
+
+        if numHits == hits.len:
+          hits.setLen(hits.len * 2)
+        hits[numHits] = (min(x, width), winding)
+        inc numHits
 
     sort(hits, 0, numHits - 1)
 
