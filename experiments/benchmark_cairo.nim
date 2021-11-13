@@ -23,7 +23,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
 
   timeIt "pixie1":
-    var p: pixie.Path
+    let p = newPath()
     p.moveTo(0, 0)
     p.lineTo(1920, 0)
     p.lineTo(1920, 1080)
@@ -56,7 +56,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
 
   timeIt "pixie2":
-    var p: pixie.Path
+    let p = newPath()
     p.moveTo(500, 240)
     p.lineTo(1500, 240)
     p.lineTo(1920, 600)
@@ -66,31 +66,31 @@ block:
 
   # a.writeFile("pixie2.png")
 
-block:
-  let
-    a = imageSurfaceCreate(FORMAT_ARGB32, 1000, 1000)
-    b = imageSurfaceCreate(FORMAT_ARGB32, 500, 500)
-    ac = a.create()
-    bc = b.create()
+# block:
+#   let
+#     a = imageSurfaceCreate(FORMAT_ARGB32, 1000, 1000)
+#     b = imageSurfaceCreate(FORMAT_ARGB32, 500, 500)
+#     ac = a.create()
+#     bc = b.create()
 
-  ac.setSourceRgba(1, 0, 0, 1)
-  ac.newPath()
-  ac.rectangle(0, 0, 1000, 1000)
-  ac.fill()
+#   ac.setSourceRgba(1, 0, 0, 1)
+#   ac.newPath()
+#   ac.rectangle(0, 0, 1000, 1000)
+#   ac.fill()
 
-  bc.setSourceRgba(0, 1, 0, 1)
-  bc.newPath()
-  bc.rectangle(0, 0, 500, 500)
-  bc.fill()
+#   bc.setSourceRgba(0, 1, 0, 1)
+#   bc.newPath()
+#   bc.rectangle(0, 0, 500, 500)
+#   bc.fill()
 
-  let pattern = patternCreateForSurface(b)
+#   let pattern = patternCreateForSurface(b)
 
-  timeIt "a":
-    ac.setSource(pattern)
-    ac.save()
-    ac.translate(25.2, 25.2)
-    ac.rectangle(0, 0, 500, 500)
-    ac.fill()
-    ac.restore()
+#   timeIt "a":
+#     ac.setSource(pattern)
+#     ac.save()
+#     ac.translate(25.2, 25.2)
+#     ac.rectangle(0, 0, 500, 500)
+#     ac.fill()
+#     ac.restore()
 
-  discard a.writeToPng("a.png")
+#   discard a.writeToPng("a.png")

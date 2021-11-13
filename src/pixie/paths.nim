@@ -1201,56 +1201,61 @@ proc computeCoverages(
         segment = partitioning.partitions[partitionIndex][i][0]
         winding = partitioning.partitions[partitionIndex][i][1]
       if segment.at.y <= yLine and segment.to.y >= yLine:
-        let x =
-          if segment.at.x - segment.to.x == 0:
-            segment.at.x
-          else:
-            let
-              m = (segment.at.y - segment.to.y) / (segment.at.x - segment.to.x)
-              b = segment.at.y - m * segment.at.x
-            (yLine - b) / m
+        let
+          d = segment.at.x - segment.to.x
+          x =
+            if d == 0:
+              segment.at.x
+            else:
+              let
+                m = (segment.at.y - segment.to.y) / d
+                b = segment.at.y - m * segment.at.x
+              (yLine - b) / m
 
         if numHits == hits.len:
           hits.setLen(hits.len * 2)
         hits[numHits] = (min(x, width), winding)
         inc numHits
 
-    sort(hits, 0, numHits - 1)
+    if numHits > 0:
+      sort(hits, 0, numHits - 1)
 
-    if aa:
-      for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
-        var fillStart = prevAt.int
+    if not aa:
+      continue
 
-        let
-          pixelCrossed = at.int - prevAt.int > 0
-          leftCover =
-            if pixelCrossed:
-              trunc(prevAt) + 1 - prevAt
-            else:
-              at - prevAt
-        if leftCover != 0:
-          inc fillStart
-          coverages[prevAt.int - startX] +=
-            (leftCover * sampleCoverage.float32).uint8
+    for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
+      var fillStart = prevAt.int
 
-        if pixelCrossed:
-          let rightCover = at - trunc(at)
-          if rightCover > 0:
-            coverages[at.int - startX] +=
-              (rightCover * sampleCoverage.float32).uint8
+      let
+        pixelCrossed = at.int - prevAt.int > 0
+        leftCover =
+          if pixelCrossed:
+            trunc(prevAt) + 1 - prevAt
+          else:
+            at - prevAt
+      if leftCover != 0:
+        inc fillStart
+        coverages[prevAt.int - startX] +=
+          (leftCover * sampleCoverage.float32).uint8
 
-        let fillLen = at.int - fillStart
-        if fillLen > 0:
-          var i = fillStart
-          when defined(amd64) and not defined(pixieNoSimd):
-            let vSampleCoverage = mm_set1_epi8(cast[int8](sampleCoverage))
-            for j in countup(i, fillStart + fillLen - 16, 16):
-              var coverage = mm_loadu_si128(coverages[j - startX].addr)
-              coverage = mm_add_epi8(coverage, vSampleCoverage)
-              mm_storeu_si128(coverages[j - startX].addr, coverage)
-              i += 16
-          for j in i ..< fillStart + fillLen:
-            coverages[j - startX] += sampleCoverage
+      if pixelCrossed:
+        let rightCover = at - trunc(at)
+        if rightCover > 0:
+          coverages[at.int - startX] +=
+            (rightCover * sampleCoverage.float32).uint8
+
+      let fillLen = at.int - fillStart
+      if fillLen > 0:
+        var i = fillStart
+        when defined(amd64) and not defined(pixieNoSimd):
+          let vSampleCoverage = mm_set1_epi8(cast[int8](sampleCoverage))
+          for j in countup(i, fillStart + fillLen - 16, 16):
+            var coverage = mm_loadu_si128(coverages[j - startX].addr)
+            coverage = mm_add_epi8(coverage, vSampleCoverage)
+            mm_storeu_si128(coverages[j - startX].addr, coverage)
+            i += 16
+        for j in i ..< fillStart + fillLen:
+          coverages[j - startX] += sampleCoverage
 
 proc clearUnsafe(target: Image | Mask, startX, startY, toX, toY: int) =
   ## Clears data from [start, to).
