@@ -40,7 +40,7 @@ type
     startY, partitionHeight: uint32
 
 const
-  epsilon = 0.0001 * PI ## Tiny value used for some computations.
+  epsilon: float32 = 0.0001 * PI ## Tiny value used for some computations.
   defaultMiterLimit*: float32 = 4
 
 when defined(release):
