@@ -35,8 +35,13 @@ type
 
   SomePath* = Path | string
 
+  PartitionEntry = object
+    atY, toY: float32
+    m, b: float32
+    winding: int16
+
   Partitioning = object
-    partitions: seq[seq[(Segment, int16)]]
+    partitions: seq[seq[PartitionEntry]]
     startY, partitionHeight: uint32
 
 const
@@ -1076,8 +1081,19 @@ proc partitionSegments(
   result.partitionHeight = height.uint32 div numPartitions
 
   for (segment, winding) in segments:
+    var entry: PartitionEntry
+    entry.atY = segment.at.y
+    entry.toY = segment.to.y
+    entry.winding = winding
+    let d = segment.at.x - segment.to.x
+    if d == 0:
+      entry.b = segment.at.x # Leave m = 0, store the x we want in b
+    else:
+      entry.m = (segment.at.y - segment.to.y) / d
+      entry.b = segment.at.y - entry.m * segment.at.x
+
     if result.partitionHeight == 0:
-      result.partitions[0].add((segment, winding))
+      result.partitions[0].add(entry)
     else:
       var
         atPartition = max(0, segment.at.y - result.startY.float32).uint32
@@ -1087,7 +1103,7 @@ proc partitionSegments(
       atPartition = clamp(atPartition, 0, result.partitions.high.uint32)
       toPartition = clamp(toPartition, 0, result.partitions.high.uint32)
       for i in atPartition .. toPartition:
-        result.partitions[i].add((segment, winding))
+        result.partitions[i].add(entry)
 
 proc getIndexForY(partitioning: Partitioning, y: int): uint32 {.inline.} =
   if partitioning.partitionHeight == 0 or partitioning.partitions.len == 1:
@@ -1191,71 +1207,64 @@ proc computeCoverages(
     zeroMem(coverages[0].addr, coverages.len)
 
   # Do scanlines for this row
-  let partitionIndex = partitioning.getIndexForY(y)
+  let
+    partitionIndex = partitioning.getIndexForY(y)
+    partitionEntryCount = partitioning.partitions[partitionIndex].len
   var yLine = y.float32 + initialOffset - offset
   for m in 0 ..< quality:
     yLine += offset
     numHits = 0
-    for i in 0 ..< partitioning.partitions[partitionIndex].len: # Perf
-      let
-        segment = partitioning.partitions[partitionIndex][i][0]
-        winding = partitioning.partitions[partitionIndex][i][1]
-      if segment.at.y <= yLine and segment.to.y >= yLine:
-        let
-          d = segment.at.x - segment.to.x
-          x =
-            if d == 0:
-              segment.at.x
-            else:
-              let
-                m = (segment.at.y - segment.to.y) / d
-                b = segment.at.y - m * segment.at.x
-              (yLine - b) / m
+    for i in 0 ..< partitionEntryCount: # Perf
+      let entry = partitioning.partitions[partitionIndex][i]
+      if entry.atY <= yLine and entry.toY >= yLine:
+        let x =
+          if entry.m == 0:
+            entry.b
+          else:
+            (yLine - entry.b) / entry.m
 
         if numHits == hits.len:
           hits.setLen(hits.len * 2)
-        hits[numHits] = (min(x, width), winding)
+        hits[numHits] = (min(x, width), entry.winding)
         inc numHits
 
     if numHits > 0:
       sort(hits, 0, numHits - 1)
 
-    if not aa:
-      continue
+    if aa:
+      for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
+        var fillStart = prevAt.int
 
-    for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
-      var fillStart = prevAt.int
+        let
+          pixelCrossed = at.int - prevAt.int > 0
+          leftCover =
+            if pixelCrossed:
+              trunc(prevAt) + 1 - prevAt
+            else:
+              at - prevAt
+        if leftCover != 0:
+          inc fillStart
+          coverages[prevAt.int - startX] +=
+            (leftCover * sampleCoverage.float32).uint8
 
-      let
-        pixelCrossed = at.int - prevAt.int > 0
-        leftCover =
-          if pixelCrossed:
-            trunc(prevAt) + 1 - prevAt
-          else:
-            at - prevAt
-      if leftCover != 0:
-        inc fillStart
-        coverages[prevAt.int - startX] +=
-          (leftCover * sampleCoverage.float32).uint8
+        if pixelCrossed:
+          let rightCover = at - trunc(at)
+          if rightCover > 0:
+            coverages[at.int - startX] +=
+              (rightCover * sampleCoverage.float32).uint8
 
-      if pixelCrossed:
-        let rightCover = at - trunc(at)
-        if rightCover > 0:
-          coverages[at.int - startX] +=
-            (rightCover * sampleCoverage.float32).uint8
-
-      let fillLen = at.int - fillStart
-      if fillLen > 0:
-        var i = fillStart
-        when defined(amd64) and not defined(pixieNoSimd):
-          let vSampleCoverage = mm_set1_epi8(cast[int8](sampleCoverage))
-          for j in countup(i, fillStart + fillLen - 16, 16):
-            var coverage = mm_loadu_si128(coverages[j - startX].addr)
-            coverage = mm_add_epi8(coverage, vSampleCoverage)
-            mm_storeu_si128(coverages[j - startX].addr, coverage)
-            i += 16
-        for j in i ..< fillStart + fillLen:
-          coverages[j - startX] += sampleCoverage
+        let fillLen = at.int - fillStart
+        if fillLen > 0:
+          var i = fillStart
+          when defined(amd64) and not defined(pixieNoSimd):
+            let vSampleCoverage = mm_set1_epi8(cast[int8](sampleCoverage))
+            for j in countup(i, fillStart + fillLen - 16, 16):
+              var coverage = mm_loadu_si128(coverages[j - startX].addr)
+              coverage = mm_add_epi8(coverage, vSampleCoverage)
+              mm_storeu_si128(coverages[j - startX].addr, coverage)
+              i += 16
+          for j in i ..< fillStart + fillLen:
+            coverages[j - startX] += sampleCoverage
 
 proc clearUnsafe(target: Image | Mask, startX, startY, toX, toY: int) =
   ## Clears data from [start, to).
