@@ -34,9 +34,9 @@ type
     bmSubtractMask ## Inverse mask
     bmExcludeMask
 
-  Blender* = proc(backdrop, source: ColorRGBX): ColorRGBX {.raises: [].}
+  Blender* = proc(backdrop, source: ColorRGBX): ColorRGBX {.gcsafe, raises: [].}
     ## Function signature returned by blender.
-  Masker* = proc(backdrop, source: uint8): uint8 {.raises: [].}
+  Masker* = proc(backdrop, source: uint8): uint8 {.gcsafe, raises: [].}
     ## Function signature returned by masker.
 
 when defined(release):
@@ -507,9 +507,9 @@ when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
 
   type
-    BlenderSimd* = proc(blackdrop, source: M128i): M128i {.raises: [].}
+    BlenderSimd* = proc(blackdrop, source: M128i): M128i {.gcsafe, raises: [].}
       ## Function signature returned by blenderSimd.
-    MaskerSimd* = proc(blackdrop, source: M128i): M128i {.raises: [].}
+    MaskerSimd* = proc(blackdrop, source: M128i): M128i {.gcsafe, raises: [].}
       ## Function signature returned by maskerSimd.
 
   proc blendNormalSimd(backdrop, source: M128i): M128i =

@@ -35,12 +35,17 @@ type
 
   SomePath* = Path | string
 
+  PartitionEntry = object
+    atY, toY: float32
+    m, b: float32
+    winding: int16
+
   Partitioning = object
-    partitions: seq[seq[(Segment, int16)]]
+    partitions: seq[seq[PartitionEntry]]
     startY, partitionHeight: uint32
 
 const
-  epsilon = 0.0001 * PI ## Tiny value used for some computations.
+  epsilon: float32 = 0.0001 * PI ## Tiny value used for some computations.
   defaultMiterLimit*: float32 = 4
 
 when defined(release):
@@ -1076,8 +1081,19 @@ proc partitionSegments(
   result.partitionHeight = height.uint32 div numPartitions
 
   for (segment, winding) in segments:
+    var entry: PartitionEntry
+    entry.atY = segment.at.y
+    entry.toY = segment.to.y
+    entry.winding = winding
+    let d = segment.at.x - segment.to.x
+    if d == 0:
+      entry.b = segment.at.x # Leave m = 0, store the x we want in b
+    else:
+      entry.m = (segment.at.y - segment.to.y) / d
+      entry.b = segment.at.y - entry.m * segment.at.x
+
     if result.partitionHeight == 0:
-      result.partitions[0].add((segment, winding))
+      result.partitions[0].add(entry)
     else:
       var
         atPartition = max(0, segment.at.y - result.startY.float32).uint32
@@ -1087,7 +1103,7 @@ proc partitionSegments(
       atPartition = clamp(atPartition, 0, result.partitions.high.uint32)
       toPartition = clamp(toPartition, 0, result.partitions.high.uint32)
       for i in atPartition .. toPartition:
-        result.partitions[i].add((segment, winding))
+        result.partitions[i].add(entry)
 
 proc getIndexForY(partitioning: Partitioning, y: int): uint32 {.inline.} =
   if partitioning.partitionHeight == 0 or partitioning.partitions.len == 1:
@@ -1191,31 +1207,29 @@ proc computeCoverages(
     zeroMem(coverages[0].addr, coverages.len)
 
   # Do scanlines for this row
-  let partitionIndex = partitioning.getIndexForY(y)
+  let
+    partitionIndex = partitioning.getIndexForY(y)
+    partitionEntryCount = partitioning.partitions[partitionIndex].len
   var yLine = y.float32 + initialOffset - offset
   for m in 0 ..< quality:
     yLine += offset
     numHits = 0
-    for i in 0 ..< partitioning.partitions[partitionIndex].len: # Perf
-      let
-        segment = partitioning.partitions[partitionIndex][i][0]
-        winding = partitioning.partitions[partitionIndex][i][1]
-      if segment.at.y <= yLine and segment.to.y >= yLine:
+    for i in 0 ..< partitionEntryCount: # Perf
+      let entry = partitioning.partitions[partitionIndex][i]
+      if entry.atY <= yLine and entry.toY >= yLine:
         let x =
-          if segment.at.x - segment.to.x == 0:
-            segment.at.x
+          if entry.m == 0:
+            entry.b
           else:
-            let
-              m = (segment.at.y - segment.to.y) / (segment.at.x - segment.to.x)
-              b = segment.at.y - m * segment.at.x
-            (yLine - b) / m
+            (yLine - entry.b) / entry.m
 
         if numHits == hits.len:
           hits.setLen(hits.len * 2)
-        hits[numHits] = (min(x, width), winding)
+        hits[numHits] = (min(x, width), entry.winding)
         inc numHits
 
-    sort(hits, 0, numHits - 1)
+    if numHits > 0:
+      sort(hits, 0, numHits - 1)
 
     if aa:
       for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
