@@ -69,12 +69,14 @@ proc start*(title = "Demo", width = 800, height = 600) =
   makeContextCurrent(window)
   loadExtensions()
 
-  var xscale, yscale: cfloat
-  window.getWindowContentScale(xscale.addr, yscale.addr)
-  dpi = xscale
-  screen = newImage(int(width.float32 * dpi), int(height.float32 * dpi))
+  screen = newImage(int(width.float32), int(height.float32))
   window.setWindowSize(screen.width.cint, screen.height.cint)
-  glViewport(0, 0, screen.width.cint, screen.height.cint)
+
+  # Correct scaling for high pixel screens
+  var frameWidthScale, frameHeightScale: cint
+  getFramebufferSize(window, frameWidthScale.addr, frameHeightScale.addr)
+
+  glViewport(0, 0, frameWidthScale, frameHeightScale)
   ctx = newContext(screen)
 
   # Allocate a texture and bind it.
