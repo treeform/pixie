@@ -1164,10 +1164,10 @@ iterator walk(
   windingRule: WindingRule,
   y: int,
   width: float32
-): (float32, float32, int32) =
+): (float32, float32, int) =
   var
     prevAt: float32
-    count: int32
+    count: int
   for i in 0 ..< numHits:
     let (at, winding) = hits[i]
     if windingRule == wrNonZero and
