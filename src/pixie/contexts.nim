@@ -555,7 +555,7 @@ proc drawImage*(
   ctx: Context, image: Image, dx, dy: float32
 ) {.raises: [PixieError].} =
   ## Draws a source image onto the destination image.
-  ctx.drawImage(image, dx, dx, image.width.float32, image.height.float32)
+  ctx.drawImage(image, dx, dy, image.width.float32, image.height.float32)
 
 proc drawImage*(ctx: Context, image: Image, pos: Vec2) {.raises: [PixieError].} =
   ## Draws a source image onto the destination image.
@@ -573,7 +573,7 @@ proc drawImage*(
 ) {.raises: [PixieError].} =
   ## Draws a source image onto the destination image.
   let image = image.subImage(sx.int, sy.int, sWidth.int, sHeight.int)
-  ctx.drawImage(image, dx, dx, image.width.float32, image.height.float32)
+  ctx.drawImage(image, dx, dy, image.width.float32, image.height.float32)
 
 proc drawImage*(ctx: Context, image: Image, src, dest: Rect) {.raises: [PixieError].} =
   ## Draws a source image onto the destination image.
