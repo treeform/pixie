@@ -1291,56 +1291,64 @@ proc fillCoverage(
       # When supported, SIMD blend as much as possible
       let
         blenderSimd = blendMode.blenderSimd()
-        first32 = cast[M128i]([uint32.high, 0, 0, 0]) # First 32 bits
         oddMask = mm_set1_epi16(cast[int16](0xff00))
         div255 = mm_set1_epi16(cast[int16](0x8081))
+        vec255 = mm_set1_epi32(cast[int32](uint32.high))
+        zeroVec = mm_setzero_si128()
         colorVec = mm_set1_epi32(cast[int32](rgbx))
-      for _ in countup(x, startX + coverages.len - 16, 4):
-        var coverage = mm_loadu_si128(coverages[x - startX].unsafeAddr)
-        coverage = mm_and_si128(coverage, first32)
-
+      for _ in countup(x, startX + coverages.len - 16, 16):
         let
           index = image.dataIndex(x, y)
-          eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
-        if mm_movemask_epi8(eqZero) != 0xffff: # or blendMode == bmExcludeMask:
+          coverage = mm_loadu_si128(coverages[x - startX].unsafeAddr)
+
+        if mm_movemask_epi8(mm_cmpeq_epi16(coverage, zeroVec)) != 0xffff:
           # If the coverages are not all zero
-          if mm_movemask_epi8(mm_cmpeq_epi32(coverage, first32)) == 0xffff:
-            # Coverages are all 255
+          if mm_movemask_epi8(mm_cmpeq_epi32(coverage, vec255)) == 0xffff:
+            # If the coverages are all 255
             if blendMode == bmNormal and rgbx.a == 255:
-              mm_storeu_si128(image.data[index].addr, colorVec)
+              for i in 0 ..< 4:
+                mm_storeu_si128(image.data[index + i * 4].addr, colorVec)
             else:
-              let backdrop = mm_loadu_si128(image.data[index].addr)
-              mm_storeu_si128(
-                image.data[index].addr,
-                blenderSimd(backdrop, colorVec)
-              )
+              for i in 0 ..< 4:
+                let backdrop = mm_loadu_si128(image.data[index + i * 4].addr)
+                mm_storeu_si128(
+                  image.data[index + i * 4].addr,
+                  blenderSimd(backdrop, colorVec)
+                )
           else:
             # Coverages are not all 255
-            coverage = unpackAlphaValues(coverage)
-            # Shift the coverages from `a` to `g` and `a` for multiplying
-            coverage = mm_or_si128(coverage, mm_srli_epi32(coverage, 16))
+            var coverage = coverage
+            for i in 0 ..< 4:
+              var unpacked = unpackAlphaValues(coverage)
+              # Shift the coverages from `a` to `g` and `a` for multiplying
+              unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
 
-            var
-              source = colorVec
-              sourceEven = mm_slli_epi16(source, 8)
-              sourceOdd = mm_and_si128(source, oddMask)
+              var
+                source = colorVec
+                sourceEven = mm_slli_epi16(source, 8)
+                sourceOdd = mm_and_si128(source, oddMask)
 
-            sourceEven = mm_mulhi_epu16(sourceEven, coverage)
-            sourceOdd = mm_mulhi_epu16(sourceOdd, coverage)
+              sourceEven = mm_mulhi_epu16(sourceEven, unpacked)
+              sourceOdd = mm_mulhi_epu16(sourceOdd, unpacked)
 
-            sourceEven = mm_srli_epi16(mm_mulhi_epu16(sourceEven, div255), 7)
-            sourceOdd = mm_srli_epi16(mm_mulhi_epu16(sourceOdd, div255), 7)
+              sourceEven = mm_srli_epi16(mm_mulhi_epu16(sourceEven, div255), 7)
+              sourceOdd = mm_srli_epi16(mm_mulhi_epu16(sourceOdd, div255), 7)
 
-            source = mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
+              source = mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
 
-            let backdrop = mm_loadu_si128(image.data[index].addr)
-            mm_storeu_si128(
-              image.data[index].addr,
-              blenderSimd(backdrop, source)
-            )
+              let backdrop = mm_loadu_si128(image.data[index + i * 4].addr)
+              mm_storeu_si128(
+                image.data[index + i * 4].addr,
+                blenderSimd(backdrop, source)
+              )
+
+              coverage = mm_srli_si128(coverage, 4)
+
         elif blendMode == bmMask:
-          mm_storeu_si128(image.data[index].addr, mm_setzero_si128())
-        x += 4
+          for i in 0 ..< 4:
+            mm_storeu_si128(image.data[index + i * 4].addr, zeroVec)
+
+        x += 16
 
   let blender = blendMode.blender()
   while x < startX + coverages.len:
@@ -1375,13 +1383,14 @@ proc fillCoverage(
   var x = startX
   when defined(amd64) and not defined(pixieNoSimd):
     if blendMode.hasSimdMasker():
-      let maskerSimd = blendMode.maskerSimd()
+      let
+        maskerSimd = blendMode.maskerSimd()
+        zeroVec = mm_setzero_si128()
       for _ in countup(x, startX + coverages.len - 16, 16):
         let
           index = mask.dataIndex(x, y)
           coverage = mm_loadu_si128(coverages[x - startX].unsafeAddr)
-          eqZero = mm_cmpeq_epi16(coverage, mm_setzero_si128())
-        if mm_movemask_epi8(eqZero) != 0xffff: # or blendMode == bmExcludeMask:
+        if mm_movemask_epi8(mm_cmpeq_epi16(coverage, zeroVec)) != 0xffff:
           # If the coverages are not all zero
           let backdrop = mm_loadu_si128(mask.data[index].addr)
           mm_storeu_si128(
@@ -1389,7 +1398,7 @@ proc fillCoverage(
             maskerSimd(backdrop, coverage)
           )
         elif blendMode == bmMask:
-          mm_storeu_si128(mask.data[index].addr, mm_setzero_si128())
+          mm_storeu_si128(mask.data[index].addr, zeroVec)
         x += 16
 
   let masker = blendMode.masker()
@@ -1439,15 +1448,15 @@ proc fillHits(
         let
           blenderSimd = blendMode.blenderSimd()
           colorVec = mm_set1_epi32(cast[int32](rgbx))
-        for _ in countup(fillStart, fillLen - 16, 4):
-          let
-            index = image.dataIndex(x, y)
-            backdrop = mm_loadu_si128(image.data[index].addr)
-          mm_storeu_si128(
-            image.data[index].addr,
-            blenderSimd(backdrop, colorVec)
-          )
-          x += 4
+        for _ in countup(fillStart, fillLen - 16, 16):
+          let index = image.dataIndex(x, y)
+          for i in 0 ..< 4:
+            let backdrop = mm_loadu_si128(image.data[index + i * 4].addr)
+            mm_storeu_si128(
+              image.data[index + i * 4].addr,
+              blenderSimd(backdrop, colorVec)
+            )
+          x += 16
 
     for x in x ..< fillStart + fillLen:
       let backdrop = image.getRgbaUnsafe(x, y)
