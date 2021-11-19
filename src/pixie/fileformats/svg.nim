@@ -410,8 +410,8 @@ proc drawInternal(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
       let points = points.split(" ")
       if points.len mod 2 != 0:
         failInvalid()
-      for i in countup(0, points.len - 2, 2):
-        vecs.add(vec2(parseFloat(points[i]), parseFloat(points[i + 1])))
+      for i in 0 ..< points.len div 2:
+        vecs.add(vec2(parseFloat(points[i * 2]), parseFloat(points[i * 2 + 1])))
 
     if vecs.len == 0:
       failInvalid()

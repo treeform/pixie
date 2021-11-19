@@ -142,8 +142,10 @@ when defined(amd64) and not defined(pixieNoSimd):
   reset()
 
   timeIt "blendNormal [simd]":
-    for i in countup(0, backdrop.data.len - 4, 4):
+    var i: int
+    while i < backdrop.data.len - 4:
       let
         b = mm_loadu_si128(backdrop.data[i].addr)
         s = mm_loadu_si128(source.data[i].addr)
       mm_storeu_si128(backdrop.data[i].addr, blendNormalSimd(b, s))
+      i += 4

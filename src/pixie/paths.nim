@@ -1258,10 +1258,10 @@ proc computeCoverages(
           var i = fillStart
           when defined(amd64) and not defined(pixieNoSimd):
             let sampleCoverageVec = mm_set1_epi8(cast[int8](sampleCoverage))
-            for j in countup(i, fillStart + fillLen - 16, 16):
-              var coverage = mm_loadu_si128(coverages[j - startX].addr)
+            for _ in 0 ..< fillLen div 16:
+              var coverage = mm_loadu_si128(coverages[i - startX].addr)
               coverage = mm_add_epi8(coverage, sampleCoverageVec)
-              mm_storeu_si128(coverages[j - startX].addr, coverage)
+              mm_storeu_si128(coverages[i - startX].addr, coverage)
               i += 16
           for j in i ..< fillStart + fillLen:
             coverages[j - startX] += sampleCoverage
@@ -1296,7 +1296,7 @@ proc fillCoverage(
         vec255 = mm_set1_epi32(cast[int32](uint32.high))
         zeroVec = mm_setzero_si128()
         colorVec = mm_set1_epi32(cast[int32](rgbx))
-      for _ in countup(x, startX + coverages.len - 16, 16):
+      for _ in 0 ..< coverages.len div 16:
         let
           index = image.dataIndex(x, y)
           coverage = mm_loadu_si128(coverages[x - startX].unsafeAddr)
@@ -1386,7 +1386,7 @@ proc fillCoverage(
       let
         maskerSimd = blendMode.maskerSimd()
         zeroVec = mm_setzero_si128()
-      for _ in countup(x, startX + coverages.len - 16, 16):
+      for _ in 0 ..< coverages.len div 16:
         let
           index = mask.dataIndex(x, y)
           coverage = mm_loadu_si128(coverages[x - startX].unsafeAddr)
@@ -1448,7 +1448,7 @@ proc fillHits(
         let
           blenderSimd = blendMode.blenderSimd()
           colorVec = mm_set1_epi32(cast[int32](rgbx))
-        for _ in countup(fillStart, fillLen - 16, 16):
+        for _ in 0 ..< fillLen div 16:
           let index = image.dataIndex(x, y)
           for i in 0 ..< 4:
             let backdrop = mm_loadu_si128(image.data[index + i * 4].addr)
@@ -1497,7 +1497,7 @@ proc fillHits(
         let
           maskerSimd = blendMode.maskerSimd()
           valueVec = mm_set1_epi8(cast[int8](255))
-        for _ in countup(fillStart, fillLen - 16, 16):
+        for _ in 0 ..< fillLen div 16:
           let backdrop = mm_loadu_si128(mask.data[mask.dataIndex(x, y)].addr)
           mm_storeu_si128(
             mask.data[mask.dataIndex(x, y)].addr,

@@ -55,8 +55,7 @@ proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} 
       notAlphaMask = mm_set1_epi32(0x00ffffff)
       oddMask = mm_set1_epi16(cast[int16](0xff00))
       div255 = mm_set1_epi16(cast[int16](0x8081))
-
-    for _ in countup(i, data.len - 4, 4):
+    for _ in 0 ..< data.len div 4:
       var
         color = mm_loadu_si128(data[i].addr)
         alpha = mm_and_si128(color, alphaMask)

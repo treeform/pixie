@@ -246,12 +246,12 @@ proc ceil*(mask: Mask) {.raises: [].} =
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
     let
-      vZero = mm_setzero_si128()
-      vMax = mm_set1_epi32(cast[int32](uint32.high))
-    for _ in countup(0, mask.data.len - 16, 16):
+      zeroVec = mm_setzero_si128()
+      vec255 = mm_set1_epi32(cast[int32](uint32.high))
+    for _ in 0 ..< mask.data.len div 16:
       var values = mm_loadu_si128(mask.data[i].addr)
-      values = mm_cmpeq_epi8(values, vZero)
-      values = mm_andnot_si128(values, vMax)
+      values = mm_cmpeq_epi8(values, zeroVec)
+      values = mm_andnot_si128(values, vec255)
       mm_storeu_si128(mask.data[i].addr, values)
       i += 16
 
