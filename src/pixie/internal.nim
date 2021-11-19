@@ -56,13 +56,11 @@ proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} 
       oddMask = mm_set1_epi16(cast[int16](0xff00))
       div255 = mm_set1_epi16(cast[int16](0x8081))
 
-    for j in countup(i, data.len - 4, 4):
+    for _ in countup(i, data.len - 4, 4):
       var
-        color = mm_loadu_si128(data[j].addr)
+        color = mm_loadu_si128(data[i].addr)
         alpha = mm_and_si128(color, alphaMask)
-
-      let eqOpaque = mm_cmpeq_epi16(alpha, alphaMask)
-      if mm_movemask_epi8(eqOpaque) != 0xffff:
+      if mm_movemask_epi8(mm_cmpeq_epi16(alpha, alphaMask)) != 0xffff:
         # If not all of the alpha values are 255, premultiply
         var
           colorEven = mm_slli_epi16(color, 8)
@@ -81,8 +79,10 @@ proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} 
           mm_and_si128(alpha, alphaMask), mm_and_si128(color, notAlphaMask)
         )
 
-        mm_storeu_si128(data[j].addr, color)
+        mm_storeu_si128(data[i].addr, color)
+
       i += 4
+
   # Convert whatever is left
   for j in i ..< data.len:
     var c = data[j]
