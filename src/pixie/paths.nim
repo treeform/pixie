@@ -1257,10 +1257,10 @@ proc computeCoverages(
         if fillLen > 0:
           var i = fillStart
           when defined(amd64) and not defined(pixieNoSimd):
-            let vSampleCoverage = mm_set1_epi8(cast[int8](sampleCoverage))
+            let sampleCoverageVec = mm_set1_epi8(cast[int8](sampleCoverage))
             for j in countup(i, fillStart + fillLen - 16, 16):
               var coverage = mm_loadu_si128(coverages[j - startX].addr)
-              coverage = mm_add_epi8(coverage, vSampleCoverage)
+              coverage = mm_add_epi8(coverage, sampleCoverageVec)
               mm_storeu_si128(coverages[j - startX].addr, coverage)
               i += 16
           for j in i ..< fillStart + fillLen:
@@ -1294,7 +1294,7 @@ proc fillCoverage(
         first32 = cast[M128i]([uint32.high, 0, 0, 0]) # First 32 bits
         oddMask = mm_set1_epi16(cast[int16](0xff00))
         div255 = mm_set1_epi16(cast[int16](0x8081))
-        vColor = mm_set1_epi32(cast[int32](rgbx))
+        colorVec = mm_set1_epi32(cast[int32](rgbx))
       for _ in countup(x, startX + coverages.len - 16, 4):
         var coverage = mm_loadu_si128(coverages[x - startX].unsafeAddr)
         coverage = mm_and_si128(coverage, first32)
@@ -1307,12 +1307,12 @@ proc fillCoverage(
           if mm_movemask_epi8(mm_cmpeq_epi32(coverage, first32)) == 0xffff:
             # Coverages are all 255
             if blendMode == bmNormal and rgbx.a == 255:
-              mm_storeu_si128(image.data[index].addr, vColor)
+              mm_storeu_si128(image.data[index].addr, colorVec)
             else:
               let backdrop = mm_loadu_si128(image.data[index].addr)
               mm_storeu_si128(
                 image.data[index].addr,
-                blenderSimd(backdrop, vColor)
+                blenderSimd(backdrop, colorVec)
               )
           else:
             # Coverages are not all 255
@@ -1321,7 +1321,7 @@ proc fillCoverage(
             coverage = mm_or_si128(coverage, mm_srli_epi32(coverage, 16))
 
             var
-              source = vColor
+              source = colorVec
               sourceEven = mm_slli_epi16(source, 8)
               sourceOdd = mm_and_si128(source, oddMask)
 
@@ -1438,14 +1438,14 @@ proc fillHits(
         # When supported, SIMD blend as much as possible
         let
           blenderSimd = blendMode.blenderSimd()
-          vColor = mm_set1_epi32(cast[int32](rgbx))
+          colorVec = mm_set1_epi32(cast[int32](rgbx))
         for _ in countup(fillStart, fillLen - 16, 4):
           let
             index = image.dataIndex(x, y)
             backdrop = mm_loadu_si128(image.data[index].addr)
           mm_storeu_si128(
             image.data[index].addr,
-            blenderSimd(backdrop, vColor)
+            blenderSimd(backdrop, colorVec)
           )
           x += 4
 
@@ -1487,12 +1487,12 @@ proc fillHits(
       if blendMode.hasSimdMasker():
         let
           maskerSimd = blendMode.maskerSimd()
-          vValue = mm_set1_epi8(cast[int8](255))
+          valueVec = mm_set1_epi8(cast[int8](255))
         for _ in countup(fillStart, fillLen - 16, 16):
           let backdrop = mm_loadu_si128(mask.data[mask.dataIndex(x, y)].addr)
           mm_storeu_si128(
             mask.data[mask.dataIndex(x, y)].addr,
-            maskerSimd(backdrop, vValue)
+            maskerSimd(backdrop, valueVec)
           )
           x += 16
 
