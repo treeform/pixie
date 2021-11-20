@@ -28,16 +28,19 @@ proc newImage*(mask: Mask): Image {.raises: [PixieError].} =
   result = newImage(mask.width, mask.height)
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
-    for _ in countup(0, mask.data.len - 16, 4):
-      var alphas = unpackAlphaValues(mm_loadu_si128(mask.data[i].addr))
-      alphas = mm_or_si128(alphas, mm_srli_epi32(alphas, 8))
-      alphas = mm_or_si128(alphas, mm_srli_epi32(alphas, 16))
-      mm_storeu_si128(result.data[i].addr, alphas)
-      i += 4
+    for _ in 0 ..< mask.data.len div 16:
+      var alphas = mm_loadu_si128(mask.data[i].addr)
+      for j in 0 ..< 4:
+        var unpacked = unpackAlphaValues(alphas)
+        unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 8))
+        unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
+        mm_storeu_si128(result.data[i + j * 4].addr, unpacked)
+        alphas = mm_srli_si128(alphas, 4)
+      i += 16
 
-  for i in i ..< mask.data.len:
-    let v = mask.data[i]
-    result.data[i] = rgbx(v, v, v, v)
+  for j in i ..< mask.data.len:
+    let v = mask.data[j]
+    result.data[j] = rgbx(v, v, v, v)
 
 proc copy*(image: Image): Image {.raises: [PixieError].} =
   ## Copies the image data into a new image.
@@ -104,10 +107,10 @@ proc fillUnsafe*(
     var i = start
     when defined(amd64) and not defined(pixieNoSimd):
       # When supported, SIMD fill until we run out of room
-      let m = mm_set1_epi32(cast[int32](rgbx))
-      for j in countup(i, start + len - 8, 8):
-        mm_storeu_si128(data[j].addr, m)
-        mm_storeu_si128(data[j + 4].addr, m)
+      let colorVec = mm_set1_epi32(cast[int32](rgbx))
+      for _ in 0 ..< len div 8:
+        mm_storeu_si128(data[i + 0].addr, colorVec)
+        mm_storeu_si128(data[i + 4].addr, colorVec)
         i += 8
     else:
       when sizeof(int) == 8:
@@ -115,8 +118,8 @@ proc fillUnsafe*(
         let
           u32 = cast[uint32](rgbx)
           u64 = cast[uint64]([u32, u32])
-        for j in countup(i, start + len - 2, 2):
-          cast[ptr uint64](data[j].addr)[] = u64
+        for _ in 0 ..< len div 2:
+          cast[ptr uint64](data[i].addr)[] = u64
           i += 2
     # Fill whatever is left the slow way
     for j in i ..< start + len:
@@ -135,10 +138,10 @@ proc isOneColor*(image: Image): bool {.raises: [].} =
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
     let colorVec = mm_set1_epi32(cast[int32](color))
-    for j in countup(0, image.data.len - 8, 8):
+    for _ in 0 ..< image.data.len div 8:
       let
-        values0 = mm_loadu_si128(image.data[j].addr)
-        values1 = mm_loadu_si128(image.data[j + 4].addr)
+        values0 = mm_loadu_si128(image.data[i + 0].addr)
+        values1 = mm_loadu_si128(image.data[i + 4].addr)
         mask0 = mm_movemask_epi8(mm_cmpeq_epi8(values0, colorVec))
         mask1 = mm_movemask_epi8(mm_cmpeq_epi8(values1, colorVec))
       if mask0 != uint16.high.int or mask1 != uint16.high.int:
@@ -155,17 +158,17 @@ proc isTransparent*(image: Image): bool {.raises: [].} =
 
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
-    let transparent = mm_setzero_si128()
-    for j in countup(0, image.data.len - 16, 16):
+    let zeroVec = mm_setzero_si128()
+    for _ in 0 ..< image.data.len div 16:
       let
-        values0 = mm_loadu_si128(image.data[j].addr)
-        values1 = mm_loadu_si128(image.data[j + 4].addr)
-        values2 = mm_loadu_si128(image.data[j + 8].addr)
-        values3 = mm_loadu_si128(image.data[j + 12].addr)
+        values0 = mm_loadu_si128(image.data[i + 0].addr)
+        values1 = mm_loadu_si128(image.data[i + 4].addr)
+        values2 = mm_loadu_si128(image.data[i + 8].addr)
+        values3 = mm_loadu_si128(image.data[i + 12].addr)
         values01 = mm_or_si128(values0, values1)
         values23 = mm_or_si128(values2, values3)
         values = mm_or_si128(values01, values23)
-        mask = mm_movemask_epi8(mm_cmpeq_epi8(values, transparent))
+        mask = mm_movemask_epi8(mm_cmpeq_epi8(values, zeroVec))
       if mask != uint16.high.int:
         return false
       i += 16
@@ -416,9 +419,8 @@ proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
     let
       oddMask = mm_set1_epi16(cast[int16](0xff00))
       div255 = mm_set1_epi16(cast[int16](0x8081))
-      vOpacity = mm_slli_epi16(mm_set1_epi16(cast[int16](opacity)), 8)
-
-    for _ in countup(0, byteLen - 16, 16):
+      opacityVec = mm_slli_epi16(mm_set1_epi16(cast[int16](opacity)), 8)
+    for _ in 0 ..< byteLen div 16:
       when type(target) is Image:
         let index = i div 4
       else:
@@ -433,8 +435,8 @@ proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
           valuesOdd = mm_and_si128(values, oddMask)
 
         # values * opacity
-        valuesEven = mm_mulhi_epu16(valuesEven, vOpacity)
-        valuesOdd = mm_mulhi_epu16(valuesOdd, vOpacity)
+        valuesEven = mm_mulhi_epu16(valuesEven, opacityVec)
+        valuesOdd = mm_mulhi_epu16(valuesOdd, opacityVec)
 
         # div 255
         valuesEven = mm_srli_epi16(mm_mulhi_epu16(valuesEven, div255), 7)
@@ -465,21 +467,21 @@ proc invert*(target: Image | Mask) {.raises: [].} =
   ## Inverts all of the colors and alpha.
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
-    let v255 = mm_set1_epi8(cast[int8](255))
+    let vec255 = mm_set1_epi8(cast[int8](255))
 
     when type(target) is Image:
       let byteLen = target.data.len * 4
     else:
       let byteLen = target.data.len
 
-    for _ in countup(0, byteLen - 16, 16):
+    for _ in 0 ..< byteLen div 16:
       when type(target) is Image:
         let index = i div 4
       else:
         let index = i
 
       var values = mm_loadu_si128(target.data[index].addr)
-      values = mm_sub_epi8(v255, values)
+      values = mm_sub_epi8(vec255, values)
       mm_storeu_si128(target.data[index].addr, values)
 
       i += 16
@@ -568,7 +570,7 @@ proc newMask*(image: Image): Mask {.raises: [PixieError].} =
 
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
-    for _ in countup(0, image.data.len - 16, 16):
+    for _ in 0 ..< image.data.len div 16:
       var
         a = mm_loadu_si128(image.data[i + 0].addr)
         b = mm_loadu_si128(image.data[i + 4].addr)
@@ -817,7 +819,7 @@ proc drawUber(
           when type(a) is Image:
             if blendMode.hasSimdBlender():
               let blenderSimd = blendMode.blenderSimd()
-              for _ in countup(x, xMax - 16, 16):
+              for _ in 0 ..< (xMax - xMin) div 16:
                 let
                   srcPos = p + dx * x.float32 + dy * y.float32
                   sx = srcPos.x.int
@@ -847,7 +849,7 @@ proc drawUber(
           else: # is a Mask
             if blendMode.hasSimdMasker():
               let maskerSimd = blendMode.maskerSimd()
-              for _ in countup(x, xMax - 16, 16):
+              for _ in 0 ..< (xMax - xMin) div 16:
                 let
                   srcPos = p + dx * x.float32 + dy * y.float32
                   sx = srcPos.x.int
