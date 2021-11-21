@@ -1068,6 +1068,17 @@ proc computeBounds*(
   shapes.transform(transform)
   computeBounds(shapes.shapesToSegments())
 
+proc initPartitionEntry(segment: Segment, winding: int16): PartitionEntry =
+  result.atY = segment.at.y
+  result.toY = segment.to.y
+  result.winding = winding
+  let d = segment.at.x - segment.to.x
+  if d == 0:
+    result.b = segment.at.x # Leave m = 0, store the x we want in b
+  else:
+    result.m = (segment.at.y - segment.to.y) / d
+    result.b = segment.at.y - result.m * segment.at.x
+
 proc partitionSegments(
   segments: seq[(Segment, int16)], top, height: int
 ): Partitioning =
@@ -1081,17 +1092,7 @@ proc partitionSegments(
   result.partitionHeight = height.uint32 div numPartitions
 
   for (segment, winding) in segments:
-    var entry: PartitionEntry
-    entry.atY = segment.at.y
-    entry.toY = segment.to.y
-    entry.winding = winding
-    let d = segment.at.x - segment.to.x
-    if d == 0:
-      entry.b = segment.at.x # Leave m = 0, store the x we want in b
-    else:
-      entry.m = (segment.at.y - segment.to.y) / d
-      entry.b = segment.at.y - entry.m * segment.at.x
-
+    let entry = initPartitionEntry(segment, winding)
     if result.partitionHeight == 0:
       result.partitions[0].add(entry)
     else:
@@ -1106,7 +1107,7 @@ proc partitionSegments(
         result.partitions[i].add(entry)
 
 proc getIndexForY(partitioning: Partitioning, y: int): uint32 {.inline.} =
-  if partitioning.partitionHeight == 0 or partitioning.partitions.len == 1:
+  if partitioning.partitions.len == 1:
     0.uint32
   else:
     min(
