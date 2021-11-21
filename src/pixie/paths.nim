@@ -1120,38 +1120,38 @@ proc maxEntryCount(partitioning: Partitioning): int =
     result = max(result, partitioning.partitions[i].len)
 
 proc insertionSort(
-  a: var seq[(float32, int16)], lo, hi: int
+  hits: var seq[(float32, int16)], lo, hi: int
 ) {.inline.} =
   for i in lo + 1 .. hi:
     var
       j = i - 1
       k = i
-    while j >= 0 and a[j][0] > a[k][0]:
-      swap(a[j + 1], a[j])
+    while j >= 0 and hits[j][0] > hits[k][0]:
+      swap(hits[j + 1], hits[j])
       dec j
       dec k
 
-proc sort(a: var seq[(float32, int16)], inl, inr: int) =
+proc sort(hits: var seq[(float32, int16)], inl, inr: int) =
   ## Quicksort + insertion sort, in-place and faster than standard lib sort.
   let n = inr - inl + 1
   if n < 32:
-    insertionSort(a, inl, inr)
+    insertionSort(hits, inl, inr)
     return
   var
     l = inl
     r = inr
-  let p = a[l + n div 2][0]
+  let p = hits[l + n div 2][0]
   while l <= r:
-    if a[l][0] < p:
+    if hits[l][0] < p:
       inc l
-    elif a[r][0] > p:
+    elif hits[r][0] > p:
       dec r
     else:
-      swap(a[l], a[r])
+      swap(hits[l], hits[r])
       inc l
       dec r
-  sort(a, inl, r)
-  sort(a, l, inr)
+  sort(hits, inl, r)
+  sort(hits, l, inr)
 
 proc shouldFill(
   windingRule: WindingRule, count: int
@@ -1175,25 +1175,22 @@ iterator walk(
     prevAt: float32
   while i < numHits:
     let (at, winding) = hits[i]
-    if windingRule == wrNonZero and
-      count != 0 and
-      count + winding != 0 and
-      i < numHits - 1:
-      # Shortcut: if nonzero rule, we only care about when the count changes
-      # between zero and nonzero (or the last hit)
-      count += winding
-      inc i
-      continue
     if at > 0:
       if shouldFill(windingRule, count):
-        # Look ahead to see if the next hit is in the same spot as this hit.
-        # If it is, see if this and the next hit's windings cancel out.
-        # If they do, skip the hits and do not yield yet. It will be yielded
-        # later in a larger chunk.
         if i < numHits - 1:
+          # Look ahead to see if the next hit is in the same spot as this hit.
+          # If it is, see if this hit and the next hit's windings cancel out.
+          # If they do, skip the hits. It will be yielded later in a
+          # larger chunk.
           let (nextAt, nextWinding) = hits[i + 1]
           if nextAt == at and winding + nextWinding == 0:
             i += 2
+            continue
+          # Shortcut: we only care about when we stop filling (or the last hit).
+          # If we continue filling, move to next hit.
+          if windingRule.shouldFill(count + winding):
+            count += winding
+            inc i
             continue
         yield (prevAt, at, count)
       prevAt = at
