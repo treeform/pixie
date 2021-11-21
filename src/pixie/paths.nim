@@ -1187,7 +1187,7 @@ iterator walk(
     if prevAt != width and count != 0:
       echo "Leak detected: ", count, " @ (", prevAt, ", ", y, ")"
 
-proc computeCoverages(
+proc computeCoverage(
   coverages: var seq[uint8],
   hits: var seq[(float32, int16)],
   numHits: var int,
@@ -1259,9 +1259,9 @@ proc computeCoverages(
           when defined(amd64) and not defined(pixieNoSimd):
             let sampleCoverageVec = mm_set1_epi8(cast[int8](sampleCoverage))
             for _ in 0 ..< fillLen div 16:
-              var coverage = mm_loadu_si128(coverages[i - startX].addr)
-              coverage = mm_add_epi8(coverage, sampleCoverageVec)
-              mm_storeu_si128(coverages[i - startX].addr, coverage)
+              var coverageVec = mm_loadu_si128(coverages[i - startX].addr)
+              coverageVec = mm_add_epi8(coverageVec, sampleCoverageVec)
+              mm_storeu_si128(coverages[i - startX].addr, coverageVec)
               i += 16
           for j in i ..< fillStart + fillLen:
             coverages[j - startX] += sampleCoverage
@@ -1299,11 +1299,11 @@ proc fillCoverage(
       for _ in 0 ..< coverages.len div 16:
         let
           index = image.dataIndex(x, y)
-          coverage = mm_loadu_si128(coverages[x - startX].unsafeAddr)
+          coverageVec = mm_loadu_si128(coverages[x - startX].unsafeAddr)
 
-        if mm_movemask_epi8(mm_cmpeq_epi16(coverage, zeroVec)) != 0xffff:
+        if mm_movemask_epi8(mm_cmpeq_epi16(coverageVec, zeroVec)) != 0xffff:
           # If the coverages are not all zero
-          if mm_movemask_epi8(mm_cmpeq_epi32(coverage, vec255)) == 0xffff:
+          if mm_movemask_epi8(mm_cmpeq_epi32(coverageVec, vec255)) == 0xffff:
             # If the coverages are all 255
             if blendMode == bmNormal and rgbx.a == 255:
               for i in 0 ..< 4:
@@ -1317,9 +1317,9 @@ proc fillCoverage(
                 )
           else:
             # Coverages are not all 255
-            var coverage = coverage
+            var coverageVec = coverageVec
             for i in 0 ..< 4:
-              var unpacked = unpackAlphaValues(coverage)
+              var unpacked = unpackAlphaValues(coverageVec)
               # Shift the coverages from `a` to `g` and `a` for multiplying
               unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
 
@@ -1342,7 +1342,7 @@ proc fillCoverage(
                 blenderSimd(backdrop, source)
               )
 
-              coverage = mm_srli_si128(coverage, 4)
+              coverageVec = mm_srli_si128(coverageVec, 4)
 
         elif blendMode == bmMask:
           for i in 0 ..< 4:
@@ -1538,7 +1538,7 @@ proc fillShapes(
     numHits: int
 
   for y in startY ..< pathHeight:
-    computeCoverages(
+    computeCoverage(
       coverages,
       hits,
       numHits,
@@ -1595,7 +1595,7 @@ proc fillShapes(
     numHits: int
 
   for y in startY ..< pathHeight:
-    computeCoverages(
+    computeCoverage(
       coverages,
       hits,
       numHits,
