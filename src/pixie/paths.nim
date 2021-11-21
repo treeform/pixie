@@ -1221,7 +1221,7 @@ proc computeCoverage(
     yLine += offset
     numHits = 0
     for i in 0 ..< partitionEntryCount: # Perf
-      let entry = partitioning.partitions[partitionIndex][i]
+      let entry = partitioning.partitions[partitionIndex][i].unsafeAddr # Perf
       if entry.atY <= yLine and entry.toY >= yLine:
         let x =
           if entry.m == 0:
