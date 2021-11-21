@@ -5,8 +5,16 @@ let pathStr = "m57.611-8.591c-1.487,1.851-4.899,4.42-1.982,6.348,0.194,0.129,0.5
 timeIt "parsePath":
   keep parsePath(pathStr)
 
-let image = newImage(500, 300)
-image.fill(rgba(255, 255, 255, 255))
+block:
+  let path = parsePath("""
+    M 10,30
+    A 20,20 0,0,1 50,30
+    A 20,20 0,0,1 90,30
+    Q 90,60 50,90
+    Q 10,60 10,30 z
+  """)
+  timeIt "fillOverlaps":
+    doAssert path.fillOverlaps(vec2(1, 1)) == false
 
 timeIt "roundedRect":
   const radius = 20
@@ -15,4 +23,5 @@ timeIt "roundedRect":
   path.roundedRect(0.5, 0.5, 499, 299, radius, radius, radius, radius)
   # path.roundedRect(0, 0, 500, 300, radius, radius, radius, radius)
 
+  let image = newImage(500, 300)
   image.fillPath(path, rgba(0, 0, 0, 255))

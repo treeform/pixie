@@ -1940,10 +1940,7 @@ proc overlaps(
   let
     scanline = line(vec2(0, test.y), vec2(1000, test.y))
     segments = shapes.shapesToSegments()
-  for i in 0 ..< segments.len: # For gc:arc
-    let
-      segment = segments[i][0]
-      winding = segments[i][1]
+  for (segment, winding) in segments:
     if segment.at.y <= scanline.a.y and segment.to.y >= scanline.a.y:
       var at: Vec2
       if scanline.intersects(segment, at):
@@ -1953,8 +1950,7 @@ proc overlaps(
   sort(hits, 0, hits.high)
 
   var count: int
-  for i in 0 ..< hits.len: # For gc:arc
-    let (at, winding) = hits[i]
+  for (at, winding) in hits:
     if at > test.x:
       return shouldFill(windingRule, count)
     count += winding
