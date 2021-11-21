@@ -1114,6 +1114,10 @@ proc getIndexForY(partitioning: Partitioning, y: int): uint32 {.inline.} =
       partitioning.partitions.high.uint32
     )
 
+proc maxEntryCount(partitioning: Partitioning): int =
+  for i in 0 ..< partitioning.partitions.len:
+    result = max(result, partitioning.partitions[i].len)
+
 proc insertionSort(
   a: var seq[(float32, int16)], lo, hi: int
 ) {.inline.} =
@@ -1223,8 +1227,6 @@ proc computeCoverage(
           else:
             (yLine - entry.b) / entry.m
 
-        if numHits == hits.len:
-          hits.setLen(hits.len * 2)
         hits[numHits] = (min(x, width), entry.winding)
         inc numHits
 
@@ -1534,7 +1536,7 @@ proc fillShapes(
 
   var
     coverages = newSeq[uint8](bounds.w.int)
-    hits = newSeq[(float32, int16)](4)
+    hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
     numHits: int
 
   for y in startY ..< pathHeight:
@@ -1591,7 +1593,7 @@ proc fillShapes(
 
   var
     coverages = newSeq[uint8](bounds.w.int)
-    hits = newSeq[(float32, int16)](4)
+    hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
     numHits: int
 
   for y in startY ..< pathHeight:
