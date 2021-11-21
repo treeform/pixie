@@ -1188,7 +1188,7 @@ iterator walk(
             continue
           # Shortcut: we only care about when we stop filling (or the last hit).
           # If we continue filling, move to next hit.
-          if windingRule.shouldFill(count + winding):
+          if windingRule == wrNonZero and count + winding != 0:
             count += winding
             inc i
             continue
