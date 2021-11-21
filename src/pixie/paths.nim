@@ -1171,9 +1171,9 @@ iterator walk(
   width: float32
 ): (float32, float32, int) =
   var
+    i, count: int
     prevAt: float32
-    count: int
-  for i in 0 ..< numHits:
+  while i < numHits:
     let (at, winding) = hits[i]
     if windingRule == wrNonZero and
       count != 0 and
@@ -1182,12 +1182,23 @@ iterator walk(
       # Shortcut: if nonzero rule, we only care about when the count changes
       # between zero and nonzero (or the last hit)
       count += winding
+      inc i
       continue
     if at > 0:
       if shouldFill(windingRule, count):
+        # Look ahead to see if the next hit is in the same spot as this hit.
+        # If it is, see if this and the next hit's windings cancel out.
+        # If they do, skip the hits and do not yield yet. It will be yielded
+        # later in a larger chunk.
+        if i < numHits - 1:
+          let (nextAt, nextWinding) = hits[i + 1]
+          if nextAt == at and winding + nextWinding == 0:
+            i += 2
+            continue
         yield (prevAt, at, count)
       prevAt = at
     count += winding
+    inc i
 
   when defined(pixieLeakCheck):
     if prevAt != width and count != 0:
