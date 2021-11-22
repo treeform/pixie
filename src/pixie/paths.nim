@@ -1068,6 +1068,17 @@ proc computeBounds*(
   shapes.transform(transform)
   computeBounds(shapes.shapesToSegments())
 
+proc initPartitionEntry(segment: Segment, winding: int16): PartitionEntry =
+  result.atY = segment.at.y
+  result.toY = segment.to.y
+  result.winding = winding
+  let d = segment.at.x - segment.to.x
+  if d == 0:
+    result.b = segment.at.x # Leave m = 0, store the x we want in b
+  else:
+    result.m = (segment.at.y - segment.to.y) / d
+    result.b = segment.at.y - result.m * segment.at.x
+
 proc partitionSegments(
   segments: seq[(Segment, int16)], top, height: int
 ): Partitioning =
@@ -1081,17 +1092,7 @@ proc partitionSegments(
   result.partitionHeight = height.uint32 div numPartitions
 
   for (segment, winding) in segments:
-    var entry: PartitionEntry
-    entry.atY = segment.at.y
-    entry.toY = segment.to.y
-    entry.winding = winding
-    let d = segment.at.x - segment.to.x
-    if d == 0:
-      entry.b = segment.at.x # Leave m = 0, store the x we want in b
-    else:
-      entry.m = (segment.at.y - segment.to.y) / d
-      entry.b = segment.at.y - entry.m * segment.at.x
-
+    let entry = initPartitionEntry(segment, winding)
     if result.partitionHeight == 0:
       result.partitions[0].add(entry)
     else:
@@ -1106,7 +1107,7 @@ proc partitionSegments(
         result.partitions[i].add(entry)
 
 proc getIndexForY(partitioning: Partitioning, y: int): uint32 {.inline.} =
-  if partitioning.partitionHeight == 0 or partitioning.partitions.len == 1:
+  if partitioning.partitions.len == 1:
     0.uint32
   else:
     min(
@@ -1114,39 +1115,43 @@ proc getIndexForY(partitioning: Partitioning, y: int): uint32 {.inline.} =
       partitioning.partitions.high.uint32
     )
 
+proc maxEntryCount(partitioning: Partitioning): int =
+  for i in 0 ..< partitioning.partitions.len:
+    result = max(result, partitioning.partitions[i].len)
+
 proc insertionSort(
-  a: var seq[(float32, int16)], lo, hi: int
+  hits: var seq[(float32, int16)], lo, hi: int
 ) {.inline.} =
   for i in lo + 1 .. hi:
     var
       j = i - 1
       k = i
-    while j >= 0 and a[j][0] > a[k][0]:
-      swap(a[j + 1], a[j])
+    while j >= 0 and hits[j][0] > hits[k][0]:
+      swap(hits[j + 1], hits[j])
       dec j
       dec k
 
-proc sort(a: var seq[(float32, int16)], inl, inr: int) =
+proc sort(hits: var seq[(float32, int16)], inl, inr: int) =
   ## Quicksort + insertion sort, in-place and faster than standard lib sort.
   let n = inr - inl + 1
   if n < 32:
-    insertionSort(a, inl, inr)
+    insertionSort(hits, inl, inr)
     return
   var
     l = inl
     r = inr
-  let p = a[l + n div 2][0]
+  let p = hits[l + n div 2][0]
   while l <= r:
-    if a[l][0] < p:
+    if hits[l][0] < p:
       inc l
-    elif a[r][0] > p:
+    elif hits[r][0] > p:
       dec r
     else:
-      swap(a[l], a[r])
+      swap(hits[l], hits[r])
       inc l
       dec r
-  sort(a, inl, r)
-  sort(a, l, inr)
+  sort(hits, inl, r)
+  sort(hits, l, inr)
 
 proc shouldFill(
   windingRule: WindingRule, count: int
@@ -1166,28 +1171,37 @@ iterator walk(
   width: float32
 ): (float32, float32, int) =
   var
+    i, count: int
     prevAt: float32
-    count: int
-  for i in 0 ..< numHits:
+  while i < numHits:
     let (at, winding) = hits[i]
-    if windingRule == wrNonZero and
-      (count != 0) == (count + winding != 0) and
-      i < numHits - 1:
-      # Shortcut: if nonzero rule, we only care about when the count changes
-      # between zero and nonzero (or the last hit)
-      count += winding
-      continue
     if at > 0:
       if shouldFill(windingRule, count):
+        if i < numHits - 1:
+          # Look ahead to see if the next hit is in the same spot as this hit.
+          # If it is, see if this hit and the next hit's windings cancel out.
+          # If they do, skip the hits. It will be yielded later in a
+          # larger chunk.
+          let (nextAt, nextWinding) = hits[i + 1]
+          if nextAt == at and winding + nextWinding == 0:
+            i += 2
+            continue
+          # Shortcut: we only care about when we stop filling (or the last hit).
+          # If we continue filling, move to next hit.
+          if windingRule == wrNonZero and count + winding != 0:
+            count += winding
+            inc i
+            continue
         yield (prevAt, at, count)
       prevAt = at
     count += winding
+    inc i
 
   when defined(pixieLeakCheck):
     if prevAt != width and count != 0:
       echo "Leak detected: ", count, " @ (", prevAt, ", ", y, ")"
 
-proc computeCoverages(
+proc computeCoverage(
   coverages: var seq[uint8],
   hits: var seq[(float32, int16)],
   numHits: var int,
@@ -1215,7 +1229,7 @@ proc computeCoverages(
     yLine += offset
     numHits = 0
     for i in 0 ..< partitionEntryCount: # Perf
-      let entry = partitioning.partitions[partitionIndex][i]
+      let entry = partitioning.partitions[partitionIndex][i].unsafeAddr # Perf
       if entry.atY <= yLine and entry.toY >= yLine:
         let x =
           if entry.m == 0:
@@ -1223,8 +1237,6 @@ proc computeCoverages(
           else:
             (yLine - entry.b) / entry.m
 
-        if numHits == hits.len:
-          hits.setLen(hits.len * 2)
         hits[numHits] = (min(x, width), entry.winding)
         inc numHits
 
@@ -1259,9 +1271,9 @@ proc computeCoverages(
           when defined(amd64) and not defined(pixieNoSimd):
             let sampleCoverageVec = mm_set1_epi8(cast[int8](sampleCoverage))
             for _ in 0 ..< fillLen div 16:
-              var coverage = mm_loadu_si128(coverages[i - startX].addr)
-              coverage = mm_add_epi8(coverage, sampleCoverageVec)
-              mm_storeu_si128(coverages[i - startX].addr, coverage)
+              var coverageVec = mm_loadu_si128(coverages[i - startX].addr)
+              coverageVec = mm_add_epi8(coverageVec, sampleCoverageVec)
+              mm_storeu_si128(coverages[i - startX].addr, coverageVec)
               i += 16
           for j in i ..< fillStart + fillLen:
             coverages[j - startX] += sampleCoverage
@@ -1299,11 +1311,11 @@ proc fillCoverage(
       for _ in 0 ..< coverages.len div 16:
         let
           index = image.dataIndex(x, y)
-          coverage = mm_loadu_si128(coverages[x - startX].unsafeAddr)
+          coverageVec = mm_loadu_si128(coverages[x - startX].unsafeAddr)
 
-        if mm_movemask_epi8(mm_cmpeq_epi16(coverage, zeroVec)) != 0xffff:
+        if mm_movemask_epi8(mm_cmpeq_epi16(coverageVec, zeroVec)) != 0xffff:
           # If the coverages are not all zero
-          if mm_movemask_epi8(mm_cmpeq_epi32(coverage, vec255)) == 0xffff:
+          if mm_movemask_epi8(mm_cmpeq_epi32(coverageVec, vec255)) == 0xffff:
             # If the coverages are all 255
             if blendMode == bmNormal and rgbx.a == 255:
               for i in 0 ..< 4:
@@ -1317,9 +1329,9 @@ proc fillCoverage(
                 )
           else:
             # Coverages are not all 255
-            var coverage = coverage
+            var coverageVec = coverageVec
             for i in 0 ..< 4:
-              var unpacked = unpackAlphaValues(coverage)
+              var unpacked = unpackAlphaValues(coverageVec)
               # Shift the coverages from `a` to `g` and `a` for multiplying
               unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
 
@@ -1342,7 +1354,7 @@ proc fillCoverage(
                 blenderSimd(backdrop, source)
               )
 
-              coverage = mm_srli_si128(coverage, 4)
+              coverageVec = mm_srli_si128(coverageVec, 4)
 
         elif blendMode == bmMask:
           for i in 0 ..< 4:
@@ -1534,11 +1546,11 @@ proc fillShapes(
 
   var
     coverages = newSeq[uint8](bounds.w.int)
-    hits = newSeq[(float32, int16)](4)
+    hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
     numHits: int
 
   for y in startY ..< pathHeight:
-    computeCoverages(
+    computeCoverage(
       coverages,
       hits,
       numHits,
@@ -1591,11 +1603,11 @@ proc fillShapes(
 
   var
     coverages = newSeq[uint8](bounds.w.int)
-    hits = newSeq[(float32, int16)](4)
+    hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
     numHits: int
 
   for y in startY ..< pathHeight:
-    computeCoverages(
+    computeCoverage(
       coverages,
       hits,
       numHits,
@@ -1937,10 +1949,7 @@ proc overlaps(
   let
     scanline = line(vec2(0, test.y), vec2(1000, test.y))
     segments = shapes.shapesToSegments()
-  for i in 0 ..< segments.len: # For gc:arc
-    let
-      segment = segments[i][0]
-      winding = segments[i][1]
+  for (segment, winding) in segments:
     if segment.at.y <= scanline.a.y and segment.to.y >= scanline.a.y:
       var at: Vec2
       if scanline.intersects(segment, at):
@@ -1950,8 +1959,7 @@ proc overlaps(
   sort(hits, 0, hits.high)
 
   var count: int
-  for i in 0 ..< hits.len: # For gc:arc
-    let (at, winding) = hits[i]
+  for (at, winding) in hits:
     if at > test.x:
       return shouldFill(windingRule, count)
     count += winding
