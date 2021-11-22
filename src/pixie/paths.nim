@@ -1020,9 +1020,7 @@ proc commandsToShapes(
       shape.addSegment(at, start)
     result.add(shape)
 
-proc shapesToSegments(
-  shapes: seq[seq[Vec2]]
-): seq[(Segment, int16)] =
+proc shapesToSegments(shapes: seq[seq[Vec2]]): seq[(Segment, int16)] =
   ## Converts the shapes into a set of filtered segments with winding value.
   for shape in shapes:
     for segment in shape.segments:
@@ -1102,8 +1100,8 @@ proc partitionSegments(
 ): Partitioning =
   ## Puts segments into the height partitions they intersect with.
   let
-    maxPartitions = max(1, height div 10).uint32
-    numPartitions = min(maxPartitions, max(1, segments.len div 10).uint32)
+    maxPartitions = max(1, height div 4).uint32
+    numPartitions = min(maxPartitions, max(1, segments.len div 4).uint32)
 
   result.partitions.setLen(numPartitions)
   result.startY = top.uint32
