@@ -45,7 +45,7 @@ type
     startY, partitionHeight: uint32
 
 const
-  epsilon: float32 = 0.0001 * PI ## Tiny value used for some computations.
+  epsilon = 0.0001 * PI ## Tiny value used for some computations.
   defaultMiterLimit*: float32 = 4
 
 when defined(release):
@@ -651,7 +651,7 @@ proc commandsToShapes(
     prevCommandKind = Move
     prevCtrl, prevCtrl2: Vec2
 
-  let errorMargin = 0.2 / pixelScale
+  let errorMargin = pow(0.2.float32 / pixelScale, 2)
 
   proc addSegment(shape: var seq[Vec2], at, to: Vec2) =
     # Don't add any 0 length lines
@@ -669,27 +669,29 @@ proc commandsToShapes(
       (1 - t) * 3 * pow(t, 2) * ctrl2 +
       pow(t, 3) * to
 
-    var prev = at
-
-    proc discretize(shape: var seq[Vec2], i, steps: int) =
-      # Closure captures at, ctrl1, ctrl2, to and prev
+    var
+      t: float32 # Where we are at on the curve from [0, 1]
+      step = 1.float32 # How far we want to try to move along the curve
+      prev = at
+      next = compute(at, ctrl1, ctrl2, to, t + step)
+      halfway = compute(at, ctrl1, ctrl2, to, t + step / 2)
+    while true:
       let
-        tPrev = (i - 1).float32 / steps.float32
-        t = i.float32 / steps.float32
-        next = compute(at, ctrl1, ctrl2, to, t)
-        halfway = compute(at, ctrl1, ctrl2, to, tPrev + (t - tPrev) / 2)
         midpoint = (prev + next) / 2
-        error = (midpoint - halfway).length
-
-      if error >= errorMargin:
-        # Error too large, double precision for this step
-        shape.discretize(i * 2 - 1, steps * 2)
-        shape.discretize(i * 2, steps * 2)
+        error = (midpoint - halfway).lengthSq
+      if error > errorMargin:
+        next = halfway
+        halfway = compute(at, ctrl1, ctrl2, to, t + step / 4)
+        step /= 2
       else:
         shape.addSegment(prev, next)
+        t += step
+        if t == 1:
+          break
         prev = next
-
-    shape.discretize(1, 1)
+        step = min(step * 2, 1 - t) # Optimistically attempt larger steps
+        next = compute(at, ctrl1, ctrl2, to, t + step)
+        halfway = compute(at, ctrl1, ctrl2, to, t + step / 2)
 
   proc addQuadratic(shape: var seq[Vec2], at, ctrl, to: Vec2) =
     ## Adds quadratic segments to shape.
@@ -698,27 +700,34 @@ proc commandsToShapes(
       2 * (1 - t) * t * ctrl +
       pow(t, 2) * to
 
-    var prev = at
-
-    proc discretize(shape: var seq[Vec2], i, steps: int) =
-      # Closure captures at, ctrl, to and prev
+    var
+      t: float32 # Where we are at on the curve from [0, 1]
+      step = 1.float32 # How far we want to try to move along the curve
+      prev = at
+      next = compute(at, ctrl, to, t + step)
+      halfway = compute(at, ctrl, to, t + step / 2)
+      halfStepping = false
+    while true:
       let
-        tPrev = (i - 1).float32 / steps.float32
-        t = i.float32 / steps.float32
-        next = compute(at, ctrl, to, t)
-        halfway = compute(at, ctrl, to, tPrev + (t - tPrev) / 2)
         midpoint = (prev + next) / 2
-        error = (midpoint - halfway).length
-
-      if error >= errorMargin:
-        # Error too large, double precision for this step
-        shape.discretize(i * 2 - 1, steps * 2)
-        shape.discretize(i * 2, steps * 2)
+        error = (midpoint - halfway).lengthSq
+      if error > errorMargin:
+        next = halfway
+        halfway = compute(at, ctrl, to, t + step / 4)
+        step /= 2
+        halfStepping = true
       else:
         shape.addSegment(prev, next)
+        t += step
+        if t == 1:
+          break
         prev = next
-
-    shape.discretize(1, 1)
+        if halfStepping:
+          step = min(step, 1 - t)
+        else:
+          step = min(step * 2, 1 - t) # Optimistically attempt larger steps
+        next = compute(at, ctrl, to, t + step)
+        halfway = compute(at, ctrl, to, t + step / 2)
 
   proc addArc(
     shape: var seq[Vec2],
@@ -808,28 +817,37 @@ proc commandsToShapes(
       result = vec2(cos(a) * arc.radii.x, sin(a) * arc.radii.y)
       result = arc.rotMat * result + arc.center
 
-    var prev = at
+    let arc = endpointToCenterArcParams(at, radii, rotation, large, sweep, to)
 
-    proc discretize(shape: var seq[Vec2], arc: ArcParams, i, steps: int) =
+    var
+      t: float32 # Where we are at on the curve from [0, 1]
+      step = 1.float32 # How far we want to try to move along the curve
+      prev = at
+    while t != 1:
       let
-        step = arc.delta / steps.float32
-        aPrev = arc.theta + step * (i - 1).float32
-        a = arc.theta + step * i.float32
+        aPrev = arc.theta + arc.delta * t
+        a = arc.theta + arc.delta * (t + step)
         next = arc.compute(a)
         halfway = arc.compute(aPrev + (a - aPrev) / 2)
         midpoint = (prev + next) / 2
-        error = (midpoint - halfway).length
-
-      if error >= errorMargin:
-        # Error too large, try again with doubled precision
-        shape.discretize(arc, i * 2 - 1, steps * 2)
-        shape.discretize(arc, i * 2, steps * 2)
+        error = (midpoint - halfway).lengthSq
+      if error > errorMargin:
+        let
+          quarterway = arc.compute(aPrev + (a - aPrev) / 4)
+          midpoint = (prev + halfway) / 2
+          halfwayError = (midpoint - quarterway).lengthSq
+        if halfwayError < errorMargin:
+          shape.addSegment(prev, halfway)
+          prev = halfway
+          t += step / 2
+          step = min(step / 2, 1 - t) # Assume next steps hould be the same size
+        else:
+          step = step / 4 # We know a half-step is too big
       else:
         shape.addSegment(prev, next)
         prev = next
-
-    let arc = endpointToCenterArcParams(at, radii, rotation, large, sweep, to)
-    shape.discretize(arc, 1, 1)
+        t += step
+        step = min(step * 2, 1 - t) # Optimistically attempt larger steps
 
   for command in path.commands:
     if command.numbers.len != command.kind.parameterCount():
@@ -1214,7 +1232,7 @@ proc computeCoverage(
   let
     quality = if aa: 5 else: 1 # Must divide 255 cleanly (1, 3, 5, 15, 17, 51, 85)
     sampleCoverage = (255 div quality).uint8
-    offset = 1 / quality.float32
+    offset = 1 / quality.float64
     initialOffset = offset / 2 + epsilon
 
   if aa: # Coverage is only used for anti-aliasing
@@ -1224,7 +1242,7 @@ proc computeCoverage(
   let
     partitionIndex = partitioning.getIndexForY(y)
     partitionEntryCount = partitioning.partitions[partitionIndex].len
-  var yLine = y.float32 + initialOffset - offset
+  var yLine = y.float64 + initialOffset - offset
   for m in 0 ..< quality:
     yLine += offset
     numHits = 0
@@ -1813,8 +1831,7 @@ proc fillPath*(
       var shapes = parseSomePath(path, true, transform.pixelScale())
       shapes.transform(transform)
       var color = paint.color
-      if paint.opacity != 1:
-        color.a *= paint.opacity
+      color.a *= paint.opacity
       image.fillShapes(shapes, color, windingRule, paint.blendMode)
     return
 
@@ -1897,8 +1914,7 @@ proc strokePath*(
       )
       strokeShapes.transform(transform)
       var color = paint.color
-      if paint.opacity != 1:
-        color.a *= paint.opacity
+      color.a *= paint.opacity
       image.fillShapes(strokeShapes, color, wrNonZero, paint.blendMode)
     return
 
