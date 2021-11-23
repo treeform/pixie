@@ -45,9 +45,7 @@ proc newPaint*(paint: Paint): Paint {.raises: [].} =
   result.gradientHandlePositions = paint.gradientHandlePositions
   result.gradientStops = paint.gradientStops
 
-converter parseSomePaint*(
-  paint: SomePaint
-): Paint {.inline.} =
+converter parseSomePaint*(paint: SomePaint): Paint {.inline.} =
   ## Given SomePaint, parse it in different ways.
   when type(paint) is string:
     result = newPaint(pkSolid)
@@ -67,19 +65,10 @@ converter parseSomePaint*(
 proc colorStop*(color: Color, position: float32): ColorStop =
   ColorStop(color: color, position: position)
 
-proc toLineSpace(at, to, point: Vec2): float32 {.inline.} =
-  ## Convert position on to where it would fall on a line between at and to.
-  let
-    d = to - at
-    det = d.x * d.x + d.y * d.y
-  (d.y * (point.y - at.y) + d.x * (point.x - at.x)) / det
-
-proc gradientPut(
-  image: Image, paint: Paint, x, y: int, t: float32, stops: seq[ColorStop]
-) =
+proc gradientPut(image: Image, paint: Paint, x, y: int, t: float32) =
   ## Put an gradient color based on `t` - where are we related to a line.
   var index = -1
-  for i, stop in stops:
+  for i, stop in paint.gradientStops:
     if stop.position < t:
       index = i
     if stop.position > t:
@@ -87,14 +76,14 @@ proc gradientPut(
   var color: Color
   if index == -1:
     # first stop solid
-    color = stops[0].color
-  elif index + 1 >= stops.len:
+    color = paint.gradientStops[0].color
+  elif index + 1 >= paint.gradientStops.len:
     # last stop solid
-    color = stops[index].color
+    color = paint.gradientStops[index].color
   else:
     let
-      gs1 = stops[index]
-      gs2 = stops[index + 1]
+      gs1 = paint.gradientStops[index]
+      gs2 = paint.gradientStops[index + 1]
     color = mix(
       gs1.color,
       gs2.color,
@@ -115,6 +104,13 @@ proc fillGradientLinear(image: Image, paint: Paint) =
   if paint.opacity == 0:
     return
 
+  proc toLineSpace(at, to, point: Vec2): float32 {.inline.} =
+    ## Convert position on to where it would fall on a line between at and to.
+    let
+      d = to - at
+      det = d.x * d.x + d.y * d.y
+    (d.y * (point.y - at.y) + d.x * (point.x - at.x)) / det
+
   let
     at = paint.gradientHandlePositions[0]
     to = paint.gradientHandlePositions[1]
@@ -123,7 +119,7 @@ proc fillGradientLinear(image: Image, paint: Paint) =
       let
         xy = vec2(x.float32, y.float32)
         t = toLineSpace(at, to, xy)
-      image.gradientPut(paint, x, y, t, paint.gradientStops)
+      image.gradientPut(paint, x, y, t)
 
 proc fillGradientRadial(image: Image, paint: Paint) =
   ## Fills a radial gradient.
@@ -154,7 +150,7 @@ proc fillGradientRadial(image: Image, paint: Paint) =
       let
         xy = vec2(x.float32, y.float32)
         t = (mat * xy).length()
-      image.gradientPut(paint, x, y, t, paint.gradientStops)
+      image.gradientPut(paint, x, y, t)
 
 proc fillGradientAngular(image: Image, paint: Paint) =
   ## Fills an angular gradient.
@@ -179,7 +175,7 @@ proc fillGradientAngular(image: Image, paint: Paint) =
         xy = vec2(x.float32, y.float32)
         angle = normalize(xy - center).angle()
         t = (angle + gradientAngle + PI / 2).fixAngle() / 2 / PI + 0.5
-      image.gradientPut(paint, x, y, t, paint.gradientStops)
+      image.gradientPut(paint, x, y, t)
 
 proc fillGradient*(image: Image, paint: Paint) {.raises: [PixieError].} =
   ## Fills with the Paint gradient.
