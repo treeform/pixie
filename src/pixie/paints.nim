@@ -1,5 +1,8 @@
 import blends, chroma, common, images, vmath
 
+when defined(amd64) and not defined(pixieNoSimd):
+  import nimsimd/sse2
+
 type
   PaintKind* = enum
     pkSolid
@@ -65,8 +68,8 @@ converter parseSomePaint*(paint: SomePaint): Paint {.inline.} =
 proc colorStop*(color: Color, position: float32): ColorStop =
   ColorStop(color: color, position: position)
 
-proc gradientPut(image: Image, paint: Paint, x, y: int, t: float32) =
-  ## Put an gradient color based on `t` - where are we related to a line.
+proc gradientColor(paint: Paint, t: float32): ColorRGBX =
+  ## Get the gradient color based on `t` - where are we related to a line.
   var index = -1
   for i, stop in paint.gradientStops:
     if stop.position < t:
@@ -90,7 +93,7 @@ proc gradientPut(image: Image, paint: Paint, x, y: int, t: float32) =
       (t - gs1.position) / (gs2.position - gs1.position)
     )
   color.a *= paint.opacity
-  image.setRgbaUnsafe(x, y, color.rgbx())
+  color.rgbx()
 
 proc fillGradientLinear(image: Image, paint: Paint) =
   ## Fills a linear gradient.
@@ -114,12 +117,56 @@ proc fillGradientLinear(image: Image, paint: Paint) =
   let
     at = paint.gradientHandlePositions[0]
     to = paint.gradientHandlePositions[1]
-  for y in 0 ..< image.height:
-    for x in 0 ..< image.width:
+
+  if at.y == to.y: # Horizontal gradient
+    var x: int
+    while x < image.width:
+      when defined(amd64) and not defined(pixieNoSimd):
+        if x + 4 <= image.width:
+          var colors: array[4, ColorRGBX]
+          for i in 0 ..< 4:
+            let
+              xy = vec2((x + i).float32, 0.float32)
+              t = toLineSpace(at, to, xy)
+              rgbx = paint.gradientColor(t)
+            colors[i] = rgbx
+
+          let colorVec = cast[M128i](colors)
+          for y in 0 ..< image.height:
+            mm_storeu_si128(image.data[image.dataIndex(x, y)].addr, colorVec)
+          x += 4
+          continue
+
       let
-        xy = vec2(x.float32, y.float32)
+        xy = vec2(x.float32, 0.float32)
         t = toLineSpace(at, to, xy)
-      image.gradientPut(paint, x, y, t)
+        rgbx = paint.gradientColor(t)
+      for y in 0 ..< image.height:
+        image.setRgbaUnsafe(x, y, rgbx)
+      inc x
+
+  elif at.x == to.x: # Vertical gradient
+    for y in 0 ..< image.height:
+      let
+        xy = vec2(0.float32, y.float32)
+        t = toLineSpace(at, to, xy)
+        rgbx = paint.gradientColor(t)
+      var x: int
+      when defined(amd64) and not defined(pixieNoSimd):
+        let colorVec = mm_set1_epi32(cast[int32](rgbx))
+        for _ in 0 ..< image.width div 4:
+          mm_storeu_si128(image.data[image.dataIndex(x, y)].addr, colorVec)
+          x += 4
+      for x in x ..< image.width:
+        image.setRgbaUnsafe(x, y, rgbx)
+
+  else:
+    for y in 0 ..< image.height:
+      for x in 0 ..< image.width:
+        let
+          xy = vec2(x.float32, y.float32)
+          t = toLineSpace(at, to, xy)
+        image.setRgbaUnsafe(x, y, paint.gradientColor(t))
 
 proc fillGradientRadial(image: Image, paint: Paint) =
   ## Fills a radial gradient.
@@ -150,7 +197,7 @@ proc fillGradientRadial(image: Image, paint: Paint) =
       let
         xy = vec2(x.float32, y.float32)
         t = (mat * xy).length()
-      image.gradientPut(paint, x, y, t)
+      image.setRgbaUnsafe(x, y, paint.gradientColor(t))
 
 proc fillGradientAngular(image: Image, paint: Paint) =
   ## Fills an angular gradient.
@@ -175,7 +222,7 @@ proc fillGradientAngular(image: Image, paint: Paint) =
         xy = vec2(x.float32, y.float32)
         angle = normalize(xy - center).angle()
         t = (angle + gradientAngle + PI / 2).fixAngle() / 2 / PI + 0.5
-      image.gradientPut(paint, x, y, t)
+      image.setRgbaUnsafe(x, y, paint.gradientColor(t))
 
 proc fillGradient*(image: Image, paint: Paint) {.raises: [PixieError].} =
   ## Fills with the Paint gradient.
