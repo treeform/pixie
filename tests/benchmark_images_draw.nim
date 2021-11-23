@@ -115,12 +115,29 @@ block:
     a = newImage(100, 100)
     b = newImage(50, 50)
 
-  timeIt "shadow":
+  timeIt "shadow (no offset)":
     b.fill(rgba(0, 0, 0, 255))
     a.draw(b, translate(vec2(25, 25)))
 
     let shadow = a.shadow(
       offset = vec2(0, 0),
+      spread = 10,
+      blur = 10,
+      color = rgba(0, 0, 0, 255)
+    )
+    keep(shadow)
+
+block:
+  let
+    a = newImage(100, 100)
+    b = newImage(50, 50)
+
+  timeIt "shadow (with offset)":
+    b.fill(rgba(0, 0, 0, 255))
+    a.draw(b, translate(vec2(25, 25)))
+
+    let shadow = a.shadow(
+      offset = vec2(10, 10),
       spread = 10,
       blur = 10,
       color = rgba(0, 0, 0, 255)

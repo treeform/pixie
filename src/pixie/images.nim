@@ -976,12 +976,18 @@ proc shadow*(
   image: Image, offset: Vec2, spread, blur: float32, color: SomeColor
 ): Image {.raises: [PixieError].} =
   ## Create a shadow of the image with the offset, spread and blur.
-  let
-    mask = image.newMask()
+  let mask = image.newMask()
+
+  var shifted: Mask
+  if offset == vec2(0, 0):
+    shifted = mask
+  else:
     shifted = newMask(mask.width, mask.height)
-  shifted.draw(mask, translate(offset), bmOverwrite)
+    shifted.draw(mask, translate(offset), bmOverwrite)
+
   shifted.spread(spread)
   shifted.blur(blur)
+
   result = newImage(shifted.width, shifted.height)
   result.fill(color)
   result.draw(shifted, blendMode = bmMask)

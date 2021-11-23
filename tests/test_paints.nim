@@ -70,6 +70,21 @@ block:
   image.writeFile("tests/paths/gradientLinear.png")
 
 block:
+  let paint = newPaint(pkGradientLinear)
+  paint.gradientHandlePositions = @[
+    vec2(50, 0),
+    vec2(50, 100),
+  ]
+  paint.gradientStops = @[
+    ColorStop(color: color(1, 0, 0, 1), position: 0),
+    ColorStop(color: color(1, 0, 0, 0.15625), position: 1.0),
+  ]
+
+  let image = newImage(100, 100)
+  image.fillPath(heartShape, paint)
+  image.writeFile("tests/paths/gradientLinear2.png")
+
+block:
   let paint = newPaint(pkGradientRadial)
   paint.gradientHandlePositions = @[
     vec2(50, 50),
