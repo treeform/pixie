@@ -990,6 +990,9 @@ proc superImage*(image: Image, x, y, w, h: int): Image {.raises: [PixieError].} 
   ## Either cuts a sub image or returns a super image with padded transparency.
   if x >= 0 and x + w <= image.width and y >= 0 and y + h <= image.height:
     result = image.subImage(x, y, w, h)
+  elif abs(x) >= image.width or abs(y) >= image.height:
+    # Nothing to copy, just an empty new image
+    result = newImage(w, h)
   else:
     result = newImage(w, h)
     result.draw(image, translate(vec2(-x.float32, -y.float32)), bmOverwrite)
