@@ -25,3 +25,19 @@ timeIt "GradientLinear horizontal":
     ColorStop(color: color(1, 0, 0, 0.15625), position: 1.0),
   ]
   image.fillGradient(paint)
+
+# timeIt "GradientLinear radial":
+#   discard
+
+timeIt "GradientLinear angular":
+  let paint = newPaint(pkGradientAngular)
+  paint.gradientHandlePositions = @[
+    vec2(500, 500),
+    vec2(1000, 500),
+    vec2(500, 1000)
+  ]
+  paint.gradientStops = @[
+    ColorStop(color: color(1, 0, 0, 1), position: 0),
+    ColorStop(color: color(1, 0, 0, 0.15625), position: 1.0),
+  ]
+  image.fillGradient(paint)

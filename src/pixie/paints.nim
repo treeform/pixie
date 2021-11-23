@@ -214,6 +214,7 @@ proc fillGradientAngular(image: Image, paint: Paint) =
   let
     center = paint.gradientHandlePositions[0]
     edge = paint.gradientHandlePositions[1]
+    f32PI = PI.float32
   # TODO: make edge between start and end anti-aliased.
   let gradientAngle = normalize(edge - center).angle().fixAngle()
   for y in 0 ..< image.height:
@@ -221,7 +222,7 @@ proc fillGradientAngular(image: Image, paint: Paint) =
       let
         xy = vec2(x.float32, y.float32)
         angle = normalize(xy - center).angle()
-        t = (angle + gradientAngle + PI / 2).fixAngle() / 2 / PI + 0.5
+        t = (angle + gradientAngle + f32PI / 2).fixAngle() / 2 / f32PI + 0.5.float32
       image.setRgbaUnsafe(x, y, paint.gradientColor(t))
 
 proc fillGradient*(image: Image, paint: Paint) {.raises: [PixieError].} =
