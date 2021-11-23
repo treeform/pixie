@@ -45,7 +45,7 @@ type
     startY, partitionHeight: uint32
 
 const
-  epsilon = 0.0001 * PI ## Tiny value used for some computations.
+  epsilon: float64 = 0.0001 * PI ## Tiny value used for some computations. Must be float64 to prevent leaks.
   defaultMiterLimit*: float32 = 4
 
 when defined(release):
@@ -651,7 +651,7 @@ proc commandsToShapes(
     prevCommandKind = Move
     prevCtrl, prevCtrl2: Vec2
 
-  let errorMargin = pow(0.2.float32 / pixelScale, 2)
+  let errorMarginSq = pow(0.2.float32 / pixelScale, 2)
 
   proc addSegment(shape: var seq[Vec2], at, to: Vec2) =
     # Don't add any 0 length lines
@@ -679,7 +679,7 @@ proc commandsToShapes(
       let
         midpoint = (prev + next) / 2
         error = (midpoint - halfway).lengthSq
-      if error > errorMargin:
+      if error > errorMarginSq:
         next = halfway
         halfway = compute(at, ctrl1, ctrl2, to, t + step / 4)
         step /= 2
@@ -711,7 +711,7 @@ proc commandsToShapes(
       let
         midpoint = (prev + next) / 2
         error = (midpoint - halfway).lengthSq
-      if error > errorMargin:
+      if error > errorMarginSq:
         next = halfway
         halfway = compute(at, ctrl, to, t + step / 4)
         step /= 2
@@ -831,12 +831,12 @@ proc commandsToShapes(
         halfway = arc.compute(aPrev + (a - aPrev) / 2)
         midpoint = (prev + next) / 2
         error = (midpoint - halfway).lengthSq
-      if error > errorMargin:
+      if error > errorMarginSq:
         let
           quarterway = arc.compute(aPrev + (a - aPrev) / 4)
           midpoint = (prev + halfway) / 2
           halfwayError = (midpoint - quarterway).lengthSq
-        if halfwayError < errorMargin:
+        if halfwayError < errorMarginSq:
           shape.addSegment(prev, halfway)
           prev = halfway
           t += step / 2
