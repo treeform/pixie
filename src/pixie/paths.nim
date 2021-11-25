@@ -1114,7 +1114,7 @@ proc partitionSegments(
     else:
       var
         atPartition = max(0, segment.at.y - result.startY.float32).uint32
-        toPartition = max(0, ceil(segment.to.y - result.startY.float32)).uint32
+        toPartition = max(0, segment.to.y - result.startY.float32).uint32
       atPartition = atPartition div result.partitionHeight
       toPartition = toPartition div result.partitionHeight
       atPartition = clamp(atPartition, 0, result.partitions.high.uint32)
