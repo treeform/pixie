@@ -1,4 +1,4 @@
-import pixie, pixie/fileformats/svg, strformat
+import pixie, strformat
 
 const files = [
   "line01",
@@ -25,4 +25,4 @@ proc doDiff(rendered: Image, name: string) =
   diffImage.writeFile(&"tests/fileformats/svg/diffs/{name}.png")
 
 for file in files:
-  doDiff(decodeSvg(readFile(&"tests/fileformats/svg/{file}.svg")), file)
+  doDiff(decodeImage(readFile(&"tests/fileformats/svg/{file}.svg")), file)
