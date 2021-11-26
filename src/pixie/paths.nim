@@ -46,6 +46,7 @@ type
 
 const
   epsilon: float64 = 0.0001 * PI ## Tiny value used for some computations. Must be float64 to prevent leaks.
+  pixelErrorMargin: float32 = 0.2
   defaultMiterLimit*: float32 = 4
 
 when defined(release):
@@ -651,7 +652,7 @@ proc commandsToShapes(
     prevCommandKind = Move
     prevCtrl, prevCtrl2: Vec2
 
-  let errorMarginSq = pow(0.2.float32 / pixelScale, 2)
+  let errorMarginSq = pow(pixelErrorMargin / pixelScale, 2)
 
   proc addSegment(shape: var seq[Vec2], at, to: Vec2) =
     # Don't add any 0 length lines
@@ -1697,7 +1698,7 @@ proc strokeShapes(
     @[a, b, c, d, a]
 
   proc addJoin(shape: var seq[seq[Vec2]], prevPos, pos, nextPos: Vec2) =
-    let minArea = 0.1 / pixelScale # 10% of a pixel
+    let minArea = pixelErrorMargin / pixelScale
 
     if lineJoin == ljRound:
       let area = PI.float32 * halfStroke * halfStroke
