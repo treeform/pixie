@@ -1136,23 +1136,18 @@ proc maxEntryCount(partitioning: Partitioning): int =
   for i in 0 ..< partitioning.partitions.len:
     result = max(result, partitioning.partitions[i].len)
 
-proc insertionSort(
-  hits: var seq[(float32, int16)], lo, hi: int
-) {.inline.} =
-  for i in lo + 1 .. hi:
-    var
-      j = i - 1
-      k = i
-    while j >= 0 and hits[j][0] > hits[k][0]:
-      swap(hits[j + 1], hits[j])
-      dec j
-      dec k
-
-proc sort(hits: var seq[(float32, int16)], inl, inr: int) =
+proc sortHits(hits: var seq[(float32, int16)], inl, inr: int) =
   ## Quicksort + insertion sort, in-place and faster than standard lib sort.
   let n = inr - inl + 1
-  if n < 32:
-    insertionSort(hits, inl, inr)
+  if n < 32: # Use insertion sort for the rest
+    for i in inl + 1 .. inr:
+      var
+        j = i - 1
+        k = i
+      while j >= 0 and hits[j][0] > hits[k][0]:
+        swap(hits[j + 1], hits[j])
+        dec j
+        dec k
     return
   var
     l = inl
@@ -1167,8 +1162,8 @@ proc sort(hits: var seq[(float32, int16)], inl, inr: int) =
       swap(hits[l], hits[r])
       inc l
       dec r
-  sort(hits, inl, r)
-  sort(hits, l, inr)
+  sortHits(hits, inl, r)
+  sortHits(hits, l, inr)
 
 proc shouldFill(
   windingRule: WindingRule, count: int
@@ -1258,7 +1253,7 @@ proc computeCoverage(
         inc numHits
 
     if numHits > 0:
-      sort(hits, 0, numHits - 1)
+      sortHits(hits, 0, numHits - 1)
 
     if aa:
       for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
@@ -1991,7 +1986,7 @@ proc overlaps(
         if segment.to != at:
           hits.add((at.x, winding))
 
-  sort(hits, 0, hits.high)
+  sortHits(hits, 0, hits.high)
 
   var count: int
   for (at, winding) in hits:
