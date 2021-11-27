@@ -329,15 +329,13 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
 proc fill(img: Image, ctx: Ctx, path: Path) {.inline.} =
   if ctx.display and ctx.opacity > 0:
     let paint = newPaint(ctx.fill)
-    if ctx.opacity != 1:
-      paint.opacity = paint.opacity * ctx.opacity
+    paint.opacity = paint.opacity * ctx.opacity
     img.fillPath(path, paint, ctx.transform, ctx.fillRule)
 
 proc stroke(img: Image, ctx: Ctx, path: Path) {.inline.} =
   if ctx.display and ctx.opacity > 0:
     let paint = newPaint(ctx.stroke)
-    if ctx.opacity != 1:
-      paint.color.a *= (ctx.opacity * ctx.strokeOpacity)
+    paint.color.a *= (ctx.opacity * ctx.strokeOpacity)
     img.strokePath(
       path,
       paint,

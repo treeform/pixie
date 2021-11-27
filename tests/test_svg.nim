@@ -26,3 +26,8 @@ proc doDiff(rendered: Image, name: string) =
 
 for file in files:
   doDiff(decodeSvg(readFile(&"tests/fileformats/svg/{file}.svg")), file)
+
+doDiff(
+  decodeSvg(readFile("tests/fileformats/svg/accessibility-outline.svg"), 512, 512),
+  "accessibility-outline"
+)

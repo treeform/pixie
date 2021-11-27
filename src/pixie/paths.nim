@@ -46,6 +46,7 @@ type
 
 const
   epsilon: float64 = 0.0001 * PI ## Tiny value used for some computations. Must be float64 to prevent leaks.
+  pixelErrorMargin: float32 = 0.2
   defaultMiterLimit*: float32 = 4
 
 when defined(release):
@@ -639,7 +640,7 @@ proc polygon*(
   path.polygon(pos.x, pos.y, size, sides)
 
 proc commandsToShapes(
-  path: Path, closeSubpaths = false, pixelScale: float32 = 1.0
+  path: Path, closeSubpaths: bool, pixelScale: float32
 ): seq[seq[Vec2]] =
   ## Converts SVG-like commands to sequences of vectors.
   var
@@ -651,7 +652,7 @@ proc commandsToShapes(
     prevCommandKind = Move
     prevCtrl, prevCtrl2: Vec2
 
-  let errorMarginSq = pow(0.2.float32 / pixelScale, 2)
+  let errorMarginSq = pow(pixelErrorMargin / pixelScale, 2)
 
   proc addSegment(shape: var seq[Vec2], at, to: Vec2) =
     # Don't add any 0 length lines
@@ -1080,7 +1081,7 @@ proc computeBounds*(
   path: Path, transform = mat3()
 ): Rect {.raises: [PixieError].} =
   ## Compute the bounds of the path.
-  var shapes = path.commandsToShapes()
+  var shapes = path.commandsToShapes(true, pixelScale(transform))
   shapes.transform(transform)
   computeBounds(shapes.shapesToSegments())
 
@@ -1135,23 +1136,18 @@ proc maxEntryCount(partitioning: Partitioning): int =
   for i in 0 ..< partitioning.partitions.len:
     result = max(result, partitioning.partitions[i].len)
 
-proc insertionSort(
-  hits: var seq[(float32, int16)], lo, hi: int
-) {.inline.} =
-  for i in lo + 1 .. hi:
-    var
-      j = i - 1
-      k = i
-    while j >= 0 and hits[j][0] > hits[k][0]:
-      swap(hits[j + 1], hits[j])
-      dec j
-      dec k
-
-proc sort(hits: var seq[(float32, int16)], inl, inr: int) =
+proc sortHits(hits: var seq[(float32, int16)], inl, inr: int) =
   ## Quicksort + insertion sort, in-place and faster than standard lib sort.
   let n = inr - inl + 1
-  if n < 32:
-    insertionSort(hits, inl, inr)
+  if n < 32: # Use insertion sort for the rest
+    for i in inl + 1 .. inr:
+      var
+        j = i - 1
+        k = i
+      while j >= 0 and hits[j][0] > hits[k][0]:
+        swap(hits[j + 1], hits[j])
+        dec j
+        dec k
     return
   var
     l = inl
@@ -1166,8 +1162,8 @@ proc sort(hits: var seq[(float32, int16)], inl, inr: int) =
       swap(hits[l], hits[r])
       inc l
       dec r
-  sort(hits, inl, r)
-  sort(hits, l, inr)
+  sortHits(hits, inl, r)
+  sortHits(hits, l, inr)
 
 proc shouldFill(
   windingRule: WindingRule, count: int
@@ -1257,7 +1253,7 @@ proc computeCoverage(
         inc numHits
 
     if numHits > 0:
-      sort(hits, 0, numHits - 1)
+      sortHits(hits, 0, numHits - 1)
 
     if aa:
       for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
@@ -1657,7 +1653,8 @@ proc strokeShapes(
   lineCap: LineCap,
   lineJoin: LineJoin,
   miterLimit: float32,
-  dashes: seq[float32]
+  dashes: seq[float32],
+  pixelScale: float32
 ): seq[seq[Vec2]] =
   if strokeWidth <= 0:
     return
@@ -1669,7 +1666,7 @@ proc strokeShapes(
   proc makeCircle(at: Vec2): seq[Vec2] =
     let path = newPath()
     path.ellipse(at, halfStroke, halfStroke)
-    path.commandsToShapes()[0]
+    path.commandsToShapes(true, pixelScale)[0]
 
   proc makeRect(at, to: Vec2): seq[Vec2] =
     # Rectangle corners
@@ -1695,7 +1692,15 @@ proc strokeShapes(
 
     @[a, b, c, d, a]
 
-  proc makeJoin(prevPos, pos, nextPos: Vec2): seq[Vec2] =
+  proc addJoin(shape: var seq[seq[Vec2]], prevPos, pos, nextPos: Vec2) =
+    let minArea = pixelErrorMargin / pixelScale
+
+    if lineJoin == ljRound:
+      let area = PI.float32 * halfStroke * halfStroke
+      if area > minArea:
+        shape.add makeCircle(pos)
+      return
+
     let angle = fixAngle(angle(nextPos - pos) - angle(prevPos - pos))
     if abs(abs(angle) - PI) > epsilon:
       var
@@ -1719,13 +1724,21 @@ proc strokeShapes(
           lb = line(nextPos + b, pos + b)
         var at: Vec2
         if la.intersects(lb, at):
-          return @[pos + a, at, pos + b, pos, pos + a]
+          let
+            bisectorLengthSq = (at - pos).lengthSq
+            areaSq = 0.25.float32 * (
+              a.lengthSq * bisectorLengthSq + b.lengthSq * bisectorLengthSq
+            )
+          if areaSq > (minArea * minArea):
+            shape.add @[pos + a, at, pos + b, pos, pos + a]
 
       of ljBevel:
-        return @[a + pos, b + pos, pos, a + pos]
+        let areaSq = 0.25.float32 * a.lengthSq * b.lengthSq
+        if areaSq > (minArea * minArea):
+          shape.add @[a + pos, b + pos, pos, a + pos]
 
       of ljRound:
-        return makeCircle(pos)
+        discard # Handled above, skipping angle calculation
 
   for shape in shapes:
     var shapeStroke: seq[seq[Vec2]]
@@ -1773,10 +1786,10 @@ proc strokeShapes(
 
       # If we need a line join
       if i < shape.len - 1:
-        shapeStroke.add(makeJoin(prevPos, pos, shape[i + 1]))
+        shapeStroke.addJoin(prevPos, pos, shape[i + 1])
 
     if shape[0] == shape[^1]:
-      shapeStroke.add(makeJoin(shape[^2], shape[^1], shape[1]))
+      shapeStroke.addJoin(shape[^2], shape[^1], shape[1])
     else:
       case lineCap:
       of lcButt:
@@ -1793,7 +1806,7 @@ proc strokeShapes(
     result.add(shapeStroke)
 
 proc parseSomePath(
-  path: SomePath, closeSubpaths: bool, pixelScale: float32 = 1.0
+  path: SomePath, closeSubpaths: bool, pixelScale: float32
 ): seq[seq[Vec2]] {.inline.} =
   ## Given SomePath, parse it in different ways.
   when type(path) is string:
@@ -1874,13 +1887,15 @@ proc strokePath*(
   blendMode = bmNormal
 ) {.raises: [PixieError].} =
   ## Strokes a path.
+  let pixelScale = transform.pixelScale()
   var strokeShapes = strokeShapes(
-    parseSomePath(path, false, transform.pixelScale()),
+    parseSomePath(path, false, pixelScale),
     strokeWidth,
     lineCap,
     lineJoin,
     miterLimit,
-    dashes
+    dashes,
+    pixelScale
   )
   strokeShapes.transform(transform)
   mask.fillShapes(strokeShapes, wrNonZero, blendMode)
@@ -1908,7 +1923,8 @@ proc strokePath*(
         lineCap,
         lineJoin,
         miterLimit,
-        dashes
+        dashes,
+        pixelScale(transform)
       )
       strokeShapes.transform(transform)
       var color = paint.color
@@ -1970,7 +1986,7 @@ proc overlaps(
         if segment.to != at:
           hits.add((at.x, winding))
 
-  sort(hits, 0, hits.high)
+  sortHits(hits, 0, hits.high)
 
   var count: int
   for (at, winding) in hits:
@@ -1985,7 +2001,7 @@ proc fillOverlaps*(
   windingRule = wrNonZero
 ): bool {.raises: [PixieError].} =
   ## Returns whether or not the specified point is contained in the current path.
-  var shapes = parseSomePath(path, true, transform.pixelScale())
+  var shapes = path.commandsToShapes(true, transform.pixelScale())
   shapes.transform(transform)
   shapes.overlaps(test, windingRule)
 
@@ -2001,13 +2017,15 @@ proc strokeOverlaps*(
 ): bool {.raises: [PixieError].} =
   ## Returns whether or not the specified point is inside the area contained
   ## by the stroking of a path.
+  let pixelScale = transform.pixelScale()
   var strokeShapes = strokeShapes(
-    parseSomePath(path, false, transform.pixelScale()),
+    path.commandsToShapes(false, pixelScale),
     strokeWidth,
     lineCap,
     lineJoin,
     miterLimit,
-    dashes
+    dashes,
+    pixelScale
   )
   strokeShapes.transform(transform)
   strokeShapes.overlaps(test, wrNonZero)

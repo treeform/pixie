@@ -12,7 +12,7 @@ let
 timeIt "typeset":
   discard font.typeset(text, bounds = vec2(image.width.float32, 0))
 
-timeIt "rasterize":
+timeIt "fill text":
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, text, bounds = vec2(image.width.float32, 0))
   # mask.fill(0)
