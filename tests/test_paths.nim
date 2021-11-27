@@ -605,7 +605,7 @@ block:
   doAssert not path.strokeOverlaps(vec2(0, 0))
   doAssert not path.strokeOverlaps(vec2(20, 20))
   doAssert path.strokeOverlaps(vec2(0, 20))
-  doAssert path.strokeOverlaps(vec2(40, 20))
+  doAssert path.strokeOverlaps(vec2(39.9, 19.9))
   doAssert path.strokeOverlaps(vec2(19.8, 30.2))
   doAssert not path.strokeOverlaps(vec2(19.4, 30.6))
 
