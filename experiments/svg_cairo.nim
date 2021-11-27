@@ -245,8 +245,7 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
         if strokeOpacity.len == 0:
           strokeOpacity = parts[1].strip()
       else:
-        when defined(pixieDebugSvg):
-          maybeLogPair(parts[0], parts[1])
+        discard
     elif pair.len > 0:
       when defined(pixieDebugSvg):
         echo "Invalid style pair: ", pair

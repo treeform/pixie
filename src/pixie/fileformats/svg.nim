@@ -79,6 +79,23 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
     fillOpacity = node.attr("fill-opacity")
     strokeOpacity = node.attr("stroke-opacity")
 
+  when defined(pixieDebugSvg):
+    proc maybeLogPair(k, v: string) =
+      if k notin [
+          "fill-rule", "fill", "stroke", "stroke-width", "stroke-linecap",
+          "stroke-linejoin", "stroke-miterlimit", "stroke-dasharray",
+          "transform", "style", "version", "viewBox", "width", "height",
+          "xmlns", "x", "y", "x1", "x2", "y1", "y2", "id", "d", "cx", "cy",
+          "r", "points", "rx", "ry", "enable-background", "xml:space",
+          "xmlns:xlink", "data-name", "role", "class", "opacity",
+          "fill-opacity", "stroke-opacity"
+        ]:
+          echo k, ": ", v
+
+    if node.attrs() != nil:
+      for k, v in node.attrs():
+        maybeLogPair(k, v)
+
   let pairs = style.split(';')
   for pair in pairs:
     let parts = pair.split(':')
