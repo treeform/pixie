@@ -145,7 +145,7 @@ block: # Test conversion between image and mask
     originalMask = newMask(100, 100)
 
   let p = newPath()
-  p.rect(10, 10, 80, 80)
+  p.circle(50, 50, 25)
 
   originalImage.fillPath(p, rgba(255, 0, 0, 255))
   originalMask.fillPath(p)

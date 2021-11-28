@@ -1247,7 +1247,7 @@ proc computeCoverage(
           if entry.m == 0:
             entry.b
           else:
-            (yLine - entry.b) / entry.m
+            (yLine.float32 - entry.b) / entry.m
 
         hits[numHits] = (min(x, width), entry.winding)
         inc numHits
