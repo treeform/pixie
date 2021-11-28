@@ -1,6 +1,9 @@
 
-import algorithm, bumpy, chroma, pixie, pixie/images, pixie/paths, print,
-    sequtils, vmath
+import algorithm, bumpy, chroma, pixie/images, print,
+    sequtils, vmath, benchy
+
+import pixie, pixie/paths {.all.}
+
 
 printColors = false
 
@@ -25,7 +28,7 @@ proc roundBy*(v: Vec2, n: float32): Vec2 {.inline.} =
   result.x = sign(v.x) * round(abs(v.x) / n) * n
   result.y = sign(v.y) * round(abs(v.y) / n) * n
 
-proc pathToTrapezoids(p: Path): seq[Trapezoid] =
+proc fillPath2(mask: Mask, p: Path) =
 
   var polygons = p.commandsToShapes()
 
@@ -39,22 +42,10 @@ proc pathToTrapezoids(p: Path): seq[Trapezoid] =
       s.at = s.at.roundBy(q)
       s.to = s.to.roundBy(q)
       if s.at.y != s.to.y:
+        if s.at.y > s.to.y:
+          # make sure segments always are at.y higher
+          swap(s.at, s.to)
         segments1.add(s)
-  #print segments1
-
-  # Handle segments overlapping each other:
-  # var segments1: seq[Segment]
-  # while segments0.len > 0:
-  #   var a = segments0.pop()
-  #   var collision = false
-  #   for b in segments0:
-  #     if a != b:
-  #       var at: Vec2
-  #       if a.intersectsInner(b, at):
-  #         print "seg2seg intersects!", a, b, at
-  #         quit()
-  #   if not collision:
-  #     segments1.add(a)
 
   # There is probably a clever way to insert-sort them.
   var yScanLines: seq[float32]
@@ -64,6 +55,7 @@ proc pathToTrapezoids(p: Path): seq[Trapezoid] =
     if s.to.y notin yScanLines:
       yScanLines.add s.to.y
   yScanLines.sort()
+  print yScanLines
 
   var segments: seq[Segment]
   while segments1.len > 0:
@@ -71,8 +63,9 @@ proc pathToTrapezoids(p: Path): seq[Trapezoid] =
     var s = segments1.pop()
     var collision = false
     for y in yScanLines:
+      let scanLine = line(vec2(0, y), vec2(1, y))
       var at: Vec2
-      if intersects(line(vec2(0, y), vec2(1, y)), s, at):
+      if intersects(scanLine, s, at):
         at = at.roundBy(q)
         at.y = y
         if s.at.y != at.y and s.to.y != at.y:
@@ -86,17 +79,16 @@ proc pathToTrapezoids(p: Path): seq[Trapezoid] =
           break
 
     if not collision:
+      # means its touching, not intersecting
       segments.add(s)
 
-  #print segments
-
   # sort at/to in segments
-  for s in segments.mitems:
-    if s.at.y > s.to.y:
-      swap(s.at, s.to)
+  # for s in segments.mitems:
+  #   if s.at.y > s.to.y:
+  #     swap(s.at, s.to)
 
-  #print segments
-  #print yScanLines
+
+  #let blender = blendMode.blender()
 
   for yScanLine in yScanLines[0..^2]:
 
@@ -107,13 +99,7 @@ proc pathToTrapezoids(p: Path): seq[Trapezoid] =
     scanSegments.sort(proc(a, b: Segment): int =
       cmp(a.at.x, b.at.x))
 
-    if scanSegments.len mod 2 != 0:
-      print "error???"
-      print yScanLine
-      print scanSegments
-      quit()
-
-    # if scanSegments.len == 0:
+    # if scanSegments.len mod 2 != 0:
     #   print "error???"
     #   print yScanLine
     #   print scanSegments
@@ -121,6 +107,7 @@ proc pathToTrapezoids(p: Path): seq[Trapezoid] =
 
     # TODO: winding rules will go here
 
+    var trapezoids: seq[Trapezoid]
     for i in 0 ..< scanSegments.len div 2:
       let
         a = scanSegments[i*2+0]
@@ -131,130 +118,190 @@ proc pathToTrapezoids(p: Path): seq[Trapezoid] =
       #assert a.at.x < b.at.x
       #assert a.to.x < b.to.x
 
-      result.add(
-        Trapezoid(
-          nw: a.at,
-          ne: b.at,
-          se: b.to, # + vec2(0,0.7),
+      trapezoids.add(Trapezoid(
+        nw: a.at,
+        ne: b.at,
+        se: b.to, # + vec2(0,0.7),
         sw: a.to # + vec2(0,0.7)
-      )
-      )
+      ))
 
-proc trapFill(image: Image, t: Trapezoid, color: ColorRGBA) =
-  # assert t.nw.y == t.ne.y
-  # assert t.sw.y == t.se.y
+    var i = 0
+    while i < trapezoids.len:
 
-  let
-    height = t.sw.y - t.nw.y
-    minY = clamp(t.nw.y, 0, image.height.float)
-    maxY = clamp(t.sw.y, 0, image.height.float)
-  for y in minY.int ..< maxY.int:
-    var yRate, minX, maxX: float32
+      let t = trapezoids[i]
+      # print t
+      let
+        nw = t.nw
+        ne = t.ne
+        se = t.se
+        sw = t.sw
 
-    yRate = clamp((y.float - t.nw.y) / height, 0, 1)
-    minX = clamp(lerp(t.nw.x, t.sw.x, yRate).round, 0, image.width.float)
-    maxX = clamp(lerp(t.ne.x, t.se.x, yRate).round, 0, image.width.float)
+      let
+        height = sw.y - nw.y
+        minYf = nw.y
+        maxYf = sw.y
+        minYi = minYf.floor.int
+        maxYi = maxYf.floor.int
 
-    for x in minX.int ..< maxX.int:
-      image.setRgbaUnsafe(x, y, color)
+      # print t
 
-proc drawTrapezoids(image: Image, trapezoids: seq[Trapezoid]) =
+      for y in minYi .. maxYi:
+        let
+          yFrac = (y.float - nw.y) / height
+          minXf = mix(nw.x, sw.x, yFrac)
+          maxXf = mix(ne.x, se.x, yFrac)
+          minXi = minXf.floor.int
+          maxXi = maxXf.floor.int
+        #print yFrac
+        # if not(minY.int == 58 or maxY.int == 58) or minX > 100:
+        #   continue
 
-  for trapezoid in trapezoids:
-    image.trapFill(trapezoid, rgba(0, 0, 0, 255))
+        var ay: float32
+        if y == minYi and y == maxYi:
+          ay = maxYf - minYf
+          # print "middle", maxYf, minYf, a
+          #print "double", y, a, minY, maxY, round(a * 255)
+        elif y == minYi:
+          ay = (1 - (minYf - float32(minYi)))
+          # print "min y", minYf, minYi, a
+          #print "s", y, a, minY, round(a * 255)
+        elif y == maxYi:
+          ay = (maxYf - float32(maxYi))
+          #print "max y", maxYf, maxYi, a
+          # print "e", y, a, maxY, round(a * 255)
+        else:
+          ay = 1.0
 
-  # for trapezoid in trapezoids:
-  #   var p = newPath()
-  #   p.moveTo(trapezoid.nw)
-  #   p.lineTo(trapezoid.ne)
-  #   p.lineTo(trapezoid.se)
-  #   p.lineTo(trapezoid.sw)
-  #   p.closePath()
-  #   image.fillPath(p, rgba(0, 0, 0, 255))
-  #   image.strokePath(p, rgba(255, 0, 0, 255))
+        for x in minXi .. maxXi:
+          var ax: float32
+          # if x == minXi:
+          #   a2 = (1 - (minXf - float32(minXi)))
+          #   #a2 = 1.0
+          # elif x == maxXi:
+          #   a2 = (maxXf - float32(maxXi))
+          #   #a2 = 1.0
+          # else:
+          #   a2 = 1.0
+
+          if x.float32 < max(nw.x, sw.x):
+            ax = 0.5
+          elif x.float32 > min(ne.x, se.x):
+            ax = 0.25
+          else:
+            ax = 1.0
+
+          let backdrop = mask.getValueUnsafe(x, y)
+          mask.setValueUnsafe(x, y, backdrop + floor(255 * ay * ax).uint8)
+          # if x == 100 and y == 172:
+          #   print backdrop, round(255 * a * a2).uint8
+          #   print mask.getValueUnsafe(x, y)
+
+      inc i
 
 block:
   # Rect
   print "rect"
-  var image = newImage(200, 200)
-  image.fill(rgba(255, 255, 255, 255))
+  #var image = newImage(200, 200)
 
-  var p: Path
-  p.moveTo(50, 50)
-  p.lineTo(50, 150)
-  p.lineTo(150, 150)
-  p.lineTo(150, 50)
-  p.closePath()
-
-  var trapezoids = p.pathToTrapezoids()
-  image.drawTrapezoids(trapezoids)
-
-  image.writeFile("experiments/trapezoids/rect.png")
-
-block:
-  # Rhombus
-  print "rhombus"
-  var image = newImage(200, 200)
-  image.fill(rgba(255, 255, 255, 255))
-
-  var p: Path
-  p.moveTo(100, 50)
-  p.lineTo(150, 100)
-  p.lineTo(100, 150)
-  p.lineTo(50, 100)
-  p.closePath()
-
-  var trapezoids = p.pathToTrapezoids()
-  image.drawTrapezoids(trapezoids)
-
-  image.writeFile("experiments/trapezoids/rhombus.png")
-
-block:
-  # heart
-  print "heart"
-  var image = newImage(400, 400)
-  image.fill(rgba(255, 255, 255, 255))
+  # var p = Path()
+  # p.moveTo(50.25, 50.25)
+  # p.lineTo(50.25, 150.25)
+  # p.lineTo(150.25, 150.25)
+  # p.lineTo(150.25, 50.25)
+  # p.closePath()
 
   var p = parsePath("""
-    M 40 120 A 80 80 90 0 1 200 120 A 80 80 90 0 1 360 120
-    Q 360 240 200 360 Q 40 240 40 120 z
+    M 20 60
+    A 40 40 90 0 1 100 60
+    A 40 40 90 0 1 180 60
+    Q 180 120 100 180
+    Q 20 120 20 60
+    z
   """)
 
-  var trapezoids = p.pathToTrapezoids()
-  image.drawTrapezoids(trapezoids)
+  # image.fill(rgba(255, 255, 255, 255))
+  #image.fillPath2(p, color(0, 0, 0, 1))
 
-  image.writeFile("experiments/trapezoids/heart.png")
+  var mask = newMask(200, 200)
+  timeIt "rect trapezoids", 1:
+    #for i in 0 ..< 100:
+      mask.fill(0)
+      mask.fillPath2(p)
+      #image.fillPath2(p, color(0, 0, 0, 1))
+  mask.writeFile("experiments/trapezoids/rect_trapesoid.png")
 
-block:
-  # l
-  print "l"
-  var image = newImage(500, 800)
-  image.fill(rgba(255, 255, 255, 255))
+  var mask2 = newMask(200, 200)
+  timeIt "rect normal", 1:
+    #for i in 0 ..< 100:
+      mask2.fill(0)
+      mask2.fillPath(p)
+  mask2.writeFile("experiments/trapezoids/rect_scanline.png")
 
-  var p = parsePath("""
-    M 236 20 Q 150 22 114 57 T 78 166 V 790 L 171 806 V 181 Q 171 158 175 143 T 188 119 T 212 105.5 T 249 98 Z
-  """)
+  let (score, image) = diff(mask.newImage, mask2.newImage)
+  print score
+  image.writeFile("experiments/trapezoids/rect_diff.png")
 
-  #image.strokePath(p, rgba(0, 0, 0, 255))
 
-  var trapezoids = p.pathToTrapezoids()
-  image.drawTrapezoids(trapezoids)
 
-  image.writeFile("experiments/trapezoids/l.png")
+# block:
+#   # Rhombus
+#   print "rhombus"
+#   var image = newImage(200, 200)
+#   image.fill(rgba(255, 255, 255, 255))
 
-block:
-  # g
-  print "g"
-  var image = newImage(500, 800)
-  image.fill(rgba(255, 255, 255, 255))
+#   var p = Path()
+#   p.moveTo(100, 50)
+#   p.lineTo(150, 100)
+#   p.lineTo(100, 150)
+#   p.lineTo(50, 100)
+#   p.closePath()
 
-  var p = parsePath("""
-    M 406 538 Q 394 546 359.5 558.5 T 279 571 Q 232 571 190.5 556 T 118 509.5 T 69 431 T 51 319 Q 51 262 68 214.5 T 117.5 132.5 T 197 78.5 T 303 59 Q 368 59 416.5 68.5 T 498 86 V 550 Q 498 670 436 724 T 248 778 Q 199 778 155.5 770 T 80 751 L 97 670 Q 125 681 165.5 689.5 T 250 698 Q 333 698 369.5 665 T 406 560 V 538 Z M 405 152 Q 391 148 367.5 144.5 T 304 141 Q 229 141 188.5 190 T 148 320 Q 148 365 159.5 397 T 190.5 450 T 235.5 481 T 288 491 Q 325 491 356 480.5 T 405 456 V 152 Z
-  """)
+#   image.fillPath2(p, color(0, 0, 0, 1))
 
-  #image.strokePath(p, rgba(0, 0, 0, 255))
+#   image.writeFile("experiments/trapezoids/rhombus.png")
 
-  var trapezoids = p.pathToTrapezoids()
-  image.drawTrapezoids(trapezoids)
+# block:
+#   # heart
+#   print "heart"
+#   var image = newImage(400, 400)
+#   image.fill(rgba(0, 0, 0, 0))
 
-  image.writeFile("experiments/trapezoids/g.png")
+#   var p = parsePath("""
+#     M 40 120 A 80 80 90 0 1 200 120 A 80 80 90 0 1 360 120
+#     Q 360 240 200 360 Q 40 240 40 120 z
+#   """)
+
+#   var mask = newMask(image)
+#   mask.fillPath2(p)
+
+#   image.draw(mask, blendMode = bmOverwrite)
+
+#   image.writeFile("experiments/trapezoids/heart.png")
+
+# block:
+#   # l
+#   print "l"
+#   var image = newImage(500, 800)
+#   image.fill(rgba(255, 255, 255, 255))
+
+#   var p = parsePath("""
+#     M 236 20 Q 150 22 114 57 T 78 166 V 790 L 171 806 V 181 Q 171 158 175 143 T 188 119 T 212 105.5 T 249 98 Z
+#   """)
+
+#   image.fillPath2(p, color(0, 0, 0, 1))
+
+#   image.writeFile("experiments/trapezoids/l.png")
+
+# block:
+#   # g
+#   print "g"
+#   var image = newImage(500, 800)
+#   image.fill(rgba(255, 255, 255, 255))
+
+#   var p = parsePath("""
+#     M 406 538 Q 394 546 359.5 558.5 T 279 571 Q 232 571 190.5 556 T 118 509.5 T 69 431 T 51 319 Q 51 262 68 214.5 T 117.5 132.5 T 197 78.5 T 303 59 Q 368 59 416.5 68.5 T 498 86 V 550 Q 498 670 436 724 T 248 778 Q 199 778 155.5 770 T 80 751 L 97 670 Q 125 681 165.5 689.5 T 250 698 Q 333 698 369.5 665 T 406 560 V 538 Z M 405 152 Q 391 148 367.5 144.5 T 304 141 Q 229 141 188.5 190 T 148 320 Q 148 365 159.5 397 T 190.5 450 T 235.5 481 T 288 491 Q 325 491 356 480.5 T 405 456 V 152 Z
+#   """)
+
+#   image.fillPath2(p, color(0, 0, 0, 1))
+
+#   image.writeFile("experiments/trapezoids/g.png")
