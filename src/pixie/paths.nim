@@ -2256,9 +2256,15 @@ when defined(pixieSweeps):
         var cutterLine: float32 = 0
         block doubleFor:
           for a in sweeps[i]:
-            let aSeg = segment(vec2(a.atx, cutLines[i]), vec2(a.tox, cutLines[i+1]))
+            let aSeg = segment(
+              vec2(a.atx, cutLines[i]),
+              vec2(a.tox, cutLines[i+1])
+            )
             for b in sweeps[i]:
-              let bSeg = segment(vec2(b.atx, cutLines[i]), vec2(b.tox, cutLines[i+1]))
+              let bSeg = segment(
+                vec2(b.atx, cutLines[i]),
+                vec2(b.tox, cutLines[i+1])
+              )
               var at: Vec2
               if intersectsInner(aSeg, bSeg, at):
                 needsCut = true
@@ -2320,7 +2326,7 @@ when defined(pixieSweeps):
     #     echo "L ", sw.x, " ", sw.y
 
     proc computeCoverage(
-      coverages: var seq[uint8],
+      coverages: var seq[uint16],
       y: int,
       startX: int,
       cutLines: seq[float32],
@@ -2347,53 +2353,61 @@ when defined(pixieSweeps):
           minEi = min(neX, seX).int
           maxEi = max(neX, seX).ceil.int
 
-        # TODO: Add case when trapezoids both starts and stops on same pixle.
-
         let
           nw = vec2(sweep[i+0].atx, cutLines[currCutLine])
           sw = vec2(sweep[i+0].tox, cutLines[currCutLine + 1])
+          f16 = (256 * 256 - 1).float32
         for x in minWi ..< maxWi:
-          var area = pixelCover(nw - vec2(x.float32, y.float32), sw - vec2(
-              x.float32, y.float32))
-          coverages[x - startX] += (area * 255).uint8
+          var area = pixelCover(
+            nw - vec2(x.float32, y.float32),
+            sw - vec2(x.float32, y.float32)
+          )
+          coverages[x - startX] += (area * f16).uint16
 
         let x = maxWi
-        var midArea = pixelCover(nw - vec2(x.float32, y.float32), sw - vec2(
-            x.float32, y.float32))
-        var midArea8 = (midArea * 255).uint8
-        for x in maxWi ..< minEi:
-          # TODO: Maybe try coverages of uint16 to prevent streeks in solid white fill?
-          coverages[x - startX] += midArea8
+        var midArea = pixelCover(
+          nw - vec2(x.float32, y.float32),
+          sw - vec2(x.float32, y.float32)
+        )
+        for x in maxWi ..< maxEi:
+          coverages[x - startX] += (midArea * f16).uint16
 
         let
           ne = vec2(sweep[i+1].atx, cutLines[currCutLine])
           se = vec2(sweep[i+1].tox, cutLines[currCutLine + 1])
         for x in minEi ..< maxEi:
-          var area = midArea - pixelCover(ne - vec2(x.float32, y.float32), se -
-              vec2(x.float32, y.float32))
-          coverages[x - startX] += (area * 255).uint8
+          var area = pixelCover(
+            ne - vec2(x.float32, y.float32),
+            se - vec2(x.float32, y.float32)
+          )
+          coverages[x - startX] -= (area * f16).uint16
 
         i += 2
 
     var
       currCutLine = 0
-      coverages = newSeq[uint8](bounds.w.int)
+      coverages16 = newSeq[uint16](bounds.w.int)
+      coverages8 = newSeq[uint8](bounds.w.int)
     for scanLine in cutLines[0].int ..< cutLines[^1].ceil.int:
-      zeroMem(coverages[0].addr, coverages.len)
 
-      coverages.computeCoverage(scanLine, startX, cutLines, currCutLine, sweeps[currCutLine])
+      zeroMem(coverages16[0].addr, coverages16.len * 2)
+
+      coverages16.computeCoverage(
+        scanLine, startX, cutLines, currCutLine, sweeps[currCutLine])
       while cutLines[currCutLine + 1] < scanLine.float + 1.0:
         inc currCutLine
         if currCutLine == sweeps.len:
           break
-        coverages.computeCoverage(scanLine, startX, cutLines, currCutLine,
-            sweeps[currCutLine])
+        coverages16.computeCoverage(
+          scanLine, startX, cutLines, currCutLine, sweeps[currCutLine])
 
+      for i in 0 ..< coverages16.len:
+        coverages8[i] = (coverages16[i] shr 8).uint8
       image.fillCoverage(
         rgbx,
         startX = startX,
         y = scanLine,
-        coverages,
+        coverages8,
         blendMode
       )
 
