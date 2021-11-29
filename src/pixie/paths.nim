@@ -2103,6 +2103,17 @@ when defined(pixieSweeps):
     line.winding = s[1]
     return line
 
+  proc intersectsYLine(y: float32, s: Segment, atx: var float32): bool {.inline.} =
+    let
+      s2y = s.to.y - s.at.y
+      denominator = -s2y
+      numerator = s.at.y - y
+      u = numerator / denominator
+    if u >= 0 and u <= 1:
+      let at = s.at + (u * vec2(s.to.x - s.at.x, s2y))
+      atx = at.x
+      return true
+
   proc binaryInsert(arr: var seq[float32], v: float32) =
     if arr.len == 0:
       arr.add(v)
@@ -2202,7 +2213,7 @@ when defined(pixieSweeps):
       bounds = computeBounds(segments).snapToPixels()
       startX = max(0, bounds.x.int)
 
-    if segments.len == 0:
+    if segments.len == 0 or bounds.w.int == 0 or bounds.h.int == 0:
       return
 
     # Create sorted segments.
@@ -2227,14 +2238,13 @@ when defined(pixieSweeps):
           let s = segments[lastSeg]
 
           if s[0].to.y != cutLines[i + 1]:
-            var at: Vec2
+            var atx: float32
             var seg = s[0]
             for j in i ..< sweeps.len:
               let y = cutLines[j + 1]
-              #TODO: speed up with horizintal line intersect
-              if intersects(line(vec2(0, y), vec2(1, y)), seg, at):
-                sweeps[j].add(toLine((segment(seg.at, at), s[1])))
-                seg = segment(at, seg.to)
+              if intersectsYLine(y, seg, atx):
+                sweeps[j].add(toLine((segment(seg.at, vec2(atx, y)), s[1])))
+                seg = segment(vec2(atx, y), seg.to)
               else:
                 if seg.at.y != seg.to.y:
                   sweeps[j].add(toLine(s))
@@ -2287,6 +2297,41 @@ when defined(pixieSweeps):
         else:
           break
       inc i
+
+    # i = 0
+    # while i < sweeps.len:
+    #   # TODO: Maybe finds all cuts first, add them to array, cut all lines at once.
+    #   for t in 0 ..< 10: # TODO: maybe while true:
+    #     # keep cutting sweep
+    #     var needsCut = false
+    #     var cutterLine: float32 = 0
+    #     block doubleFor:
+    #       for a in sweeps[i]:
+    #         let aSeg = segment(vec2(a.atx, cutLines[i]), vec2(a.tox, cutLines[i+1]))
+    #         for b in sweeps[i]:
+    #           let bSeg = segment(vec2(b.atx, cutLines[i]), vec2(b.tox, cutLines[i+1]))
+    #           var at: Vec2
+    #           if intersectsInner(aSeg, bSeg, at):
+    #             needsCut = true
+    #             cutterLine = at.y
+    #             break doubleFor
+    #     # TODO enable?
+    #     if false and needsCut:
+    #       # Doing a cut.
+    #       var
+    #         thisSweep = sweeps[i]
+    #       sweeps[i].setLen(0)
+    #       sweeps.insert(newSeq[SweepLine](), i + 1)
+    #       for a in thisSweep:
+    #         let seg = segment(vec2(a.atx, cutLines[i]), vec2(a.tox, cutLines[i+1]))
+    #         var at: Vec2
+    #         if intersects(line(vec2(0, cutterLine), vec2(1, cutterLine)), seg, at):
+    #           sweeps[i+0].add(toLine((segment(seg.at, at), a.winding)))
+    #           sweeps[i+1].add(toLine((segment(at, seg.to), a.winding)))
+    #       cutLines.binaryInsert(cutterLine)
+    #     else:
+    #       break
+    #   inc i
 
     i = 0
     while i < sweeps.len:
@@ -2347,11 +2392,11 @@ when defined(pixieSweeps):
           swX = mix(sweep[i+0].atx, sweep[i+0].tox, yFracBottom)
           seX = mix(sweep[i+1].atx, sweep[i+1].tox, yFracBottom)
 
-          minWi = min(nwX, swX).int
-          maxWi = max(nwX, swX).ceil.int
+          minWi = min(nwX, swX).int#.clamp(startX, coverages.len + startX)
+          maxWi = max(nwX, swX).ceil.int#.clamp(startX, coverages.len + startX)
 
-          minEi = min(neX, seX).int
-          maxEi = max(neX, seX).ceil.int
+          minEi = min(neX, seX).int#.clamp(startX, coverages.len + startX)
+          maxEi = max(neX, seX).ceil.int#.clamp(startX, coverages.len + startX)
 
         let
           nw = vec2(sweep[i+0].atx, cutLines[currCutLine])
@@ -2388,7 +2433,7 @@ when defined(pixieSweeps):
       currCutLine = 0
       coverages16 = newSeq[uint16](bounds.w.int)
       coverages8 = newSeq[uint8](bounds.w.int)
-    for scanLine in cutLines[0].int ..< cutLines[^1].ceil.int:
+    for scanLine in max(cutLines[0].int, 0) ..< min(cutLines[^1].ceil.int, image.height):
 
       zeroMem(coverages16[0].addr, coverages16.len * 2)
 
