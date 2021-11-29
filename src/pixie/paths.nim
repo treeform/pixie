@@ -1474,7 +1474,6 @@ proc fillHits(
   let
     blender = blendMode.blender()
     width = image.width.float32
-
   var filledTo: int
   for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
     let
