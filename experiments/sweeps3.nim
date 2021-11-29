@@ -1,6 +1,5 @@
 
-import algorithm, bumpy, chroma, pixie/images, print,
-    sequtils, vmath, benchy, fidget2/perf
+import algorithm, chroma, pixie/images, vmath, benchy
 
 import pixie, pixie/paths {.all.}
 

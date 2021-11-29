@@ -12,3 +12,5 @@ nimcache
 *.dll
 __pycache__
 bindings/generated
+*.dSYM
+dump.txt

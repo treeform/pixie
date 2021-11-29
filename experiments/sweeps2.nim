@@ -1,6 +1,6 @@
 
 import algorithm, bumpy, chroma, pixie/images, print,
-    sequtils, vmath, benchy, fidget2/perf
+    vmath, benchy, fidget2/perf
 
 import pixie, pixie/paths {.all.}
 
@@ -160,7 +160,7 @@ proc binaryInsert(arr: var seq[float32], v: float32) =
 proc fillPath2(image: Image, p: Path, color: Color, windingRule = wrNonZero, blendMode = bmNormal) =
   const q = 1/256.0
   let rgbx = color.rgbx
-  var segments = p.commandsToShapes().shapesToSegments()
+  var segments = p.commandsToShapes(true, 1.0).shapesToSegments()
   let
     bounds = computeBounds(segments).snapToPixels()
     startX = max(0, bounds.x.int)
@@ -465,7 +465,7 @@ when defined(bench):
   test("halfAarc", halfAarc, 100)
   test("hourGlass", hourGlass, 100)
   test("hole", hole, 100)
-  test("holeEvenOdd", holeEvenOdd, 100, wr=wrNonZero)
+  test("holeNonZero", holeEvenOdd, 100, wr=wrNonZero)
   test("holeEvenOdd", holeEvenOdd, 100, wr=wrEvenOdd)
   test("letterG", letterG, 100)
 else:
@@ -476,6 +476,6 @@ else:
   # test("halfAarc", halfAarc)
   # test("hourGlass", hourGlass)
   #test("hole", hole, wr=wrEvenOdd)
-  test("holeEvenOdd", holeEvenOdd, wr=wrNonZero)
+  test("holeNonZero", holeEvenOdd, wr=wrNonZero)
   test("holeEvenOdd", holeEvenOdd, wr=wrEvenOdd)
   # test("letterG", letterG)

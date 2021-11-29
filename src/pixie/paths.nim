@@ -2052,17 +2052,6 @@ when defined(sweeps):
       bI: Vec2
       area: float32 = 0.0
 
-    # # Sort A on top.
-    # if a.y > b.y:
-    #   let tmp = a
-    #   a = b
-    #   b = tmp
-
-    # if (b.y < 0 or a.y > 1) or # Above or bellow, no effect.
-    #   (a.x >= 1 and b.x >= 1) or # To the right, no effect.
-    #   (a.y == b.y): # Horizontal line, no effect.
-    #   return 0
-
     if (a.x < 0 and b.x < 0) or # Both to the left.
       (a.x == b.x): # Vertical line
       # Area of the rectangle:
@@ -2116,7 +2105,6 @@ when defined(sweeps):
       t = (s2.x * (a.at.y - b.at.y) - s2.y * (a.at.x - b.at.x)) / denominator
 
     if s > 0 and s < 1 and t > 0 and t < 1:
-      #print s, t
       at = a.at + (t * s1)
       return true
 
@@ -2140,28 +2128,6 @@ when defined(sweeps):
     line.winding = s[1]
     return line
 
-  proc computeBounds(polygons: seq[seq[Vec2]]): Rect =
-    ## Compute the bounds of the segments.
-    var
-      xMin = float32.high
-      xMax = float32.low
-      yMin = float32.high
-      yMax = float32.low
-    for segments in polygons:
-      for v in segments:
-        xMin = min(xMin, v.x)
-        xMax = max(xMax, v.x)
-        yMin = min(yMin, v.y)
-        yMax = max(yMax, v.y)
-
-    if xMin.isNaN() or xMax.isNaN() or yMin.isNaN() or yMax.isNaN():
-      discard
-    else:
-      result.x = xMin
-      result.y = yMin
-      result.w = xMax - xMin
-      result.h = yMax - yMin
-
   proc binaryInsert(arr: var seq[float32], v: float32) =
     if arr.len == 0:
       arr.add(v)
@@ -2180,11 +2146,72 @@ when defined(sweeps):
     if arr[L] ~= v:
       return
     elif arr[L] > v:
-      #print "insert", v, arr, L, R
       arr.insert(v, L)
     else:
-      #print "insert", v, arr, L, R
       arr.insert(v, L + 1)
+
+  proc sortSegments(segments: var seq[(Segment, int16)], inl, inr: int) =
+    ## Quicksort + insertion sort, in-place and faster than standard lib sort.
+
+    let n = inr - inl + 1
+    if n < 32: # Use insertion sort for the rest
+      for i in inl + 1 .. inr:
+        var
+          j = i - 1
+          k = i
+        while j >= 0 and segments[j][0].at.y > segments[k][0].at.y:
+          swap(segments[j + 1], segments[j])
+          dec j
+          dec k
+      return
+    var
+      l = inl
+      r = inr
+    let p = segments[l + n div 2][0].at.y
+    while l <= r:
+      if segments[l][0].at.y < p:
+        inc l
+      elif segments[r][0].at.y > p:
+        dec r
+      else:
+        swap(segments[l], segments[r])
+        inc l
+        dec r
+    sortSegments(segments, inl, r)
+    sortSegments(segments, l, inr)
+
+  proc sortSweepLines(segments: var seq[SweepLine], inl, inr: int) =
+    ## Quicksort + insertion sort, in-place and faster than standard lib sort.
+
+    proc avg(line: SweepLine): float32 {.inline.} =
+      (line.tox + line.atx) / 2.float32
+
+    let n = inr - inl + 1
+    if n < 32: # Use insertion sort for the rest
+      for i in inl + 1 .. inr:
+        var
+          j = i - 1
+          k = i
+        while j >= 0 and segments[j].avg > segments[k].avg:
+          swap(segments[j + 1], segments[j])
+          dec j
+          dec k
+      return
+    var
+      l = inl
+      r = inr
+    let p = segments[l + n div 2].avg
+    while l <= r:
+      if segments[l].avg < p:
+        inc l
+      elif segments[r].avg > p:
+        dec r
+      else:
+        swap(segments[l], segments[r])
+        inc l
+        dec r
+    sortSweepLines(segments, inl, r)
+    sortSweepLines(segments, l, inr)
 
   proc fillShapes(
     image: Image,
@@ -2200,8 +2227,11 @@ when defined(sweeps):
       bounds = computeBounds(segments).snapToPixels()
       startX = max(0, bounds.x.int)
 
+    if segments.len == 0:
+      return
+
     # Create sorted segments.
-    segments.sort(proc(a, b: (Segment, int16)): int = cmp(a[0].at.y, b[0].at.y))
+    segments.sortSegments(0, segments.high)
 
     # Compute cut lines
     var cutLines: seq[float32]
@@ -2209,61 +2239,43 @@ when defined(sweeps):
       cutLines.binaryInsert(s[0].at.y)
       cutLines.binaryInsert(s[0].to.y)
 
-    if cutLines.len == 0 or cutLines.len == 1:
-      return
-
     var
-      sweeps = newSeq[seq[SweepLine]](cutLines.len - 1) # dont add bottom cutLine
+      # Dont add bottom cutLine.
+      sweeps = newSeq[seq[SweepLine]](cutLines.len - 1)
       lastSeg = 0
       i = 0
     while i < sweeps.len:
-
-      #for i, sweep in sweeps.mpairs:
-      #print "sweep", i, cutLines[i]
 
       if lastSeg < segments.len:
 
         while segments[lastSeg][0].at.y == cutLines[i]:
           let s = segments[lastSeg]
 
-          if s[0].at.y != s[0].to.y:
-
-            #print s
-            if s[0].to.y != cutLines[i + 1]:
-              #print "needs cut?", s
-
-              #quit("need to cut lines")
-              var at: Vec2
-              var seg = s[0]
-              for j in i ..< sweeps.len:
-                let y = cutLines[j + 1]
-                if intersects(line(vec2(0, y), vec2(1, y)), seg, at):
-                  #print "cutting", j, seg
-                  #print "add cut", j, segment(seg.at, at)
-                  sweeps[j].add(toLine((segment(seg.at, at), s[1])))
-                  seg = segment(at, seg.to)
-                else:
-                  if seg.at.y != seg.to.y:
-                    #print "add rest", j, segment(seg.at, seg.to)
-                    sweeps[j].add(toLine(s))
-                  # else:
-                  #   print "micro?"
-                  break
-            else:
-              #print "add", s
-              sweeps[i].add(toLine(s))
+          if s[0].to.y != cutLines[i + 1]:
+            var at: Vec2
+            var seg = s[0]
+            for j in i ..< sweeps.len:
+              let y = cutLines[j + 1]
+              #TODO: speed up with horizintal line intersect
+              if intersects(line(vec2(0, y), vec2(1, y)), seg, at):
+                sweeps[j].add(toLine((segment(seg.at, at), s[1])))
+                seg = segment(at, seg.to)
+              else:
+                if seg.at.y != seg.to.y:
+                  sweeps[j].add(toLine(s))
+                break
+          else:
+            sweeps[i].add(toLine(s))
 
           inc lastSeg
-
           if lastSeg >= segments.len:
             break
       inc i
 
     i = 0
-    #echo sweeps.len, " vs ", cutLines.len
-
     while i < sweeps.len:
-      for t in 0 ..< 10:
+      # TODO: Maybe finds all cuts first, add them to array, cut all lines at once.
+      for t in 0 ..< 10: # TODO: maybe while true:
         # keep cutting sweep
         var needsCut = false
         var cutterLine: float32 = 0
@@ -2277,8 +2289,9 @@ when defined(sweeps):
                 needsCut = true
                 cutterLine = at.y
                 break doubleFor
+        # TODO enable?
         if false and needsCut:
-          #echo "doing a cut"
+          # Doing a cut.
           var
             thisSweep = sweeps[i]
           sweeps[i].setLen(0)
@@ -2294,43 +2307,31 @@ when defined(sweeps):
           break
       inc i
 
-
     i = 0
     while i < sweeps.len:
       # Sort the sweep by X
-      sweeps[i].sort proc(a, b: SweepLine): int =
-        result = cmp(a.atx, b.atx)
-        if result == 0:
-          result = cmp(a.tox, b.tox)
-
+      sweeps[i].sortSweepLines(0, sweeps[i].high)
       # Do winding order
       var
         pen = 0
         prevFill = false
         j = 0
-      # print "sweep", i, "--------------"
       while j < sweeps[i].len:
         let a = sweeps[i][j]
-        # print a.winding
         if a.winding == 1:
           inc pen
         if a.winding == -1:
           dec pen
-        # print j, pen, prevFill, shouldFill(windingRule, pen)
         let thisFill = shouldFill(windingRule, pen)
         if prevFill == thisFill:
-          # remove this line
-          # print "remove", j
+          # Remove this sweep line.
           sweeps[i].delete(j)
           continue
         prevFill = thisFill
         inc j
-
-      # print sweeps[i]
-
       inc i
 
-    #print sweeps
+    # Used to debug sweeps:
     # for s in 0 ..< sweeps.len:
     #   let
     #     y1 = cutLines[s]
@@ -2351,10 +2352,6 @@ when defined(sweeps):
       currCutLine: int,
       sweep: seq[SweepLine]
     ) =
-
-      # if sweep.len mod 2 != 0:
-      #   return
-
       let
         sweepHeight = cutLines[currCutLine + 1] - cutLines[currCutLine]
         yFracTop = ((y.float32 - cutLines[currCutLine]) / sweepHeight).clamp(0, 1)
@@ -2374,6 +2371,8 @@ when defined(sweeps):
           minEi = min(neX, seX).int
           maxEi = max(neX, seX).ceil.int
 
+        # TODO: Add case when trapezoids both starts and stops on same pixle.
+
         let
           nw = vec2(sweep[i+0].atx, cutLines[currCutLine])
           sw = vec2(sweep[i+0].tox, cutLines[currCutLine + 1])
@@ -2385,6 +2384,7 @@ when defined(sweeps):
         var midArea = pixelCover(nw - vec2(x.float32, y.float32), sw - vec2(x.float32, y.float32))
         var midArea8 = (midArea * 255).uint8
         for x in maxWi ..< minEi:
+          # TODO: Maybe try coverages of uint16 to prevent streeks in solid white fill?
           coverages[x - startX] += midArea8
 
         let
@@ -2399,7 +2399,6 @@ when defined(sweeps):
     var
       currCutLine = 0
       coverages = newSeq[uint8](bounds.w.int)
-    #echo "coverages", coverages.len
     for scanLine in cutLines[0].int ..< cutLines[^1].ceil.int:
       zeroMem(coverages[0].addr, coverages.len)
 
@@ -2417,7 +2416,6 @@ when defined(sweeps):
         coverages,
         blendMode
       )
-
 
 when defined(release):
   {.pop.}
