@@ -139,3 +139,48 @@ block:
   # a.writeFile("pixie3.png")
 
   # doDiff(readImage("cairo3.png"), a, "cairo3")
+
+block:
+  let path = newPath()
+  path.roundedRect(200, 200, 600, 600, 10, 10, 10, 10)
+
+  let shapes = path.commandsToShapes(true, 1)
+
+  let
+    surface = imageSurfaceCreate(FORMAT_ARGB32, 1000, 1000)
+    ctx = surface.create()
+
+  timeIt "cairo4":
+    ctx.setSourceRgba(1, 1, 1, 1)
+    let operator = ctx.getOperator()
+    ctx.setOperator(OperatorSource)
+    ctx.paint()
+    ctx.setOperator(operator)
+
+    ctx.setSourceRgba(1, 0, 0, 1)
+
+    ctx.newPath()
+    ctx.moveTo(shapes[0][0].x, shapes[0][0].y)
+    for shape in shapes:
+      for v in shape:
+        ctx.lineTo(v.x, v.y)
+    ctx.fill()
+    surface.flush()
+
+  # discard surface.writeToPng("cairo3.png")
+
+  let a = newImage(1000, 1000)
+
+  timeIt "pixie4":
+    a.fill(rgba(255, 255, 255, 255))
+
+    let p = newPath()
+    p.moveTo(shapes[0][0])
+    for shape in shapes:
+      for v in shape:
+        p.lineTo(v)
+    a.fillPath(p, rgba(255, 0, 0, 255))
+
+  # a.writeFile("pixie3.png")
+
+  # doDiff(readImage("cairo3.png"), a, "cairo3")
