@@ -1481,15 +1481,15 @@ proc fillHits(
         let
           blenderSimd = blendMode.blenderSimd()
           colorVec = mm_set1_epi32(cast[int32](rgbx))
-        for _ in 0 ..< fillLen div 16:
-          let index = image.dataIndex(x, y)
-          for i in 0 ..< 4:
-            let backdrop = mm_loadu_si128(image.data[index + i * 4].addr)
-            mm_storeu_si128(
-              image.data[index + i * 4].addr,
-              blenderSimd(backdrop, colorVec)
-            )
-          x += 16
+        for _ in 0 ..< fillLen div 4:
+          let
+            index = image.dataIndex(x, y)
+            backdrop = mm_loadu_si128(image.data[index].addr)
+          mm_storeu_si128(
+            image.data[index].addr,
+            blenderSimd(backdrop, colorVec)
+          )
+          x += 4
 
     for x in x ..< fillStart + fillLen:
       let backdrop = image.getRgbaUnsafe(x, y)
@@ -1531,9 +1531,11 @@ proc fillHits(
           maskerSimd = blendMode.maskerSimd()
           valueVec = mm_set1_epi8(cast[int8](255))
         for _ in 0 ..< fillLen div 16:
-          let backdrop = mm_loadu_si128(mask.data[mask.dataIndex(x, y)].addr)
+          let
+            index = mask.dataIndex(x, y)
+            backdrop = mm_loadu_si128(mask.data[index].addr)
           mm_storeu_si128(
-            mask.data[mask.dataIndex(x, y)].addr,
+            mask.data[index].addr,
             maskerSimd(backdrop, valueVec)
           )
           x += 16
