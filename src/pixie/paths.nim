@@ -1537,7 +1537,7 @@ proc fillHits(
     mask.clearUnsafe(0, y, startX, y)
     mask.clearUnsafe(filledTo, y, mask.width, y)
 
-when not defined(sweeps):
+when not defined(pixieSweeps):
   proc fillShapes(
     image: Image,
     shapes: seq[seq[Vec2]],
@@ -2039,7 +2039,7 @@ proc strokeOverlaps*(
   strokeShapes.transform(transform)
   strokeShapes.overlaps(test, wrNonZero)
 
-when defined(sweeps):
+when defined(pixieSweeps):
   import algorithm
 
   proc pixelCover(a0, b0: Vec2): float32 =
