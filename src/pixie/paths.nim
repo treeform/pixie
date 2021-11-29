@@ -1338,9 +1338,17 @@ proc fillCoverage(
           # If the coverages are not all zero
           if mm_movemask_epi8(mm_cmpeq_epi32(coverageVec, vec255)) == 0xffff:
             # If the coverages are all 255
-            if blendMode == bmNormal and rgbx.a == 255:
-              for i in 0 ..< 4:
-                mm_storeu_si128(image.data[index + i * 4].addr, colorVec)
+            if blendMode == bmNormal:
+              if rgbx.a == 255:
+                for i in 0 ..< 4:
+                  mm_storeu_si128(image.data[index + i * 4].addr, colorVec)
+              else:
+                for i in 0 ..< 4:
+                  let backdrop = mm_loadu_si128(image.data[index + i * 4].addr)
+                  mm_storeu_si128(
+                    image.data[index + i * 4].addr,
+                    blendNormalInlineSimd(backdrop, colorVec)
+                  )
             else:
               for i in 0 ..< 4:
                 let backdrop = mm_loadu_si128(image.data[index + i * 4].addr)
@@ -1350,32 +1358,38 @@ proc fillCoverage(
                 )
           else:
             # Coverages are not all 255
-            var coverageVec = coverageVec
-            for i in 0 ..< 4:
-              var unpacked = unpackAlphaValues(coverageVec)
-              # Shift the coverages from `a` to `g` and `a` for multiplying
-              unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
+            template useCoverage(blendProc: untyped) =
+              var coverageVec = coverageVec
+              for i in 0 ..< 4:
+                var unpacked = unpackAlphaValues(coverageVec)
+                # Shift the coverages from `a` to `g` and `a` for multiplying
+                unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
 
-              var
-                source = colorVec
-                sourceEven = mm_slli_epi16(source, 8)
-                sourceOdd = mm_and_si128(source, oddMask)
+                var
+                  source = colorVec
+                  sourceEven = mm_slli_epi16(source, 8)
+                  sourceOdd = mm_and_si128(source, oddMask)
 
-              sourceEven = mm_mulhi_epu16(sourceEven, unpacked)
-              sourceOdd = mm_mulhi_epu16(sourceOdd, unpacked)
+                sourceEven = mm_mulhi_epu16(sourceEven, unpacked)
+                sourceOdd = mm_mulhi_epu16(sourceOdd, unpacked)
 
-              sourceEven = mm_srli_epi16(mm_mulhi_epu16(sourceEven, div255), 7)
-              sourceOdd = mm_srli_epi16(mm_mulhi_epu16(sourceOdd, div255), 7)
+                sourceEven = mm_srli_epi16(mm_mulhi_epu16(sourceEven, div255), 7)
+                sourceOdd = mm_srli_epi16(mm_mulhi_epu16(sourceOdd, div255), 7)
 
-              source = mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
+                source = mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
 
-              let backdrop = mm_loadu_si128(image.data[index + i * 4].addr)
-              mm_storeu_si128(
-                image.data[index + i * 4].addr,
-                blenderSimd(backdrop, source)
-              )
+                let backdrop = mm_loadu_si128(image.data[index + i * 4].addr)
+                mm_storeu_si128(
+                  image.data[index + i * 4].addr,
+                  blendProc(backdrop, source)
+                )
 
-              coverageVec = mm_srli_si128(coverageVec, 4)
+                coverageVec = mm_srli_si128(coverageVec, 4)
+
+            if blendMode == bmNormal:
+              useCoverage(blendNormalInlineSimd)
+            else:
+              useCoverage(blenderSimd)
 
         elif blendMode == bmMask:
           for i in 0 ..< 4:
@@ -1460,6 +1474,7 @@ proc fillHits(
   let
     blender = blendMode.blender()
     width = image.width.float32
+
   var filledTo: int
   for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
     let
@@ -1478,18 +1493,30 @@ proc fillHits(
     when defined(amd64) and not defined(pixieNoSimd):
       if blendMode.hasSimdBlender():
         # When supported, SIMD blend as much as possible
-        let
-          blenderSimd = blendMode.blenderSimd()
-          colorVec = mm_set1_epi32(cast[int32](rgbx))
-        for _ in 0 ..< fillLen div 4:
-          let
-            index = image.dataIndex(x, y)
-            backdrop = mm_loadu_si128(image.data[index].addr)
-          mm_storeu_si128(
-            image.data[index].addr,
-            blenderSimd(backdrop, colorVec)
-          )
-          x += 4
+        let colorVec = mm_set1_epi32(cast[int32](rgbx))
+        if blendMode == bmNormal:
+          # For path filling, bmNormal is almost always used.
+          # Inline SIMD is faster here.
+          for _ in 0 ..< fillLen div 4:
+            let
+              index = image.dataIndex(x, y)
+              backdrop = mm_loadu_si128(image.data[index].addr)
+            mm_storeu_si128(
+              image.data[index].addr,
+              blendNormalInlineSimd(backdrop, colorVec)
+            )
+            x += 4
+        else:
+          let blenderSimd = blendMode.blenderSimd()
+          for _ in 0 ..< fillLen div 4:
+            let
+              index = image.dataIndex(x, y)
+              backdrop = mm_loadu_si128(image.data[index].addr)
+            mm_storeu_si128(
+              image.data[index].addr,
+              blenderSimd(backdrop, colorVec)
+            )
+            x += 4
 
     for x in x ..< fillStart + fillLen:
       let backdrop = image.getRgbaUnsafe(x, y)

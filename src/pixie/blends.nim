@@ -510,7 +510,7 @@ when defined(amd64) and not defined(pixieNoSimd):
     MaskerSimd* = proc(blackdrop, source: M128i): M128i {.gcsafe, raises: [].}
       ## Function signature returned by maskerSimd.
 
-  proc blendNormalSimd(backdrop, source: M128i): M128i =
+  proc blendNormalInlineSimd*(backdrop, source: M128i): M128i {.inline.} =
     let
       alphaMask = mm_set1_epi32(cast[int32](0xff000000))
       oddMask = mm_set1_epi16(cast[int16](0xff00))
@@ -538,6 +538,9 @@ when defined(amd64) and not defined(pixieNoSimd):
       source,
       mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
     )
+
+  proc blendNormalSimd(backdrop, source: M128i): M128i =
+    blendNormalInlineSimd(backdrop, source)
 
   proc blendMaskSimd(backdrop, source: M128i): M128i =
     let

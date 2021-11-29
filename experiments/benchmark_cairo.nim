@@ -184,3 +184,15 @@ block:
   # a.writeFile("pixie4.png")
 
   # doDiff(readImage("cairo4.png"), a, "4")
+
+  let mask = newMask(1000, 1000)
+
+  timeIt "pixie4 mask":
+    mask.fill(63)
+
+    let p = newPath()
+    p.moveTo(shapes[0][0])
+    for shape in shapes:
+      for v in shape:
+        p.lineTo(v)
+    mask.fillPath(p)
