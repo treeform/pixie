@@ -36,12 +36,16 @@ type
   SomePath* = Path | string
 
   PartitionEntry = object
-    atY, toY: float32
+    segment: Segment
     m, b: float32
     winding: int16
 
+  Partition = object
+    entries: seq[PartitionEntry]
+    requiresAntiAliasing: bool
+
   Partitioning = object
-    partitions: seq[seq[PartitionEntry]]
+    partitions: seq[Partition]
     startY, partitionHeight: uint32
 
 const
@@ -1036,20 +1040,6 @@ proc shapesToSegments(shapes: seq[seq[Vec2]]): seq[(Segment, int16)] =
 
       result.add((segment, winding))
 
-proc requiresAntiAliasing(segments: seq[(Segment, int16)]): bool =
-  ## Returns true if the fill requires antialiasing.
-
-  template hasFractional(v: float32): bool =
-    v - trunc(v) != 0
-
-  for i, (segment, _) in segments:
-    if segment.at.x != segment.to.x or
-      segment.at.x.hasFractional() or # at.x and to.x are the same
-      segment.at.y.hasFractional() or
-      segment.to.y.hasFractional():
-      # AA is required if all segments are not vertical or have fractional > 0
-      return true
-
 proc transform(shapes: var seq[seq[Vec2]], transform: Mat3) =
   if transform != mat3():
     for shape in shapes.mitems:
@@ -1086,8 +1076,7 @@ proc computeBounds*(
   computeBounds(shapes.shapesToSegments())
 
 proc initPartitionEntry(segment: Segment, winding: int16): PartitionEntry =
-  result.atY = segment.at.y
-  result.toY = segment.to.y
+  result.segment = segment
   result.winding = winding
   let d = segment.at.x - segment.to.x
   if d == 0:
@@ -1096,13 +1085,27 @@ proc initPartitionEntry(segment: Segment, winding: int16): PartitionEntry =
     result.m = (segment.at.y - segment.to.y) / d
     result.b = segment.at.y - result.m * segment.at.x
 
+proc requiresAntiAliasing(entries: var seq[PartitionEntry]): bool =
+  ## Returns true if the fill requires antialiasing.
+
+  template hasFractional(v: float32): bool =
+    v - trunc(v) != 0
+
+  for entry in entries:
+    if entry.segment.at.x != entry.segment.to.x or
+      entry.segment.at.x.hasFractional() or # at.x and to.x are the same
+      entry.segment.at.y.hasFractional() or
+      entry.segment.to.y.hasFractional():
+      # AA is required if all segments are not vertical or have fractional > 0
+      return true
+
 proc partitionSegments(
   segments: seq[(Segment, int16)], top, height: int
 ): Partitioning =
   ## Puts segments into the height partitions they intersect with.
   let
     maxPartitions = max(1, height div 4).uint32
-    numPartitions = min(maxPartitions, max(1, segments.len div 4).uint32)
+    numPartitions = min(maxPartitions, max(1, segments.len div 2).uint32)
 
   result.partitions.setLen(numPartitions)
   result.startY = top.uint32
@@ -1111,7 +1114,7 @@ proc partitionSegments(
   for (segment, winding) in segments:
     let entry = initPartitionEntry(segment, winding)
     if result.partitionHeight == 0:
-      result.partitions[0].add(entry)
+      result.partitions[0].entries.add(entry)
     else:
       var
         atPartition = max(0, segment.at.y - result.startY.float32).uint32
@@ -1121,7 +1124,11 @@ proc partitionSegments(
       atPartition = clamp(atPartition, 0, result.partitions.high.uint32)
       toPartition = clamp(toPartition, 0, result.partitions.high.uint32)
       for i in atPartition .. toPartition:
-        result.partitions[i].add(entry)
+        result.partitions[i].entries.add(entry)
+
+  for partition in result.partitions.mitems:
+    partition.requiresAntiAliasing =
+      requiresAntiAliasing(partition.entries)
 
 proc getIndexForY(partitioning: Partitioning, y: int): uint32 {.inline.} =
   if partitioning.partitions.len == 1:
@@ -1134,7 +1141,7 @@ proc getIndexForY(partitioning: Partitioning, y: int): uint32 {.inline.} =
 
 proc maxEntryCount(partitioning: Partitioning): int =
   for i in 0 ..< partitioning.partitions.len:
-    result = max(result, partitioning.partitions[i].len)
+    result = max(result, partitioning.partitions[i].entries.len)
 
 proc sortHits(hits: var seq[(float32, int16)], inl, inr: int) =
   ## Quicksort + insertion sort, in-place and faster than standard lib sort.
@@ -1217,32 +1224,34 @@ proc computeCoverage(
   coverages: var seq[uint8],
   hits: var seq[(float32, int16)],
   numHits: var int,
+  aa: var bool,
   width: float32,
   y, startX: int,
-  aa: bool,
   partitioning: Partitioning,
   windingRule: WindingRule
 ) {.inline.} =
+  let
+    partitionIndex = partitioning.getIndexForY(y)
+    partitionEntryCount = partitioning.partitions[partitionIndex].entries.len
+
+  aa = partitioning.partitions[partitionIndex].requiresAntiAliasing
+
+  if aa: # Coverage is only used for anti-aliasing
+    zeroMem(coverages[0].addr, coverages.len)
+
   let
     quality = if aa: 5 else: 1 # Must divide 255 cleanly (1, 3, 5, 15, 17, 51, 85)
     sampleCoverage = (255 div quality).uint8
     offset = 1 / quality.float64
     initialOffset = offset / 2 + epsilon
 
-  if aa: # Coverage is only used for anti-aliasing
-    zeroMem(coverages[0].addr, coverages.len)
-
-  # Do scanlines for this row
-  let
-    partitionIndex = partitioning.getIndexForY(y)
-    partitionEntryCount = partitioning.partitions[partitionIndex].len
   var yLine = y.float64 + initialOffset - offset
   for m in 0 ..< quality:
     yLine += offset
     numHits = 0
     for i in 0 ..< partitionEntryCount: # Perf
-      let entry = partitioning.partitions[partitionIndex][i].unsafeAddr # Perf
-      if entry.atY <= yLine and entry.toY >= yLine:
+      let entry = partitioning.partitions[partitionIndex].entries[i].unsafeAddr # Perf
+      if entry.segment.at.y <= yLine and entry.segment.to.y >= yLine:
         let x =
           if entry.m == 0:
             entry.b
@@ -1329,9 +1338,17 @@ proc fillCoverage(
           # If the coverages are not all zero
           if mm_movemask_epi8(mm_cmpeq_epi32(coverageVec, vec255)) == 0xffff:
             # If the coverages are all 255
-            if blendMode == bmNormal and rgbx.a == 255:
-              for i in 0 ..< 4:
-                mm_storeu_si128(image.data[index + i * 4].addr, colorVec)
+            if blendMode == bmNormal:
+              if rgbx.a == 255:
+                for i in 0 ..< 4:
+                  mm_storeu_si128(image.data[index + i * 4].addr, colorVec)
+              else:
+                for i in 0 ..< 4:
+                  let backdrop = mm_loadu_si128(image.data[index + i * 4].addr)
+                  mm_storeu_si128(
+                    image.data[index + i * 4].addr,
+                    blendNormalInlineSimd(backdrop, colorVec)
+                  )
             else:
               for i in 0 ..< 4:
                 let backdrop = mm_loadu_si128(image.data[index + i * 4].addr)
@@ -1341,32 +1358,38 @@ proc fillCoverage(
                 )
           else:
             # Coverages are not all 255
-            var coverageVec = coverageVec
-            for i in 0 ..< 4:
-              var unpacked = unpackAlphaValues(coverageVec)
-              # Shift the coverages from `a` to `g` and `a` for multiplying
-              unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
+            template useCoverage(blendProc: untyped) =
+              var coverageVec = coverageVec
+              for i in 0 ..< 4:
+                var unpacked = unpackAlphaValues(coverageVec)
+                # Shift the coverages from `a` to `g` and `a` for multiplying
+                unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
 
-              var
-                source = colorVec
-                sourceEven = mm_slli_epi16(source, 8)
-                sourceOdd = mm_and_si128(source, oddMask)
+                var
+                  source = colorVec
+                  sourceEven = mm_slli_epi16(source, 8)
+                  sourceOdd = mm_and_si128(source, oddMask)
 
-              sourceEven = mm_mulhi_epu16(sourceEven, unpacked)
-              sourceOdd = mm_mulhi_epu16(sourceOdd, unpacked)
+                sourceEven = mm_mulhi_epu16(sourceEven, unpacked)
+                sourceOdd = mm_mulhi_epu16(sourceOdd, unpacked)
 
-              sourceEven = mm_srli_epi16(mm_mulhi_epu16(sourceEven, div255), 7)
-              sourceOdd = mm_srli_epi16(mm_mulhi_epu16(sourceOdd, div255), 7)
+                sourceEven = mm_srli_epi16(mm_mulhi_epu16(sourceEven, div255), 7)
+                sourceOdd = mm_srli_epi16(mm_mulhi_epu16(sourceOdd, div255), 7)
 
-              source = mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
+                source = mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
 
-              let backdrop = mm_loadu_si128(image.data[index + i * 4].addr)
-              mm_storeu_si128(
-                image.data[index + i * 4].addr,
-                blenderSimd(backdrop, source)
-              )
+                let backdrop = mm_loadu_si128(image.data[index + i * 4].addr)
+                mm_storeu_si128(
+                  image.data[index + i * 4].addr,
+                  blendProc(backdrop, source)
+                )
 
-              coverageVec = mm_srli_si128(coverageVec, 4)
+                coverageVec = mm_srli_si128(coverageVec, 4)
+
+            if blendMode == bmNormal:
+              useCoverage(blendNormalInlineSimd)
+            else:
+              useCoverage(blenderSimd)
 
         elif blendMode == bmMask:
           for i in 0 ..< 4:
@@ -1469,18 +1492,30 @@ proc fillHits(
     when defined(amd64) and not defined(pixieNoSimd):
       if blendMode.hasSimdBlender():
         # When supported, SIMD blend as much as possible
-        let
-          blenderSimd = blendMode.blenderSimd()
-          colorVec = mm_set1_epi32(cast[int32](rgbx))
-        for _ in 0 ..< fillLen div 16:
-          let index = image.dataIndex(x, y)
-          for i in 0 ..< 4:
-            let backdrop = mm_loadu_si128(image.data[index + i * 4].addr)
+        let colorVec = mm_set1_epi32(cast[int32](rgbx))
+        if blendMode == bmNormal:
+          # For path filling, bmNormal is almost always used.
+          # Inline SIMD is faster here.
+          for _ in 0 ..< fillLen div 4:
+            let
+              index = image.dataIndex(x, y)
+              backdrop = mm_loadu_si128(image.data[index].addr)
             mm_storeu_si128(
-              image.data[index + i * 4].addr,
+              image.data[index].addr,
+              blendNormalInlineSimd(backdrop, colorVec)
+            )
+            x += 4
+        else:
+          let blenderSimd = blendMode.blenderSimd()
+          for _ in 0 ..< fillLen div 4:
+            let
+              index = image.dataIndex(x, y)
+              backdrop = mm_loadu_si128(image.data[index].addr)
+            mm_storeu_si128(
+              image.data[index].addr,
               blenderSimd(backdrop, colorVec)
             )
-          x += 16
+            x += 4
 
     for x in x ..< fillStart + fillLen:
       let backdrop = image.getRgbaUnsafe(x, y)
@@ -1522,9 +1557,11 @@ proc fillHits(
           maskerSimd = blendMode.maskerSimd()
           valueVec = mm_set1_epi8(cast[int8](255))
         for _ in 0 ..< fillLen div 16:
-          let backdrop = mm_loadu_si128(mask.data[mask.dataIndex(x, y)].addr)
+          let
+            index = mask.dataIndex(x, y)
+            backdrop = mm_loadu_si128(mask.data[index].addr)
           mm_storeu_si128(
-            mask.data[mask.dataIndex(x, y)].addr,
+            mask.data[index].addr,
             maskerSimd(backdrop, valueVec)
           )
           x += 16
@@ -1555,7 +1592,6 @@ proc fillShapes(
   # rasterize only within the total bounds
   let
     segments = shapes.shapesToSegments()
-    aa = segments.requiresAntiAliasing()
     bounds = computeBounds(segments).snapToPixels()
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
@@ -1566,16 +1602,17 @@ proc fillShapes(
     coverages = newSeq[uint8](bounds.w.int)
     hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
     numHits: int
+    aa: bool
 
   for y in startY ..< pathHeight:
     computeCoverage(
       coverages,
       hits,
       numHits,
+      aa,
       mask.width.float32,
       y,
       startX,
-      aa,
       partitioning,
       windingRule
     )
@@ -2370,7 +2407,6 @@ else:
     let
       rgbx = color.asRgbx()
       segments = shapes.shapesToSegments()
-      aa = segments.requiresAntiAliasing()
       bounds = computeBounds(segments).snapToPixels()
       startX = max(0, bounds.x.int)
       startY = max(0, bounds.y.int)
@@ -2381,16 +2417,17 @@ else:
       coverages = newSeq[uint8](bounds.w.int)
       hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
       numHits: int
+      aa: bool
 
     for y in startY ..< pathHeight:
       computeCoverage(
         coverages,
         hits,
         numHits,
+        aa,
         image.width.float32,
         y,
         startX,
-        aa,
         partitioning,
         windingRule
       )
