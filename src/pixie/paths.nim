@@ -1537,73 +1537,13 @@ proc fillHits(
     mask.clearUnsafe(0, y, startX, y)
     mask.clearUnsafe(filledTo, y, mask.width, y)
 
-when not defined(pixieSweeps):
-  proc fillShapes(
-    image: Image,
-    shapes: seq[seq[Vec2]],
-    color: SomeColor,
-    windingRule: WindingRule,
-    blendMode: BlendMode
-  ) =
-    # Figure out the total bounds of all the shapes,
-    # rasterize only within the total bounds
-    let
-      rgbx = color.asRgbx()
-      segments = shapes.shapesToSegments()
-      aa = segments.requiresAntiAliasing()
-      bounds = computeBounds(segments).snapToPixels()
-      startX = max(0, bounds.x.int)
-      startY = max(0, bounds.y.int)
-      pathHeight = min(image.height, (bounds.y + bounds.h).int)
-      partitioning = partitionSegments(segments, startY, pathHeight - startY)
-
-    var
-      coverages = newSeq[uint8](bounds.w.int)
-      hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
-      numHits: int
-
-    for y in startY ..< pathHeight:
-      computeCoverage(
-        coverages,
-        hits,
-        numHits,
-        image.width.float32,
-        y,
-        startX,
-        aa,
-        partitioning,
-        windingRule
-      )
-      if aa:
-        image.fillCoverage(
-          rgbx,
-          startX,
-          y,
-          coverages,
-          blendMode
-        )
-      else:
-        image.fillHits(
-          rgbx,
-          startX,
-          y,
-          hits,
-          numHits,
-          windingRule,
-          blendMode
-        )
-
-    if blendMode == bmMask:
-      image.clearUnsafe(0, 0, 0, startY)
-      image.clearUnsafe(0, pathHeight, 0, image.height)
-else:
-  proc fillShapes(
-    image: Image,
-    shapes: seq[seq[Vec2]],
-    color: SomeColor,
-    windingRule: WindingRule,
-    blendMode: BlendMode
-  )
+proc fillShapes(
+  image: Image,
+  shapes: seq[seq[Vec2]],
+  color: SomeColor,
+  windingRule: WindingRule,
+  blendMode: BlendMode
+)
 
 proc fillShapes(
   mask: Mask,
@@ -2416,6 +2356,67 @@ when defined(pixieSweeps):
         coverages,
         blendMode
       )
+
+else:
+  proc fillShapes(
+    image: Image,
+    shapes: seq[seq[Vec2]],
+    color: SomeColor,
+    windingRule: WindingRule,
+    blendMode: BlendMode
+  ) =
+    # Figure out the total bounds of all the shapes,
+    # rasterize only within the total bounds
+    let
+      rgbx = color.asRgbx()
+      segments = shapes.shapesToSegments()
+      aa = segments.requiresAntiAliasing()
+      bounds = computeBounds(segments).snapToPixels()
+      startX = max(0, bounds.x.int)
+      startY = max(0, bounds.y.int)
+      pathHeight = min(image.height, (bounds.y + bounds.h).int)
+      partitioning = partitionSegments(segments, startY, pathHeight - startY)
+
+    var
+      coverages = newSeq[uint8](bounds.w.int)
+      hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
+      numHits: int
+
+    for y in startY ..< pathHeight:
+      computeCoverage(
+        coverages,
+        hits,
+        numHits,
+        image.width.float32,
+        y,
+        startX,
+        aa,
+        partitioning,
+        windingRule
+      )
+      if aa:
+        image.fillCoverage(
+          rgbx,
+          startX,
+          y,
+          coverages,
+          blendMode
+        )
+      else:
+        image.fillHits(
+          rgbx,
+          startX,
+          y,
+          hits,
+          numHits,
+          windingRule,
+          blendMode
+        )
+
+    if blendMode == bmMask:
+      image.clearUnsafe(0, 0, 0, startY)
+      image.clearUnsafe(0, pathHeight, 0, image.height)
+
 
 when defined(release):
   {.pop.}
