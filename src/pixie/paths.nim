@@ -1105,7 +1105,7 @@ proc partitionSegments(
   ## Puts segments into the height partitions they intersect with.
   let
     maxPartitions = max(1, height div 4).uint32
-    numPartitions = min(maxPartitions, max(1, segments.len div 4).uint32)
+    numPartitions = min(maxPartitions, max(1, segments.len div 2).uint32)
 
   result.partitions.setLen(numPartitions)
   result.startY = top.uint32
