@@ -2206,7 +2206,7 @@ when defined(pixieSweeps):
     windingRule: WindingRule,
     blendMode: BlendMode
   ) =
-    const q = 1/256.0
+
     let rgbx = color.rgbx
     var segments = shapes.shapesToSegments()
     let
@@ -2215,6 +2215,13 @@ when defined(pixieSweeps):
 
     if segments.len == 0 or bounds.w.int == 0 or bounds.h.int == 0:
       return
+
+    # const q = 1/10
+    # for i in 0 ..< segments.len:
+    #   segments[i][0].at.x = quantize(segments[i][0].at.x, q)
+    #   segments[i][0].at.y = quantize(segments[i][0].at.y, q)
+    #   segments[i][0].to.x = quantize(segments[i][0].to.x, q)
+    #   segments[i][0].to.y = quantize(segments[i][0].to.y, q)
 
     # Create sorted segments.
     segments.sortSegments(0, segments.high)
@@ -2378,6 +2385,11 @@ when defined(pixieSweeps):
       currCutLine: int,
       sweep: seq[SweepLine]
     ) =
+
+      if cutLines[currCutLine + 1] - cutLines[currCutLine] < 1/256:
+        # TODO some thing about micro sweeps
+        return
+
       let
         sweepHeight = cutLines[currCutLine + 1] - cutLines[currCutLine]
         yFracTop = ((y.float32 - cutLines[currCutLine]) / sweepHeight).clamp(0, 1)
