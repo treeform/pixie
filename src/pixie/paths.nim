@@ -1221,7 +1221,7 @@ iterator walk(
       echo "Leak detected: ", count, " @ (", prevAt, ", ", y, ")"
 
 proc computeCoverage(
-  coverages: var seq[uint8],
+  coverages: ptr UncheckedArray[uint8],
   hits: var seq[(float32, int16)],
   numHits: var int,
   aa: var bool,
@@ -1235,9 +1235,6 @@ proc computeCoverage(
     partitionEntryCount = partitioning.partitions[partitionIndex].entries.len
 
   aa = partitioning.partitions[partitionIndex].requiresAntiAliasing
-
-  if aa: # Coverage is only used for anti-aliasing
-    zeroMem(coverages[0].addr, coverages.len)
 
   let
     quality = if aa: 5 else: 1 # Must divide 255 cleanly (1, 3, 5, 15, 17, 51, 85)
@@ -1606,7 +1603,7 @@ proc fillShapes(
 
   for y in startY ..< pathHeight:
     computeCoverage(
-      coverages,
+      cast[ptr UncheckedArray[uint8]](coverages[0].addr),
       hits,
       numHits,
       aa,
@@ -1618,6 +1615,7 @@ proc fillShapes(
     )
     if aa:
       mask.fillCoverage(startX, y, coverages, blendMode)
+      zeroMem(coverages[0].addr, coverages.len)
     else:
       mask.fillHits(startX, y, hits, numHits, windingRule, blendMode)
 
@@ -2421,7 +2419,7 @@ else:
 
     for y in startY ..< pathHeight:
       computeCoverage(
-        coverages,
+        cast[ptr UncheckedArray[uint8]](coverages[0].addr),
         hits,
         numHits,
         aa,
@@ -2439,6 +2437,7 @@ else:
           coverages,
           blendMode
         )
+        zeroMem(coverages[0].addr, coverages.len)
       else:
         image.fillHits(
           rgbx,
@@ -2454,15 +2453,51 @@ else:
       image.clearUnsafe(0, 0, 0, startY)
       image.clearUnsafe(0, pathHeight, 0, image.height)
 
-proc fillMask*(path: SomePath, width, height: int): Mask =
-  result = newMask(width, height)
-  result.fillPath(path, blendMode = bmOverwrite)
+proc fillMask*(
+  path: SomePath, width, height: int, windingRule = wrNonZero
+): Mask =
+  let shapes = parseSomePath(path, true, 1)
 
-proc fillImage*(path: SomePath, width, height: int, color: SomeColor): Image =
+  result = newMask(width, height)
+
+  let
+    segments = shapes.shapesToSegments()
+    bounds = computeBounds(segments).snapToPixels()
+    startY = max(0, bounds.y.int)
+    pathHeight = min(height, (bounds.y + bounds.h).int)
+    partitioning = partitionSegments(segments, startY, pathHeight)
+    width = width.float32
+
+  var
+    hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
+    numHits: int
+    aa: bool
+  for y in startY ..< pathHeight:
+    computeCoverage(
+      cast[ptr UncheckedArray[uint8]](result.data[result.dataIndex(0, y)].addr),
+      hits,
+      numHits,
+      aa,
+      width,
+      y,
+      0,
+      partitioning,
+      windingRule
+    )
+    if not aa:
+      for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
+        let
+          startIndex = result.dataIndex(prevAt.int, y)
+          len = at.int - prevAt.int
+        fillUnsafe(result.data, 255, startIndex, len)
+
+proc fillImage*(
+  path: SomePath, width, height: int, color: SomeColor, windingRule = wrNonZero
+): Image =
   result = newImage(width, height)
 
   let
-    mask = path.fillMask(width, height)
+    mask = path.fillMask(width, height, windingRule)
     rgbx = color.rgbx()
 
   var i: int

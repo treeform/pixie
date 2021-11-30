@@ -39,7 +39,7 @@ block:
     for shape in shapes:
       for v in shape:
         p.lineTo(v)
-    a.fillPath(p, rgba(0, 0, 255, 255))
+    a.fillPath(p, rgbx(0, 0, 255, 255))
 
   # a.writeFile("pixie1.png")
 
@@ -79,14 +79,14 @@ block:
   let a = newImage(1920, 1080)
 
   timeIt "pixie2":
-    a.fill(rgba(255, 255, 255, 255))
+    a.fill(rgbx(255, 255, 255, 255))
 
     let p = newPath()
     p.moveTo(shapes[0][0])
     for shape in shapes:
       for v in shape:
         p.lineTo(v)
-    a.fillPath(p, rgba(0, 0, 255, 255))
+    a.fillPath(p, rgbx(0, 0, 255, 255))
 
   # a.writeFile("pixie2.png")
 
@@ -127,14 +127,14 @@ block:
   let a = newImage(1000, 1000)
 
   timeIt "pixie3":
-    a.fill(rgba(255, 255, 255, 255))
+    a.fill(rgbx(255, 255, 255, 255))
 
     let p = newPath()
     p.moveTo(shapes[0][0])
     for shape in shapes:
       for v in shape:
         p.lineTo(v)
-    a.fillPath(p, rgba(255, 0, 0, 255))
+    a.fillPath(p, rgbx(255, 0, 0, 255))
 
   # a.writeFile("pixie3.png")
 
@@ -184,7 +184,7 @@ block:
     for shape in shapes:
       for v in shape:
         p.lineTo(v)
-    a.fillPath(p, rgba(255, 0, 0, 127))
+    a.fillPath(p, rgbx(127, 0, 0, 127))
 
   # a.writeFile("pixie4.png")
 
@@ -202,6 +202,6 @@ block:
 
   var tmp: Image
   timeIt "pixie fillImage":
-    tmp = path.fillImage(1000, 1000, rgba(255, 0, 0, 127))
+    tmp = path.fillImage(1000, 1000, rgbx(127, 0, 0, 127))
 
   # tmp.writeFile("tmp.png")
