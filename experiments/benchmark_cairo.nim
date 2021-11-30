@@ -178,6 +178,7 @@ block:
   # a = newImage(1000, 1000)
   timeIt "pixie4":
     a = newImage(1000, 1000)
+    # a.fill(rgbx(0, 0, 0, 0))
 
     let p = newPath()
     p.moveTo(shapes[0][0])
@@ -202,6 +203,12 @@ block:
 
   var tmp: Image
   timeIt "pixie fillImage":
-    tmp = path.fillImage(1000, 1000, rgbx(127, 0, 0, 127))
+    let p = newPath()
+    p.moveTo(shapes[0][0])
+    for shape in shapes:
+      for v in shape:
+        p.lineTo(v)
+
+    tmp = p.fillImage(1000, 1000, rgbx(127, 0, 0, 127))
 
   # tmp.writeFile("tmp.png")
