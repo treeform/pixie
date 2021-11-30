@@ -1546,7 +1546,7 @@ proc fillHits(
 
     filledTo = fillStart + fillLen
 
-    if blendMode == bmNormal:
+    if blendMode == bmNormal or blendMode == bmOverwrite:
       fillUnsafe(mask.data, 255, mask.dataIndex(fillStart, y), fillLen)
       continue
 
@@ -2454,13 +2454,16 @@ else:
       image.clearUnsafe(0, 0, 0, startY)
       image.clearUnsafe(0, pathHeight, 0, image.height)
 
+proc fillMask*(path: SomePath, width, height: int): Mask =
+  result = newMask(width, height)
+  result.fillPath(path, blendMode = bmOverwrite)
+
 proc fillImage*(path: SomePath, width, height: int, color: SomeColor): Image =
   result = newImage(width, height)
 
-  let mask = newMask(width, height)
-  mask.fillPath(path)
-
-  let rgbx = color.rgbx()
+  let
+    mask = path.fillMask(width, height)
+    rgbx = color.rgbx()
 
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):

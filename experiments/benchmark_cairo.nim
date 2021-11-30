@@ -175,9 +175,9 @@ block:
   # discard surface.writeToPng("cairo4.png")
 
   var a: Image
-  a = newImage(1000, 1000)
+  # a = newImage(1000, 1000)
   timeIt "pixie4":
-    # a = newImage(1000, 1000)
+    a = newImage(1000, 1000)
 
     let p = newPath()
     p.moveTo(shapes[0][0])
