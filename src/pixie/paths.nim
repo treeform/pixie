@@ -1327,14 +1327,14 @@ proc fillCoverage(
         oddMask = mm_set1_epi16(cast[int16](0xff00))
         div255 = mm_set1_epi16(cast[int16](0x8081))
         vec255 = mm_set1_epi32(cast[int32](uint32.high))
-        zeroVec = mm_setzero_si128()
+        vecZero = mm_setzero_si128()
         colorVec = mm_set1_epi32(cast[int32](rgbx))
       for _ in 0 ..< coverages.len div 16:
         let
           index = image.dataIndex(x, y)
           coverageVec = mm_loadu_si128(coverages[x - startX].unsafeAddr)
 
-        if mm_movemask_epi8(mm_cmpeq_epi16(coverageVec, zeroVec)) != 0xffff:
+        if mm_movemask_epi8(mm_cmpeq_epi16(coverageVec, vecZero)) != 0xffff:
           # If the coverages are not all zero
           if mm_movemask_epi8(mm_cmpeq_epi32(coverageVec, vec255)) == 0xffff:
             # If the coverages are all 255
@@ -1393,7 +1393,7 @@ proc fillCoverage(
 
         elif blendMode == bmMask:
           for i in 0 ..< 4:
-            mm_storeu_si128(image.data[index + i * 4].addr, zeroVec)
+            mm_storeu_si128(image.data[index + i * 4].addr, vecZero)
 
         x += 16
 
@@ -2453,6 +2453,60 @@ else:
     if blendMode == bmMask:
       image.clearUnsafe(0, 0, 0, startY)
       image.clearUnsafe(0, pathHeight, 0, image.height)
+
+proc fillImage*(path: SomePath, width, height: int, color: SomeColor): Image =
+  result = newImage(width, height)
+
+  let mask = newMask(width, height)
+  mask.fillPath(path)
+
+  let rgbx = color.rgbx()
+
+  var i: int
+  when defined(amd64) and not defined(pixieNoSimd):
+    let
+      colorVec = mm_set1_epi32(cast[int32](rgbx))
+      oddMask = mm_set1_epi16(cast[int16](0xff00))
+      div255 = mm_set1_epi16(cast[int16](0x8081))
+      vec255 = mm_set1_epi32(cast[int32](uint32.high))
+      vecZero = mm_setzero_si128()
+      colorVecEven = mm_slli_epi16(colorVec, 8)
+      colorVecOdd = mm_and_si128(colorVec, oddMask)
+      iterations = result.data.len div 16
+    for _ in 0 ..< iterations:
+      var coverageVec = mm_loadu_si128(mask.data[i].addr)
+      if mm_movemask_epi8(mm_cmpeq_epi16(coverageVec, vecZero)) != 0xffff:
+        if mm_movemask_epi8(mm_cmpeq_epi32(coverageVec, vec255)) == 0xffff:
+          for q in [0, 4, 8, 12]:
+            mm_storeu_si128(result.data[i + q].addr, colorVec)
+        else:
+          for q in [0, 4, 8, 12]:
+            var unpacked = unpackAlphaValues(coverageVec)
+            # Shift the coverages from `a` to `g` and `a` for multiplying
+            unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
+
+            var
+              sourceEven = mm_mulhi_epu16(colorVecEven, unpacked)
+              sourceOdd = mm_mulhi_epu16(colorVecOdd, unpacked)
+            sourceEven = mm_srli_epi16(mm_mulhi_epu16(sourceEven, div255), 7)
+            sourceOdd = mm_srli_epi16(mm_mulhi_epu16(sourceOdd, div255), 7)
+
+            mm_storeu_si128(
+              result.data[i + q].addr,
+              mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
+            )
+
+            coverageVec = mm_srli_si128(coverageVec, 4)
+
+      i += 16
+
+  let channels = [rgbx.r.uint32, rgbx.g.uint32, rgbx.b.uint32, rgbx.a.uint32]
+  for i in i ..< result.data.len:
+    let coverage = mask.data[i]
+    result.data[i].r = ((channels[0] * coverage) div 255).uint8
+    result.data[i].g = ((channels[1] * coverage) div 255).uint8
+    result.data[i].b = ((channels[2] * coverage) div 255).uint8
+    result.data[i].a = ((channels[3] * coverage) div 255).uint8
 
 when defined(release):
   {.pop.}

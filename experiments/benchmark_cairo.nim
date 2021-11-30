@@ -151,11 +151,16 @@ block:
     ctx = surface.create()
 
   timeIt "cairo4":
-    ctx.setSourceRgba(1, 1, 1, 0.25)
+    ctx.setSourceRgba(0, 0, 0, 0)
     let operator = ctx.getOperator()
     ctx.setOperator(OperatorSource)
     ctx.paint()
     ctx.setOperator(operator)
+
+  # timeIt "cairo4":
+  #   let
+  #     surface = imageSurfaceCreate(FORMAT_ARGB32, 1000, 1000)
+  #     ctx = surface.create()
 
     ctx.setSourceRgba(1, 0, 0, 0.5)
 
@@ -169,10 +174,10 @@ block:
 
   # discard surface.writeToPng("cairo4.png")
 
-  let a = newImage(1000, 1000)
-
+  var a: Image
+  a = newImage(1000, 1000)
   timeIt "pixie4":
-    a.fill(rgba(255, 255, 255, 63))
+    # a = newImage(1000, 1000)
 
     let p = newPath()
     p.moveTo(shapes[0][0])
@@ -185,10 +190,8 @@ block:
 
   # doDiff(readImage("cairo4.png"), a, "4")
 
-  let mask = newMask(1000, 1000)
-
   timeIt "pixie4 mask":
-    mask.fill(63)
+    let mask = newMask(1000, 1000)
 
     let p = newPath()
     p.moveTo(shapes[0][0])
@@ -196,3 +199,9 @@ block:
       for v in shape:
         p.lineTo(v)
     mask.fillPath(p)
+
+  var tmp: Image
+  timeIt "pixie fillImage":
+    tmp = path.fillImage(1000, 1000, rgba(255, 0, 0, 127))
+
+  # tmp.writeFile("tmp.png")
