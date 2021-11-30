@@ -990,7 +990,7 @@ proc shadow*(
 
   result = newImage(shifted.width, shifted.height)
   result.fill(color)
-  result.draw(shifted, blendMode = bmMask)
+  result.draw(shifted)
 
 proc superImage*(image: Image, x, y, w, h: int): Image {.raises: [PixieError].} =
   ## Either cuts a sub image or returns a super image with padded transparency.

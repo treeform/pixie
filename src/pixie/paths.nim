@@ -2454,6 +2454,5 @@ else:
       image.clearUnsafe(0, 0, 0, startY)
       image.clearUnsafe(0, pathHeight, 0, image.height)
 
-
 when defined(release):
   {.pop.}
