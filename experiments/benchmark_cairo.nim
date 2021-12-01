@@ -146,21 +146,21 @@ block:
 
   let shapes = path.commandsToShapes(true, 1)
 
-  let
-    surface = imageSurfaceCreate(FORMAT_ARGB32, 1000, 1000)
-    ctx = surface.create()
-
-  timeIt "cairo4":
-    ctx.setSourceRgba(0, 0, 0, 0)
-    let operator = ctx.getOperator()
-    ctx.setOperator(OperatorSource)
-    ctx.paint()
-    ctx.setOperator(operator)
+  # let
+  #   surface = imageSurfaceCreate(FORMAT_ARGB32, 1000, 1000)
+  #   ctx = surface.create()
 
   # timeIt "cairo4":
-  #   let
-  #     surface = imageSurfaceCreate(FORMAT_ARGB32, 1000, 1000)
-  #     ctx = surface.create()
+  #   ctx.setSourceRgba(0, 0, 0, 0)
+  #   let operator = ctx.getOperator()
+  #   ctx.setOperator(OperatorSource)
+  #   ctx.paint()
+  #   ctx.setOperator(operator)
+
+  timeIt "cairo4":
+    let
+      surface = imageSurfaceCreate(FORMAT_ARGB32, 1000, 1000)
+      ctx = surface.create()
 
     ctx.setSourceRgba(1, 0, 0, 0.5)
 
@@ -175,10 +175,8 @@ block:
   # discard surface.writeToPng("cairo4.png")
 
   var a: Image
-  # a = newImage(1000, 1000)
   timeIt "pixie4":
     a = newImage(1000, 1000)
-    # a.fill(rgbx(0, 0, 0, 0))
 
     let p = newPath()
     p.moveTo(shapes[0][0])
