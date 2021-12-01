@@ -2453,11 +2453,9 @@ else:
       image.clearUnsafe(0, 0, 0, startY)
       image.clearUnsafe(0, pathHeight, 0, image.height)
 
-proc fillMask*(
-  path: SomePath, width, height: int, windingRule = wrNonZero
+proc fillMask(
+  shapes: seq[seq[Vec2]], width, height: int, windingRule = wrNonZero
 ): Mask =
-  let shapes = parseSomePath(path, true, 1)
-
   result = newMask(width, height)
 
   let
@@ -2491,13 +2489,24 @@ proc fillMask*(
           len = at.int - prevAt.int
         fillUnsafe(result.data, 255, startIndex, len)
 
-proc fillImage*(
-  path: SomePath, width, height: int, color: SomeColor, windingRule = wrNonZero
+proc fillMask*(
+  path: SomePath, width, height: int, windingRule = wrNonZero
+): Mask =
+  ## Returns a new mask with the path filled. This is a faster alternative
+  ## to `newMask` + `fillPath`.
+  let shapes = parseSomePath(path, true, 1)
+  shapes.fillMask(width, height, windingRule)
+
+proc fillImage(
+  shapes: seq[seq[Vec2]],
+  width, height: int,
+  color: SomeColor,
+  windingRule = wrNonZero
 ): Image =
   result = newImage(width, height)
 
   let
-    mask = path.fillMask(width, height, windingRule)
+    mask = shapes.fillMask(width, height, windingRule)
     rgbx = color.rgbx()
 
   var i: int
@@ -2545,6 +2554,59 @@ proc fillImage*(
     result.data[i].g = ((channels[1] * coverage) div 255).uint8
     result.data[i].b = ((channels[2] * coverage) div 255).uint8
     result.data[i].a = ((channels[3] * coverage) div 255).uint8
+
+proc fillImage*(
+  path: SomePath, width, height: int, color: SomeColor, windingRule = wrNonZero
+): Image =
+  ## Returns a new image with the path filled. This is a faster alternative
+  ## to `newImage` + `fillPath`.
+  let shapes = parseSomePath(path, false, 1)
+  shapes.fillImage(width, height, color, windingRule)
+
+proc strokeMask*(
+  path: SomePath,
+  width, height: int,
+  strokeWidth: float32 = 1.0,
+  lineCap = lcButt,
+  lineJoin = ljMiter,
+  miterLimit = defaultMiterLimit,
+  dashes: seq[float32] = @[]
+): Mask =
+  ## Returns a new mask with the path stroked. This is a faster alternative
+  ## to `newImage` + `strokePath`.
+  let strokeShapes = strokeShapes(
+    parseSomePath(path, false, 1),
+    strokeWidth,
+    lineCap,
+    lineJoin,
+    miterLimit,
+    dashes,
+    1
+  )
+  result = strokeShapes.fillMask(width, height, wrNonZero)
+
+proc strokeImage*(
+  path: SomePath,
+  width, height: int,
+  color: SomeColor,
+  strokeWidth: float32 = 1.0,
+  lineCap = lcButt,
+  lineJoin = ljMiter,
+  miterLimit = defaultMiterLimit,
+  dashes: seq[float32] = @[]
+): Image =
+  ## Returns a new image with the path stroked. This is a faster alternative
+  ## to `newImage` + `strokePath`.
+  let strokeShapes = strokeShapes(
+    parseSomePath(path, false, 1),
+    strokeWidth,
+    lineCap,
+    lineJoin,
+    miterLimit,
+    dashes,
+    1
+  )
+  result = strokeShapes.fillImage(width, height, color, wrNonZero)
 
 when defined(release):
   {.pop.}
