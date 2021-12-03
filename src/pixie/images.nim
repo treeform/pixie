@@ -133,7 +133,7 @@ proc isOneColor*(image: Image): bool {.raises: [].} =
   ## Checks if the entire image is the same color.
   result = true
 
-  let color = image.getRgbaUnsafe(0, 0)
+  let color = image.data[0]
 
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
