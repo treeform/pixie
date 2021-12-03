@@ -151,12 +151,6 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
   if opacity.len > 0:
     result.opacity = clamp(parseFloat(opacity), 0, 1)
 
-  if fillOpacity.len > 0:
-    result.fill.opacity = clamp(parseFloat(fillOpacity), 0, 1)
-
-  if strokeOpacity.len > 0:
-    result.strokeOpacity = clamp(parseFloat(strokeOpacity), 0, 1)
-
   if fillRule == "":
     discard # Inherit
   elif fillRule == "nonzero":
@@ -196,6 +190,12 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
   else:
     result.stroke = parseHtmlColor(stroke).rgbx
     result.shouldStroke = true
+
+  if fillOpacity.len > 0:
+    result.fill.opacity = parseFloat(fillOpacity).clamp(0, 1)
+
+  if strokeOpacity.len > 0:
+    result.strokeOpacity = parseFloat(strokeOpacity).clamp(0, 1)
 
   if strokeWidth == "":
     discard # Inherit

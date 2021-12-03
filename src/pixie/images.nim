@@ -62,7 +62,7 @@ proc getRgbaUnsafe*(image: Image, x, y: int): ColorRGBX {.inline, raises: [].} =
   ## Gets a color from (x, y) coordinates.
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
-  ## Failure in the assumptions will case unsafe memory reads.
+  ## Failure in the assumptions will cause unsafe memory reads.
   result = image.data[image.width * y + x]
 
 proc `[]`*(image: Image, x, y: int): ColorRGBX {.inline, raises: [].} =
@@ -80,7 +80,7 @@ proc setRgbaUnsafe*(
   ## Sets a color from (x, y) coordinates.
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
-  ## Failure in the assumptions will case unsafe memory writes.
+  ## Failure in the assumptions will cause unsafe memory writes.
   image.data[image.dataIndex(x, y)] = color.asRgbx()
 
 proc `[]=`*(image: Image, x, y: int, color: SomeColor) {.inline, raises: [].} =
@@ -133,7 +133,7 @@ proc isOneColor*(image: Image): bool {.raises: [].} =
   ## Checks if the entire image is the same color.
   result = true
 
-  let color = image.getRgbaUnsafe(0, 0)
+  let color = image.data[0]
 
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
@@ -419,6 +419,7 @@ proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
     let
       oddMask = mm_set1_epi16(cast[int16](0xff00))
       div255 = mm_set1_epi16(cast[int16](0x8081))
+      zeroVec = mm_setzero_si128()
       opacityVec = mm_slli_epi16(mm_set1_epi16(cast[int16](opacity)), 8)
     for _ in 0 ..< byteLen div 16:
       when type(target) is Image:
@@ -428,8 +429,7 @@ proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
 
       let values = mm_loadu_si128(target.data[index].addr)
 
-      let eqZero = mm_cmpeq_epi16(values, mm_setzero_si128())
-      if mm_movemask_epi8(eqZero) != 0xffff:
+      if mm_movemask_epi8(mm_cmpeq_epi16(values, zeroVec)) != 0xffff:
         var
           valuesEven = mm_slli_epi16(mm_andnot_si128(oddMask, values), 8)
           valuesOdd = mm_and_si128(values, oddMask)
