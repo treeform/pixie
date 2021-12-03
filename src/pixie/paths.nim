@@ -1151,7 +1151,7 @@ proc sortHits(hits: var seq[(float32, int16)], inl, inr: int) =
       var
         j = i - 1
         k = i
-      while j >= 0 and hits[j][0] > hits[k][0]:
+      while j >= inl and hits[j][0] > hits[k][0]:
         swap(hits[j + 1], hits[j])
         dec j
         dec k
