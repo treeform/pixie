@@ -1,117 +1,29 @@
 ## Load and Save SVG files.
 
-import cairo, chroma, pixie/common, pixie/images, pixie/paints, strutils, tables,
-    vmath, xmlparser, xmltree
+import cairo, chroma, pixie/common, pixie/images, pixie/paints, pixie/paths {.all.},
+    strutils, tables, vmath, xmlparser, xmltree
 
 include pixie/paths
 
-proc processCommands(c: ptr Context, path: Path) =
+proc processCommands(
+  c: ptr Context, path: Path, closeSubpaths: bool, mat: Mat3
+) =
+  let shapes = path.commandsToShapes(closeSubpaths, mat.pixelScale())
+  if shapes.len == 0:
+    return
+
   c.newPath()
-  c.moveTo(0, 0)
-
-  var
-    prevCommandKind = Move
-    start, at, prevCtrl2: Vec2
-  for command in path.commands:
-    case command.kind
-    of Move:
-      c.moveTo(command.numbers[0], command.numbers[1])
-      at.x = command.numbers[0]
-      at.y = command.numbers[1]
-      start = at
-    of Line:
-      c.lineTo(command.numbers[0], command.numbers[1])
-      at.x = command.numbers[0]
-      at.y = command.numbers[1]
-    of HLine:
-      echo "HLine not yet supported for Cairo"
-    of VLine:
-      echo "VLine not yet supported for Cairo"
-    of Cubic:
-      c.curveTo(
-        command.numbers[0],
-        command.numbers[1],
-        command.numbers[2],
-        command.numbers[3],
-        command.numbers[4],
-        command.numbers[5]
-      )
-      at.x = command.numbers[4]
-      at.y = command.numbers[5]
-      prevCtrl2 = vec2(command.numbers[2], command.numbers[3])
-    of SCubic:
-      echo "SCubic not yet supported for Cairo"
-    of Quad:
-      echo "Quad not supported by Cairo"
-    of TQuad:
-      echo "TQuad not supported by Cairo"
-    of Arc:
-      echo "Arc not yet supported for Cairo"
-    of RMove:
-      c.relMoveTo(command.numbers[0], command.numbers[1])
-      at.x += command.numbers[0]
-      at.y += command.numbers[1]
-      start = at
-    of RLine:
-      c.relLineTo(command.numbers[0], command.numbers[1])
-      at.x += command.numbers[0]
-      at.y += command.numbers[1]
-    of RHLine:
-      c.relLineTo(command.numbers[0], 0)
-      at.x += command.numbers[0]
-    of RVLine:
-      c.relLineTo(0, command.numbers[0])
-      at.y += command.numbers[0]
-    of RCubic:
-      c.relCurveTo(
-        command.numbers[0],
-        command.numbers[1],
-        command.numbers[2],
-        command.numbers[3],
-        command.numbers[4],
-        command.numbers[5]
-      )
-      prevCtrl2 = vec2(at.x + command.numbers[2], at.y + command.numbers[3])
-      at.x += command.numbers[4]
-      at.y += command.numbers[5]
-    of RSCubic:
-      let
-        ctrl1 =
-          if prevCommandKind in {Cubic, SCubic, RCubic, RSCubic}:
-            at * 2 - prevCtrl2
-          else:
-            at
-        ctrl2 = vec2(at.x + command.numbers[0], at.y + command.numbers[1])
-        to = vec2(at.x + command.numbers[2], at.y + command.numbers[3])
-      c.curveTo(
-        ctrl1.x,
-        ctrl1.y,
-        ctrl2.x,
-        ctrl2.y,
-        to.x,
-        to.y
-      )
-      prevCtrl2 = ctrl2
-      at = to
-    of RQuad:
-      echo "RQuad not supported by Cairo"
-    of RTQuad:
-      echo "RTQuad not supported by Cairo"
-    of RArc:
-      echo "RArc not yet supported for Cairo"
-    of Close:
-      c.closePath()
-      at = start
-
-    prevCommandKind = command.kind
-
-    checkStatus(c.status())
+  c.moveTo(shapes[0][0].x, shapes[0][0].y)
+  for shape in shapes:
+    for v in shape:
+      c.lineTo(v.x, v.y)
 
 proc prepare(
   c: ptr Context,
   path: Path,
   paint: Paint,
   mat: Mat3,
+  closeSubpaths: bool,
   windingRule = wrNonZero
 ) =
   let
@@ -131,7 +43,7 @@ proc prepare(
     c.setFillRule(FillRuleWinding)
   else:
     c.setFillRule(FillRuleEvenOdd)
-  c.processCommands(path)
+  c.processCommands(path, closeSubpaths, mat)
 
 type
   LinearGradient = object
@@ -453,14 +365,14 @@ proc fill(c: ptr Context, ctx: Ctx, path: Path) {.inline.} =
   if ctx.display and ctx.opacity > 0:
     let paint = newPaint(ctx.fill)
     paint.opacity = paint.opacity * ctx.opacity
-    prepare(c, path, paint, ctx.transform, ctx.fillRule)
+    prepare(c, path, paint, ctx.transform, true, ctx.fillRule)
     c.fill()
 
 proc stroke(c: ptr Context, ctx: Ctx, path: Path) {.inline.} =
   if ctx.display and ctx.opacity > 0:
     let paint = newPaint(ctx.stroke)
     paint.color.a *= (ctx.opacity * ctx.strokeOpacity)
-    prepare(c, path, paint, ctx.transform)
+    prepare(c, path, paint, ctx.transform, false)
     c.setLineWidth(ctx.strokeWidth)
     c.setLineCap(ctx.strokeLineCap.cairoLineCap())
     c.setLineJoin(ctx.strokeLineJoin.cairoLineJoin())
