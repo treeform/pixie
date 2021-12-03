@@ -39,7 +39,7 @@ block:
     for shape in shapes:
       for v in shape:
         p.lineTo(v)
-    a.fillPath(p, rgba(0, 0, 255, 255))
+    a.fillPath(p, rgbx(0, 0, 255, 255))
 
   # a.writeFile("pixie1.png")
 
@@ -79,14 +79,14 @@ block:
   let a = newImage(1920, 1080)
 
   timeIt "pixie2":
-    a.fill(rgba(255, 255, 255, 255))
+    a.fill(rgbx(255, 255, 255, 255))
 
     let p = newPath()
     p.moveTo(shapes[0][0])
     for shape in shapes:
       for v in shape:
         p.lineTo(v)
-    a.fillPath(p, rgba(0, 0, 255, 255))
+    a.fillPath(p, rgbx(0, 0, 255, 255))
 
   # a.writeFile("pixie2.png")
 
@@ -127,14 +127,14 @@ block:
   let a = newImage(1000, 1000)
 
   timeIt "pixie3":
-    a.fill(rgba(255, 255, 255, 255))
+    a.fill(rgbx(255, 255, 255, 255))
 
     let p = newPath()
     p.moveTo(shapes[0][0])
     for shape in shapes:
       for v in shape:
         p.lineTo(v)
-    a.fillPath(p, rgba(255, 0, 0, 255))
+    a.fillPath(p, rgbx(255, 0, 0, 255))
 
   # a.writeFile("pixie3.png")
 
@@ -146,16 +146,21 @@ block:
 
   let shapes = path.commandsToShapes(true, 1)
 
-  let
-    surface = imageSurfaceCreate(FORMAT_ARGB32, 1000, 1000)
-    ctx = surface.create()
+  # let
+  #   surface = imageSurfaceCreate(FORMAT_ARGB32, 1000, 1000)
+  #   ctx = surface.create()
+
+  # timeIt "cairo4":
+  #   ctx.setSourceRgba(0, 0, 0, 0)
+  #   let operator = ctx.getOperator()
+  #   ctx.setOperator(OperatorSource)
+  #   ctx.paint()
+  #   ctx.setOperator(operator)
 
   timeIt "cairo4":
-    ctx.setSourceRgba(1, 1, 1, 0.25)
-    let operator = ctx.getOperator()
-    ctx.setOperator(OperatorSource)
-    ctx.paint()
-    ctx.setOperator(operator)
+    let
+      surface = imageSurfaceCreate(FORMAT_ARGB32, 1000, 1000)
+      ctx = surface.create()
 
     ctx.setSourceRgba(1, 0, 0, 0.5)
 
@@ -169,26 +174,23 @@ block:
 
   # discard surface.writeToPng("cairo4.png")
 
-  let a = newImage(1000, 1000)
-
+  var a: Image
   timeIt "pixie4":
-    a.fill(rgba(255, 255, 255, 63))
+    a = newImage(1000, 1000)
 
     let p = newPath()
     p.moveTo(shapes[0][0])
     for shape in shapes:
       for v in shape:
         p.lineTo(v)
-    a.fillPath(p, rgba(255, 0, 0, 127))
+    a.fillPath(p, rgbx(127, 0, 0, 127))
 
   # a.writeFile("pixie4.png")
 
   # doDiff(readImage("cairo4.png"), a, "4")
 
-  let mask = newMask(1000, 1000)
-
   timeIt "pixie4 mask":
-    mask.fill(63)
+    let mask = newMask(1000, 1000)
 
     let p = newPath()
     p.moveTo(shapes[0][0])
@@ -196,3 +198,15 @@ block:
       for v in shape:
         p.lineTo(v)
     mask.fillPath(p)
+
+  var tmp: Image
+  timeIt "pixie fillImage":
+    let p = newPath()
+    p.moveTo(shapes[0][0])
+    for shape in shapes:
+      for v in shape:
+        p.lineTo(v)
+
+    tmp = p.fillImage(1000, 1000, rgbx(127, 0, 0, 127))
+
+  # tmp.writeFile("tmp.png")

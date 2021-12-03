@@ -1121,8 +1121,8 @@ proc partitionSegments(
         toPartition = max(0, segment.to.y - result.startY.float32).uint32
       atPartition = atPartition div result.partitionHeight
       toPartition = toPartition div result.partitionHeight
-      atPartition = clamp(atPartition, 0, result.partitions.high.uint32)
-      toPartition = clamp(toPartition, 0, result.partitions.high.uint32)
+      atPartition = min(atPartition, result.partitions.high.uint32)
+      toPartition = min(toPartition, result.partitions.high.uint32)
       for i in atPartition .. toPartition:
         result.partitions[i].entries.add(entry)
 
@@ -1151,7 +1151,7 @@ proc sortHits(hits: var seq[(float32, int16)], inl, inr: int) =
       var
         j = i - 1
         k = i
-      while j >= 0 and hits[j][0] > hits[k][0]:
+      while j >= inl and hits[j][0] > hits[k][0]:
         swap(hits[j + 1], hits[j])
         dec j
         dec k
@@ -1221,7 +1221,7 @@ iterator walk(
       echo "Leak detected: ", count, " @ (", prevAt, ", ", y, ")"
 
 proc computeCoverage(
-  coverages: var seq[uint8],
+  coverages: ptr UncheckedArray[uint8],
   hits: var seq[(float32, int16)],
   numHits: var int,
   aa: var bool,
@@ -1235,9 +1235,6 @@ proc computeCoverage(
     partitionEntryCount = partitioning.partitions[partitionIndex].entries.len
 
   aa = partitioning.partitions[partitionIndex].requiresAntiAliasing
-
-  if aa: # Coverage is only used for anti-aliasing
-    zeroMem(coverages[0].addr, coverages.len)
 
   let
     quality = if aa: 5 else: 1 # Must divide 255 cleanly (1, 3, 5, 15, 17, 51, 85)
@@ -1327,14 +1324,14 @@ proc fillCoverage(
         oddMask = mm_set1_epi16(cast[int16](0xff00))
         div255 = mm_set1_epi16(cast[int16](0x8081))
         vec255 = mm_set1_epi32(cast[int32](uint32.high))
-        zeroVec = mm_setzero_si128()
+        vecZero = mm_setzero_si128()
         colorVec = mm_set1_epi32(cast[int32](rgbx))
       for _ in 0 ..< coverages.len div 16:
         let
           index = image.dataIndex(x, y)
           coverageVec = mm_loadu_si128(coverages[x - startX].unsafeAddr)
 
-        if mm_movemask_epi8(mm_cmpeq_epi16(coverageVec, zeroVec)) != 0xffff:
+        if mm_movemask_epi8(mm_cmpeq_epi16(coverageVec, vecZero)) != 0xffff:
           # If the coverages are not all zero
           if mm_movemask_epi8(mm_cmpeq_epi32(coverageVec, vec255)) == 0xffff:
             # If the coverages are all 255
@@ -1393,7 +1390,7 @@ proc fillCoverage(
 
         elif blendMode == bmMask:
           for i in 0 ..< 4:
-            mm_storeu_si128(image.data[index + i * 4].addr, zeroVec)
+            mm_storeu_si128(image.data[index + i * 4].addr, vecZero)
 
         x += 16
 
@@ -1546,7 +1543,7 @@ proc fillHits(
 
     filledTo = fillStart + fillLen
 
-    if blendMode == bmNormal:
+    if blendMode == bmNormal or blendMode == bmOverwrite:
       fillUnsafe(mask.data, 255, mask.dataIndex(fillStart, y), fillLen)
       continue
 
@@ -1606,7 +1603,7 @@ proc fillShapes(
 
   for y in startY ..< pathHeight:
     computeCoverage(
-      coverages,
+      cast[ptr UncheckedArray[uint8]](coverages[0].addr),
       hits,
       numHits,
       aa,
@@ -1618,6 +1615,7 @@ proc fillShapes(
     )
     if aa:
       mask.fillCoverage(startX, y, coverages, blendMode)
+      zeroMem(coverages[0].addr, coverages.len)
     else:
       mask.fillHits(startX, y, hits, numHits, windingRule, blendMode)
 
@@ -2421,7 +2419,7 @@ else:
 
     for y in startY ..< pathHeight:
       computeCoverage(
-        coverages,
+        cast[ptr UncheckedArray[uint8]](coverages[0].addr),
         hits,
         numHits,
         aa,
@@ -2439,6 +2437,7 @@ else:
           coverages,
           blendMode
         )
+        zeroMem(coverages[0].addr, coverages.len)
       else:
         image.fillHits(
           rgbx,
@@ -2454,6 +2453,160 @@ else:
       image.clearUnsafe(0, 0, 0, startY)
       image.clearUnsafe(0, pathHeight, 0, image.height)
 
+proc fillMask(
+  shapes: seq[seq[Vec2]], width, height: int, windingRule = wrNonZero
+): Mask =
+  result = newMask(width, height)
+
+  let
+    segments = shapes.shapesToSegments()
+    bounds = computeBounds(segments).snapToPixels()
+    startY = max(0, bounds.y.int)
+    pathHeight = min(height, (bounds.y + bounds.h).int)
+    partitioning = partitionSegments(segments, startY, pathHeight)
+    width = width.float32
+
+  var
+    hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
+    numHits: int
+    aa: bool
+  for y in startY ..< pathHeight:
+    computeCoverage(
+      cast[ptr UncheckedArray[uint8]](result.data[result.dataIndex(0, y)].addr),
+      hits,
+      numHits,
+      aa,
+      width,
+      y,
+      0,
+      partitioning,
+      windingRule
+    )
+    if not aa:
+      for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
+        let
+          startIndex = result.dataIndex(prevAt.int, y)
+          len = at.int - prevAt.int
+        fillUnsafe(result.data, 255, startIndex, len)
+
+proc fillMask*(
+  path: SomePath, width, height: int, windingRule = wrNonZero
+): Mask =
+  ## Returns a new mask with the path filled. This is a faster alternative
+  ## to `newMask` + `fillPath`.
+  let shapes = parseSomePath(path, true, 1)
+  shapes.fillMask(width, height, windingRule)
+
+proc fillImage(
+  shapes: seq[seq[Vec2]],
+  width, height: int,
+  color: SomeColor,
+  windingRule = wrNonZero
+): Image =
+  result = newImage(width, height)
+
+  let
+    mask = shapes.fillMask(width, height, windingRule)
+    rgbx = color.rgbx()
+
+  var i: int
+  when defined(amd64) and not defined(pixieNoSimd):
+    let
+      colorVec = mm_set1_epi32(cast[int32](rgbx))
+      oddMask = mm_set1_epi16(cast[int16](0xff00))
+      div255 = mm_set1_epi16(cast[int16](0x8081))
+      vec255 = mm_set1_epi32(cast[int32](uint32.high))
+      vecZero = mm_setzero_si128()
+      colorVecEven = mm_slli_epi16(colorVec, 8)
+      colorVecOdd = mm_and_si128(colorVec, oddMask)
+      iterations = result.data.len div 16
+    for _ in 0 ..< iterations:
+      var coverageVec = mm_loadu_si128(mask.data[i].addr)
+      if mm_movemask_epi8(mm_cmpeq_epi16(coverageVec, vecZero)) != 0xffff:
+        if mm_movemask_epi8(mm_cmpeq_epi32(coverageVec, vec255)) == 0xffff:
+          for q in [0, 4, 8, 12]:
+            mm_storeu_si128(result.data[i + q].addr, colorVec)
+        else:
+          for q in [0, 4, 8, 12]:
+            var unpacked = unpackAlphaValues(coverageVec)
+            # Shift the coverages from `a` to `g` and `a` for multiplying
+            unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
+
+            var
+              sourceEven = mm_mulhi_epu16(colorVecEven, unpacked)
+              sourceOdd = mm_mulhi_epu16(colorVecOdd, unpacked)
+            sourceEven = mm_srli_epi16(mm_mulhi_epu16(sourceEven, div255), 7)
+            sourceOdd = mm_srli_epi16(mm_mulhi_epu16(sourceOdd, div255), 7)
+
+            mm_storeu_si128(
+              result.data[i + q].addr,
+              mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
+            )
+
+            coverageVec = mm_srli_si128(coverageVec, 4)
+
+      i += 16
+
+  let channels = [rgbx.r.uint32, rgbx.g.uint32, rgbx.b.uint32, rgbx.a.uint32]
+  for i in i ..< result.data.len:
+    let coverage = mask.data[i]
+    result.data[i].r = ((channels[0] * coverage) div 255).uint8
+    result.data[i].g = ((channels[1] * coverage) div 255).uint8
+    result.data[i].b = ((channels[2] * coverage) div 255).uint8
+    result.data[i].a = ((channels[3] * coverage) div 255).uint8
+
+proc fillImage*(
+  path: SomePath, width, height: int, color: SomeColor, windingRule = wrNonZero
+): Image =
+  ## Returns a new image with the path filled. This is a faster alternative
+  ## to `newImage` + `fillPath`.
+  let shapes = parseSomePath(path, false, 1)
+  shapes.fillImage(width, height, color, windingRule)
+
+proc strokeMask*(
+  path: SomePath,
+  width, height: int,
+  strokeWidth: float32 = 1.0,
+  lineCap = lcButt,
+  lineJoin = ljMiter,
+  miterLimit = defaultMiterLimit,
+  dashes: seq[float32] = @[]
+): Mask =
+  ## Returns a new mask with the path stroked. This is a faster alternative
+  ## to `newImage` + `strokePath`.
+  let strokeShapes = strokeShapes(
+    parseSomePath(path, false, 1),
+    strokeWidth,
+    lineCap,
+    lineJoin,
+    miterLimit,
+    dashes,
+    1
+  )
+  result = strokeShapes.fillMask(width, height, wrNonZero)
+
+proc strokeImage*(
+  path: SomePath,
+  width, height: int,
+  color: SomeColor,
+  strokeWidth: float32 = 1.0,
+  lineCap = lcButt,
+  lineJoin = ljMiter,
+  miterLimit = defaultMiterLimit,
+  dashes: seq[float32] = @[]
+): Image =
+  ## Returns a new image with the path stroked. This is a faster alternative
+  ## to `newImage` + `strokePath`.
+  let strokeShapes = strokeShapes(
+    parseSomePath(path, false, 1),
+    strokeWidth,
+    lineCap,
+    lineJoin,
+    miterLimit,
+    dashes,
+    1
+  )
+  result = strokeShapes.fillImage(width, height, color, wrNonZero)
 
 when defined(release):
   {.pop.}
