@@ -13,7 +13,8 @@ const files = [
   "Ghostscript_Tiger",
   "scale",
   "miterlimit",
-  "dashes"
+  "dashes",
+  "dragon2"
 ]
 
 proc doDiff(rendered: Image, name: string) =
