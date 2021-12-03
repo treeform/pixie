@@ -1121,8 +1121,8 @@ proc partitionSegments(
         toPartition = max(0, segment.to.y - result.startY.float32).uint32
       atPartition = atPartition div result.partitionHeight
       toPartition = toPartition div result.partitionHeight
-      atPartition = clamp(atPartition, 0, result.partitions.high.uint32)
-      toPartition = clamp(toPartition, 0, result.partitions.high.uint32)
+      atPartition = min(atPartition, result.partitions.high.uint32)
+      toPartition = min(toPartition, result.partitions.high.uint32)
       for i in atPartition .. toPartition:
         result.partitions[i].entries.add(entry)
 
