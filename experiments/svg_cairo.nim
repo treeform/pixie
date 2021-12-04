@@ -79,8 +79,7 @@ proc initCtx(): Ctx =
     result.fill = parseHtmlColor("black").rgbx
     result.stroke = parseHtmlColor("black").rgbx
   except:
-    let e = getCurrentException()
-    raise newException(PixieError, e.msg, e)
+    raise currentExceptionAsPixieError()
   result.strokeWidth = 1
   result.transform = mat3()
   result.strokeMiterLimit = defaultMiterLimit
@@ -340,8 +339,7 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
   except PixieError as e:
     raise e
   except:
-    let e = getCurrentException()
-    raise newException(PixieError, e.msg, e)
+    raise currentExceptionAsPixieError()
 
 proc cairoLineCap(lineCap: LineCap): cairo.LineCap =
   case lineCap:
@@ -526,8 +524,7 @@ proc draw(img: ptr Context, node: XmlNode, ctxStack: var seq[Ctx]) =
   except PixieError as e:
     raise e
   except:
-    let e = getCurrentException()
-    raise newException(PixieError, e.msg, e)
+    raise currentExceptionAsPixieError()
 
 proc decodeSvg*(data: string, width = 0, height = 0): Image =
   ## Render SVG file and return the image. Defaults to the SVG's view box size.

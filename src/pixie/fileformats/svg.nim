@@ -1,7 +1,7 @@
 ## Load SVG files.
 
-import chroma, pixie/common, pixie/images, pixie/paints, pixie/paths, strutils,
-    tables, vmath, xmlparser, xmltree
+import chroma, pixie/common, pixie/internal, pixie/images, pixie/paints,
+    pixie/paths, strutils, tables, vmath, xmlparser, xmltree
 
 when defined(pixieDebugSvg):
   import strtabs
@@ -44,8 +44,7 @@ proc initCtx(): Ctx =
     result.fill = parseHtmlColor("black").rgbx
     result.stroke = parseHtmlColor("black").rgbx
   except:
-    let e = getCurrentException()
-    raise newException(PixieError, e.msg, e)
+    raise currentExceptionAsPixieError()
   result.strokeWidth = 1
   result.transform = mat3()
   result.strokeMiterLimit = defaultMiterLimit
@@ -323,8 +322,7 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
   except PixieError as e:
     raise e
   except:
-    let e = getCurrentException()
-    raise newException(PixieError, e.msg, e)
+    raise currentExceptionAsPixieError()
 
 proc fill(img: Image, ctx: Ctx, path: Path) {.inline.} =
   if ctx.display and ctx.opacity > 0:
@@ -560,8 +558,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
   except PixieError as e:
     raise e
   except:
-    let e = getCurrentException()
-    raise newException(PixieError, e.msg, e)
+    raise currentExceptionAsPixieError()
 
 proc decodeSvg*(
   data: string, width = 0, height = 0
