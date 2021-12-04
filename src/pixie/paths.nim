@@ -2550,10 +2550,13 @@ proc fillImage(
   let channels = [rgbx.r.uint32, rgbx.g.uint32, rgbx.b.uint32, rgbx.a.uint32]
   for i in i ..< result.data.len:
     let coverage = mask.data[i]
-    result.data[i].r = ((channels[0] * coverage) div 255).uint8
-    result.data[i].g = ((channels[1] * coverage) div 255).uint8
-    result.data[i].b = ((channels[2] * coverage) div 255).uint8
-    result.data[i].a = ((channels[3] * coverage) div 255).uint8
+    if coverage == 255:
+      result.data[i] = rgbx
+    elif coverage != 0:
+      result.data[i].r = ((channels[0] * coverage) div 255).uint8
+      result.data[i].g = ((channels[1] * coverage) div 255).uint8
+      result.data[i].b = ((channels[2] * coverage) div 255).uint8
+      result.data[i].a = ((channels[3] * coverage) div 255).uint8
 
 proc fillImage*(
   path: SomePath, width, height: int, color: SomeColor, windingRule = wrNonZero
