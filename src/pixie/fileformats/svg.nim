@@ -2,6 +2,7 @@
 
 import chroma, pixie/common, pixie/images, pixie/internal, pixie/paints,
     pixie/paths, strutils, tables, vmath, xmlparser, xmltree
+
 when defined(pixieDebugSvg):
   import strtabs
 

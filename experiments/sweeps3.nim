@@ -64,6 +64,10 @@ var hourGlass = parsePath("""
   M 20 20 L 180 20 L 20 180 L 180 180 z
 """)
 
+var hourGlass2 = parsePath("""
+  M 20 20 L 180 20 L 20 180 L 180 180 z M 62 24 L 132 24 L 50 173 L 156 173 z
+""")
+
 # Hole
 var hole = parsePath("""
   M 40 40 L 40 160 L 160 160 L 160 40 z
@@ -88,6 +92,8 @@ when defined(bench):
   test("cricle", cricle, 100)
   test("halfAarc", halfAarc, 100)
   test("hourGlass", hourGlass, 100)
+  test("hourGlass2", hourGlass2, wr=wrNonZero)
+  test("hourGlass2", hourGlass2, wr=wrEvenOdd)
   test("hole", hole, 100)
   test("holeEvenOdd", holeEvenOdd, 100, wr=wrNonZero)
   test("holeEvenOdd", holeEvenOdd, 100, wr=wrEvenOdd)
@@ -99,7 +105,8 @@ else:
   # test("cricle", cricle)
   # test("halfAarc", halfAarc)
   # test("hourGlass", hourGlass)
-  #test("hole", hole, wr=wrEvenOdd)
-  test("holeEvenOdd", holeEvenOdd, wr=wrNonZero)
-  test("holeEvenOdd", holeEvenOdd, wr=wrEvenOdd)
+  test("hourGlass2", hourGlass2, wr=wrEvenOdd)
+  # test("hole", hole, wr=wrEvenOdd)
+  # test("holeEvenOdd", holeEvenOdd, wr=wrNonZero)
+  # test("holeEvenOdd", holeEvenOdd, wr=wrEvenOdd)
   # test("letterG", letterG)

@@ -2267,78 +2267,46 @@ when defined(pixieSweeps):
     i = 0
     while i < sweeps.len:
       # TODO: Maybe finds all cuts first, add them to array, cut all lines at once.
-      for t in 0 ..< 10: # TODO: maybe while true:
-        # keep cutting sweep
-        var needsCut = false
-        var cutterLine: float32 = 0
-        block doubleFor:
-          for a in sweeps[i]:
-            let aSeg = segment(
-              vec2(a.atx, cutLines[i]),
-              vec2(a.tox, cutLines[i+1])
-            )
-            for b in sweeps[i]:
-              let bSeg = segment(
-                vec2(b.atx, cutLines[i]),
-                vec2(b.tox, cutLines[i+1])
-              )
-              var at: Vec2
-              if intersectsInner(aSeg, bSeg, at):
-                needsCut = true
-                cutterLine = at.y
-                break doubleFor
-        # TODO enable?
-        if false and needsCut:
-          # Doing a cut.
-          var
-            thisSweep = sweeps[i]
-          sweeps[i].setLen(0)
-          sweeps.insert(newSeq[SweepLine](), i + 1)
-          for a in thisSweep:
-            let seg = segment(vec2(a.atx, cutLines[i]), vec2(a.tox, cutLines[i+1]))
-            var at: Vec2
-            if intersects(line(vec2(0, cutterLine), vec2(1, cutterLine)), seg, at):
-              sweeps[i+0].add(toLine((segment(seg.at, at), a.winding)))
-              sweeps[i+1].add(toLine((segment(at, seg.to), a.winding)))
-          cutLines.binaryInsert(cutterLine)
-        else:
-          break
-      inc i
+      var crossCuts: seq[float32]
 
-    # i = 0
-    # while i < sweeps.len:
-    #   # TODO: Maybe finds all cuts first, add them to array, cut all lines at once.
-    #   for t in 0 ..< 10: # TODO: maybe while true:
-    #     # keep cutting sweep
-    #     var needsCut = false
-    #     var cutterLine: float32 = 0
-    #     block doubleFor:
-    #       for a in sweeps[i]:
-    #         let aSeg = segment(vec2(a.atx, cutLines[i]), vec2(a.tox, cutLines[i+1]))
-    #         for b in sweeps[i]:
-    #           let bSeg = segment(vec2(b.atx, cutLines[i]), vec2(b.tox, cutLines[i+1]))
-    #           var at: Vec2
-    #           if intersectsInner(aSeg, bSeg, at):
-    #             needsCut = true
-    #             cutterLine = at.y
-    #             break doubleFor
-    #     # TODO enable?
-    #     if false and needsCut:
-    #       # Doing a cut.
-    #       var
-    #         thisSweep = sweeps[i]
-    #       sweeps[i].setLen(0)
-    #       sweeps.insert(newSeq[SweepLine](), i + 1)
-    #       for a in thisSweep:
-    #         let seg = segment(vec2(a.atx, cutLines[i]), vec2(a.tox, cutLines[i+1]))
-    #         var at: Vec2
-    #         if intersects(line(vec2(0, cutterLine), vec2(1, cutterLine)), seg, at):
-    #           sweeps[i+0].add(toLine((segment(seg.at, at), a.winding)))
-    #           sweeps[i+1].add(toLine((segment(at, seg.to), a.winding)))
-    #       cutLines.binaryInsert(cutterLine)
-    #     else:
-    #       break
-    #   inc i
+      # echo i, " cut?"
+
+      for aIndex in 0 ..< sweeps[i].len:
+        let a = sweeps[i][aIndex]
+        # echo i, ":", sweeps.len, ":", cutLines.len
+        let aSeg = segment(vec2(a.atx, cutLines[i]), vec2(a.tox, cutLines[i+1]))
+        for bIndex in aIndex + 1 ..< sweeps[i].len:
+          let b = sweeps[i][bIndex]
+          let bSeg = segment(vec2(b.atx, cutLines[i]), vec2(b.tox, cutLines[i+1]))
+          var at: Vec2
+          if intersectsInner(aSeg, bSeg, at):
+            crossCuts.binaryInsert(at.y)
+
+      if crossCuts.len > 0:
+        var
+          thisSweep = sweeps[i]
+          yTop = cutLines[i]
+          yBottom = cutLines[i + 1]
+        sweeps[i].setLen(0)
+
+        for k in crossCuts:
+          let prevLen = cutLines.len
+          cutLines.binaryInsert(k)
+          if prevLen != cutLines.len:
+            sweeps.insert(newSeq[SweepLine](), i + 1)
+
+        for a in thisSweep:
+          var seg = segment(vec2(a.atx, yTop), vec2(a.tox, yBottom))
+          var at: Vec2
+          for j, cutterLine in crossCuts:
+            if intersects(line(vec2(0, cutterLine), vec2(1, cutterLine)), seg, at):
+              sweeps[i+j].add(toLine((segment(seg.at, at), a.winding)))
+              seg = segment(at, seg.to)
+          sweeps[i+crossCuts.len].add(toLine((seg, a.winding)))
+
+        i += crossCuts.len
+
+      inc i
 
     i = 0
     while i < sweeps.len:
