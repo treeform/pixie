@@ -172,12 +172,12 @@ proc magnifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
 proc fillUnsafe*(
   data: var seq[uint8], value: uint8, start, len: int
 ) {.raises: [].} =
-  ## Fills the mask data with the parameter value starting at index start and
+  ## Fills the mask data with the value starting at index start and
   ## continuing for len indices.
   nimSetMem(data[start].addr, value.cint, len)
 
 proc fill*(mask: Mask, value: uint8) {.inline, raises: [].} =
-  ## Fills the mask with the parameter value.
+  ## Fills the mask with the value.
   fillUnsafe(mask.data, value, 0, mask.data.len)
 
 proc getValueSmooth*(mask: Mask, x, y: float32): uint8 {.raises: [].} =

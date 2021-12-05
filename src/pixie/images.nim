@@ -95,7 +95,7 @@ proc setColor*(image: Image, x, y: int, color: Color) {.inline, raises: [].} =
 proc fillUnsafe*(
   data: var seq[ColorRGBX], color: SomeColor, start, len: int
 ) {.raises: [].} =
-  ## Fills the image data with the parameter color starting at index start and
+  ## Fills the image data with the color starting at index start and
   ## continuing for len indices.
 
   let rgbx = color.asRgbx()
@@ -126,7 +126,7 @@ proc fillUnsafe*(
       data[j] = rgbx
 
 proc fill*(image: Image, color: SomeColor) {.inline, raises: [].} =
-  ## Fills the image with the parameter color.
+  ## Fills the image with the color.
   fillUnsafe(image.data, color, 0, image.data.len)
 
 proc isOneColor*(image: Image): bool {.raises: [].} =
@@ -565,7 +565,7 @@ proc blur*(
       image.setRgbaUnsafe(x, y, rgbx(values))
 
 proc newMask*(image: Image): Mask {.raises: [PixieError].} =
-  ## Returns a new mask using the alpha values of the parameter image.
+  ## Returns a new mask using the alpha values of the image.
   result = newMask(image.width, image.height)
 
   var i: int
