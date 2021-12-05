@@ -1,6 +1,10 @@
 ## This example show how to have real time pixie using the X11 API.
 
-import math, pixie, x11/[x, xlib], std/os
+import math, pixie, std/os
+import
+  x11/xlib,
+  x11/xutil,
+  x11/x
 
 let
   w: int32 = 256
@@ -16,7 +20,6 @@ var
   deleteMessage: Atom
   graphicsContext: GC
   frameCount = 0
-
 
 proc render() =
   ## Called every frame by main while loop
@@ -50,11 +53,6 @@ proc render() =
       DefaultScreenOfDisplay(display)), 24, ZPixmap, 0, cast[cstring](
       frameBuffer), w.cuint, h.cuint, 8, w*4)
   discard XPutImage(display, window, graphicsContext, image, 0, 0, 0, 0, w.cuint, h.cuint)
-
-import
-  x11/xlib,
-  x11/xutil,
-  x11/x
 
 const
   borderWidth = 0
