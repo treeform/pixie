@@ -1,4 +1,5 @@
-import pixie/common, pixie/paths, strutils, tables, unicode, vmath, xmlparser, xmltree
+import pixie/common, pixie/internal, pixie/paths, strutils, tables, unicode,
+    vmath, xmlparser, xmltree
 
 type SvgFont* = ref object
   unitsPerEm*, ascent*, descent*: float32
@@ -42,8 +43,7 @@ proc parseSvgFont*(buf: string): SvgFont {.raises: [PixieError].} =
     try:
       parseXml(buf)
     except:
-      let e = getCurrentException()
-      raise newException(PixieError, e.msg, e)
+      raise currentExceptionAsPixieError()
 
   let defs = root.child("defs")
   if defs == nil:

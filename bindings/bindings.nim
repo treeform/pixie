@@ -38,8 +38,7 @@ proc parseColor(s: string): Color {.raises: [PixieError]} =
   try:
     result = parseHtmlColor(s)
   except:
-    let e = getCurrentException()
-    raise newException(PixieError, e.msg, e)
+    raise currentExceptionAsPixieError()
 
 proc drawImage2(
   ctx: Context, image: Image, dx, dy, dWidth, dHeight: float32

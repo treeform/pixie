@@ -3,6 +3,11 @@ import chroma, vmath
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
 
+template currentExceptionAsPixieError*(): untyped =
+  ## Gets the current exception and returns it as a PixieError with stack trace.
+  let e = getCurrentException()
+  newException(PixieError, e.getStackTrace & e.msg, e)
+
 proc gaussianKernel*(radius: int): seq[uint16] {.raises: [].} =
   ## Compute lookup table for 1d Gaussian kernel.
   ## Values are [0, 255] * 256.
