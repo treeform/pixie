@@ -2103,6 +2103,17 @@ when defined(pixieSweeps):
     line.winding = s[1]
     return line
 
+  proc intersectsYLine(y: float32, s: Segment, atx: var float32): bool {.inline.} =
+    let
+      s2y = s.to.y - s.at.y
+      denominator = -s2y
+      numerator = s.at.y - y
+      u = numerator / denominator
+    if u >= 0 and u <= 1:
+      let at = s.at + (u * vec2(s.to.x - s.at.x, s2y))
+      atx = at.x
+      return true
+
   proc binaryInsert(arr: var seq[float32], v: float32) =
     if arr.len == 0:
       arr.add(v)
@@ -2195,15 +2206,22 @@ when defined(pixieSweeps):
     windingRule: WindingRule,
     blendMode: BlendMode
   ) =
-    const q = 1/256.0
+
     let rgbx = color.rgbx
     var segments = shapes.shapesToSegments()
     let
       bounds = computeBounds(segments).snapToPixels()
       startX = max(0, bounds.x.int)
 
-    if segments.len == 0:
+    if segments.len == 0 or bounds.w.int == 0 or bounds.h.int == 0:
       return
+
+    # const q = 1/10
+    # for i in 0 ..< segments.len:
+    #   segments[i][0].at.x = quantize(segments[i][0].at.x, q)
+    #   segments[i][0].at.y = quantize(segments[i][0].at.y, q)
+    #   segments[i][0].to.x = quantize(segments[i][0].to.x, q)
+    #   segments[i][0].to.y = quantize(segments[i][0].to.y, q)
 
     # Create sorted segments.
     segments.sortSegments(0, segments.high)
@@ -2227,14 +2245,13 @@ when defined(pixieSweeps):
           let s = segments[lastSeg]
 
           if s[0].to.y != cutLines[i + 1]:
-            var at: Vec2
+            var atx: float32
             var seg = s[0]
             for j in i ..< sweeps.len:
               let y = cutLines[j + 1]
-              #TODO: speed up with horizintal line intersect
-              if intersects(line(vec2(0, y), vec2(1, y)), seg, at):
-                sweeps[j].add(toLine((segment(seg.at, at), s[1])))
-                seg = segment(at, seg.to)
+              if intersectsYLine(y, seg, atx):
+                sweeps[j].add(toLine((segment(seg.at, vec2(atx, y)), s[1])))
+                seg = segment(vec2(atx, y), seg.to)
               else:
                 if seg.at.y != seg.to.y:
                   sweeps[j].add(toLine(s))
@@ -2247,40 +2264,49 @@ when defined(pixieSweeps):
             break
       inc i
 
-    i = 0
-    while i < sweeps.len:
-      # TODO: Maybe finds all cuts first, add them to array, cut all lines at once.
-      for t in 0 ..< 10: # TODO: maybe while true:
-        # keep cutting sweep
-        var needsCut = false
-        var cutterLine: float32 = 0
-        block doubleFor:
-          for a in sweeps[i]:
-            let aSeg = segment(vec2(a.atx, cutLines[i]), vec2(a.tox, cutLines[i+1]))
-            for b in sweeps[i]:
-              let bSeg = segment(vec2(b.atx, cutLines[i]), vec2(b.tox, cutLines[i+1]))
-              var at: Vec2
-              if intersectsInner(aSeg, bSeg, at):
-                needsCut = true
-                cutterLine = at.y
-                break doubleFor
-        # TODO enable?
-        if false and needsCut:
-          # Doing a cut.
-          var
-            thisSweep = sweeps[i]
-          sweeps[i].setLen(0)
-          sweeps.insert(newSeq[SweepLine](), i + 1)
-          for a in thisSweep:
-            let seg = segment(vec2(a.atx, cutLines[i]), vec2(a.tox, cutLines[i+1]))
-            var at: Vec2
-            if intersects(line(vec2(0, cutterLine), vec2(1, cutterLine)), seg, at):
-              sweeps[i+0].add(toLine((segment(seg.at, at), a.winding)))
-              sweeps[i+1].add(toLine((segment(at, seg.to), a.winding)))
-          cutLines.binaryInsert(cutterLine)
-        else:
-          break
-      inc i
+    # i = 0
+    # while i < sweeps.len:
+    #   # TODO: Maybe finds all cuts first, add them to array, cut all lines at once.
+    #   var crossCuts: seq[float32]
+
+    #   # echo i, " cut?"
+
+    #   for aIndex in 0 ..< sweeps[i].len:
+    #     let a = sweeps[i][aIndex]
+    #     # echo i, ":", sweeps.len, ":", cutLines.len
+    #     let aSeg = segment(vec2(a.atx, cutLines[i]), vec2(a.tox, cutLines[i+1]))
+    #     for bIndex in aIndex + 1 ..< sweeps[i].len:
+    #       let b = sweeps[i][bIndex]
+    #       let bSeg = segment(vec2(b.atx, cutLines[i]), vec2(b.tox, cutLines[i+1]))
+    #       var at: Vec2
+    #       if intersectsInner(aSeg, bSeg, at):
+    #         crossCuts.binaryInsert(at.y)
+
+    #   if crossCuts.len > 0:
+    #     var
+    #       thisSweep = sweeps[i]
+    #       yTop = cutLines[i]
+    #       yBottom = cutLines[i + 1]
+    #     sweeps[i].setLen(0)
+
+    #     for k in crossCuts:
+    #       let prevLen = cutLines.len
+    #       cutLines.binaryInsert(k)
+    #       if prevLen != cutLines.len:
+    #         sweeps.insert(newSeq[SweepLine](), i + 1)
+
+    #     for a in thisSweep:
+    #       var seg = segment(vec2(a.atx, yTop), vec2(a.tox, yBottom))
+    #       var at: Vec2
+    #       for j, cutterLine in crossCuts:
+    #         if intersects(line(vec2(0, cutterLine), vec2(1, cutterLine)), seg, at):
+    #           sweeps[i+j].add(toLine((segment(seg.at, at), a.winding)))
+    #           seg = segment(at, seg.to)
+    #       sweeps[i+crossCuts.len].add(toLine((seg, a.winding)))
+
+    #     i += crossCuts.len
+
+    #   inc i
 
     i = 0
     while i < sweeps.len:
@@ -2320,13 +2346,18 @@ when defined(pixieSweeps):
     #     echo "L ", sw.x, " ", sw.y
 
     proc computeCoverage(
-      coverages: var seq[uint8],
+      coverages: var seq[uint16],
       y: int,
       startX: int,
       cutLines: seq[float32],
       currCutLine: int,
       sweep: seq[SweepLine]
     ) =
+
+      if cutLines[currCutLine + 1] - cutLines[currCutLine] < 1/256:
+        # TODO some thing about micro sweeps
+        return
+
       let
         sweepHeight = cutLines[currCutLine + 1] - cutLines[currCutLine]
         yFracTop = ((y.float32 - cutLines[currCutLine]) / sweepHeight).clamp(0, 1)
@@ -2341,59 +2372,67 @@ when defined(pixieSweeps):
           swX = mix(sweep[i+0].atx, sweep[i+0].tox, yFracBottom)
           seX = mix(sweep[i+1].atx, sweep[i+1].tox, yFracBottom)
 
-          minWi = min(nwX, swX).int
-          maxWi = max(nwX, swX).ceil.int
+          minWi = min(nwX, swX).int#.clamp(startX, coverages.len + startX)
+          maxWi = max(nwX, swX).ceil.int#.clamp(startX, coverages.len + startX)
 
-          minEi = min(neX, seX).int
-          maxEi = max(neX, seX).ceil.int
-
-        # TODO: Add case when trapezoids both starts and stops on same pixle.
+          minEi = min(neX, seX).int#.clamp(startX, coverages.len + startX)
+          maxEi = max(neX, seX).ceil.int#.clamp(startX, coverages.len + startX)
 
         let
           nw = vec2(sweep[i+0].atx, cutLines[currCutLine])
           sw = vec2(sweep[i+0].tox, cutLines[currCutLine + 1])
+          f16 = (256 * 256 - 1).float32
         for x in minWi ..< maxWi:
-          var area = pixelCover(nw - vec2(x.float32, y.float32), sw - vec2(
-              x.float32, y.float32))
-          coverages[x - startX] += (area * 255).uint8
+          var area = pixelCover(
+            nw - vec2(x.float32, y.float32),
+            sw - vec2(x.float32, y.float32)
+          )
+          coverages[x - startX] += (area * f16).uint16
 
         let x = maxWi
-        var midArea = pixelCover(nw - vec2(x.float32, y.float32), sw - vec2(
-            x.float32, y.float32))
-        var midArea8 = (midArea * 255).uint8
-        for x in maxWi ..< minEi:
-          # TODO: Maybe try coverages of uint16 to prevent streeks in solid white fill?
-          coverages[x - startX] += midArea8
+        var midArea = pixelCover(
+          nw - vec2(x.float32, y.float32),
+          sw - vec2(x.float32, y.float32)
+        )
+        for x in maxWi ..< maxEi:
+          coverages[x - startX] += (midArea * f16).uint16
 
         let
           ne = vec2(sweep[i+1].atx, cutLines[currCutLine])
           se = vec2(sweep[i+1].tox, cutLines[currCutLine + 1])
         for x in minEi ..< maxEi:
-          var area = midArea - pixelCover(ne - vec2(x.float32, y.float32), se -
-              vec2(x.float32, y.float32))
-          coverages[x - startX] += (area * 255).uint8
+          var area = pixelCover(
+            ne - vec2(x.float32, y.float32),
+            se - vec2(x.float32, y.float32)
+          )
+          coverages[x - startX] -= (area * f16).uint16
 
         i += 2
 
     var
       currCutLine = 0
-      coverages = newSeq[uint8](bounds.w.int)
-    for scanLine in cutLines[0].int ..< cutLines[^1].ceil.int:
-      zeroMem(coverages[0].addr, coverages.len)
+      coverages16 = newSeq[uint16](bounds.w.int)
+      coverages8 = newSeq[uint8](bounds.w.int)
+    for scanLine in max(cutLines[0].int, 0) ..< min(cutLines[^1].ceil.int, image.height):
 
-      coverages.computeCoverage(scanLine, startX, cutLines, currCutLine, sweeps[currCutLine])
+      zeroMem(coverages16[0].addr, coverages16.len * 2)
+
+      coverages16.computeCoverage(
+        scanLine, startX, cutLines, currCutLine, sweeps[currCutLine])
       while cutLines[currCutLine + 1] < scanLine.float + 1.0:
         inc currCutLine
         if currCutLine == sweeps.len:
           break
-        coverages.computeCoverage(scanLine, startX, cutLines, currCutLine,
-            sweeps[currCutLine])
+        coverages16.computeCoverage(
+          scanLine, startX, cutLines, currCutLine, sweeps[currCutLine])
 
+      for i in 0 ..< coverages16.len:
+        coverages8[i] = (coverages16[i] shr 8).uint8
       image.fillCoverage(
         rgbx,
         startX = startX,
         y = scanLine,
-        coverages,
+        coverages8,
         blendMode
       )
 
