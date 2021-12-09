@@ -1,7 +1,7 @@
 ## Load SVG files.
 
 import chroma, pixie/common, pixie/images, pixie/internal, pixie/paints,
-    pixie/paths, strutils, tables, vmath, xmlparser, xmltree
+    pixie/paths, parseutils, strutils, tables, vmath, xmlparser, xmltree
 
 when defined(pixieDebugSvg):
   import strtabs
@@ -14,6 +14,8 @@ type
   LinearGradient = object
     x1, y1, x2, y2: float32
     stops: seq[ColorStop]
+
+  ViewBox = tuple[minX, minY, width, height: int]
 
   Ctx = object
     display: bool
@@ -29,6 +31,7 @@ type
     shouldStroke: bool
     opacity, strokeOpacity: float32
     linearGradients: TableRef[string, LinearGradient]
+    viewBox: ViewBox
 
 template failInvalid() =
   raise newException(PixieError, "Invalid SVG data")
@@ -38,7 +41,16 @@ proc attrOrDefault(node: XmlNode, name, default: string): string =
   if result.len == 0:
     result = default
 
-proc initCtx(): Ctx =
+proc parseIntTuple(s: string; T: typedesc[tuple]): T {.inline.} =
+  case s
+  of "", "none": discard
+  else:
+    var off: int
+    for x in fields(result):
+      if off != 0: off.inc skipWhitespace(s, off)
+      off.inc parseInt(s, x, off)
+
+proc initCtx(width, height: int): Ctx =
   result.display = true
   try:
     result.fill = parseHtmlColor("black").rgbx
@@ -51,6 +63,19 @@ proc initCtx(): Ctx =
   result.opacity = 1
   result.strokeOpacity = 1
   result.linearGradients = newTable[string, LinearGradient]()
+  (result.viewBox.width, result.viewBox.height) = (width, height)
+
+proc applyViewBox(result: var Ctx, node: XmlNode) =
+  let s = node.attr("viewBox")
+  if s != "":
+    var viewBox = parseIntTuple(s, ViewBox)
+    if viewBox.width < 0 or viewBox.height < 0: failInvalid()
+    let
+      scaleX = result.viewBox.width.float32 / viewBox.width.float32
+      scaleY = result.viewBox.height.float32 / viewBox.height.float32
+    result.transform = result.transform *
+      translate(vec2(-viewBox.minX.float32, -viewBox.minY.float32)) *
+      scale(vec2(scaleX, scaleY))
 
 proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
   result = inherited
@@ -549,6 +574,14 @@ proc drawInternal(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
 
     ctx.linearGradients[id] = linearGradient
 
+  of "svg":
+    var ctx = decodeCtx(ctxStack[^1], node)
+    applyViewBox(ctx, node)
+    ctxStack.add(ctx)
+    for child in node:
+      img.drawInternal(child, ctxStack)
+    discard ctxStack.pop()
+
   else:
     raise newException(PixieError, "Unsupported SVG tag: " & node.tag)
 
@@ -563,41 +596,26 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
 proc decodeSvg*(
   data: string, width = 0, height = 0
 ): Image {.raises: [PixieError].} =
-  ## Render SVG file and return the image. Defaults to the SVG's view box size.
+  ## Render SVG file and return the image.
+  ## Defaults to the SVG's width and height or view box size.
   try:
     let root = parseXml(data)
     if root.tag != "svg":
       failInvalid()
 
-    let
-      viewBox = root.attr("viewBox")
-      box = viewBox.split(" ")
-      viewBoxMinX = parseInt(box[0])
-      viewBoxMinY = parseInt(box[1])
-      viewBoxWidth = parseInt(box[2])
-      viewBoxHeight = parseInt(box[3])
-
-    var rootCtx = initCtx()
-    rootCtx = decodeCtx(rootCtx, root)
-
-    if viewBoxMinX != 0 or viewBoxMinY != 0:
-      rootCtx.transform = rootCtx.transform * translate(
-        vec2(-viewBoxMinX.float32, -viewBoxMinY.float32)
-      )
-
-    if width == 0 and height == 0: # Default to the view box size
-      result = newImage(viewBoxWidth, viewBoxHeight)
-    else:
+    block:
+      var
+        viewBox = parseIntTuple(root.attr"viewBox", ViewBox)
+        (width, height) = (width, height)
+      if width == 0: discard parseInt(root.attr"width", width)
+      if height == 0: discard parseInt(root.attr"height", height)
+      if width == 0 and height == 0:
+        if viewBox.width != 0 or viewBox.height != 0:
+          (width, height) = (viewBox.width, viewBox.height)
       result = newImage(width, height)
 
-      let
-        scaleX = width.float32 / viewBoxWidth.float32
-        scaleY = height.float32 / viewBoxHeight.float32
-      rootCtx.transform = rootCtx.transform * scale(vec2(scaleX, scaleY))
-
-    var ctxStack = @[rootCtx]
-    for node in root:
-      result.draw(node, ctxStack)
+    var ctxStack = @[initCtx(result.width, result.height)]
+    result.draw(root, ctxStack)
   except PixieError as e:
     raise e
   except:
