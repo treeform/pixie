@@ -1400,7 +1400,7 @@ proc fillCoverage(
     if coverage != 0 or blendMode == bmExcludeMask:
       if blendMode == bmNormal and coverage == 255 and rgbx.a == 255:
         # Skip blending
-        image.setRgbaUnsafe(x, y, rgbx)
+        image.unsafe[x, y] = rgbx
       else:
         var source = rgbx
         if coverage != 255:
@@ -1408,10 +1408,10 @@ proc fillCoverage(
           source.g = ((source.g.uint32 * coverage) div 255).uint8
           source.b = ((source.b.uint32 * coverage) div 255).uint8
           source.a = ((source.a.uint32 * coverage) div 255).uint8
-        let backdrop = image.getRgbaUnsafe(x, y)
-        image.setRgbaUnsafe(x, y, blender(backdrop, source))
+        let backdrop = image.unsafe[x, y]
+        image.unsafe[x, y] = blender(backdrop, source)
     elif blendMode == bmMask:
-      image.setRgbaUnsafe(x, y, rgbx(0, 0, 0, 0))
+      image.unsafe[x, y] = rgbx(0, 0, 0, 0)
     inc x
 
   if blendMode == bmMask:
@@ -1515,8 +1515,8 @@ proc fillHits(
             x += 4
 
     for x in x ..< fillStart + fillLen:
-      let backdrop = image.getRgbaUnsafe(x, y)
-      image.setRgbaUnsafe(x, y, blender(backdrop, rgbx))
+      let backdrop = image.unsafe[x, y]
+      image.unsafe[x, y] = blender(backdrop, rgbx)
 
   if blendMode == bmMask:
     image.clearUnsafe(0, y, startX, y)
