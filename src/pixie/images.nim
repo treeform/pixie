@@ -63,30 +63,30 @@ proc getRgbaUnsafe*(image: Image, x, y: int): ColorRGBX {.inline, raises: [].} =
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will cause unsafe memory reads.
-  result = image.data[image.width * y + x]
+  image.data[image.dataIndex(x, y)]
+
+proc setRgbaUnsafe*(
+  image: Image, x, y: int, color: ColorRGBX
+) {.inline, raises: [].} =
+  ## Sets a color from (x, y) coordinates.
+  ## * No bounds checking *
+  ## Make sure that x, y are in bounds.
+  ## Failure in the assumptions will cause unsafe memory writes.
+  image.data[image.dataIndex(x, y)] = color
 
 proc `[]`*(image: Image, x, y: int): ColorRGBX {.inline, raises: [].} =
   ## Gets a pixel at (x, y) or returns transparent black if outside of bounds.
   if image.inside(x, y):
     return image.getRgbaUnsafe(x, y)
 
-proc getColor*(image: Image, x, y: int): Color {.inline, raises: [].} =
-  ## Gets a color at (x, y) or returns transparent black if outside of bounds.
-  image[x, y].color()
-
-proc setRgbaUnsafe*(
-  image: Image, x, y: int, color: SomeColor
-) {.inline, raises: [].} =
-  ## Sets a color from (x, y) coordinates.
-  ## * No bounds checking *
-  ## Make sure that x, y are in bounds.
-  ## Failure in the assumptions will cause unsafe memory writes.
-  image.data[image.dataIndex(x, y)] = color.asRgbx()
-
 proc `[]=`*(image: Image, x, y: int, color: SomeColor) {.inline, raises: [].} =
   ## Sets a pixel at (x, y) or does nothing if outside of bounds.
   if image.inside(x, y):
     image.setRgbaUnsafe(x, y, color.asRgbx())
+
+proc getColor*(image: Image, x, y: int): Color {.inline, raises: [].} =
+  ## Gets a color at (x, y) or returns transparent black if outside of bounds.
+  image[x, y].color()
 
 proc setColor*(image: Image, x, y: int, color: Color) {.inline, raises: [].} =
   ## Sets a color at (x, y) or does nothing if outside of bounds.

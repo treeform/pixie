@@ -43,16 +43,7 @@ proc getValueUnsafe*(mask: Mask, x, y: int): uint8 {.inline, raises: [].} =
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will case unsafe memory reads.
-  result = mask.data[mask.width * y + x]
-
-proc `[]`*(mask: Mask, x, y: int): uint8 {.inline, raises: [].} =
-  ## Gets a value at (x, y) or returns transparent black if outside of bounds.
-  if mask.inside(x, y):
-    return mask.getValueUnsafe(x, y)
-
-proc getValue*(mask: Mask, x, y: int): uint8 {.inline, raises: [].} =
-  ## Gets a value at (x, y) or returns transparent black if outside of bounds.
-  mask[x, y]
+  result = mask.data[mask.dataIndex(x, y)]
 
 proc setValueUnsafe*(mask: Mask, x, y: int, value: uint8) {.inline, raises: [].} =
   ## Sets a value from (x, y) coordinates.
@@ -61,10 +52,19 @@ proc setValueUnsafe*(mask: Mask, x, y: int, value: uint8) {.inline, raises: [].}
   ## Failure in the assumptions will case unsafe memory writes.
   mask.data[mask.dataIndex(x, y)] = value
 
+proc `[]`*(mask: Mask, x, y: int): uint8 {.inline, raises: [].} =
+  ## Gets a value at (x, y) or returns transparent black if outside of bounds.
+  if mask.inside(x, y):
+    return mask.getValueUnsafe(x, y)
+
 proc `[]=`*(mask: Mask, x, y: int, value: uint8) {.inline, raises: [].} =
   ## Sets a value at (x, y) or does nothing if outside of bounds.
   if mask.inside(x, y):
     mask.setValueUnsafe(x, y, value)
+
+proc getValue*(mask: Mask, x, y: int): uint8 {.inline, raises: [].} =
+  ## Gets a value at (x, y) or returns transparent black if outside of bounds.
+  mask[x, y]
 
 proc setValue*(mask: Mask, x, y: int, value: uint8) {.inline, raises: [].} =
   ## Sets a value at (x, y) or does nothing if outside of bounds.
