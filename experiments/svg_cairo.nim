@@ -1,7 +1,7 @@
 ## Load and Save SVG files.
 
-import cairo, chroma, pixie/common, pixie/images, pixie/paints, pixie/paths {.all.},
-    strutils, tables, vmath, xmlparser, xmltree
+import cairo, chroma, pixie/common, pixie/images, pixie/paints,
+    pixie/paths {.all.}, strutils, tables, vmath, xmlparser, xmltree
 
 include pixie/paths
 

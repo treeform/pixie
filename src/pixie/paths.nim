@@ -2103,7 +2103,9 @@ when defined(pixieSweeps):
     line.winding = s[1]
     return line
 
-  proc intersectsYLine(y: float32, s: Segment, atx: var float32): bool {.inline.} =
+  proc intersectsYLine(
+    y: float32, s: Segment, atx: var float32
+  ): bool {.inline.} =
     let
       s2y = s.to.y - s.at.y
       denominator = -s2y
@@ -2372,11 +2374,11 @@ when defined(pixieSweeps):
           swX = mix(sweep[i+0].atx, sweep[i+0].tox, yFracBottom)
           seX = mix(sweep[i+1].atx, sweep[i+1].tox, yFracBottom)
 
-          minWi = min(nwX, swX).int#.clamp(startX, coverages.len + startX)
-          maxWi = max(nwX, swX).ceil.int#.clamp(startX, coverages.len + startX)
+          minWi = min(nwX, swX).int      #.clamp(startX, coverages.len + startX)
+          maxWi = max(nwX, swX).ceil.int #.clamp(startX, coverages.len + startX)
 
-          minEi = min(neX, seX).int#.clamp(startX, coverages.len + startX)
-          maxEi = max(neX, seX).ceil.int#.clamp(startX, coverages.len + startX)
+          minEi = min(neX, seX).int      #.clamp(startX, coverages.len + startX)
+          maxEi = max(neX, seX).ceil.int #.clamp(startX, coverages.len + startX)
 
         let
           nw = vec2(sweep[i+0].atx, cutLines[currCutLine])
