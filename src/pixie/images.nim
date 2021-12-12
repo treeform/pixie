@@ -689,7 +689,7 @@ proc drawCorrect(
             blended = blender(backdrop, rgbx(0, 0, 0, sample))
         a.unsafe[x, y] = blended
       else: # a is a Mask
-        let backdrop = a.getValueUnsafe(x, y)
+        let backdrop = a.unsafe[x, y]
         when type(b) is Image:
           let sample = b.getRgbaSmooth(xFloat, yFloat, tiled).a
         else: # b is a Mask
@@ -803,12 +803,12 @@ proc drawUber(
               blended = blender(backdrop, rgbx(0, 0, 0, sample))
           a.unsafe[x, y] = blended
         else: # a is a Mask
-          let backdrop = a.getValueUnsafe(x, y)
+          let backdrop = a.unsafe[x, y]
           when type(b) is Image:
             let sample = b.getRgbaSmooth(srcPos.x, srcPos.y).a
           else: # b is a Mask
             let sample = b.getValueSmooth(srcPos.x, srcPos.y)
-          a.setValueUnsafe(x, y, masker(backdrop, sample))
+          a.unsafe[x, y] = masker(backdrop, sample)
 
         srcPos += dx
 
@@ -900,16 +900,16 @@ proc drawUber(
               blended = blender(backdrop, sample)
           else: # b is a Mask
             let
-              sample = b.getValueUnsafe(samplePos.x, samplePos.y)
+              sample = b.unsafe[samplePos.x, samplePos.y]
               blended = blender(backdrop, rgbx(0, 0, 0, sample))
           a.unsafe[x, y] = blended
         else: # a is a Mask
-          let backdrop = a.getValueUnsafe(x, y)
+          let backdrop = a.unsafe[x, y]
           when type(b) is Image:
             let sample = b.unsafe[samplePos.x, samplePos.y].a
           else: # b is a Mask
-            let sample = b.getValueUnsafe(samplePos.x, samplePos.y)
-          a.setValueUnsafe(x, y, masker(backdrop, sample))
+            let sample = b.unsafe[samplePos.x, samplePos.y]
+          a.unsafe[x, y] = masker(backdrop, sample)
 
         srcPos += dx
 

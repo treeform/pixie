@@ -9,6 +9,9 @@ type
     width*, height*: int
     data*: seq[uint8]
 
+  UnsafeMask = object
+    mask: Mask
+
 when defined(release):
   {.push checks: off.}
 
@@ -38,29 +41,24 @@ proc inside*(mask: Mask, x, y: int): bool {.inline, raises: [].} =
 proc dataIndex*(mask: Mask, x, y: int): int {.inline, raises: [].} =
   mask.width * y + x
 
-proc getValueUnsafe*(mask: Mask, x, y: int): uint8 {.inline, raises: [].} =
-  ## Gets a value from (x, y) coordinates.
-  ## * No bounds checking *
-  ## Make sure that x, y are in bounds.
-  ## Failure in the assumptions will case unsafe memory reads.
-  result = mask.data[mask.dataIndex(x, y)]
+template unsafe*(src: Mask): UnsafeMask =
+  UnsafeMask(mask: src)
 
-proc setValueUnsafe*(mask: Mask, x, y: int, value: uint8) {.inline, raises: [].} =
-  ## Sets a value from (x, y) coordinates.
-  ## * No bounds checking *
-  ## Make sure that x, y are in bounds.
-  ## Failure in the assumptions will case unsafe memory writes.
-  mask.data[mask.dataIndex(x, y)] = value
+template `[]`*(view: UnsafeMask, x, y: int): uint8 =
+  view.mask.data[view.mask.dataIndex(x, y)]
+
+template `[]=`*(view: UnsafeMask, x, y: int, color: uint8) =
+  view.mask.data[view.mask.dataIndex(x, y)] = color
 
 proc `[]`*(mask: Mask, x, y: int): uint8 {.inline, raises: [].} =
   ## Gets a value at (x, y) or returns transparent black if outside of bounds.
   if mask.inside(x, y):
-    return mask.getValueUnsafe(x, y)
+    return mask.unsafe[x, y]
 
 proc `[]=`*(mask: Mask, x, y: int, value: uint8) {.inline, raises: [].} =
   ## Sets a value at (x, y) or does nothing if outside of bounds.
   if mask.inside(x, y):
-    mask.setValueUnsafe(x, y, value)
+    mask.unsafe[x, y] = value
 
 proc getValue*(mask: Mask, x, y: int): uint8 {.inline, raises: [].} =
   ## Gets a value at (x, y) or returns transparent black if outside of bounds.
@@ -144,11 +142,11 @@ proc minifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
 
       for x in x ..< result.width:
         let value =
-          src.getValueUnsafe(x * 2 + 0, y * 2 + 0).uint32 +
-          src.getValueUnsafe(x * 2 + 1, y * 2 + 0) +
-          src.getValueUnsafe(x * 2 + 1, y * 2 + 1) +
-          src.getValueUnsafe(x * 2 + 0, y * 2 + 1)
-        result.setValueUnsafe(x, y, (value div 4).uint8)
+          src.unsafe[x * 2 + 0, y * 2 + 0].uint32 +
+          src.unsafe[x * 2 + 1, y * 2 + 0] +
+          src.unsafe[x * 2 + 1, y * 2 + 1] +
+          src.unsafe[x * 2 + 0, y * 2 + 1]
+        result.unsafe[x, y] = (value div 4).uint8
 
     # Set src as this result for if we do another power
     src = result
@@ -163,7 +161,7 @@ proc magnifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
   for y in 0 ..< result.height:
     for x in 0 ..< mask.width:
       let
-        value = mask.getValueUnsafe(x, y div scale)
+        value = mask.unsafe[x, y div scale]
         scaledX = x * scale
         idx = result.dataIndex(scaledX, y)
       for i in 0 ..< scale:
@@ -222,24 +220,24 @@ proc spread*(mask: Mask, spread: float32) {.raises: [PixieError].} =
     for x in 0 ..< mask.width:
       var maxValue: uint8
       for xx in max(x - spread, 0) .. min(x + spread, mask.width - 1):
-        let value = mask.getValueUnsafe(xx, y)
+        let value = mask.unsafe[xx, y]
         if value > maxValue:
           maxValue = value
         if maxValue == 255:
           break
-      spreadX.setValueUnsafe(y, x, maxValue)
+      spreadX.unsafe[y, x] = maxValue
 
   # Spread in the Y direction and modify mask.
   for y in 0 ..< mask.height:
     for x in 0 ..< mask.width:
       var maxValue: uint8
       for yy in max(y - spread, 0) .. min(y + spread, mask.height - 1):
-        let value = spreadX.getValueUnsafe(yy, x)
+        let value = spreadX.unsafe[yy, x]
         if value > maxValue:
           maxValue = value
         if maxValue == 255:
           break
-      mask.setValueUnsafe(x, y, maxValue)
+      mask.unsafe[x, y] = maxValue
 
 proc ceil*(mask: Mask) {.raises: [].} =
   ## A value of 0 stays 0. Anything else turns into 255.
@@ -277,10 +275,10 @@ proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) {.raises: [Pixie
       for xx in x - radius ..< min(x + radius, 0):
         value += outOfBounds * kernel[xx - x + radius].uint32
       for xx in max(x - radius, 0) .. min(x + radius, mask.width - 1):
-        value += mask.getValueUnsafe(xx, y) * kernel[xx - x + radius].uint32
+        value += mask.unsafe[xx, y] * kernel[xx - x + radius].uint32
       for xx in max(x - radius, mask.width) .. x + radius:
         value += outOfBounds * kernel[xx - x + radius].uint32
-      blurX.setValueUnsafe(y, x, (value div 256 div 255).uint8)
+      blurX.unsafe[y, x] = (value div 256 div 255).uint8
 
   # Blur in the Y direction and modify image.
   for y in 0 ..< mask.height:
@@ -289,10 +287,10 @@ proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) {.raises: [Pixie
       for yy in y - radius ..< min(y + radius, 0):
         value += outOfBounds * kernel[yy - y + radius].uint32
       for yy in max(y - radius, 0) .. min(y + radius, mask.height - 1):
-        value += blurX.getValueUnsafe(yy, x) * kernel[yy - y + radius].uint32
+        value += blurX.unsafe[yy, x] * kernel[yy - y + radius].uint32
       for yy in max(y - radius, mask.height) .. y + radius:
         value += outOfBounds * kernel[yy - y + radius].uint32
-      mask.setValueUnsafe(x, y, (value div 256 div 255).uint8)
+      mask.unsafe[x, y] = (value div 256 div 255).uint8
 
 when defined(release):
   {.pop.}

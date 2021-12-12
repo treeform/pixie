@@ -1449,10 +1449,10 @@ proc fillCoverage(
   while x < startX + coverages.len:
     let coverage = coverages[x - startX]
     if coverage != 0 or blendMode == bmExcludeMask:
-      let backdrop = mask.getValueUnsafe(x, y)
-      mask.setValueUnsafe(x, y, masker(backdrop, coverage))
+      let backdrop = mask.unsafe[x, y]
+      mask.unsafe[x, y] = masker(backdrop, coverage)
     elif blendMode == bmMask:
-      mask.setValueUnsafe(x, y, 0)
+      mask.unsafe[x, y] = 0
     inc x
 
   if blendMode == bmMask:
@@ -1564,8 +1564,8 @@ proc fillHits(
           x += 16
 
     for x in x ..< fillStart + fillLen:
-      let backdrop = mask.getValueUnsafe(x, y)
-      mask.setValueUnsafe(x, y, masker(backdrop, 255))
+      let backdrop = mask.unsafe[x, y]
+      mask.unsafe[x, y] = masker(backdrop, 255)
 
   if blendMode == bmMask:
     mask.clearUnsafe(0, y, startX, y)
