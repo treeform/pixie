@@ -59,5 +59,5 @@ block spread_3:
 block spread_4:
   timeIt "spread_4":
     mask.fill(0)
-    mask.setValueUnsafe(1000, 1000, 255)
+    mask.unsafe[1000, 1000] = 255
     mask.spread(10)
