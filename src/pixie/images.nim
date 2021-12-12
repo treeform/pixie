@@ -11,6 +11,9 @@ type
     width*, height*: int
     data*: seq[ColorRGBX]
 
+  UnsafeImage = object
+    image: Image
+
 when defined(release):
   {.push checks: off.}
 
@@ -58,31 +61,32 @@ proc inside*(image: Image, x, y: int): bool {.inline, raises: [].} =
 proc dataIndex*(image: Image, x, y: int): int {.inline, raises: [].} =
   image.width * y + x
 
-proc getRgbaUnsafe*(image: Image, x, y: int): ColorRGBX {.inline, raises: [].} =
+template unsafe*(src: Image): UnsafeImage =
+  UnsafeImage(image: src)
+
+template `[]`*(view: UnsafeImage, x, y: int): ColorRGBX =
   ## Gets a color from (x, y) coordinates.
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will cause unsafe memory reads.
-  image.data[image.dataIndex(x, y)]
+  view.image.data[view.image.dataIndex(x, y)]
 
-proc setRgbaUnsafe*(
-  image: Image, x, y: int, color: ColorRGBX
-) {.inline, raises: [].} =
+template `[]=`*(view: UnsafeImage, x, y: int, color: ColorRGBX) =
   ## Sets a color from (x, y) coordinates.
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will cause unsafe memory writes.
-  image.data[image.dataIndex(x, y)] = color
+  view.image.data[view.image.dataIndex(x, y)] = color
 
 proc `[]`*(image: Image, x, y: int): ColorRGBX {.inline, raises: [].} =
   ## Gets a pixel at (x, y) or returns transparent black if outside of bounds.
   if image.inside(x, y):
-    return image.getRgbaUnsafe(x, y)
+    return image.unsafe[x, y]
 
 proc `[]=`*(image: Image, x, y: int, color: SomeColor) {.inline, raises: [].} =
   ## Sets a pixel at (x, y) or does nothing if outside of bounds.
   if image.inside(x, y):
-    image.setRgbaUnsafe(x, y, color.asRgbx())
+    image.unsafe[x, y] = color.asRgbx()
 
 proc getColor*(image: Image, x, y: int): Color {.inline, raises: [].} =
   ## Gets a color at (x, y) or returns transparent black if outside of bounds.
@@ -239,7 +243,7 @@ proc diff*(master, image: Image): (float32, Image) {.raises: [PixieError].} =
       c.g = diff.clamp(0, 255).uint8
       c.b = (-diff).clamp(0, 255).uint8
       c.a = 255
-      diffImage.setRgbaUnsafe(x, y, c)
+      diffImage.unsafe[x, y] = c
       diffScore += abs(m.r.int - u.r.int) +
         abs(m.g.int - u.g.int) +
         abs(m.b.int - u.b.int) +
@@ -316,10 +320,10 @@ proc minifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
 
       for x in x ..< resultEvenWidth:
         let
-          a = src.getRgbaUnsafe(x * 2 + 0, y * 2 + 0)
-          b = src.getRgbaUnsafe(x * 2 + 1, y * 2 + 0)
-          c = src.getRgbaUnsafe(x * 2 + 1, y * 2 + 1)
-          d = src.getRgbaUnsafe(x * 2 + 0, y * 2 + 1)
+          a = src.unsafe[x * 2 + 0, y * 2 + 0]
+          b = src.unsafe[x * 2 + 1, y * 2 + 0]
+          c = src.unsafe[x * 2 + 1, y * 2 + 1]
+          d = src.unsafe[x * 2 + 0, y * 2 + 1]
           rgba = rgbx(
             ((a.r.uint32 + b.r + c.r + d.r) div 4).uint8,
             ((a.g.uint32 + b.g + c.g + d.g) div 4).uint8,
@@ -327,31 +331,28 @@ proc minifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
             ((a.a.uint32 + b.a + c.a + d.a) div 4).uint8
           )
 
-        result.setRgbaUnsafe(x, y, rgba)
+        result.unsafe[x, y] = rgba
 
       if srcWidthIsOdd:
         let rgbx = mix(
-          src.getRgbaUnsafe(src.width - 1, y * 2 + 0),
-          src.getRgbaUnsafe(src.width - 1, y * 2 + 1),
+          src.unsafe[src.width - 1, y * 2 + 0],
+          src.unsafe[src.width - 1, y * 2 + 1],
           0.5
         ) * 0.5
-        result.setRgbaUnsafe(result.width - 1, y, rgbx)
+        result.unsafe[result.width - 1, y] = rgbx
 
     if srcHeightIsOdd:
       for x in 0 ..< resultEvenWidth:
         let rgbx = mix(
-          src.getRgbaUnsafe(x * 2 + 0, src.height - 1),
-          src.getRgbaUnsafe(x * 2 + 1, src.height - 1),
+          src.unsafe[x * 2 + 0, src.height - 1],
+          src.unsafe[x * 2 + 1, src.height - 1],
           0.5
         ) * 0.5
-        result.setRgbaUnsafe(x, result.height - 1, rgbx)
+        result.unsafe[x, result.height - 1] = rgbx
 
       if srcWidthIsOdd:
-        result.setRgbaUnsafe(
-          result.width - 1,
-          result.height - 1,
-          src.getRgbaUnsafe(src.width - 1, src.height - 1) * 0.25
-        )
+        result.unsafe[result.width - 1, result.height - 1] =
+          src.unsafe[src.width - 1, src.height - 1] * 0.25
 
     # Set src as this result for if we do another power
     src = result
@@ -384,7 +385,7 @@ proc magnifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
           x += 2
     for _ in x ..< image.width:
       let
-        rgbx = image.getRgbaUnsafe(x, y)
+        rgbx = image.unsafe[x, y]
         resultIdx = result.dataIndex(x * scale, y * scale)
       for i in 0 ..< scale:
         result.data[resultIdx + i] = rgbx
@@ -547,10 +548,10 @@ proc blur*(
       for xx in x - radius ..< min(x + radius, 0):
         values += outOfBounds * kernel[xx - x + radius]
       for xx in max(x - radius, 0) .. min(x + radius, image.width - 1):
-        values += image.getRgbaUnsafe(xx, y) * kernel[xx - x + radius]
+        values += image.unsafe[xx, y] * kernel[xx - x + radius]
       for xx in max(x - radius, image.width) .. x + radius:
         values += outOfBounds * kernel[xx - x + radius]
-      blurX.setRgbaUnsafe(y, x, rgbx(values))
+      blurX.unsafe[y, x] = rgbx(values)
 
   # Blur in the Y direction.
   for y in 0 ..< image.height:
@@ -559,10 +560,10 @@ proc blur*(
       for yy in y - radius ..< min(y + radius, 0):
         values += outOfBounds * kernel[yy - y + radius]
       for yy in max(y - radius, 0) .. min(y + radius, image.height - 1):
-        values += blurX.getRgbaUnsafe(yy, x) * kernel[yy - y + radius]
+        values += blurX.unsafe[yy, x] * kernel[yy - y + radius]
       for yy in max(y - radius, image.height) .. y + radius:
         values += outOfBounds * kernel[yy - y + radius]
-      image.setRgbaUnsafe(x, y, rgbx(values))
+      image.unsafe[x, y] = rgbx(values)
 
 proc newMask*(image: Image): Mask {.raises: [PixieError].} =
   ## Returns a new mask using the alpha values of the image.
@@ -611,10 +612,10 @@ proc getRgbaSmooth*(
 
   var x0y0, x1y0, x0y1, x1y1: ColorRGBX
   if wrapped:
-    x0y0 = image.getRgbaUnsafe(x0 mod image.width, y0 mod image.height)
-    x1y0 = image.getRgbaUnsafe(x1 mod image.width, y0 mod image.height)
-    x0y1 = image.getRgbaUnsafe(x0 mod image.width, y1 mod image.height)
-    x1y1 = image.getRgbaUnsafe(x1 mod image.width, y1 mod image.height)
+    x0y0 = image.unsafe[x0 mod image.width, y0 mod image.height]
+    x1y0 = image.unsafe[x1 mod image.width, y0 mod image.height]
+    x0y1 = image.unsafe[x0 mod image.width, y1 mod image.height]
+    x1y1 = image.unsafe[x1 mod image.width, y1 mod image.height]
   else:
     x0y0 = image[x0, y0]
     x1y0 = image[x1, y0]
@@ -677,7 +678,7 @@ proc drawCorrect(
         yFloat = samplePos.y - h
 
       when type(a) is Image:
-        let backdrop = a.getRgbaUnsafe(x, y)
+        let backdrop = a.unsafe[x, y]
         when type(b) is Image:
           let
             sample = b.getRgbaSmooth(xFloat, yFloat, tiled)
@@ -686,9 +687,9 @@ proc drawCorrect(
           let
             sample = b.getValueSmooth(xFloat, yFloat)
             blended = blender(backdrop, rgbx(0, 0, 0, sample))
-        a.setRgbaUnsafe(x, y, blended)
+        a.unsafe[x, y] = blended
       else: # a is a Mask
-        let backdrop = a.getValueUnsafe(x, y)
+        let backdrop = a.unsafe[x, y]
         when type(b) is Image:
           let sample = b.getRgbaSmooth(xFloat, yFloat, tiled).a
         else: # b is a Mask
@@ -791,7 +792,7 @@ proc drawUber(
 
       for x in xMin ..< xMax:
         when type(a) is Image:
-          let backdrop = a.getRgbaUnsafe(x, y)
+          let backdrop = a.unsafe[x, y]
           when type(b) is Image:
             let
               sample = b.getRgbaSmooth(srcPos.x, srcPos.y)
@@ -800,14 +801,14 @@ proc drawUber(
             let
               sample = b.getValueSmooth(srcPos.x, srcPos.y)
               blended = blender(backdrop, rgbx(0, 0, 0, sample))
-          a.setRgbaUnsafe(x, y, blended)
+          a.unsafe[x, y] = blended
         else: # a is a Mask
-          let backdrop = a.getValueUnsafe(x, y)
+          let backdrop = a.unsafe[x, y]
           when type(b) is Image:
             let sample = b.getRgbaSmooth(srcPos.x, srcPos.y).a
           else: # b is a Mask
             let sample = b.getValueSmooth(srcPos.x, srcPos.y)
-          a.setValueUnsafe(x, y, masker(backdrop, sample))
+          a.unsafe[x, y] = masker(backdrop, sample)
 
         srcPos += dx
 
@@ -892,23 +893,23 @@ proc drawUber(
         let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
 
         when type(a) is Image:
-          let backdrop = a.getRgbaUnsafe(x, y)
+          let backdrop = a.unsafe[x, y]
           when type(b) is Image:
             let
-              sample = b.getRgbaUnsafe(samplePos.x, samplePos.y)
+              sample = b.unsafe[samplePos.x, samplePos.y]
               blended = blender(backdrop, sample)
           else: # b is a Mask
             let
-              sample = b.getValueUnsafe(samplePos.x, samplePos.y)
+              sample = b.unsafe[samplePos.x, samplePos.y]
               blended = blender(backdrop, rgbx(0, 0, 0, sample))
-          a.setRgbaUnsafe(x, y, blended)
+          a.unsafe[x, y] = blended
         else: # a is a Mask
-          let backdrop = a.getValueUnsafe(x, y)
+          let backdrop = a.unsafe[x, y]
           when type(b) is Image:
-            let sample = b.getRgbaUnsafe(samplePos.x, samplePos.y).a
+            let sample = b.unsafe[samplePos.x, samplePos.y].a
           else: # b is a Mask
-            let sample = b.getValueUnsafe(samplePos.x, samplePos.y)
-          a.setValueUnsafe(x, y, masker(backdrop, sample))
+            let sample = b.unsafe[samplePos.x, samplePos.y]
+          a.unsafe[x, y] = masker(backdrop, sample)
 
         srcPos += dx
 

@@ -142,7 +142,7 @@ proc fillGradientLinear(image: Image, paint: Paint) =
         t = toLineSpace(at, to, xy)
         rgbx = paint.gradientColor(t)
       for y in 0 ..< image.height:
-        image.setRgbaUnsafe(x, y, rgbx)
+        image.unsafe[x, y] = rgbx
       inc x
 
   elif at.x == to.x: # Vertical gradient
@@ -158,7 +158,7 @@ proc fillGradientLinear(image: Image, paint: Paint) =
           mm_storeu_si128(image.data[image.dataIndex(x, y)].addr, colorVec)
           x += 4
       for x in x ..< image.width:
-        image.setRgbaUnsafe(x, y, rgbx)
+        image.unsafe[x, y] = rgbx
 
   else:
     for y in 0 ..< image.height:
@@ -166,7 +166,7 @@ proc fillGradientLinear(image: Image, paint: Paint) =
         let
           xy = vec2(x.float32, y.float32)
           t = toLineSpace(at, to, xy)
-        image.setRgbaUnsafe(x, y, paint.gradientColor(t))
+        image.unsafe[x, y] = paint.gradientColor(t)
 
 proc fillGradientRadial(image: Image, paint: Paint) =
   ## Fills a radial gradient.
@@ -197,7 +197,7 @@ proc fillGradientRadial(image: Image, paint: Paint) =
       let
         xy = vec2(x.float32, y.float32)
         t = (mat * xy).length()
-      image.setRgbaUnsafe(x, y, paint.gradientColor(t))
+      image.unsafe[x, y] = paint.gradientColor(t)
 
 proc fillGradientAngular(image: Image, paint: Paint) =
   ## Fills an angular gradient.
@@ -223,7 +223,7 @@ proc fillGradientAngular(image: Image, paint: Paint) =
         xy = vec2(x.float32, y.float32)
         angle = normalize(xy - center).angle()
         t = (angle + gradientAngle + f32PI / 2).fixAngle() / 2 / f32PI + 0.5.float32
-      image.setRgbaUnsafe(x, y, paint.gradientColor(t))
+      image.unsafe[x, y] = paint.gradientColor(t)
 
 proc fillGradient*(image: Image, paint: Paint) {.raises: [PixieError].} =
   ## Fills with the Paint gradient.
