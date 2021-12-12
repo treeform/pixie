@@ -45,9 +45,17 @@ template unsafe*(src: Mask): UnsafeMask =
   UnsafeMask(mask: src)
 
 template `[]`*(view: UnsafeMask, x, y: int): uint8 =
+  ## Gets a value from (x, y) coordinates.
+  ## * No bounds checking *
+  ## Make sure that x, y are in bounds.
+  ## Failure in the assumptions will case unsafe memory reads.
   view.mask.data[view.mask.dataIndex(x, y)]
 
 template `[]=`*(view: UnsafeMask, x, y: int, color: uint8) =
+  ## Sets a value from (x, y) coordinates.
+  ## * No bounds checking *
+  ## Make sure that x, y are in bounds.
+  ## Failure in the assumptions will case unsafe memory writes.
   view.mask.data[view.mask.dataIndex(x, y)] = color
 
 proc `[]`*(mask: Mask, x, y: int): uint8 {.inline, raises: [].} =
