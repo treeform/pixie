@@ -52,7 +52,7 @@ block:
     ctx.setMatrix(matrix.unsafeAddr)
     ctx.setSource(backdrop, 0, 0)
     ctx.paint()
-    mat = rotate(15.toRadians)
+    mat = translate(vec2(0.5, 0.5))
     matrix = cairo.Matrix(
       xx: mat[0, 0],
       yx: mat[0, 1],
