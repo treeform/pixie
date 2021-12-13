@@ -9,31 +9,6 @@ when defined(amd64) and not defined(pixieNoSimd):
 # See https://www.khronos.org/registry/OpenGL/extensions/KHR/KHR_blend_equation_advanced.txt
 
 type
-  BlendMode* = enum
-    bmNormal
-    bmDarken
-    bmMultiply
-    # bmLinearBurn
-    bmColorBurn
-    bmLighten
-    bmScreen
-    # bmLinearDodge
-    bmColorDodge
-    bmOverlay
-    bmSoftLight
-    bmHardLight
-    bmDifference
-    bmExclusion
-    bmHue
-    bmSaturation
-    bmColor
-    bmLuminosity
-
-    bmMask         ## Special blend mode that is used for masking
-    bmOverwrite    ## Special blend mode that just copies pixels
-    bmSubtractMask ## Inverse mask
-    bmExcludeMask
-
   Blender* = proc(backdrop, source: ColorRGBX): ColorRGBX {.gcsafe, raises: [].}
     ## Function signature returned by blender.
   Masker* = proc(backdrop, source: uint8): uint8 {.gcsafe, raises: [].}

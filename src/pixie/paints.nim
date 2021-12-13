@@ -1,4 +1,4 @@
-import blends, chroma, common, images, vmath
+import chroma, common, images, vmath
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2

@@ -3,6 +3,31 @@ import bumpy, chroma, vmath
 type
   PixieError* = object of ValueError ## Raised if an operation fails.
 
+  BlendMode* = enum
+    bmNormal
+    bmDarken
+    bmMultiply
+    # bmLinearBurn
+    bmColorBurn
+    bmLighten
+    bmScreen
+    # bmLinearDodge
+    bmColorDodge
+    bmOverlay
+    bmSoftLight
+    bmHardLight
+    bmDifference
+    bmExclusion
+    bmHue
+    bmSaturation
+    bmColor
+    bmLuminosity
+
+    bmMask         ## Special blend mode that is used for masking
+    bmOverwrite    ## Special blend mode that just copies pixels
+    bmSubtractMask ## Inverse mask
+    bmExcludeMask
+
 proc mix*(a, b: uint8, t: float32): uint8 {.inline, raises: [].} =
   ## Linearly interpolate between a and b using t.
   let t = round(t * 255).uint32
