@@ -419,7 +419,7 @@ proc blendSaturation(backdrop, source: ColorRGBX): ColorRGBX =
     blended = SetLum(SetSat(backdrop, Sat(source)), Lum(backdrop))
   result = alphaFix(backdrop, source, blended).rgba.rgbx()
 
-proc blendMask(backdrop, source: ColorRGBX): ColorRGBX =
+proc blendMask*(backdrop, source: ColorRGBX): ColorRGBX =
   let k = source.a.uint32
   result.r = ((backdrop.r * k) div 255).uint8
   result.g = ((backdrop.g * k) div 255).uint8

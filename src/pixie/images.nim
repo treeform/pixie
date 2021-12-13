@@ -955,6 +955,30 @@ proc drawUber(
                 let backdrop = a.unsafe[x, y]
                 a.unsafe[x, y] = blendAlpha(backdrop, source)
           srcPos += dx
+      elif blendMode == bmMask:
+        for x in x ..< xMax:
+          let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
+          when type(a) is Image:
+            when type(b) is Image:
+              let source = b.unsafe[samplePos.x, samplePos.y]
+            else: # b is a Mask
+              let source = rgbx(0, 0, 0, b.unsafe[samplePos.x, samplePos.y])
+            if source.a == 0:
+              a.unsafe[x, y] = rgbx(0, 0, 0, 0)
+            elif source.a != 255:
+              let backdrop = a.unsafe[x, y]
+              a.unsafe[x, y] = blendMask(backdrop, source)
+          else: # a is a Mask
+            when type(b) is Image:
+              let source = b.unsafe[samplePos.x, samplePos.y].a
+            else: # b is a Mask
+              let source = b.unsafe[samplePos.x, samplePos.y]
+            if source == 0:
+              a.unsafe[x, y] = 0
+            elif source != 255:
+              let backdrop = a.unsafe[x, y]
+              a.unsafe[x, y] = blendAlpha(backdrop, source)
+          srcPos += dx
       else:
         for x in x ..< xMax:
           let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)

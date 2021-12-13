@@ -42,6 +42,38 @@ block:
     tmp = imageSurfaceCreate(FORMAT_ARGB32, 1568, 940)
     ctx = tmp.create()
 
+  timeIt "cairo draw mask":
+    ctx.setSourceRgba(1, 1, 1, 1)
+    let operator = ctx.getOperator()
+    ctx.setOperator(OperatorSource)
+    ctx.paint()
+    ctx.setOperator(operator)
+
+    ctx.setSource(backdrop, 0, 0)
+    ctx.mask(source, 0, 0)
+    tmp.flush()
+
+  echo tmp.writeToPng("tmp_masked.png")
+
+block:
+  let
+    backdrop = readImage("tests/fileformats/svg/masters/dragon2.png")
+    source = readImage("tests/fileformats/svg/masters/Ghostscript_Tiger.png")
+    tmp = newImage(1568, 940)
+
+  timeIt "pixie draw mask":
+    tmp.draw(backdrop)
+    tmp.draw(source, blendMode = bmMask)
+
+  tmp.writeFile("tmp_masked2.png")
+
+block:
+  let
+    backdrop = imageSurfaceCreateFromPng("tests/fileformats/svg/masters/dragon2.png")
+    source = imageSurfaceCreateFromPng("tests/fileformats/svg/masters/Ghostscript_Tiger.png")
+    tmp = imageSurfaceCreate(FORMAT_ARGB32, 1568, 940)
+    ctx = tmp.create()
+
   timeIt "cairo draw smooth":
     var
       mat = mat3()
