@@ -1394,15 +1394,6 @@ proc fillCoverage(
 
         x += 16
 
-  proc applyCoverage(rgbx: ColorRGBX, coverage: uint8): ColorRGBX {.inline.} =
-    if coverage != 255:
-      result.r = ((rgbx.r.uint32 * coverage) div 255).uint8
-      result.g = ((rgbx.g.uint32 * coverage) div 255).uint8
-      result.b = ((rgbx.b.uint32 * coverage) div 255).uint8
-      result.a = ((rgbx.a.uint32 * coverage) div 255).uint8
-    else:
-      result = rgbx
-
   let blender = blendMode.blender()
   for x in x ..< startX + coverages.len:
     let coverage = coverages[x - startX]
@@ -1411,9 +1402,13 @@ proc fillCoverage(
         # Skip blending
         image.unsafe[x, y] = rgbx
       else:
-        let
-          source = rgbx.applyCoverage(coverage)
-          backdrop = image.unsafe[x, y]
+        var source = rgbx
+        if coverage != 255:
+          source.r = ((source.r.uint32 * coverage) div 255).uint8
+          source.g = ((source.g.uint32 * coverage) div 255).uint8
+          source.b = ((source.b.uint32 * coverage) div 255).uint8
+          source.a = ((source.a.uint32 * coverage) div 255).uint8
+        let backdrop = image.unsafe[x, y]
         image.unsafe[x, y] = blender(backdrop, source)
     elif blendMode == bmMask:
       image.unsafe[x, y] = rgbx(0, 0, 0, 0)
