@@ -13,6 +13,12 @@ timeIt "minifyBy2":
 
 reset()
 
+timeIt "magnifyBy2":
+  let magnified = mask.magnifyBy2()
+  doAssert magnified[0, 0] == 63
+
+reset()
+
 timeIt "invert":
   mask.invert()
 

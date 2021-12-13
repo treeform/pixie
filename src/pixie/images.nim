@@ -394,26 +394,26 @@ proc magnifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
     var x: int
     when defined(amd64) and not defined(pixieNoSimd):
       if scale == 2:
-        let mask = cast[M128i]([uint32.high, 0, 0, 0])
-        for _ in countup(0, image.width - 4, 2):
+        while x <= image.width - 4:
           let
             values = mm_loadu_si128(image.data[image.dataIndex(x, y)].addr)
-            first = mm_and_si128(values, mask)
-            second = mm_and_si128(mm_srli_si128(values, 4), mask)
-            combined = mm_or_si128(first, mm_slli_si128(second, 8))
-            doubled = mm_or_si128(combined, mm_slli_si128(combined, 4))
+            lo = mm_unpacklo_epi32(values, mm_setzero_si128())
+            hi = mm_unpackhi_epi32(values, mm_setzero_si128())
           mm_storeu_si128(
-            result.data[result.dataIndex(x * scale, y * scale)].addr,
-            doubled
+            result.data[result.dataIndex(x * scale + 0, y * scale)].addr,
+            mm_or_si128(lo, mm_slli_si128(lo, 4))
           )
-          x += 2
-    for _ in x ..< image.width:
+          mm_storeu_si128(
+            result.data[result.dataIndex(x * scale + 4, y * scale)].addr,
+            mm_or_si128(hi, mm_slli_si128(hi, 4))
+          )
+          x += 4
+    for x in x ..< image.width:
       let
         rgbx = image.unsafe[x, y]
         resultIdx = result.dataIndex(x * scale, y * scale)
       for i in 0 ..< scale:
         result.data[resultIdx + i] = rgbx
-      inc x
     # Copy that row of pixels into (scale - 1) more rows
     let rowStart = result.dataIndex(0, y * scale)
     for i in 1 ..< scale:

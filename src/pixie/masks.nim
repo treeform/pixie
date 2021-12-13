@@ -166,14 +166,41 @@ proc magnifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
 
   let scale = 2 ^ power
   result = newMask(mask.width * scale, mask.height * scale)
-  for y in 0 ..< result.height:
-    for x in 0 ..< mask.width:
+
+  for y in 0 ..< mask.height:
+    # Write one row of values duplicated by scale
+    var x: int
+    when defined(amd64) and not defined(pixieNoSimd):
+      if scale == 2:
+        while x <= mask.width - 16:
+          let
+            values = mm_loadu_si128(mask.data[mask.dataIndex(x, y)].addr)
+            lo = mm_unpacklo_epi8(values, mm_setzero_si128())
+            hi = mm_unpacklo_epi8(values, mm_setzero_si128())
+          mm_storeu_si128(
+            result.data[result.dataIndex(x * scale + 0, y * scale)].addr,
+            mm_or_si128(lo, mm_slli_si128(lo, 1))
+          )
+          mm_storeu_si128(
+            result.data[result.dataIndex(x * scale + 16, y * scale)].addr,
+            mm_or_si128(hi, mm_slli_si128(hi, 1))
+          )
+          x += 16
+    for x in x ..< mask.width:
       let
         value = mask.unsafe[x, y div scale]
         scaledX = x * scale
         idx = result.dataIndex(scaledX, y)
       for i in 0 ..< scale:
         result.data[idx + i] = value
+    # Copy that row of values into (scale - 1) more rows
+    let rowStart = result.dataIndex(0, y * scale)
+    for i in 1 ..< scale:
+      copyMem(
+        result.data[rowStart + result.width * i].addr,
+        result.data[rowStart].addr,
+        result.width * 4
+      )
 
 proc fillUnsafe*(
   data: var seq[uint8], value: uint8, start, len: int
