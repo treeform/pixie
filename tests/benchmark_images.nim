@@ -25,6 +25,10 @@ image.fill(rgba(0, 0, 0, 0))
 timeIt "isTransparent":
   doAssert image.isTransparent()
 
+image.fill(rgba(255, 255, 255, 255))
+timeIt "isOpaque":
+  doAssert image.isOpaque()
+
 reset()
 
 timeIt "subImage":

@@ -148,7 +148,7 @@ proc isOneColor*(image: Image): bool {.raises: [].} =
         values1 = mm_loadu_si128(image.data[i + 4].addr)
         mask0 = mm_movemask_epi8(mm_cmpeq_epi8(values0, colorVec))
         mask1 = mm_movemask_epi8(mm_cmpeq_epi8(values1, colorVec))
-      if mask0 != uint16.high.int or mask1 != uint16.high.int:
+      if mask0 != 0xffff or mask1 != 0xffff:
         return false
       i += 8
 
@@ -162,7 +162,7 @@ proc isTransparent*(image: Image): bool {.raises: [].} =
 
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
-    let zeroVec = mm_setzero_si128()
+    let vecZero = mm_setzero_si128()
     for _ in 0 ..< image.data.len div 16:
       let
         values0 = mm_loadu_si128(image.data[i + 0].addr)
@@ -172,13 +172,37 @@ proc isTransparent*(image: Image): bool {.raises: [].} =
         values01 = mm_or_si128(values0, values1)
         values23 = mm_or_si128(values2, values3)
         values = mm_or_si128(values01, values23)
-        mask = mm_movemask_epi8(mm_cmpeq_epi8(values, zeroVec))
-      if mask != uint16.high.int:
+      if mm_movemask_epi8(mm_cmpeq_epi8(values, vecZero)) != 0xffff:
         return false
       i += 16
 
   for j in i ..< image.data.len:
     if image.data[j].a != 0:
+      return false
+
+proc isOpaque*(image: Image): bool {.raises: [].} =
+  result = true
+
+  var i: int
+  when defined(amd64) and not defined(pixieNoSimd):
+    let
+      vec255 = mm_set1_epi32(cast[int32](uint32.high))
+      colorMask = mm_set1_epi32(cast[int32]([255.uint8, 255, 255, 0]))
+    for _ in 0 ..< image.data.len div 16:
+      let
+        values0 = mm_loadu_si128(image.data[i + 0].addr)
+        values1 = mm_loadu_si128(image.data[i + 4].addr)
+        values2 = mm_loadu_si128(image.data[i + 8].addr)
+        values3 = mm_loadu_si128(image.data[i + 12].addr)
+        values01 = mm_and_si128(values0, values1)
+        values23 = mm_and_si128(values2, values3)
+        values = mm_or_si128(mm_and_si128(values01, values23), colorMask)
+      if mm_movemask_epi8(mm_cmpeq_epi8(values, vec255)) != 0xffff:
+        return false
+      i += 16
+
+  for j in i ..< image.data.len:
+    if image.data[j].a != 255:
       return false
 
 proc flipHorizontal*(image: Image) {.raises: [].} =

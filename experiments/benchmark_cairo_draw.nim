@@ -8,6 +8,12 @@ block:
     ctx = tmp.create()
 
   timeIt "cairo draw basic":
+    # ctx.setSourceRgba(0.5, 0.5, 0.5, 1)
+    # let operator = ctx.getOperator()
+    # ctx.setOperator(OperatorSource)
+    # ctx.paint()
+    # ctx.setOperator(operator)
+
     ctx.setSource(backdrop, 0, 0)
     ctx.paint()
     ctx.setSource(source, 0, 0)
@@ -22,10 +28,8 @@ block:
     source = readImage("tests/fileformats/svg/masters/Ghostscript_Tiger.png")
     tmp = newImage(1568, 940)
 
-  timeIt "isOneColor":
-    doAssert not backdrop.isOneColor()
-
   timeIt "pixie draw basic":
+    # tmp.fill(rgbx(127, 127, 127, 255))
     tmp.draw(backdrop)
     tmp.draw(source)
 
