@@ -768,17 +768,12 @@ proc drawUber(
   )
 
   # Determine where we should start and stop drawing in the y dimension
-  var yMin, yMax: int
-  if blendMode == bmMask:
-    yMin = 0
-    yMax = a.height
-  else:
+  var
     yMin = a.height
     yMax = 0
-    for segment in perimeter:
-      yMin = min(yMin, segment.at.y.floor.int)
-      yMax = max(yMax, segment.at.y.ceil.int)
-
+  for segment in perimeter:
+    yMin = min(yMin, segment.at.y.floor.int)
+    yMax = max(yMax, segment.at.y.ceil.int)
   yMin = yMin.clamp(0, a.height)
   yMax = yMax.clamp(0, a.height)
 
@@ -786,6 +781,10 @@ proc drawUber(
     let blender = blendMode.blender()
   else: # a is a Mask
     let masker = blendMode.masker()
+
+  if blendMode == bmMask:
+    if yMin > 0:
+      zeroMem(a.data[0].addr, 4 * yMin * a.width)
 
   for y in yMin ..< yMax:
     # Determine where we should start and stop drawing in the x dimension
@@ -1006,6 +1005,10 @@ proc drawUber(
     if blendMode == bmMask:
       if a.width - xMax > 0:
         zeroMem(a.data[a.dataIndex(xMax, y)].addr, 4 * (a.width - xMax))
+
+  if blendMode == bmMask:
+    if a.height - yMax > 0:
+      zeroMem(a.data[a.dataIndex(0, yMax)].addr, 4 * a.width * (a.height - yMax))
 
 proc draw*(
   a, b: Image, transform = mat3(), blendMode = bmNormal
