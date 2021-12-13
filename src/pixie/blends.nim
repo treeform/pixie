@@ -165,7 +165,7 @@ proc SetSat(C: Color, s: float32): Color {.inline.} =
   if satC > 0:
     result = (C - min([C.r, C.g, C.b])) * s / satC
 
-proc blendNormal(backdrop, source: ColorRGBX): ColorRGBX =
+proc blendNormal*(backdrop, source: ColorRGBX): ColorRGBX =
   if backdrop.a == 0 or source.a == 255:
     return source
   if source.a == 0:
