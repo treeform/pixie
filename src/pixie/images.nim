@@ -760,12 +760,14 @@ proc drawUber(
     dy *= 2
     filterBy2 *= 2
 
-  let smooth = not(
-    dx.length == 1.0 and
-    dy.length == 1.0 and
-    transform[2, 0].fractional == 0.0 and
-    transform[2, 1].fractional == 0.0
-  )
+  let
+    hasRotation = not(dx == vec2(1, 0) and dy == vec2(0, 1))
+    smooth = not(
+      dx.length == 1.0 and
+      dy.length == 1.0 and
+      transform[2, 0].fractional == 0.0 and
+      transform[2, 1].fractional == 0.0
+    )
 
   # Determine where we should start and stop drawing in the y dimension
   var
@@ -783,14 +785,17 @@ proc drawUber(
     let masker = blendMode.masker()
 
   if blendMode == bmMask:
-    if yMin > 0:
+    if yMin > 0 and yMin < a.height:
       zeroMem(a.data[0].addr, 4 * yMin * a.width)
+
+  when type(a) is Image and type(b) is Image:
+    let opaqueFastPath = blendMode in {bmNormal, bmOverwrite} and b.isOpaque()
 
   for y in yMin ..< yMax:
     # Determine where we should start and stop drawing in the x dimension
     var
-      xMin = a.width
-      xMax = 0
+      xMin = a.width.float32
+      xMax = 0.float32
     for yOffset in [0.float32, 1]:
       let scanLine = Line(
         a: vec2(-1000, y.float32 + yOffset),
@@ -799,21 +804,28 @@ proc drawUber(
       for segment in perimeter:
         var at: Vec2
         if scanline.intersects(segment, at) and segment.to != at:
-          xMin = min(xMin, at.x.floor.int)
-          xMax = max(xMax, at.x.ceil.int)
+          xMin = min(xMin, at.x)
+          xMax = max(xMax, at.x)
 
-    xMin = xMin.clamp(0, a.width)
-    xMax = xMax.clamp(0, a.width)
+    var xStart, xStop: int
+    if hasRotation or smooth:
+      xStart = xMin.floor.int
+      xStop = xMax.ceil.int
+    else:
+      xStart = xMin.round().int
+      xStop = xMax.round().int
+    xStart = xStart.clamp(0, a.width)
+    xStop = xStop.clamp(0, a.width)
 
     if blendMode == bmMask:
-      if xMin > 0:
-        zeroMem(a.data[a.dataIndex(0, y)].addr, 4 * xMin)
+      if xStart > 0 and xStart < a.width:
+        zeroMem(a.data[a.dataIndex(0, y)].addr, 4 * xStart)
 
     if smooth:
-      var srcPos = p + dx * xMin.float32 + dy * y.float32
+      var srcPos = p + dx * xStart.float32 + dy * y.float32
       srcPos = vec2(srcPos.x - h, srcPos.y - h)
 
-      for x in xMin ..< xMax:
+      for x in xStart ..< xStop:
         when type(a) is Image:
           let backdrop = a.unsafe[x, y]
           when type(b) is Image:
@@ -836,14 +848,27 @@ proc drawUber(
         srcPos += dx
 
     else:
-      var x = xMin
-      when defined(amd64) and not defined(pixieNoSimd):
-        if dx == vec2(1, 0) and dy == vec2(0, 1):
-          # Check we are not rotated before using SIMD blends
+      var x = xStart
+      if not hasRotation:
+        when type(a) is Image and type(b) is Image:
+          if opaqueFastPath:
+            let
+              srcPos = p + dx * x.float32 + dy * y.float32
+              sx = srcPos.x.int
+              sy = srcPos.y.int
+            copyMem(
+              a.data[a.dataIndex(x, y)].addr,
+              b.data[b.dataIndex(sx, sy)].addr,
+              (xStop - xStart) * 4
+            )
+            continue
+
+        when defined(amd64) and not defined(pixieNoSimd):
+          # Check we are not rotated
           when type(a) is Image:
             if blendMode.hasSimdBlender():
               let blenderSimd = blendMode.blenderSimd()
-              for _ in 0 ..< (xMax - xMin) div 16:
+              for _ in 0 ..< (xStop - xStart) div 16:
                 let
                   srcPos = p + dx * x.float32 + dy * y.float32
                   sx = srcPos.x.int
@@ -873,7 +898,7 @@ proc drawUber(
           else: # is a Mask
             if blendMode.hasSimdMasker():
               let maskerSimd = blendMode.maskerSimd()
-              for _ in 0 ..< (xMax - xMin) div 16:
+              for _ in 0 ..< (xStop - xStart) div 16:
                 let
                   srcPos = p + dx * x.float32 + dy * y.float32
                   sx = srcPos.x.int
@@ -914,7 +939,7 @@ proc drawUber(
 
       case blendMode:
       of bmOverwrite:
-        for x in x ..< xMax:
+        for x in x ..< xStop:
           let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
           when type(a) is Image:
             when type(b) is Image:
@@ -932,7 +957,7 @@ proc drawUber(
               a.unsafe[x, y] = source
           srcPos += dx
       of bmNormal:
-        for x in x ..< xMax:
+        for x in x ..< xStop:
           let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
           when type(a) is Image:
             when type(b) is Image:
@@ -958,7 +983,7 @@ proc drawUber(
                 a.unsafe[x, y] = blendAlpha(backdrop, source)
           srcPos += dx
       of bmMask:
-        for x in x ..< xMax:
+        for x in x ..< xStop:
           let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
           when type(a) is Image:
             when type(b) is Image:
@@ -982,7 +1007,7 @@ proc drawUber(
               a.unsafe[x, y] = maskMaskInline(backdrop, source)
           srcPos += dx
       else:
-        for x in x ..< xMax:
+        for x in x ..< xStop:
           let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
           when type(a) is Image:
             let backdrop = a.unsafe[x, y]
@@ -1005,8 +1030,8 @@ proc drawUber(
           srcPos += dx
 
     if blendMode == bmMask:
-      if a.width - xMax > 0:
-        zeroMem(a.data[a.dataIndex(xMax, y)].addr, 4 * (a.width - xMax))
+      if a.width - xStop > 0:
+        zeroMem(a.data[a.dataIndex(xStop, y)].addr, 4 * (a.width - xStop))
 
   if blendMode == bmMask:
     if a.height - yMax > 0:
