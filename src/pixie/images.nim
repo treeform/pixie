@@ -660,7 +660,7 @@ proc getRgbaSmooth*(
     topMix
 
 proc drawCorrect(
-  a, b: Image | Mask, mat = mat3(), tiled = false, blendMode = bmNormal
+  a, b: Image | Mask, transform = mat3(), tiled = false, blendMode = bmNormal
 ) {.raises: [PixieError].} =
   ## Draws one image onto another using matrix with color blending.
 
@@ -670,11 +670,11 @@ proc drawCorrect(
     let masker = blendMode.masker()
 
   var
-    matInv = mat.inverse()
+    inverseTransform = transform.inverse()
     # Compute movement vectors
-    p = matInv * vec2(0 + h, 0 + h)
-    dx = matInv * vec2(1 + h, 0 + h) - p
-    dy = matInv * vec2(0 + h, 1 + h) - p
+    p = inverseTransform * vec2(0 + h, 0 + h)
+    dx = inverseTransform * vec2(1 + h, 0 + h) - p
+    dy = inverseTransform * vec2(0 + h, 1 + h) - p
     filterBy2 = max(dx.length, dy.length)
     b = b
 
@@ -684,7 +684,7 @@ proc drawCorrect(
     dx /= 2
     dy /= 2
     filterBy2 /= 2
-    matInv = scale(vec2(1/2, 1/2)) * matInv
+    inverseTransform = scale(vec2(1/2, 1/2)) * inverseTransform
 
   while filterBy2 <= 0.5:
     b = b.magnifyBy2()
@@ -692,12 +692,12 @@ proc drawCorrect(
     dx *= 2
     dy *= 2
     filterBy2 *= 2
-    matInv = scale(vec2(2, 2)) * matInv
+    inverseTransform = scale(vec2(2, 2)) * inverseTransform
 
   for y in 0 ..< a.height:
     for x in 0 ..< a.width:
       let
-        samplePos = matInv * vec2(x.float32 + h, y.float32 + h)
+        samplePos = inverseTransform * vec2(x.float32 + h, y.float32 + h)
         xFloat = samplePos.x - h
         yFloat = samplePos.y - h
 
@@ -721,14 +721,14 @@ proc drawCorrect(
         a.setValueUnsafe(x, y, masker(backdrop, sample))
 
 proc drawUber(
-  a, b: Image | Mask, mat = mat3(), blendMode = bmNormal
+  a, b: Image | Mask, transform = mat3(), blendMode: BlendMode
 ) {.raises: [PixieError].} =
   let
     corners = [
-      mat * vec2(0, 0),
-      mat * vec2(b.width.float32, 0),
-      mat * vec2(b.width.float32, b.height.float32),
-      mat * vec2(0, b.height.float32)
+      transform * vec2(0, 0),
+      transform * vec2(b.width.float32, 0),
+      transform * vec2(b.width.float32, b.height.float32),
+      transform * vec2(0, b.height.float32)
     ]
     perimeter = [
       segment(corners[0], corners[1]),
@@ -738,11 +738,11 @@ proc drawUber(
     ]
 
   var
-    matInv = mat.inverse()
+    inverseTransform = transform.inverse()
     # Compute movement vectors
-    p = matInv * vec2(0 + h, 0 + h)
-    dx = matInv * vec2(1 + h, 0 + h) - p
-    dy = matInv * vec2(0 + h, 1 + h) - p
+    p = inverseTransform * vec2(0 + h, 0 + h)
+    dx = inverseTransform * vec2(1 + h, 0 + h) - p
+    dy = inverseTransform * vec2(0 + h, 1 + h) - p
     filterBy2 = max(dx.length, dy.length)
     b = b
 
@@ -763,14 +763,9 @@ proc drawUber(
   let smooth = not(
     dx.length == 1.0 and
     dy.length == 1.0 and
-    mat[2, 0].fractional == 0.0 and
-    mat[2, 1].fractional == 0.0
+    transform[2, 0].fractional == 0.0 and
+    transform[2, 1].fractional == 0.0
   )
-
-  when type(a) is Image:
-    let blender = blendMode.blender()
-  else: # a is a Mask
-    let masker = blendMode.masker()
 
   # Determine where we should start and stop drawing in the y dimension
   var yMin, yMax: int
@@ -786,6 +781,11 @@ proc drawUber(
 
   yMin = yMin.clamp(0, a.height)
   yMax = yMax.clamp(0, a.height)
+
+  when type(a) is Image:
+    let blender = blendMode.blender()
+  else: # a is a Mask
+    let masker = blendMode.masker()
 
   for y in yMin ..< yMax:
     # Determine where we should start and stop drawing in the x dimension
