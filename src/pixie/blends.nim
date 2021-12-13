@@ -477,9 +477,12 @@ proc maskNormal(backdrop, source: uint8): uint8 =
   ## Blending masks
   blendAlpha(backdrop, source)
 
-proc maskMask*(backdrop, source: uint8): uint8 =
+proc maskMaskInline*(backdrop, source: uint8): uint8 {.inline.} =
   ## Masking masks
   ((backdrop.uint32 * source) div 255).uint8
+
+proc maskMask(backdrop, source: uint8): uint8 =
+  maskMaskInline(backdrop, source)
 
 proc maskSubtract(backdrop, source: uint8): uint8 =
   ((backdrop.uint32 * (255 - source)) div 255).uint8
