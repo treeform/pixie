@@ -477,7 +477,7 @@ proc maskNormal(backdrop, source: uint8): uint8 =
   ## Blending masks
   blendAlpha(backdrop, source)
 
-proc maskMask(backdrop, source: uint8): uint8 =
+proc maskMask*(backdrop, source: uint8): uint8 =
   ## Masking masks
   ((backdrop.uint32 * source) div 255).uint8
 

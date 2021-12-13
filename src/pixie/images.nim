@@ -978,7 +978,7 @@ proc drawUber(
               a.unsafe[x, y] = 0
             elif source != 255:
               let backdrop = a.unsafe[x, y]
-              a.unsafe[x, y] = blendAlpha(backdrop, source)
+              a.unsafe[x, y] = maskMask(backdrop, source)
           srcPos += dx
       else:
         for x in x ..< xMax:
