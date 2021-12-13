@@ -921,13 +921,15 @@ proc drawUber(
               let source = b.unsafe[samplePos.x, samplePos.y]
             else: # b is a Mask
               let source = rgbx(0, 0, 0, b.unsafe[samplePos.x, samplePos.y])
-            a.unsafe[x, y] = source
+            if source.a > 0:
+              a.unsafe[x, y] = source
           else: # a is a Mask
             when type(b) is Image:
               let source = b.unsafe[samplePos.x, samplePos.y].a
             else: # b is a Mask
               let source = b.unsafe[samplePos.x, samplePos.y]
-            a.unsafe[x, y] = source
+            if source > 0:
+              a.unsafe[x, y] = source
           srcPos += dx
       of bmNormal:
         for x in x ..< xMax:

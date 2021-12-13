@@ -78,6 +78,19 @@ block:
     source = readImage("tests/fileformats/svg/masters/Ghostscript_Tiger.png")
     tmp = newImage(1568, 940)
 
+  timeIt "pixie draw overwrite":
+    # tmp.fill(rgbx(127, 127, 127, 255))
+    tmp.draw(backdrop, blendMode = bmOverwrite)
+    tmp.draw(source)
+
+  # tmp.writeFile("tmp2.png")
+
+block:
+  let
+    backdrop = readImage("tests/fileformats/svg/masters/dragon2.png")
+    source = readImage("tests/fileformats/svg/masters/Ghostscript_Tiger.png")
+    tmp = newImage(1568, 940)
+
   timeIt "pixie draw basic":
     # tmp.fill(rgbx(127, 127, 127, 255))
     tmp.drawBasic(backdrop)
