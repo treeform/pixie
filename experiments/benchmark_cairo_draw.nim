@@ -53,7 +53,7 @@ block:
     ctx.mask(source, 0, 0)
     tmp.flush()
 
-  echo tmp.writeToPng("tmp_masked.png")
+  # echo tmp.writeToPng("tmp_masked.png")
 
 block:
   let
@@ -65,7 +65,7 @@ block:
     tmp.draw(backdrop)
     tmp.draw(source, blendMode = bmMask)
 
-  tmp.writeFile("tmp_masked2.png")
+  # tmp.writeFile("tmp_masked2.png")
 
 block:
   let

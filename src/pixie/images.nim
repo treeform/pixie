@@ -913,7 +913,8 @@ proc drawUber(
         clamp(srcPos.y, 0, b.height.float32)
       )
 
-      if blendMode == bmOverwrite:
+      case blendMode:
+      of bmOverwrite:
         for x in x ..< xMax:
           let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
           when type(a) is Image:
@@ -929,7 +930,7 @@ proc drawUber(
               let source = b.unsafe[samplePos.x, samplePos.y]
             a.unsafe[x, y] = source
           srcPos += dx
-      elif blendMode == bmNormal:
+      of bmNormal:
         for x in x ..< xMax:
           let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
           when type(a) is Image:
@@ -955,7 +956,7 @@ proc drawUber(
                 let backdrop = a.unsafe[x, y]
                 a.unsafe[x, y] = blendAlpha(backdrop, source)
           srcPos += dx
-      elif blendMode == bmMask:
+      of bmMask:
         for x in x ..< xMax:
           let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
           when type(a) is Image:
