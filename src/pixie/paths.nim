@@ -1335,7 +1335,10 @@ proc fillCoverage(
           # If the coverages are not all zero
           if mm_movemask_epi8(mm_cmpeq_epi32(coverageVec, vec255)) == 0xffff:
             # If the coverages are all 255
-            if blendMode == bmNormal:
+            if blendMode == bmOverwrite:
+              for i in 0 ..< 4:
+                mm_storeu_si128(image.data[index + i * 4].addr, colorVec)
+            elif blendMode == bmNormal:
               if rgbx.a == 255:
                 for i in 0 ..< 4:
                   mm_storeu_si128(image.data[index + i * 4].addr, colorVec)
@@ -1375,11 +1378,14 @@ proc fillCoverage(
 
                 source = mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
 
-                let backdrop = mm_loadu_si128(image.data[index + i * 4].addr)
-                mm_storeu_si128(
-                  image.data[index + i * 4].addr,
-                  blendProc(backdrop, source)
-                )
+                if blendMode == bmOverwrite:
+                  mm_storeu_si128(image.data[index + i * 4].addr, source)
+                else:
+                  let backdrop = mm_loadu_si128(image.data[index + i * 4].addr)
+                  mm_storeu_si128(
+                    image.data[index + i * 4].addr,
+                    blendProc(backdrop, source)
+                  )
 
                 coverageVec = mm_srli_si128(coverageVec, 4)
 
@@ -1395,24 +1401,28 @@ proc fillCoverage(
         x += 16
 
   let blender = blendMode.blender()
-  while x < startX + coverages.len:
+  for x in x ..< startX + coverages.len:
     let coverage = coverages[x - startX]
     if coverage != 0 or blendMode == bmExcludeMask:
       if blendMode == bmNormal and coverage == 255 and rgbx.a == 255:
         # Skip blending
         image.unsafe[x, y] = rgbx
+        continue
+
+      var source = rgbx
+      if coverage != 255:
+        source.r = ((source.r.uint32 * coverage) div 255).uint8
+        source.g = ((source.g.uint32 * coverage) div 255).uint8
+        source.b = ((source.b.uint32 * coverage) div 255).uint8
+        source.a = ((source.a.uint32 * coverage) div 255).uint8
+
+      if blendMode == bmOverwrite:
+        image.unsafe[x, y] = source
       else:
-        var source = rgbx
-        if coverage != 255:
-          source.r = ((source.r.uint32 * coverage) div 255).uint8
-          source.g = ((source.g.uint32 * coverage) div 255).uint8
-          source.b = ((source.b.uint32 * coverage) div 255).uint8
-          source.a = ((source.a.uint32 * coverage) div 255).uint8
         let backdrop = image.unsafe[x, y]
         image.unsafe[x, y] = blender(backdrop, source)
     elif blendMode == bmMask:
       image.unsafe[x, y] = rgbx(0, 0, 0, 0)
-    inc x
 
   if blendMode == bmMask:
     image.clearUnsafe(0, y, startX, y)
@@ -1429,31 +1439,36 @@ proc fillCoverage(
     if blendMode.hasSimdMasker():
       let
         maskerSimd = blendMode.maskerSimd()
-        zeroVec = mm_setzero_si128()
+        vecZero = mm_setzero_si128()
       for _ in 0 ..< coverages.len div 16:
         let
           index = mask.dataIndex(x, y)
-          coverage = mm_loadu_si128(coverages[x - startX].unsafeAddr)
-        if mm_movemask_epi8(mm_cmpeq_epi16(coverage, zeroVec)) != 0xffff:
+          coverageVec = mm_loadu_si128(coverages[x - startX].unsafeAddr)
+        if mm_movemask_epi8(mm_cmpeq_epi16(coverageVec, vecZero)) != 0xffff:
           # If the coverages are not all zero
-          let backdrop = mm_loadu_si128(mask.data[index].addr)
-          mm_storeu_si128(
-            mask.data[index].addr,
-            maskerSimd(backdrop, coverage)
-          )
+          if blendMode == bmOverwrite:
+            mm_storeu_si128(mask.data[index].addr, coverageVec)
+          else:
+            let backdrop = mm_loadu_si128(mask.data[index].addr)
+            mm_storeu_si128(
+              mask.data[index].addr,
+              maskerSimd(backdrop, coverageVec)
+            )
         elif blendMode == bmMask:
-          mm_storeu_si128(mask.data[index].addr, zeroVec)
+          mm_storeu_si128(mask.data[index].addr, vecZero)
         x += 16
 
   let masker = blendMode.masker()
-  while x < startX + coverages.len:
+  for x in x ..< startX + coverages.len:
     let coverage = coverages[x - startX]
     if coverage != 0 or blendMode == bmExcludeMask:
-      let backdrop = mask.unsafe[x, y]
-      mask.unsafe[x, y] = masker(backdrop, coverage)
+      if blendMode == bmOverwrite:
+        mask.unsafe[x, y] = coverage
+      else:
+        let backdrop = mask.unsafe[x, y]
+        mask.unsafe[x, y] = masker(backdrop, coverage)
     elif blendMode == bmMask:
       mask.unsafe[x, y] = 0
-    inc x
 
   if blendMode == bmMask:
     mask.clearUnsafe(0, y, startX, y)
@@ -1481,7 +1496,7 @@ proc fillHits(
 
     filledTo = fillStart + fillLen
 
-    if blendMode == bmNormal and rgbx.a == 255:
+    if blendMode == bmOverwrite or (blendMode == bmNormal and rgbx.a == 255):
       fillUnsafe(image.data, rgbx, image.dataIndex(fillStart, y), fillLen)
       continue
 
@@ -1543,7 +1558,7 @@ proc fillHits(
 
     filledTo = fillStart + fillLen
 
-    if blendMode == bmNormal or blendMode == bmOverwrite:
+    if blendMode in {bmNormal, bmOverwrite}:
       fillUnsafe(mask.data, 255, mask.dataIndex(fillStart, y), fillLen)
       continue
 
@@ -1577,7 +1592,59 @@ proc fillShapes(
   color: SomeColor,
   windingRule: WindingRule,
   blendMode: BlendMode
-)
+) =
+  # Figure out the total bounds of all the shapes,
+  # rasterize only within the total bounds
+  let
+    rgbx = color.asRgbx()
+    segments = shapes.shapesToSegments()
+    bounds = computeBounds(segments).snapToPixels()
+    startX = max(0, bounds.x.int)
+    startY = max(0, bounds.y.int)
+    pathHeight = min(image.height, (bounds.y + bounds.h).int)
+    partitioning = partitionSegments(segments, startY, pathHeight - startY)
+
+  var
+    coverages = newSeq[uint8](bounds.w.int)
+    hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
+    numHits: int
+    aa: bool
+
+  for y in startY ..< pathHeight:
+    computeCoverage(
+      cast[ptr UncheckedArray[uint8]](coverages[0].addr),
+      hits,
+      numHits,
+      aa,
+      image.width.float32,
+      y,
+      startX,
+      partitioning,
+      windingRule
+    )
+    if aa:
+      image.fillCoverage(
+        rgbx,
+        startX,
+        y,
+        coverages,
+        blendMode
+      )
+      zeroMem(coverages[0].addr, coverages.len)
+    else:
+      image.fillHits(
+        rgbx,
+        startX,
+        y,
+        hits,
+        numHits,
+        windingRule,
+        blendMode
+      )
+
+  if blendMode == bmMask:
+    image.clearUnsafe(0, 0, 0, startY)
+    image.clearUnsafe(0, pathHeight, 0, image.height)
 
 proc fillShapes(
   mask: Mask,
@@ -2013,647 +2080,3 @@ proc strokeOverlaps*(
   )
   strokeShapes.transform(transform)
   strokeShapes.overlaps(test, wrNonZero)
-
-when defined(pixieSweeps):
-  import algorithm
-
-  proc pixelCover(a0, b0: Vec2): float32 =
-    ## Returns the amount of area a given segment sweeps to the right
-    ## in a [0,0 to 1,1] box.
-    var
-      a = a0
-      b = b0
-      aI: Vec2
-      bI: Vec2
-      area: float32 = 0.0
-
-    if (a.x < 0 and b.x < 0) or # Both to the left.
-      (a.x == b.x): # Vertical line
-      # Area of the rectangle:
-      return (1 - clamp(a.x, 0, 1)) * (min(b.y, 1) - max(a.y, 0))
-
-    else:
-      # y = mm*x + bb
-      let
-        mm: float32 = (b.y - a.y) / (b.x - a.x)
-        bb: float32 = a.y - mm * a.x
-
-      if a.x >= 0 and a.x <= 1 and a.y >= 0 and a.y <= 1:
-        # A is in pixel bounds.
-        aI = a
-      else:
-        aI = vec2((0 - bb) / mm, 0)
-        if aI.x < 0:
-          let y = mm * 0 + bb
-          # Area of the extra rectangle.
-          area += (min(bb, 1) - max(a.y, 0)).clamp(0, 1)
-          aI = vec2(0, y.clamp(0, 1))
-        elif aI.x > 1:
-          let y = mm * 1 + bb
-          aI = vec2(1, y.clamp(0, 1))
-
-      if b.x >= 0 and b.x <= 1 and b.y >= 0 and b.y <= 1:
-        # B is in pixel bounds.
-        bI = b
-      else:
-        bI = vec2((1 - bb) / mm, 1)
-        if bI.x < 0:
-          let y = mm * 0 + bb
-          # Area of the extra rectangle.
-          area += (min(b.y, 1) - max(bb, 0)).clamp(0, 1)
-          bI = vec2(0, y.clamp(0, 1))
-        elif bI.x > 1:
-          let y = mm * 1 + bb
-          bI = vec2(1, y.clamp(0, 1))
-
-    area += ((1 - aI.x) + (1 - bI.x)) / 2 * (bI.y - aI.y)
-    return area
-
-  proc intersectsInner*(a, b: Segment, at: var Vec2): bool {.inline.} =
-    ## Checks if the a segment intersects b segment.
-    ## If it returns true, at will have point of intersection
-    let
-      s1 = a.to - a.at
-      s2 = b.to - b.at
-      denominator = (-s2.x * s1.y + s1.x * s2.y)
-      s = (-s1.y * (a.at.x - b.at.x) + s1.x * (a.at.y - b.at.y)) / denominator
-      t = (s2.x * (a.at.y - b.at.y) - s2.y * (a.at.x - b.at.x)) / denominator
-
-    if s > 0 and s < 1 and t > 0 and t < 1:
-      at = a.at + (t * s1)
-      return true
-
-  type
-
-    Trapezoid = object
-      nw, ne, se, sw: Vec2
-
-    SweepLine = object
-      #m, x, b: float32
-      atx, tox: float32
-      winding: int16
-
-  proc toLine(s: (Segment, int16)): SweepLine =
-    var line = SweepLine()
-    line.atx = s[0].at.x
-    line.tox = s[0].to.x
-    # y = mx + b
-    # line.m = (s.at.y - s.to.y) / (s.at.x - s.to.x)
-    # line.b = s.at.y - line.m * s.at.x
-    line.winding = s[1]
-    return line
-
-  proc intersectsYLine(y: float32, s: Segment, atx: var float32): bool {.inline.} =
-    let
-      s2y = s.to.y - s.at.y
-      denominator = -s2y
-      numerator = s.at.y - y
-      u = numerator / denominator
-    if u >= 0 and u <= 1:
-      let at = s.at + (u * vec2(s.to.x - s.at.x, s2y))
-      atx = at.x
-      return true
-
-  proc binaryInsert(arr: var seq[float32], v: float32) =
-    if arr.len == 0:
-      arr.add(v)
-      return
-    var
-      L = 0
-      R = arr.len - 1
-    while L < R:
-      let m = (L + R) div 2
-      if arr[m] ~= v:
-        return
-      elif arr[m] < v:
-        L = m + 1
-      else: # arr[m] > v:
-        R = m - 1
-    if arr[L] ~= v:
-      return
-    elif arr[L] > v:
-      arr.insert(v, L)
-    else:
-      arr.insert(v, L + 1)
-
-  proc sortSegments(segments: var seq[(Segment, int16)], inl, inr: int) =
-    ## Quicksort + insertion sort, in-place and faster than standard lib sort.
-
-    let n = inr - inl + 1
-    if n < 32: # Use insertion sort for the rest
-      for i in inl + 1 .. inr:
-        var
-          j = i - 1
-          k = i
-        while j >= 0 and segments[j][0].at.y > segments[k][0].at.y:
-          swap(segments[j + 1], segments[j])
-          dec j
-          dec k
-      return
-    var
-      l = inl
-      r = inr
-    let p = segments[l + n div 2][0].at.y
-    while l <= r:
-      if segments[l][0].at.y < p:
-        inc l
-      elif segments[r][0].at.y > p:
-        dec r
-      else:
-        swap(segments[l], segments[r])
-        inc l
-        dec r
-    sortSegments(segments, inl, r)
-    sortSegments(segments, l, inr)
-
-  proc sortSweepLines(segments: var seq[SweepLine], inl, inr: int) =
-    ## Quicksort + insertion sort, in-place and faster than standard lib sort.
-
-    proc avg(line: SweepLine): float32 {.inline.} =
-      (line.tox + line.atx) / 2.float32
-
-    let n = inr - inl + 1
-    if n < 32: # Use insertion sort for the rest
-      for i in inl + 1 .. inr:
-        var
-          j = i - 1
-          k = i
-        while j >= 0 and segments[j].avg > segments[k].avg:
-          swap(segments[j + 1], segments[j])
-          dec j
-          dec k
-      return
-    var
-      l = inl
-      r = inr
-    let p = segments[l + n div 2].avg
-    while l <= r:
-      if segments[l].avg < p:
-        inc l
-      elif segments[r].avg > p:
-        dec r
-      else:
-        swap(segments[l], segments[r])
-        inc l
-        dec r
-    sortSweepLines(segments, inl, r)
-    sortSweepLines(segments, l, inr)
-
-  proc fillShapes(
-    image: Image,
-    shapes: seq[seq[Vec2]],
-    color: SomeColor,
-    windingRule: WindingRule,
-    blendMode: BlendMode
-  ) =
-
-    let rgbx = color.rgbx
-    var segments = shapes.shapesToSegments()
-    let
-      bounds = computeBounds(segments).snapToPixels()
-      startX = max(0, bounds.x.int)
-
-    if segments.len == 0 or bounds.w.int == 0 or bounds.h.int == 0:
-      return
-
-    # const q = 1/10
-    # for i in 0 ..< segments.len:
-    #   segments[i][0].at.x = quantize(segments[i][0].at.x, q)
-    #   segments[i][0].at.y = quantize(segments[i][0].at.y, q)
-    #   segments[i][0].to.x = quantize(segments[i][0].to.x, q)
-    #   segments[i][0].to.y = quantize(segments[i][0].to.y, q)
-
-    # Create sorted segments.
-    segments.sortSegments(0, segments.high)
-
-    # Compute cut lines
-    var cutLines: seq[float32]
-    for s in segments:
-      cutLines.binaryInsert(s[0].at.y)
-      cutLines.binaryInsert(s[0].to.y)
-
-    var
-      # Dont add bottom cutLine.
-      sweeps = newSeq[seq[SweepLine]](cutLines.len - 1)
-      lastSeg = 0
-      i = 0
-    while i < sweeps.len:
-
-      if lastSeg < segments.len:
-
-        while segments[lastSeg][0].at.y == cutLines[i]:
-          let s = segments[lastSeg]
-
-          if s[0].to.y != cutLines[i + 1]:
-            var atx: float32
-            var seg = s[0]
-            for j in i ..< sweeps.len:
-              let y = cutLines[j + 1]
-              if intersectsYLine(y, seg, atx):
-                sweeps[j].add(toLine((segment(seg.at, vec2(atx, y)), s[1])))
-                seg = segment(vec2(atx, y), seg.to)
-              else:
-                if seg.at.y != seg.to.y:
-                  sweeps[j].add(toLine(s))
-                break
-          else:
-            sweeps[i].add(toLine(s))
-
-          inc lastSeg
-          if lastSeg >= segments.len:
-            break
-      inc i
-
-    # i = 0
-    # while i < sweeps.len:
-    #   # TODO: Maybe finds all cuts first, add them to array, cut all lines at once.
-    #   var crossCuts: seq[float32]
-
-    #   # echo i, " cut?"
-
-    #   for aIndex in 0 ..< sweeps[i].len:
-    #     let a = sweeps[i][aIndex]
-    #     # echo i, ":", sweeps.len, ":", cutLines.len
-    #     let aSeg = segment(vec2(a.atx, cutLines[i]), vec2(a.tox, cutLines[i+1]))
-    #     for bIndex in aIndex + 1 ..< sweeps[i].len:
-    #       let b = sweeps[i][bIndex]
-    #       let bSeg = segment(vec2(b.atx, cutLines[i]), vec2(b.tox, cutLines[i+1]))
-    #       var at: Vec2
-    #       if intersectsInner(aSeg, bSeg, at):
-    #         crossCuts.binaryInsert(at.y)
-
-    #   if crossCuts.len > 0:
-    #     var
-    #       thisSweep = sweeps[i]
-    #       yTop = cutLines[i]
-    #       yBottom = cutLines[i + 1]
-    #     sweeps[i].setLen(0)
-
-    #     for k in crossCuts:
-    #       let prevLen = cutLines.len
-    #       cutLines.binaryInsert(k)
-    #       if prevLen != cutLines.len:
-    #         sweeps.insert(newSeq[SweepLine](), i + 1)
-
-    #     for a in thisSweep:
-    #       var seg = segment(vec2(a.atx, yTop), vec2(a.tox, yBottom))
-    #       var at: Vec2
-    #       for j, cutterLine in crossCuts:
-    #         if intersects(line(vec2(0, cutterLine), vec2(1, cutterLine)), seg, at):
-    #           sweeps[i+j].add(toLine((segment(seg.at, at), a.winding)))
-    #           seg = segment(at, seg.to)
-    #       sweeps[i+crossCuts.len].add(toLine((seg, a.winding)))
-
-    #     i += crossCuts.len
-
-    #   inc i
-
-    i = 0
-    while i < sweeps.len:
-      # Sort the sweep by X
-      sweeps[i].sortSweepLines(0, sweeps[i].high)
-      # Do winding order
-      var
-        pen = 0
-        prevFill = false
-        j = 0
-      while j < sweeps[i].len:
-        let a = sweeps[i][j]
-        if a.winding == 1:
-          inc pen
-        if a.winding == -1:
-          dec pen
-        let thisFill = shouldFill(windingRule, pen)
-        if prevFill == thisFill:
-          # Remove this sweep line.
-          sweeps[i].delete(j)
-          continue
-        prevFill = thisFill
-        inc j
-      inc i
-
-    # Used to debug sweeps:
-    # for s in 0 ..< sweeps.len:
-    #   let
-    #     y1 = cutLines[s]
-    #   echo "M -100 ", y1
-    #   echo "L 300 ", y1
-    #   for line in sweeps[s]:
-    #     let
-    #       nw = vec2(line.atx, cutLines[s])
-    #       sw = vec2(line.tox, cutLines[s + 1])
-    #     echo "M ", nw.x, " ", nw.y
-    #     echo "L ", sw.x, " ", sw.y
-
-    proc computeCoverage(
-      coverages: var seq[uint16],
-      y: int,
-      startX: int,
-      cutLines: seq[float32],
-      currCutLine: int,
-      sweep: seq[SweepLine]
-    ) =
-
-      if cutLines[currCutLine + 1] - cutLines[currCutLine] < 1/256:
-        # TODO some thing about micro sweeps
-        return
-
-      let
-        sweepHeight = cutLines[currCutLine + 1] - cutLines[currCutLine]
-        yFracTop = ((y.float32 - cutLines[currCutLine]) / sweepHeight).clamp(0, 1)
-        yFracBottom = ((y.float32 + 1 - cutLines[currCutLine]) /
-            sweepHeight).clamp(0, 1)
-      var i = 0
-      while i < sweep.len:
-        let
-          nwX = mix(sweep[i+0].atx, sweep[i+0].tox, yFracTop)
-          neX = mix(sweep[i+1].atx, sweep[i+1].tox, yFracTop)
-
-          swX = mix(sweep[i+0].atx, sweep[i+0].tox, yFracBottom)
-          seX = mix(sweep[i+1].atx, sweep[i+1].tox, yFracBottom)
-
-          minWi = min(nwX, swX).int#.clamp(startX, coverages.len + startX)
-          maxWi = max(nwX, swX).ceil.int#.clamp(startX, coverages.len + startX)
-
-          minEi = min(neX, seX).int#.clamp(startX, coverages.len + startX)
-          maxEi = max(neX, seX).ceil.int#.clamp(startX, coverages.len + startX)
-
-        let
-          nw = vec2(sweep[i+0].atx, cutLines[currCutLine])
-          sw = vec2(sweep[i+0].tox, cutLines[currCutLine + 1])
-          f16 = (256 * 256 - 1).float32
-        for x in minWi ..< maxWi:
-          var area = pixelCover(
-            nw - vec2(x.float32, y.float32),
-            sw - vec2(x.float32, y.float32)
-          )
-          coverages[x - startX] += (area * f16).uint16
-
-        let x = maxWi
-        var midArea = pixelCover(
-          nw - vec2(x.float32, y.float32),
-          sw - vec2(x.float32, y.float32)
-        )
-        for x in maxWi ..< maxEi:
-          coverages[x - startX] += (midArea * f16).uint16
-
-        let
-          ne = vec2(sweep[i+1].atx, cutLines[currCutLine])
-          se = vec2(sweep[i+1].tox, cutLines[currCutLine + 1])
-        for x in minEi ..< maxEi:
-          var area = pixelCover(
-            ne - vec2(x.float32, y.float32),
-            se - vec2(x.float32, y.float32)
-          )
-          coverages[x - startX] -= (area * f16).uint16
-
-        i += 2
-
-    var
-      currCutLine = 0
-      coverages16 = newSeq[uint16](bounds.w.int)
-      coverages8 = newSeq[uint8](bounds.w.int)
-    for scanLine in max(cutLines[0].int, 0) ..< min(cutLines[^1].ceil.int, image.height):
-
-      zeroMem(coverages16[0].addr, coverages16.len * 2)
-
-      coverages16.computeCoverage(
-        scanLine, startX, cutLines, currCutLine, sweeps[currCutLine])
-      while cutLines[currCutLine + 1] < scanLine.float + 1.0:
-        inc currCutLine
-        if currCutLine == sweeps.len:
-          break
-        coverages16.computeCoverage(
-          scanLine, startX, cutLines, currCutLine, sweeps[currCutLine])
-
-      for i in 0 ..< coverages16.len:
-        coverages8[i] = (coverages16[i] shr 8).uint8
-      image.fillCoverage(
-        rgbx,
-        startX = startX,
-        y = scanLine,
-        coverages8,
-        blendMode
-      )
-
-else:
-  proc fillShapes(
-    image: Image,
-    shapes: seq[seq[Vec2]],
-    color: SomeColor,
-    windingRule: WindingRule,
-    blendMode: BlendMode
-  ) =
-    # Figure out the total bounds of all the shapes,
-    # rasterize only within the total bounds
-    let
-      rgbx = color.asRgbx()
-      segments = shapes.shapesToSegments()
-      bounds = computeBounds(segments).snapToPixels()
-      startX = max(0, bounds.x.int)
-      startY = max(0, bounds.y.int)
-      pathHeight = min(image.height, (bounds.y + bounds.h).int)
-      partitioning = partitionSegments(segments, startY, pathHeight - startY)
-
-    var
-      coverages = newSeq[uint8](bounds.w.int)
-      hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
-      numHits: int
-      aa: bool
-
-    for y in startY ..< pathHeight:
-      computeCoverage(
-        cast[ptr UncheckedArray[uint8]](coverages[0].addr),
-        hits,
-        numHits,
-        aa,
-        image.width.float32,
-        y,
-        startX,
-        partitioning,
-        windingRule
-      )
-      if aa:
-        image.fillCoverage(
-          rgbx,
-          startX,
-          y,
-          coverages,
-          blendMode
-        )
-        zeroMem(coverages[0].addr, coverages.len)
-      else:
-        image.fillHits(
-          rgbx,
-          startX,
-          y,
-          hits,
-          numHits,
-          windingRule,
-          blendMode
-        )
-
-    if blendMode == bmMask:
-      image.clearUnsafe(0, 0, 0, startY)
-      image.clearUnsafe(0, pathHeight, 0, image.height)
-
-proc fillMask(
-  shapes: seq[seq[Vec2]], width, height: int, windingRule = wrNonZero
-): Mask =
-  result = newMask(width, height)
-
-  let
-    segments = shapes.shapesToSegments()
-    bounds = computeBounds(segments).snapToPixels()
-    startY = max(0, bounds.y.int)
-    pathHeight = min(height, (bounds.y + bounds.h).int)
-    partitioning = partitionSegments(segments, startY, pathHeight)
-    width = width.float32
-
-  var
-    hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
-    numHits: int
-    aa: bool
-  for y in startY ..< pathHeight:
-    computeCoverage(
-      cast[ptr UncheckedArray[uint8]](result.data[result.dataIndex(0, y)].addr),
-      hits,
-      numHits,
-      aa,
-      width,
-      y,
-      0,
-      partitioning,
-      windingRule
-    )
-    if not aa:
-      for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
-        let
-          startIndex = result.dataIndex(prevAt.int, y)
-          len = at.int - prevAt.int
-        fillUnsafe(result.data, 255, startIndex, len)
-
-proc fillMask*(
-  path: SomePath, width, height: int, windingRule = wrNonZero
-): Mask =
-  ## Returns a new mask with the path filled. This is a faster alternative
-  ## to `newMask` + `fillPath`.
-  let shapes = parseSomePath(path, true, 1)
-  shapes.fillMask(width, height, windingRule)
-
-proc fillImage(
-  shapes: seq[seq[Vec2]],
-  width, height: int,
-  color: SomeColor,
-  windingRule = wrNonZero
-): Image =
-  result = newImage(width, height)
-
-  let
-    mask = shapes.fillMask(width, height, windingRule)
-    rgbx = color.rgbx()
-
-  var i: int
-  when defined(amd64) and not defined(pixieNoSimd):
-    let
-      colorVec = mm_set1_epi32(cast[int32](rgbx))
-      oddMask = mm_set1_epi16(cast[int16](0xff00))
-      div255 = mm_set1_epi16(cast[int16](0x8081))
-      vec255 = mm_set1_epi32(cast[int32](uint32.high))
-      vecZero = mm_setzero_si128()
-      colorVecEven = mm_slli_epi16(colorVec, 8)
-      colorVecOdd = mm_and_si128(colorVec, oddMask)
-      iterations = result.data.len div 16
-    for _ in 0 ..< iterations:
-      var coverageVec = mm_loadu_si128(mask.data[i].addr)
-      if mm_movemask_epi8(mm_cmpeq_epi16(coverageVec, vecZero)) != 0xffff:
-        if mm_movemask_epi8(mm_cmpeq_epi32(coverageVec, vec255)) == 0xffff:
-          for q in [0, 4, 8, 12]:
-            mm_storeu_si128(result.data[i + q].addr, colorVec)
-        else:
-          for q in [0, 4, 8, 12]:
-            var unpacked = unpackAlphaValues(coverageVec)
-            # Shift the coverages from `a` to `g` and `a` for multiplying
-            unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
-
-            var
-              sourceEven = mm_mulhi_epu16(colorVecEven, unpacked)
-              sourceOdd = mm_mulhi_epu16(colorVecOdd, unpacked)
-            sourceEven = mm_srli_epi16(mm_mulhi_epu16(sourceEven, div255), 7)
-            sourceOdd = mm_srli_epi16(mm_mulhi_epu16(sourceOdd, div255), 7)
-
-            mm_storeu_si128(
-              result.data[i + q].addr,
-              mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
-            )
-
-            coverageVec = mm_srli_si128(coverageVec, 4)
-
-      i += 16
-
-  let channels = [rgbx.r.uint32, rgbx.g.uint32, rgbx.b.uint32, rgbx.a.uint32]
-  for i in i ..< result.data.len:
-    let coverage = mask.data[i]
-    if coverage == 255:
-      result.data[i] = rgbx
-    elif coverage != 0:
-      result.data[i].r = ((channels[0] * coverage) div 255).uint8
-      result.data[i].g = ((channels[1] * coverage) div 255).uint8
-      result.data[i].b = ((channels[2] * coverage) div 255).uint8
-      result.data[i].a = ((channels[3] * coverage) div 255).uint8
-
-proc fillImage*(
-  path: SomePath, width, height: int, color: SomeColor, windingRule = wrNonZero
-): Image =
-  ## Returns a new image with the path filled. This is a faster alternative
-  ## to `newImage` + `fillPath`.
-  let shapes = parseSomePath(path, false, 1)
-  shapes.fillImage(width, height, color, windingRule)
-
-proc strokeMask*(
-  path: SomePath,
-  width, height: int,
-  strokeWidth: float32 = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
-  miterLimit = defaultMiterLimit,
-  dashes: seq[float32] = @[]
-): Mask =
-  ## Returns a new mask with the path stroked. This is a faster alternative
-  ## to `newImage` + `strokePath`.
-  let strokeShapes = strokeShapes(
-    parseSomePath(path, false, 1),
-    strokeWidth,
-    lineCap,
-    lineJoin,
-    miterLimit,
-    dashes,
-    1
-  )
-  result = strokeShapes.fillMask(width, height, wrNonZero)
-
-proc strokeImage*(
-  path: SomePath,
-  width, height: int,
-  color: SomeColor,
-  strokeWidth: float32 = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
-  miterLimit = defaultMiterLimit,
-  dashes: seq[float32] = @[]
-): Image =
-  ## Returns a new image with the path stroked. This is a faster alternative
-  ## to `newImage` + `strokePath`.
-  let strokeShapes = strokeShapes(
-    parseSomePath(path, false, 1),
-    strokeWidth,
-    lineCap,
-    lineJoin,
-    miterLimit,
-    dashes,
-    1
-  )
-  result = strokeShapes.fillImage(width, height, color, wrNonZero)
-
-when defined(release):
-  {.pop.}

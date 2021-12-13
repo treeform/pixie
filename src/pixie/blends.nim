@@ -502,8 +502,6 @@ proc masker*(blendMode: BlendMode): Masker {.raises: [PixieError].} =
     raise newException(PixieError, "No masker for " & $blendMode)
 
 when defined(amd64) and not defined(pixieNoSimd):
-  import nimsimd/sse2
-
   type
     BlenderSimd* = proc(blackdrop, source: M128i): M128i {.gcsafe, raises: [].}
       ## Function signature returned by blenderSimd.

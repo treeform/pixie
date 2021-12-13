@@ -132,16 +132,6 @@ block:
   image.writeFile("tests/paths/pathHeart.png")
 
 block:
-  let image = """
-    M 10,30
-    A 20,20 0,0,1 50,30
-    A 20,20 0,0,1 90,30
-    Q 90,60 50,90
-    Q 10,60 10,30 z
-  """.fillImage(100, 100, parseHtmlColor("#FC427B").rgba)
-  image.writeFile("tests/paths/pathHeart2.png")
-
-block:
   let image = newImage(100, 100)
   image.fillPath(
     "M 20 50 A 20 10 45 1 1 80 50 L 20 50",

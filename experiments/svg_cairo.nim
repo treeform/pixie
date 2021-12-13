@@ -1,7 +1,7 @@
 ## Load and Save SVG files.
 
-import cairo, chroma, pixie/common, pixie/images, pixie/paints, pixie/paths {.all.},
-    strutils, tables, vmath, xmlparser, xmltree
+import cairo, chroma, pixie/common, pixie/images, pixie/paints, strutils,
+    tables, vmath, xmlparser, xmltree
 
 include pixie/paths
 
@@ -580,7 +580,7 @@ proc decodeSvg*(data: string, width = 0, height = 0): Image =
         let
           bgra = pixels[result.dataIndex(x, y)]
           rgba = rgba(bgra[2], bgra[1], bgra[0], bgra[3])
-        result.setRgbaUnsafe(x, y, rgba.rgbx())
+        result.unsafe[x, y] = rgba.rgbx()
   except PixieError as e:
     raise e
   except:
