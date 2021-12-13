@@ -357,6 +357,23 @@ block:
 
   # doDiff(readImage("cairo4.png"), a, "4")
 
+  var b: Image
+  let paint = newPaint(pkSolid)
+  paint.color = color(1, 0, 0, 0.5)
+  paint.blendMode = bmOverwrite
+
+  timeIt "pixie4 overwrite":
+    b = newImage(1000, 1000)
+
+    let p = newPath()
+    p.moveTo(shapes[0][0])
+    for shape in shapes:
+      for v in shape:
+        p.lineTo(v)
+    b.fillPath(p, paint)
+
+  # b.writeFile("b.png")
+
   timeIt "pixie4 mask":
     let mask = newMask(1000, 1000)
 
