@@ -181,6 +181,7 @@ proc isTransparent*(image: Image): bool {.raises: [].} =
       return false
 
 proc isOpaque*(image: Image): bool {.raises: [].} =
+  ## Checks if the entire image is opaque (alpha values are all 255).
   result = true
 
   var i: int
