@@ -542,26 +542,15 @@ proc newMask*(image: Image): Mask {.raises: [PixieError].} =
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
     for _ in 0 ..< image.data.len div 16:
-      var
+      let
         a = mm_loadu_si128(image.data[i + 0].addr)
         b = mm_loadu_si128(image.data[i + 4].addr)
         c = mm_loadu_si128(image.data[i + 8].addr)
         d = mm_loadu_si128(image.data[i + 12].addr)
-
-      a = packAlphaValues(a)
-      b = packAlphaValues(b)
-      c = packAlphaValues(c)
-      d = packAlphaValues(d)
-
-      b = mm_slli_si128(b, 4)
-      c = mm_slli_si128(c, 8)
-      d = mm_slli_si128(d, 12)
-
       mm_storeu_si128(
         result.data[i].addr,
-        mm_or_si128(mm_or_si128(a, b), mm_or_si128(c, d))
+        pack4xAlphaValues(a, b, c, d)
       )
-
       i += 16
 
   for j in i ..< image.data.len:
@@ -850,22 +839,12 @@ proc drawUber(
                   backdrop = mm_loadu_si128(a.data[a.dataIndex(x, y)].addr)
                 when type(b) is Image:
                   # Need to read 16 colors and pack their alpha values
-                  var
+                  let
                     i = mm_loadu_si128(b.data[b.dataIndex(sx + 0, sy)].addr)
                     j = mm_loadu_si128(b.data[b.dataIndex(sx + 4, sy)].addr)
                     k = mm_loadu_si128(b.data[b.dataIndex(sx + 8, sy)].addr)
                     l = mm_loadu_si128(b.data[b.dataIndex(sx + 12, sy)].addr)
-
-                  i = packAlphaValues(i)
-                  j = packAlphaValues(j)
-                  k = packAlphaValues(k)
-                  l = packAlphaValues(l)
-
-                  j = mm_slli_si128(j, 4)
-                  k = mm_slli_si128(k, 8)
-                  l = mm_slli_si128(l, 12)
-
-                  let source = mm_or_si128(mm_or_si128(i, j), mm_or_si128(k, l))
+                    source = pack4xAlphaValues(i, j, k, l)
                 else: # b is a Mask
                   let source = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
 

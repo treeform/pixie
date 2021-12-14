@@ -173,6 +173,14 @@ when defined(amd64) and not defined(pixieNoSimd):
     result = mm_or_si128(mm_or_si128(result, i), mm_or_si128(j, k))
     result = mm_and_si128(result, first32)
 
+  proc pack4xAlphaValues*(i, j, k, l: M128i): M128i {.inline, raises: [].} =
+    let
+      i = packAlphaValues(i)
+      j = mm_slli_si128(packAlphaValues(j), 4)
+      k = mm_slli_si128(packAlphaValues(k), 8)
+      l = mm_slli_si128(packAlphaValues(l), 12)
+    mm_or_si128(mm_or_si128(i, j), mm_or_si128(k, l))
+
   proc unpackAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
     ## Unpack the first 32 bits into 4 rgba(0, 0, 0, value)
     let
