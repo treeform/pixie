@@ -1,4 +1,41 @@
-import benchy, cairo, pixie
+import benchy, cairo, pixie, pixie/blends
+
+when defined(amd64) and not defined(pixieNoSimd):
+  import nimsimd/sse2
+
+when defined(release):
+  {.push checks: off.}
+
+proc drawBasic(backdrop, source: Image) =
+  let sourceIsOpaque = source.isOpaque()
+
+  for y in 0 ..< min(backdrop.height, source.height):
+    if sourceIsOpaque:
+      copyMem(
+        backdrop.data[backdrop.dataIndex(0, y)].addr,
+        source.data[source.dataIndex(0, y)].addr,
+        min(backdrop.width, source.width) * 4
+      )
+    else:
+      var x: int
+      when defined(amd64) and not defined(pixieNoSimd):
+        let vec255 = mm_set1_epi32(cast[int32](uint32.high))
+        for _ in 0 ..< min(backdrop.width, source.width) div 4:
+          let sourceVec = mm_loadu_si128(source.data[source.dataIndex(x, y)].addr)
+          if mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, mm_setzero_si128())) != 0xffff:
+            if (mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, vec255)) and 0x8888) == 0x8888:
+              mm_storeu_si128(backdrop.data[backdrop.dataIndex(x, y)].addr, sourceVec)
+            else:
+              let backdropVec = mm_loadu_si128(backdrop.data[backdrop.dataIndex(x, y)].addr)
+              mm_storeu_si128(
+                backdrop.data[backdrop.dataIndex(x, y)].addr,
+                blendNormalInlineSimd(backdropVec, sourceVec)
+              )
+          x += 4
+      # No scalar for now
+
+when defined(release):
+  {.pop.}
 
 block:
   let
@@ -7,7 +44,13 @@ block:
     tmp = imageSurfaceCreate(FORMAT_ARGB32, 1568, 940)
     ctx = tmp.create()
 
-  timeIt "cairo draw basic":
+  timeIt "cairo draw normal":
+    # ctx.setSourceRgba(0.5, 0.5, 0.5, 1)
+    # let operator = ctx.getOperator()
+    # ctx.setOperator(OperatorSource)
+    # ctx.paint()
+    # ctx.setOperator(operator)
+
     ctx.setSource(backdrop, 0, 0)
     ctx.paint()
     ctx.setSource(source, 0, 0)
@@ -22,14 +65,70 @@ block:
     source = readImage("tests/fileformats/svg/masters/Ghostscript_Tiger.png")
     tmp = newImage(1568, 940)
 
-  timeIt "isOneColor":
-    doAssert not backdrop.isOneColor()
-
-  timeIt "pixie draw basic":
+  timeIt "pixie draw normal":
+    # tmp.fill(rgbx(127, 127, 127, 255))
     tmp.draw(backdrop)
     tmp.draw(source)
 
   # tmp.writeFile("tmp2.png")
+
+block:
+  let
+    backdrop = readImage("tests/fileformats/svg/masters/dragon2.png")
+    source = readImage("tests/fileformats/svg/masters/Ghostscript_Tiger.png")
+    tmp = newImage(1568, 940)
+
+  timeIt "pixie draw overwrite":
+    # tmp.fill(rgbx(127, 127, 127, 255))
+    tmp.draw(backdrop, blendMode = bmOverwrite)
+    tmp.draw(source)
+
+  # tmp.writeFile("tmp2.png")
+
+block:
+  let
+    backdrop = readImage("tests/fileformats/svg/masters/dragon2.png")
+    source = readImage("tests/fileformats/svg/masters/Ghostscript_Tiger.png")
+    tmp = newImage(1568, 940)
+
+  timeIt "pixie draw basic":
+    # tmp.fill(rgbx(127, 127, 127, 255))
+    tmp.drawBasic(backdrop)
+    tmp.drawBasic(source)
+
+  # tmp.writeFile("tmp2.png")
+
+block:
+  let
+    backdrop = imageSurfaceCreateFromPng("tests/fileformats/svg/masters/dragon2.png")
+    source = imageSurfaceCreateFromPng("tests/fileformats/svg/masters/Ghostscript_Tiger.png")
+    tmp = imageSurfaceCreate(FORMAT_ARGB32, 1568, 940)
+    ctx = tmp.create()
+
+  timeIt "cairo draw mask":
+    ctx.setSourceRgba(1, 1, 1, 1)
+    let operator = ctx.getOperator()
+    ctx.setOperator(OperatorSource)
+    ctx.paint()
+    ctx.setOperator(operator)
+
+    ctx.setSource(backdrop, 0, 0)
+    ctx.mask(source, 0, 0)
+    tmp.flush()
+
+  # echo tmp.writeToPng("tmp_masked.png")
+
+block:
+  let
+    backdrop = readImage("tests/fileformats/svg/masters/dragon2.png")
+    source = readImage("tests/fileformats/svg/masters/Ghostscript_Tiger.png")
+    tmp = newImage(1568, 940)
+
+  timeIt "pixie draw mask":
+    tmp.draw(backdrop)
+    tmp.draw(source, blendMode = bmMask)
+
+  # tmp.writeFile("tmp_masked2.png")
 
 block:
   let

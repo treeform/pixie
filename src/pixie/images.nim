@@ -148,7 +148,7 @@ proc isOneColor*(image: Image): bool {.raises: [].} =
         values1 = mm_loadu_si128(image.data[i + 4].addr)
         mask0 = mm_movemask_epi8(mm_cmpeq_epi8(values0, colorVec))
         mask1 = mm_movemask_epi8(mm_cmpeq_epi8(values1, colorVec))
-      if mask0 != uint16.high.int or mask1 != uint16.high.int:
+      if mask0 != 0xffff or mask1 != 0xffff:
         return false
       i += 8
 
@@ -162,7 +162,7 @@ proc isTransparent*(image: Image): bool {.raises: [].} =
 
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
-    let zeroVec = mm_setzero_si128()
+    let vecZero = mm_setzero_si128()
     for _ in 0 ..< image.data.len div 16:
       let
         values0 = mm_loadu_si128(image.data[i + 0].addr)
@@ -172,13 +172,37 @@ proc isTransparent*(image: Image): bool {.raises: [].} =
         values01 = mm_or_si128(values0, values1)
         values23 = mm_or_si128(values2, values3)
         values = mm_or_si128(values01, values23)
-        mask = mm_movemask_epi8(mm_cmpeq_epi8(values, zeroVec))
-      if mask != uint16.high.int:
+      if mm_movemask_epi8(mm_cmpeq_epi8(values, vecZero)) != 0xffff:
         return false
       i += 16
 
   for j in i ..< image.data.len:
     if image.data[j].a != 0:
+      return false
+
+proc isOpaque*(image: Image): bool {.raises: [].} =
+  result = true
+
+  var i: int
+  when defined(amd64) and not defined(pixieNoSimd):
+    let
+      vec255 = mm_set1_epi32(cast[int32](uint32.high))
+      colorMask = mm_set1_epi32(cast[int32]([255.uint8, 255, 255, 0]))
+    for _ in 0 ..< image.data.len div 16:
+      let
+        values0 = mm_loadu_si128(image.data[i + 0].addr)
+        values1 = mm_loadu_si128(image.data[i + 4].addr)
+        values2 = mm_loadu_si128(image.data[i + 8].addr)
+        values3 = mm_loadu_si128(image.data[i + 12].addr)
+        values01 = mm_and_si128(values0, values1)
+        values23 = mm_and_si128(values2, values3)
+        values = mm_or_si128(mm_and_si128(values01, values23), colorMask)
+      if mm_movemask_epi8(mm_cmpeq_epi8(values, vec255)) != 0xffff:
+        return false
+      i += 16
+
+  for j in i ..< image.data.len:
+    if image.data[j].a != 255:
       return false
 
 proc flipHorizontal*(image: Image) {.raises: [].} =
@@ -636,7 +660,7 @@ proc getRgbaSmooth*(
     topMix
 
 proc drawCorrect(
-  a, b: Image | Mask, mat = mat3(), tiled = false, blendMode = bmNormal
+  a, b: Image | Mask, transform = mat3(), tiled = false, blendMode = bmNormal
 ) {.raises: [PixieError].} =
   ## Draws one image onto another using matrix with color blending.
 
@@ -646,11 +670,11 @@ proc drawCorrect(
     let masker = blendMode.masker()
 
   var
-    matInv = mat.inverse()
+    inverseTransform = transform.inverse()
     # Compute movement vectors
-    p = matInv * vec2(0 + h, 0 + h)
-    dx = matInv * vec2(1 + h, 0 + h) - p
-    dy = matInv * vec2(0 + h, 1 + h) - p
+    p = inverseTransform * vec2(0 + h, 0 + h)
+    dx = inverseTransform * vec2(1 + h, 0 + h) - p
+    dy = inverseTransform * vec2(0 + h, 1 + h) - p
     filterBy2 = max(dx.length, dy.length)
     b = b
 
@@ -660,7 +684,7 @@ proc drawCorrect(
     dx /= 2
     dy /= 2
     filterBy2 /= 2
-    matInv = scale(vec2(1/2, 1/2)) * matInv
+    inverseTransform = scale(vec2(1/2, 1/2)) * inverseTransform
 
   while filterBy2 <= 0.5:
     b = b.magnifyBy2()
@@ -668,12 +692,12 @@ proc drawCorrect(
     dx *= 2
     dy *= 2
     filterBy2 *= 2
-    matInv = scale(vec2(2, 2)) * matInv
+    inverseTransform = scale(vec2(2, 2)) * inverseTransform
 
   for y in 0 ..< a.height:
     for x in 0 ..< a.width:
       let
-        samplePos = matInv * vec2(x.float32 + h, y.float32 + h)
+        samplePos = inverseTransform * vec2(x.float32 + h, y.float32 + h)
         xFloat = samplePos.x - h
         yFloat = samplePos.y - h
 
@@ -697,14 +721,14 @@ proc drawCorrect(
         a.setValueUnsafe(x, y, masker(backdrop, sample))
 
 proc drawUber(
-  a, b: Image | Mask, mat = mat3(), blendMode = bmNormal
+  a, b: Image | Mask, transform = mat3(), blendMode: BlendMode
 ) {.raises: [PixieError].} =
   let
     corners = [
-      mat * vec2(0, 0),
-      mat * vec2(b.width.float32, 0),
-      mat * vec2(b.width.float32, b.height.float32),
-      mat * vec2(0, b.height.float32)
+      transform * vec2(0, 0),
+      transform * vec2(b.width.float32, 0),
+      transform * vec2(b.width.float32, b.height.float32),
+      transform * vec2(0, b.height.float32)
     ]
     perimeter = [
       segment(corners[0], corners[1]),
@@ -714,11 +738,11 @@ proc drawUber(
     ]
 
   var
-    matInv = mat.inverse()
+    inverseTransform = transform.inverse()
     # Compute movement vectors
-    p = matInv * vec2(0 + h, 0 + h)
-    dx = matInv * vec2(1 + h, 0 + h) - p
-    dy = matInv * vec2(0 + h, 1 + h) - p
+    p = inverseTransform * vec2(0 + h, 0 + h)
+    dx = inverseTransform * vec2(1 + h, 0 + h) - p
+    dy = inverseTransform * vec2(0 + h, 1 + h) - p
     filterBy2 = max(dx.length, dy.length)
     b = b
 
@@ -739,29 +763,28 @@ proc drawUber(
   let smooth = not(
     dx.length == 1.0 and
     dy.length == 1.0 and
-    mat[2, 0].fractional == 0.0 and
-    mat[2, 1].fractional == 0.0
+    transform[2, 0].fractional == 0.0 and
+    transform[2, 1].fractional == 0.0
   )
+
+  # Determine where we should start and stop drawing in the y dimension
+  var
+    yMin = a.height
+    yMax = 0
+  for segment in perimeter:
+    yMin = min(yMin, segment.at.y.floor.int)
+    yMax = max(yMax, segment.at.y.ceil.int)
+  yMin = yMin.clamp(0, a.height)
+  yMax = yMax.clamp(0, a.height)
 
   when type(a) is Image:
     let blender = blendMode.blender()
   else: # a is a Mask
     let masker = blendMode.masker()
 
-  # Determine where we should start and stop drawing in the y dimension
-  var yMin, yMax: int
   if blendMode == bmMask:
-    yMin = 0
-    yMax = a.height
-  else:
-    yMin = a.height
-    yMax = 0
-    for segment in perimeter:
-      yMin = min(yMin, segment.at.y.floor.int)
-      yMax = max(yMax, segment.at.y.ceil.int)
-
-  yMin = yMin.clamp(0, a.height)
-  yMax = yMax.clamp(0, a.height)
+    if yMin > 0:
+      zeroMem(a.data[0].addr, 4 * yMin * a.width)
 
   for y in yMin ..< yMax:
     # Determine where we should start and stop drawing in the x dimension
@@ -889,33 +912,105 @@ proc drawUber(
         clamp(srcPos.y, 0, b.height.float32)
       )
 
-      for x in x ..< xMax:
-        let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
-
-        when type(a) is Image:
-          let backdrop = a.unsafe[x, y]
-          when type(b) is Image:
-            let
-              sample = b.unsafe[samplePos.x, samplePos.y]
-              blended = blender(backdrop, sample)
-          else: # b is a Mask
-            let
-              sample = b.unsafe[samplePos.x, samplePos.y]
-              blended = blender(backdrop, rgbx(0, 0, 0, sample))
-          a.unsafe[x, y] = blended
-        else: # a is a Mask
-          let backdrop = a.unsafe[x, y]
-          when type(b) is Image:
-            let sample = b.unsafe[samplePos.x, samplePos.y].a
-          else: # b is a Mask
-            let sample = b.unsafe[samplePos.x, samplePos.y]
-          a.unsafe[x, y] = masker(backdrop, sample)
-
-        srcPos += dx
+      case blendMode:
+      of bmOverwrite:
+        for x in x ..< xMax:
+          let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
+          when type(a) is Image:
+            when type(b) is Image:
+              let source = b.unsafe[samplePos.x, samplePos.y]
+            else: # b is a Mask
+              let source = rgbx(0, 0, 0, b.unsafe[samplePos.x, samplePos.y])
+            if source.a > 0:
+              a.unsafe[x, y] = source
+          else: # a is a Mask
+            when type(b) is Image:
+              let source = b.unsafe[samplePos.x, samplePos.y].a
+            else: # b is a Mask
+              let source = b.unsafe[samplePos.x, samplePos.y]
+            if source > 0:
+              a.unsafe[x, y] = source
+          srcPos += dx
+      of bmNormal:
+        for x in x ..< xMax:
+          let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
+          when type(a) is Image:
+            when type(b) is Image:
+              let source = b.unsafe[samplePos.x, samplePos.y]
+            else: # b is a Mask
+              let source = rgbx(0, 0, 0, b.unsafe[samplePos.x, samplePos.y])
+            if source.a > 0:
+              if source.a == 255:
+                a.unsafe[x, y] = source
+              else:
+                let backdrop = a.unsafe[x, y]
+                a.unsafe[x, y] = blendNormal(backdrop, source)
+          else: # a is a Mask
+            when type(b) is Image:
+              let source = b.unsafe[samplePos.x, samplePos.y].a
+            else: # b is a Mask
+              let source = b.unsafe[samplePos.x, samplePos.y]
+            if source > 0:
+              if source == 255:
+                a.unsafe[x, y] = source
+              else:
+                let backdrop = a.unsafe[x, y]
+                a.unsafe[x, y] = blendAlpha(backdrop, source)
+          srcPos += dx
+      of bmMask:
+        for x in x ..< xMax:
+          let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
+          when type(a) is Image:
+            when type(b) is Image:
+              let source = b.unsafe[samplePos.x, samplePos.y]
+            else: # b is a Mask
+              let source = rgbx(0, 0, 0, b.unsafe[samplePos.x, samplePos.y])
+            if source.a == 0:
+              a.unsafe[x, y] = rgbx(0, 0, 0, 0)
+            elif source.a != 255:
+              let backdrop = a.unsafe[x, y]
+              a.unsafe[x, y] = blendMask(backdrop, source)
+          else: # a is a Mask
+            when type(b) is Image:
+              let source = b.unsafe[samplePos.x, samplePos.y].a
+            else: # b is a Mask
+              let source = b.unsafe[samplePos.x, samplePos.y]
+            if source == 0:
+              a.unsafe[x, y] = 0
+            elif source != 255:
+              let backdrop = a.unsafe[x, y]
+              a.unsafe[x, y] = maskMaskInline(backdrop, source)
+          srcPos += dx
+      else:
+        for x in x ..< xMax:
+          let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
+          when type(a) is Image:
+            let backdrop = a.unsafe[x, y]
+            when type(b) is Image:
+              let
+                sample = b.unsafe[samplePos.x, samplePos.y]
+                blended = blender(backdrop, sample)
+            else: # b is a Mask
+              let
+                sample = b.unsafe[samplePos.x, samplePos.y]
+                blended = blender(backdrop, rgbx(0, 0, 0, sample))
+            a.unsafe[x, y] = blended
+          else: # a is a Mask
+            let backdrop = a.unsafe[x, y]
+            when type(b) is Image:
+              let sample = b.unsafe[samplePos.x, samplePos.y].a
+            else: # b is a Mask
+              let sample = b.unsafe[samplePos.x, samplePos.y]
+            a.unsafe[x, y] = masker(backdrop, sample)
+          srcPos += dx
 
     if blendMode == bmMask:
       if a.width - xMax > 0:
         zeroMem(a.data[a.dataIndex(xMax, y)].addr, 4 * (a.width - xMax))
+
+  if blendMode == bmMask:
+    if a.height - yMax > 0:
+      zeroMem(a.data[a.dataIndex(0, yMax)].addr, 4 * a.width * (a.height - yMax))
 
 proc draw*(
   a, b: Image, transform = mat3(), blendMode = bmNormal

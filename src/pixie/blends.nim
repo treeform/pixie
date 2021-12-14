@@ -9,31 +9,6 @@ when defined(amd64) and not defined(pixieNoSimd):
 # See https://www.khronos.org/registry/OpenGL/extensions/KHR/KHR_blend_equation_advanced.txt
 
 type
-  BlendMode* = enum
-    bmNormal
-    bmDarken
-    bmMultiply
-    # bmLinearBurn
-    bmColorBurn
-    bmLighten
-    bmScreen
-    # bmLinearDodge
-    bmColorDodge
-    bmOverlay
-    bmSoftLight
-    bmHardLight
-    bmDifference
-    bmExclusion
-    bmHue
-    bmSaturation
-    bmColor
-    bmLuminosity
-
-    bmMask         ## Special blend mode that is used for masking
-    bmOverwrite    ## Special blend mode that just copies pixels
-    bmSubtractMask ## Inverse mask
-    bmExcludeMask
-
   Blender* = proc(backdrop, source: ColorRGBX): ColorRGBX {.gcsafe, raises: [].}
     ## Function signature returned by blender.
   Masker* = proc(backdrop, source: uint8): uint8 {.gcsafe, raises: [].}
@@ -165,7 +140,7 @@ proc SetSat(C: Color, s: float32): Color {.inline.} =
   if satC > 0:
     result = (C - min([C.r, C.g, C.b])) * s / satC
 
-proc blendNormal(backdrop, source: ColorRGBX): ColorRGBX =
+proc blendNormal*(backdrop, source: ColorRGBX): ColorRGBX =
   if backdrop.a == 0 or source.a == 255:
     return source
   if source.a == 0:
@@ -419,7 +394,7 @@ proc blendSaturation(backdrop, source: ColorRGBX): ColorRGBX =
     blended = SetLum(SetSat(backdrop, Sat(source)), Lum(backdrop))
   result = alphaFix(backdrop, source, blended).rgba.rgbx()
 
-proc blendMask(backdrop, source: ColorRGBX): ColorRGBX =
+proc blendMask*(backdrop, source: ColorRGBX): ColorRGBX =
   let k = source.a.uint32
   result.r = ((backdrop.r * k) div 255).uint8
   result.g = ((backdrop.g * k) div 255).uint8
@@ -477,9 +452,12 @@ proc maskNormal(backdrop, source: uint8): uint8 =
   ## Blending masks
   blendAlpha(backdrop, source)
 
-proc maskMask(backdrop, source: uint8): uint8 =
+proc maskMaskInline*(backdrop, source: uint8): uint8 {.inline.} =
   ## Masking masks
   ((backdrop.uint32 * source) div 255).uint8
+
+proc maskMask(backdrop, source: uint8): uint8 =
+  maskMaskInline(backdrop, source)
 
 proc maskSubtract(backdrop, source: uint8): uint8 =
   ((backdrop.uint32 * (255 - source)) div 255).uint8
