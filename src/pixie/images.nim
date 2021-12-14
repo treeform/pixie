@@ -182,29 +182,7 @@ proc isTransparent*(image: Image): bool {.raises: [].} =
 
 proc isOpaque*(image: Image): bool {.raises: [].} =
   ## Checks if the entire image is opaque (alpha values are all 255).
-  result = true
-
-  var i: int
-  when defined(amd64) and not defined(pixieNoSimd):
-    let
-      vec255 = mm_set1_epi32(cast[int32](uint32.high))
-      colorMask = mm_set1_epi32(cast[int32]([255.uint8, 255, 255, 0]))
-    for _ in 0 ..< image.data.len div 16:
-      let
-        values0 = mm_loadu_si128(image.data[i + 0].addr)
-        values1 = mm_loadu_si128(image.data[i + 4].addr)
-        values2 = mm_loadu_si128(image.data[i + 8].addr)
-        values3 = mm_loadu_si128(image.data[i + 12].addr)
-        values01 = mm_and_si128(values0, values1)
-        values23 = mm_and_si128(values2, values3)
-        values = mm_or_si128(mm_and_si128(values01, values23), colorMask)
-      if mm_movemask_epi8(mm_cmpeq_epi8(values, vec255)) != 0xffff:
-        return false
-      i += 16
-
-  for j in i ..< image.data.len:
-    if image.data[j].a != 255:
-      return false
+  isOpaque(image.data, 0, image.data.len)
 
 proc flipHorizontal*(image: Image) {.raises: [].} =
   ## Flips the image around the Y axis.
@@ -789,9 +767,6 @@ proc drawUber(
     if yMin > 0 and yMin < a.height:
       zeroMem(a.data[0].addr, 4 * yMin * a.width)
 
-  when type(a) is Image and type(b) is Image:
-    let opaqueFastPath = blendMode in {bmNormal, bmOverwrite} and b.isOpaque()
-
   for y in yMin ..< yMax:
     # Determine where we should start and stop drawing in the x dimension
     var
@@ -852,7 +827,8 @@ proc drawUber(
       var x = xStart
       if not hasRotation:
         when type(a) is Image and type(b) is Image:
-          if opaqueFastPath:
+          if blendMode in {bmNormal, bmOverwrite} and
+            isOpaque(b.data, b.dataIndex(xStart, y), xStop - xStart):
             let
               srcPos = p + dx * x.float32 + dy * y.float32
               sx = srcPos.x.int
