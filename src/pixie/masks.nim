@@ -1,4 +1,4 @@
-import common, internal, system/memory, vmath
+import common, internal, vmath
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -201,13 +201,6 @@ proc magnifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
         result.data[rowStart].addr,
         result.width * 4
       )
-
-proc fillUnsafe*(
-  data: var seq[uint8], value: uint8, start, len: int
-) {.raises: [].} =
-  ## Fills the mask data with the value starting at index start and
-  ## continuing for len indices.
-  nimSetMem(data[start].addr, value.cint, len)
 
 proc fill*(mask: Mask, value: uint8) {.inline, raises: [].} =
   ## Fills the mask with the value.

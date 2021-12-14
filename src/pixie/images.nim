@@ -1,4 +1,4 @@
-import blends, bumpy, chroma, common, masks, pixie/internal, system/memory, vmath
+import blends, bumpy, chroma, common, masks, pixie/internal, vmath
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -95,39 +95,6 @@ proc getColor*(image: Image, x, y: int): Color {.inline, raises: [].} =
 proc setColor*(image: Image, x, y: int, color: Color) {.inline, raises: [].} =
   ## Sets a color at (x, y) or does nothing if outside of bounds.
   image[x, y] = color.rgbx()
-
-proc fillUnsafe*(
-  data: var seq[ColorRGBX], color: SomeColor, start, len: int
-) {.raises: [].} =
-  ## Fills the image data with the color starting at index start and
-  ## continuing for len indices.
-
-  let rgbx = color.asRgbx()
-
-  # Use memset when every byte has the same value
-  if rgbx.r == rgbx.g and rgbx.r == rgbx.b and rgbx.r == rgbx.a:
-    nimSetMem(data[start].addr, rgbx.r.cint, len * 4)
-  else:
-    var i = start
-    when defined(amd64) and not defined(pixieNoSimd):
-      # When supported, SIMD fill until we run out of room
-      let colorVec = mm_set1_epi32(cast[int32](rgbx))
-      for _ in 0 ..< len div 8:
-        mm_storeu_si128(data[i + 0].addr, colorVec)
-        mm_storeu_si128(data[i + 4].addr, colorVec)
-        i += 8
-    else:
-      when sizeof(int) == 8:
-        # Fill 8 bytes at a time when possible
-        let
-          u32 = cast[uint32](rgbx)
-          u64 = cast[uint64]([u32, u32])
-        for _ in 0 ..< len div 2:
-          cast[ptr uint64](data[i].addr)[] = u64
-          i += 2
-    # Fill whatever is left the slow way
-    for j in i ..< start + len:
-      data[j] = rgbx
 
 proc fill*(image: Image, color: SomeColor) {.inline, raises: [].} =
   ## Fills the image with the color.
