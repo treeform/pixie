@@ -798,62 +798,193 @@ proc drawUber(
             continue
 
         when defined(amd64) and not defined(pixieNoSimd):
-          # Check we are not rotated
-          when type(a) is Image:
-            if blendMode.hasSimdBlender():
-              let blenderSimd = blendMode.blenderSimd()
-              for _ in 0 ..< (xStop - xStart) div 16:
-                let
-                  srcPos = p + dx * x.float32 + dy * y.float32
-                  sx = srcPos.x.int
-                  sy = srcPos.y.int
+          case blendMode:
+          of bmOverwrite:
+            for _ in 0 ..< (xStop - xStart) div 16:
+              let
+                srcPos = p + dx * x.float32 + dy * y.float32
+                sx = srcPos.x.int
+                sy = srcPos.y.int
+              when type(a) is Image:
                 when type(b) is Image:
                   for q in [0, 4, 8, 12]:
-                    let
-                      backdrop = mm_loadu_si128(a.data[a.dataIndex(x + q, y)].addr)
-                      source = mm_loadu_si128(b.data[b.dataIndex(sx + q, sy)].addr)
-                    mm_storeu_si128(
-                      a.data[a.dataIndex(x + q, y)].addr,
-                      blenderSimd(backdrop, source)
-                    )
+                    let sourceVec = mm_loadu_si128(b.data[b.dataIndex(sx + q, sy)].addr)
+                    mm_storeu_si128(a.data[a.dataIndex(x + q, y)].addr, sourceVec)
                 else: # b is a Mask
                   var values = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
                   for q in [0, 4, 8, 12]:
-                    let
-                      backdrop = mm_loadu_si128(a.data[a.dataIndex(x + q, y)].addr)
-                      source = unpackAlphaValues(values)
-                    mm_storeu_si128(
-                      a.data[a.dataIndex(x + q, y)].addr,
-                      blenderSimd(backdrop, source)
-                    )
+                    let sourceVec = unpackAlphaValues(values)
+                    mm_storeu_si128(a.data[a.dataIndex(x + q, y)].addr, sourceVec)
                     # Shuffle 32 bits off for the next iteration
                     values = mm_srli_si128(values, 4)
-                x += 16
-          else: # is a Mask
-            if blendMode.hasSimdMasker():
-              let maskerSimd = blendMode.maskerSimd()
-              for _ in 0 ..< (xStop - xStart) div 16:
-                let
-                  srcPos = p + dx * x.float32 + dy * y.float32
-                  sx = srcPos.x.int
-                  sy = srcPos.y.int
-                  backdrop = mm_loadu_si128(a.data[a.dataIndex(x, y)].addr)
+              else: # a is a Mask
                 when type(b) is Image:
-                  # Need to read 16 colors and pack their alpha values
-                  let
+                  var
                     i = mm_loadu_si128(b.data[b.dataIndex(sx + 0, sy)].addr)
                     j = mm_loadu_si128(b.data[b.dataIndex(sx + 4, sy)].addr)
                     k = mm_loadu_si128(b.data[b.dataIndex(sx + 8, sy)].addr)
                     l = mm_loadu_si128(b.data[b.dataIndex(sx + 12, sy)].addr)
-                    source = pack4xAlphaValues(i, j, k, l)
+                  let sourceVec = pack4xAlphaValues(i, j, k, l)
                 else: # b is a Mask
-                  let source = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
-
+                  let sourceVec = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
+                mm_storeu_si128(a.data[a.dataIndex(x, y)].addr, sourceVec)
+              x += 16
+          of bmNormal:
+            let vec255 = mm_set1_epi32(cast[int32](uint32.high))
+            for _ in 0 ..< (xStop - xStart) div 16:
+              let
+                srcPos = p + dx * x.float32 + dy * y.float32
+                sx = srcPos.x.int
+                sy = srcPos.y.int
+              when type(a) is Image:
+                when type(b) is Image:
+                  for q in [0, 4, 8, 12]:
+                    let sourceVec = mm_loadu_si128(b.data[b.dataIndex(sx + q, sy)].addr)
+                    if mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, mm_setzero_si128())) != 0xffff:
+                      if (mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, vec255)) and 0x8888) == 0x8888:
+                        mm_storeu_si128(a.data[a.dataIndex(x + q, y)].addr, sourceVec)
+                      else:
+                        let backdropVec = mm_loadu_si128(a.data[a.dataIndex(x + q, y)].addr)
+                        mm_storeu_si128(
+                          a.data[a.dataIndex(x + q, y)].addr,
+                          blendNormalInlineSimd(backdropVec, sourceVec)
+                        )
+                else: # b is a Mask
+                  var values = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
+                  for q in [0, 4, 8, 12]:
+                    let sourceVec = unpackAlphaValues(values)
+                    if mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, mm_setzero_si128())) != 0xffff:
+                      if (mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, vec255)) and 0x8888) == 0x8888:
+                        discard
+                      else:
+                        let backdropVec = mm_loadu_si128(a.data[a.dataIndex(x + q, y)].addr)
+                        mm_storeu_si128(
+                          a.data[a.dataIndex(x + q, y)].addr,
+                          blendNormalInlineSimd(backdropVec, sourceVec)
+                        )
+                    # Shuffle 32 bits off for the next iteration
+                    values = mm_srli_si128(values, 4)
+              else: # a is a Mask
+                let backdropVec = mm_loadu_si128(a.data[a.dataIndex(x, y)].addr)
+                when type(b) is Image:
+                  var
+                    i = mm_loadu_si128(b.data[b.dataIndex(sx + 0, sy)].addr)
+                    j = mm_loadu_si128(b.data[b.dataIndex(sx + 4, sy)].addr)
+                    k = mm_loadu_si128(b.data[b.dataIndex(sx + 8, sy)].addr)
+                    l = mm_loadu_si128(b.data[b.dataIndex(sx + 12, sy)].addr)
+                  let sourceVec = pack4xAlphaValues(i, j, k, l)
+                else: # b is a Mask
+                  let sourceVec = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
                 mm_storeu_si128(
                   a.data[a.dataIndex(x, y)].addr,
-                  maskerSimd(backdrop, source)
+                  maskNormalInlineSimd(backdropVec, sourceVec)
                 )
-                x += 16
+              x += 16
+          of bmMask:
+            let vec255 = mm_set1_epi32(cast[int32](uint32.high))
+            for _ in 0 ..< (xStop - xStart) div 16:
+              let
+                srcPos = p + dx * x.float32 + dy * y.float32
+                sx = srcPos.x.int
+                sy = srcPos.y.int
+              when type(a) is Image:
+                when type(b) is Image:
+                  for q in [0, 4, 8, 12]:
+                    let sourceVec = mm_loadu_si128(b.data[b.dataIndex(sx + q, sy)].addr)
+                    if mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, mm_setzero_si128())) == 0xffff:
+                      mm_storeu_si128(a.data[a.dataIndex(x + q, y)].addr, mm_setzero_si128())
+                    elif mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, vec255)) != 0xffff:
+                      let backdropVec = mm_loadu_si128(a.data[a.dataIndex(x + q, y)].addr)
+                      mm_storeu_si128(
+                        a.data[a.dataIndex(x + q, y)].addr,
+                        blendMaskInlineSimd(backdropVec, sourceVec)
+                      )
+                else: # b is a Mask
+                  var values = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
+                  for q in [0, 4, 8, 12]:
+                    let sourceVec = unpackAlphaValues(values)
+                    if mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, mm_setzero_si128())) == 0xffff:
+                       mm_storeu_si128(a.data[a.dataIndex(x + q, y)].addr, mm_setzero_si128())
+                    elif (mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, vec255)) and 0x8888) != 0x8888:
+                      let backdropVec = mm_loadu_si128(a.data[a.dataIndex(x + q, y)].addr)
+                      mm_storeu_si128(
+                        a.data[a.dataIndex(x + q, y)].addr,
+                        blendMaskInlineSimd(backdropVec, sourceVec)
+                      )
+                    # Shuffle 32 bits off for the next iteration
+                    values = mm_srli_si128(values, 4)
+              else: # a is a Mask
+                let backdropVec = mm_loadu_si128(a.data[a.dataIndex(x, y)].addr)
+                when type(b) is Image:
+                  var
+                    i = mm_loadu_si128(b.data[b.dataIndex(sx + 0, sy)].addr)
+                    j = mm_loadu_si128(b.data[b.dataIndex(sx + 4, sy)].addr)
+                    k = mm_loadu_si128(b.data[b.dataIndex(sx + 8, sy)].addr)
+                    l = mm_loadu_si128(b.data[b.dataIndex(sx + 12, sy)].addr)
+                  let sourceVec = pack4xAlphaValues(i, j, k, l)
+                else: # b is a Mask
+                  let sourceVec = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
+                mm_storeu_si128(
+                  a.data[a.dataIndex(x, y)].addr,
+                  maskMaskInlineSimd(backdropVec, sourceVec)
+                )
+              x += 16
+          else:
+            when type(a) is Image:
+              if blendMode.hasSimdBlender():
+                let blenderSimd = blendMode.blenderSimd()
+                for _ in 0 ..< (xStop - xStart) div 16:
+                  let
+                    srcPos = p + dx * x.float32 + dy * y.float32
+                    sx = srcPos.x.int
+                    sy = srcPos.y.int
+                  when type(b) is Image:
+                    for q in [0, 4, 8, 12]:
+                      let
+                        backdrop = mm_loadu_si128(a.data[a.dataIndex(x + q, y)].addr)
+                        source = mm_loadu_si128(b.data[b.dataIndex(sx + q, sy)].addr)
+                      mm_storeu_si128(
+                        a.data[a.dataIndex(x + q, y)].addr,
+                        blenderSimd(backdrop, source)
+                      )
+                  else: # b is a Mask
+                    var values = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
+                    for q in [0, 4, 8, 12]:
+                      let
+                        backdrop = mm_loadu_si128(a.data[a.dataIndex(x + q, y)].addr)
+                        source = unpackAlphaValues(values)
+                      mm_storeu_si128(
+                        a.data[a.dataIndex(x + q, y)].addr,
+                        blenderSimd(backdrop, source)
+                      )
+                      # Shuffle 32 bits off for the next iteration
+                      values = mm_srli_si128(values, 4)
+                  x += 16
+            else: # is a Mask
+              if blendMode.hasSimdMasker():
+                let maskerSimd = blendMode.maskerSimd()
+                for _ in 0 ..< (xStop - xStart) div 16:
+                  let
+                    srcPos = p + dx * x.float32 + dy * y.float32
+                    sx = srcPos.x.int
+                    sy = srcPos.y.int
+                    backdrop = mm_loadu_si128(a.data[a.dataIndex(x, y)].addr)
+                  when type(b) is Image:
+                    # Need to read 16 colors and pack their alpha values
+                    let
+                      i = mm_loadu_si128(b.data[b.dataIndex(sx + 0, sy)].addr)
+                      j = mm_loadu_si128(b.data[b.dataIndex(sx + 4, sy)].addr)
+                      k = mm_loadu_si128(b.data[b.dataIndex(sx + 8, sy)].addr)
+                      l = mm_loadu_si128(b.data[b.dataIndex(sx + 12, sy)].addr)
+                      source = pack4xAlphaValues(i, j, k, l)
+                  else: # b is a Mask
+                    let source = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
+
+                  mm_storeu_si128(
+                    a.data[a.dataIndex(x, y)].addr,
+                    maskerSimd(backdrop, source)
+                  )
+                  x += 16
 
       var srcPos = p + dx * x.float32 + dy * y.float32
       srcPos = vec2(

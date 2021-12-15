@@ -518,7 +518,7 @@ when defined(amd64) and not defined(pixieNoSimd):
   proc blendNormalSimd(backdrop, source: M128i): M128i =
     blendNormalInlineSimd(backdrop, source)
 
-  proc blendMaskSimd(backdrop, source: M128i): M128i =
+  proc blendMaskInlineSimd*(backdrop, source: M128i): M128i {.inline.} =
     let
       alphaMask = mm_set1_epi32(cast[int32](0xff000000))
       oddMask = mm_set1_epi16(cast[int16](0xff00))
@@ -539,6 +539,9 @@ when defined(amd64) and not defined(pixieNoSimd):
 
     mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
 
+  proc blendMaskSimd(backdrop, source: M128i): M128i =
+    blendMaskInlineSimd(backdrop, source)
+
   proc blendOverwriteSimd(backdrop, source: M128i): M128i =
     source
 
@@ -555,7 +558,7 @@ when defined(amd64) and not defined(pixieNoSimd):
     ## Is there a blend function for a given blend mode with SIMD support?
     blendMode in {bmNormal, bmMask, bmOverwrite}
 
-  proc maskNormalSimd(backdrop, source: M128i): M128i =
+  proc maskNormalInlineSimd*(backdrop, source: M128i): M128i {.inline.} =
     ## Blending masks
     let
       oddMask = mm_set1_epi16(cast[int16](0xff00))
@@ -592,7 +595,10 @@ when defined(amd64) and not defined(pixieNoSimd):
 
     mm_or_si128(blendedEven, mm_slli_epi16(blendedOdd, 8))
 
-  proc maskMaskSimd(backdrop, source: M128i): M128i =
+  proc maskNormalSimd(backdrop, source: M128i): M128i =
+    maskNormalInlineSimd(backdrop, source)
+
+  proc maskMaskInlineSimd*(backdrop, source: M128i): M128i =
     let
       oddMask = mm_set1_epi16(cast[int16](0xff00))
       div255 = mm_set1_epi16(cast[int16](0x8081))
@@ -612,6 +618,9 @@ when defined(amd64) and not defined(pixieNoSimd):
     backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
 
     mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
+
+  proc maskMaskSimd(backdrop, source: M128i): M128i =
+    maskMaskInlineSimd(backdrop, source)
 
   proc maskerSimd*(blendMode: BlendMode): MaskerSimd {.raises: [PixieError].} =
     ## Returns a blend masking function with SIMD support.
