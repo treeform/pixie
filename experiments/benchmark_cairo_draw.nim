@@ -1,4 +1,4 @@
-import benchy, cairo, pixie, pixie/blends
+import benchy, cairo, pixie, pixie/blends, pixie/internal
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -7,10 +7,8 @@ when defined(release):
   {.push checks: off.}
 
 proc drawBasic(backdrop, source: Image) =
-  let sourceIsOpaque = source.isOpaque()
-
   for y in 0 ..< min(backdrop.height, source.height):
-    if sourceIsOpaque:
+    if isOpaque(source.data, source.dataIndex(0, y), source.width):
       copyMem(
         backdrop.data[backdrop.dataIndex(0, y)].addr,
         source.data[source.dataIndex(0, y)].addr,

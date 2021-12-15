@@ -1,4 +1,4 @@
-import blends, bumpy, chroma, common, masks, pixie/internal, system/memory, vmath
+import blends, bumpy, chroma, common, masks, pixie/internal, vmath
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -96,39 +96,6 @@ proc setColor*(image: Image, x, y: int, color: Color) {.inline, raises: [].} =
   ## Sets a color at (x, y) or does nothing if outside of bounds.
   image[x, y] = color.rgbx()
 
-proc fillUnsafe*(
-  data: var seq[ColorRGBX], color: SomeColor, start, len: int
-) {.raises: [].} =
-  ## Fills the image data with the color starting at index start and
-  ## continuing for len indices.
-
-  let rgbx = color.asRgbx()
-
-  # Use memset when every byte has the same value
-  if rgbx.r == rgbx.g and rgbx.r == rgbx.b and rgbx.r == rgbx.a:
-    nimSetMem(data[start].addr, rgbx.r.cint, len * 4)
-  else:
-    var i = start
-    when defined(amd64) and not defined(pixieNoSimd):
-      # When supported, SIMD fill until we run out of room
-      let colorVec = mm_set1_epi32(cast[int32](rgbx))
-      for _ in 0 ..< len div 8:
-        mm_storeu_si128(data[i + 0].addr, colorVec)
-        mm_storeu_si128(data[i + 4].addr, colorVec)
-        i += 8
-    else:
-      when sizeof(int) == 8:
-        # Fill 8 bytes at a time when possible
-        let
-          u32 = cast[uint32](rgbx)
-          u64 = cast[uint64]([u32, u32])
-        for _ in 0 ..< len div 2:
-          cast[ptr uint64](data[i].addr)[] = u64
-          i += 2
-    # Fill whatever is left the slow way
-    for j in i ..< start + len:
-      data[j] = rgbx
-
 proc fill*(image: Image, color: SomeColor) {.inline, raises: [].} =
   ## Fills the image with the color.
   fillUnsafe(image.data, color, 0, image.data.len)
@@ -181,29 +148,8 @@ proc isTransparent*(image: Image): bool {.raises: [].} =
       return false
 
 proc isOpaque*(image: Image): bool {.raises: [].} =
-  result = true
-
-  var i: int
-  when defined(amd64) and not defined(pixieNoSimd):
-    let
-      vec255 = mm_set1_epi32(cast[int32](uint32.high))
-      colorMask = mm_set1_epi32(cast[int32]([255.uint8, 255, 255, 0]))
-    for _ in 0 ..< image.data.len div 16:
-      let
-        values0 = mm_loadu_si128(image.data[i + 0].addr)
-        values1 = mm_loadu_si128(image.data[i + 4].addr)
-        values2 = mm_loadu_si128(image.data[i + 8].addr)
-        values3 = mm_loadu_si128(image.data[i + 12].addr)
-        values01 = mm_and_si128(values0, values1)
-        values23 = mm_and_si128(values2, values3)
-        values = mm_or_si128(mm_and_si128(values01, values23), colorMask)
-      if mm_movemask_epi8(mm_cmpeq_epi8(values, vec255)) != 0xffff:
-        return false
-      i += 16
-
-  for j in i ..< image.data.len:
-    if image.data[j].a != 255:
-      return false
+  ## Checks if the entire image is opaque (alpha values are all 255).
+  isOpaque(image.data, 0, image.data.len)
 
 proc flipHorizontal*(image: Image) {.raises: [].} =
   ## Flips the image around the Y axis.
@@ -394,26 +340,26 @@ proc magnifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
     var x: int
     when defined(amd64) and not defined(pixieNoSimd):
       if scale == 2:
-        let mask = cast[M128i]([uint32.high, 0, 0, 0])
-        for _ in countup(0, image.width - 4, 2):
+        while x <= image.width - 4:
           let
             values = mm_loadu_si128(image.data[image.dataIndex(x, y)].addr)
-            first = mm_and_si128(values, mask)
-            second = mm_and_si128(mm_srli_si128(values, 4), mask)
-            combined = mm_or_si128(first, mm_slli_si128(second, 8))
-            doubled = mm_or_si128(combined, mm_slli_si128(combined, 4))
+            lo = mm_unpacklo_epi32(values, mm_setzero_si128())
+            hi = mm_unpackhi_epi32(values, mm_setzero_si128())
           mm_storeu_si128(
-            result.data[result.dataIndex(x * scale, y * scale)].addr,
-            doubled
+            result.data[result.dataIndex(x * scale + 0, y * scale)].addr,
+            mm_or_si128(lo, mm_slli_si128(lo, 4))
           )
-          x += 2
-    for _ in x ..< image.width:
+          mm_storeu_si128(
+            result.data[result.dataIndex(x * scale + 4, y * scale)].addr,
+            mm_or_si128(hi, mm_slli_si128(hi, 4))
+          )
+          x += 4
+    for x in x ..< image.width:
       let
         rgbx = image.unsafe[x, y]
         resultIdx = result.dataIndex(x * scale, y * scale)
       for i in 0 ..< scale:
         result.data[resultIdx + i] = rgbx
-      inc x
     # Copy that row of pixels into (scale - 1) more rows
     let rowStart = result.dataIndex(0, y * scale)
     for i in 1 ..< scale:
@@ -596,26 +542,15 @@ proc newMask*(image: Image): Mask {.raises: [PixieError].} =
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
     for _ in 0 ..< image.data.len div 16:
-      var
+      let
         a = mm_loadu_si128(image.data[i + 0].addr)
         b = mm_loadu_si128(image.data[i + 4].addr)
         c = mm_loadu_si128(image.data[i + 8].addr)
         d = mm_loadu_si128(image.data[i + 12].addr)
-
-      a = packAlphaValues(a)
-      b = packAlphaValues(b)
-      c = packAlphaValues(c)
-      d = packAlphaValues(d)
-
-      b = mm_slli_si128(b, 4)
-      c = mm_slli_si128(c, 8)
-      d = mm_slli_si128(d, 12)
-
       mm_storeu_si128(
         result.data[i].addr,
-        mm_or_si128(mm_or_si128(a, b), mm_or_si128(c, d))
+        pack4xAlphaValues(a, b, c, d)
       )
-
       i += 16
 
   for j in i ..< image.data.len:
@@ -760,12 +695,14 @@ proc drawUber(
     dy *= 2
     filterBy2 *= 2
 
-  let smooth = not(
-    dx.length == 1.0 and
-    dy.length == 1.0 and
-    transform[2, 0].fractional == 0.0 and
-    transform[2, 1].fractional == 0.0
-  )
+  let
+    hasRotation = not(dx == vec2(1, 0) and dy == vec2(0, 1))
+    smooth = not(
+      dx.length == 1.0 and
+      dy.length == 1.0 and
+      transform[2, 0].fractional == 0.0 and
+      transform[2, 1].fractional == 0.0
+    )
 
   # Determine where we should start and stop drawing in the y dimension
   var
@@ -789,8 +726,8 @@ proc drawUber(
   for y in yMin ..< yMax:
     # Determine where we should start and stop drawing in the x dimension
     var
-      xMin = a.width
-      xMax = 0
+      xMin = a.width.float32
+      xMax = 0.float32
     for yOffset in [0.float32, 1]:
       let scanLine = Line(
         a: vec2(-1000, y.float32 + yOffset),
@@ -799,21 +736,29 @@ proc drawUber(
       for segment in perimeter:
         var at: Vec2
         if scanline.intersects(segment, at) and segment.to != at:
-          xMin = min(xMin, at.x.floor.int)
-          xMax = max(xMax, at.x.ceil.int)
+          xMin = min(xMin, at.x)
+          xMax = max(xMax, at.x)
 
-    xMin = xMin.clamp(0, a.width)
-    xMax = xMax.clamp(0, a.width)
+    var xStart, xStop: int
+    if hasRotation or smooth:
+      xStart = xMin.floor.int
+      xStop = xMax.ceil.int
+    else:
+      # Rotation of 360 degrees can cause knife-edge issues with floor and ceil
+      xStart = xMin.round().int
+      xStop = xMax.round().int
+    xStart = xStart.clamp(0, a.width)
+    xStop = xStop.clamp(0, a.width)
 
     if blendMode == bmMask:
-      if xMin > 0:
-        zeroMem(a.data[a.dataIndex(0, y)].addr, 4 * xMin)
+      if xStart > 0:
+        zeroMem(a.data[a.dataIndex(0, y)].addr, 4 * xStart)
 
     if smooth:
-      var srcPos = p + dx * xMin.float32 + dy * y.float32
+      var srcPos = p + dx * xStart.float32 + dy * y.float32
       srcPos = vec2(srcPos.x - h, srcPos.y - h)
 
-      for x in xMin ..< xMax:
+      for x in xStart ..< xStop:
         when type(a) is Image:
           let backdrop = a.unsafe[x, y]
           when type(b) is Image:
@@ -836,14 +781,28 @@ proc drawUber(
         srcPos += dx
 
     else:
-      var x = xMin
-      when defined(amd64) and not defined(pixieNoSimd):
-        if dx == vec2(1, 0) and dy == vec2(0, 1):
-          # Check we are not rotated before using SIMD blends
+      var x = xStart
+      if not hasRotation:
+        when type(a) is Image and type(b) is Image:
+          if blendMode in {bmNormal, bmOverwrite} and
+            isOpaque(b.data, b.dataIndex(xStart, y), xStop - xStart):
+            let
+              srcPos = p + dx * x.float32 + dy * y.float32
+              sx = srcPos.x.int
+              sy = srcPos.y.int
+            copyMem(
+              a.data[a.dataIndex(x, y)].addr,
+              b.data[b.dataIndex(sx, sy)].addr,
+              (xStop - xStart) * 4
+            )
+            continue
+
+        when defined(amd64) and not defined(pixieNoSimd):
+          # Check we are not rotated
           when type(a) is Image:
             if blendMode.hasSimdBlender():
               let blenderSimd = blendMode.blenderSimd()
-              for _ in 0 ..< (xMax - xMin) div 16:
+              for _ in 0 ..< (xStop - xStart) div 16:
                 let
                   srcPos = p + dx * x.float32 + dy * y.float32
                   sx = srcPos.x.int
@@ -873,7 +832,7 @@ proc drawUber(
           else: # is a Mask
             if blendMode.hasSimdMasker():
               let maskerSimd = blendMode.maskerSimd()
-              for _ in 0 ..< (xMax - xMin) div 16:
+              for _ in 0 ..< (xStop - xStart) div 16:
                 let
                   srcPos = p + dx * x.float32 + dy * y.float32
                   sx = srcPos.x.int
@@ -881,22 +840,12 @@ proc drawUber(
                   backdrop = mm_loadu_si128(a.data[a.dataIndex(x, y)].addr)
                 when type(b) is Image:
                   # Need to read 16 colors and pack their alpha values
-                  var
+                  let
                     i = mm_loadu_si128(b.data[b.dataIndex(sx + 0, sy)].addr)
                     j = mm_loadu_si128(b.data[b.dataIndex(sx + 4, sy)].addr)
                     k = mm_loadu_si128(b.data[b.dataIndex(sx + 8, sy)].addr)
                     l = mm_loadu_si128(b.data[b.dataIndex(sx + 12, sy)].addr)
-
-                  i = packAlphaValues(i)
-                  j = packAlphaValues(j)
-                  k = packAlphaValues(k)
-                  l = packAlphaValues(l)
-
-                  j = mm_slli_si128(j, 4)
-                  k = mm_slli_si128(k, 8)
-                  l = mm_slli_si128(l, 12)
-
-                  let source = mm_or_si128(mm_or_si128(i, j), mm_or_si128(k, l))
+                    source = pack4xAlphaValues(i, j, k, l)
                 else: # b is a Mask
                   let source = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
 
@@ -914,7 +863,7 @@ proc drawUber(
 
       case blendMode:
       of bmOverwrite:
-        for x in x ..< xMax:
+        for x in x ..< xStop:
           let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
           when type(a) is Image:
             when type(b) is Image:
@@ -932,7 +881,7 @@ proc drawUber(
               a.unsafe[x, y] = source
           srcPos += dx
       of bmNormal:
-        for x in x ..< xMax:
+        for x in x ..< xStop:
           let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
           when type(a) is Image:
             when type(b) is Image:
@@ -958,7 +907,7 @@ proc drawUber(
                 a.unsafe[x, y] = blendAlpha(backdrop, source)
           srcPos += dx
       of bmMask:
-        for x in x ..< xMax:
+        for x in x ..< xStop:
           let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
           when type(a) is Image:
             when type(b) is Image:
@@ -982,7 +931,7 @@ proc drawUber(
               a.unsafe[x, y] = maskMaskInline(backdrop, source)
           srcPos += dx
       else:
-        for x in x ..< xMax:
+        for x in x ..< xStop:
           let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
           when type(a) is Image:
             let backdrop = a.unsafe[x, y]
@@ -1005,8 +954,8 @@ proc drawUber(
           srcPos += dx
 
     if blendMode == bmMask:
-      if a.width - xMax > 0:
-        zeroMem(a.data[a.dataIndex(xMax, y)].addr, 4 * (a.width - xMax))
+      if a.width - xStop > 0:
+        zeroMem(a.data[a.dataIndex(xStop, y)].addr, 4 * (a.width - xStop))
 
   if blendMode == bmMask:
     if a.height - yMax > 0:

@@ -1,4 +1,4 @@
-import chroma, vmath
+import chroma, system/memory, vmath
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -38,6 +38,46 @@ proc `*`*(color: ColorRGBX, opacity: float32): ColorRGBX {.raises: [].} =
       b = ((color.b * x) div 255).uint8
       a = ((color.a * x) div 255).uint8
     rgbx(r, g, b, a)
+
+proc fillUnsafe*(
+  data: var seq[uint8], value: uint8, start, len: int
+) {.raises: [].} =
+  ## Fills the mask data with the value starting at index start and
+  ## continuing for len indices.
+  nimSetMem(data[start].addr, value.cint, len)
+
+proc fillUnsafe*(
+  data: var seq[ColorRGBX], color: SomeColor, start, len: int
+) {.raises: [].} =
+  ## Fills the image data with the color starting at index start and
+  ## continuing for len indices.
+
+  let rgbx = color.asRgbx()
+
+  # Use memset when every byte has the same value
+  if rgbx.r == rgbx.g and rgbx.r == rgbx.b and rgbx.r == rgbx.a:
+    nimSetMem(data[start].addr, rgbx.r.cint, len * 4)
+  else:
+    var i = start
+    when defined(amd64) and not defined(pixieNoSimd):
+      # When supported, SIMD fill until we run out of room
+      let colorVec = mm_set1_epi32(cast[int32](rgbx))
+      for _ in 0 ..< len div 8:
+        mm_storeu_si128(data[i + 0].addr, colorVec)
+        mm_storeu_si128(data[i + 4].addr, colorVec)
+        i += 8
+    else:
+      when sizeof(int) == 8:
+        # Fill 8 bytes at a time when possible
+        let
+          u32 = cast[uint32](rgbx)
+          u64 = cast[uint64]([u32, u32])
+        for _ in 0 ..< len div 2:
+          cast[ptr uint64](data[i].addr)[] = u64
+          i += 2
+    # Fill whatever is left the slow way
+    for j in i ..< start + len:
+      data[j] = rgbx
 
 proc toStraightAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} =
   ## Converts an image from premultiplied alpha to straight alpha.
@@ -96,17 +136,48 @@ proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} 
       c.b = ((c.b.uint32 * c.a.uint32) div 255).uint8
       data[j] = c
 
+proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
+  result = true
+
+  var i: int
+  when defined(amd64) and not defined(pixieNoSimd):
+    let
+      vec255 = mm_set1_epi32(cast[int32](uint32.high))
+      colorMask = mm_set1_epi32(cast[int32]([255.uint8, 255, 255, 0]))
+    for _ in 0 ..< len div 16:
+      let
+        values0 = mm_loadu_si128(data[i + 0].addr)
+        values1 = mm_loadu_si128(data[i + 4].addr)
+        values2 = mm_loadu_si128(data[i + 8].addr)
+        values3 = mm_loadu_si128(data[i + 12].addr)
+        values01 = mm_and_si128(values0, values1)
+        values23 = mm_and_si128(values2, values3)
+        values = mm_or_si128(mm_and_si128(values01, values23), colorMask)
+      if mm_movemask_epi8(mm_cmpeq_epi8(values, vec255)) != 0xffff:
+        return false
+      i += 16
+
+  for j in i ..< len:
+    if data[j].a != 255:
+      return false
+
 when defined(amd64) and not defined(pixieNoSimd):
   proc packAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
     ## Shuffle the alpha values for these 4 colors to the first 4 bytes
-    result = mm_srli_epi32(v, 24)
+    let mask = mm_set1_epi32(cast[int32](0xff000000))
+    result = mm_and_si128(v, mask)
+    result = mm_srli_epi32(result, 24)
+    result = mm_packus_epi16(result, result)
+    result = mm_packus_epi16(result, result)
+    result = mm_srli_si128(result, 12)
+
+  proc pack4xAlphaValues*(i, j, k, l: M128i): M128i {.inline, raises: [].} =
     let
-      i = mm_srli_si128(result, 3)
-      j = mm_srli_si128(result, 6)
-      k = mm_srli_si128(result, 9)
-      first32 = cast[M128i]([uint32.high, 0, 0, 0])
-    result = mm_or_si128(mm_or_si128(result, i), mm_or_si128(j, k))
-    result = mm_and_si128(result, first32)
+      i = packAlphaValues(i)
+      j = mm_slli_si128(packAlphaValues(j), 4)
+      k = mm_slli_si128(packAlphaValues(k), 8)
+      l = mm_slli_si128(packAlphaValues(l), 12)
+    mm_or_si128(mm_or_si128(i, j), mm_or_si128(k, l))
 
   proc unpackAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
     ## Unpack the first 32 bits into 4 rgba(0, 0, 0, value)

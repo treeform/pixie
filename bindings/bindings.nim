@@ -1,4 +1,4 @@
-import genny, pixie, unicode
+import genny, pixie, pixie/internal, unicode
 
 var lastError: ref PixieError
 
