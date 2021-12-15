@@ -164,14 +164,12 @@ proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
 when defined(amd64) and not defined(pixieNoSimd):
   proc packAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
     ## Shuffle the alpha values for these 4 colors to the first 4 bytes
-    result = mm_srli_epi32(v, 24)
-    let
-      i = mm_srli_si128(result, 3)
-      j = mm_srli_si128(result, 6)
-      k = mm_srli_si128(result, 9)
-      first32 = cast[M128i]([uint32.high, 0, 0, 0])
-    result = mm_or_si128(mm_or_si128(result, i), mm_or_si128(j, k))
-    result = mm_and_si128(result, first32)
+    let mask = mm_set1_epi32(cast[int32](0xff000000))
+    result = mm_and_si128(v, mask)
+    result = mm_srli_epi32(result, 24)
+    result = mm_packus_epi16(result, result)
+    result = mm_packus_epi16(result, result)
+    result = mm_srli_si128(result, 12)
 
   proc pack4xAlphaValues*(i, j, k, l: M128i): M128i {.inline, raises: [].} =
     let
