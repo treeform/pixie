@@ -720,7 +720,7 @@ proc drawUber(
     let masker = blendMode.masker()
 
   if blendMode == bmMask:
-    if yMin > 0 and yMin < a.height:
+    if yMin > 0:
       zeroMem(a.data[0].addr, 4 * yMin * a.width)
 
   for y in yMin ..< yMax:
@@ -744,13 +744,14 @@ proc drawUber(
       xStart = xMin.floor.int
       xStop = xMax.ceil.int
     else:
+      # Rotation of 360 degrees can cause knife-edge issues with floor and ceil
       xStart = xMin.round().int
       xStop = xMax.round().int
     xStart = xStart.clamp(0, a.width)
     xStop = xStop.clamp(0, a.width)
 
     if blendMode == bmMask:
-      if xStart > 0 and xStart < a.width:
+      if xStart > 0:
         zeroMem(a.data[a.dataIndex(0, y)].addr, 4 * xStart)
 
     if smooth:
