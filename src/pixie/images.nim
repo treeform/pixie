@@ -921,14 +921,7 @@ proc drawUber(
                     j = mm_loadu_si128(b.data[b.dataIndex(sx + 4, sy)].addr)
                     k = mm_loadu_si128(b.data[b.dataIndex(sx + 8, sy)].addr)
                     l = mm_loadu_si128(b.data[b.dataIndex(sx + 12, sy)].addr)
-                  i = packAlphaValues(i)
-                  j = packAlphaValues(j)
-                  k = packAlphaValues(k)
-                  l = packAlphaValues(l)
-                  j = mm_slli_si128(j, 4)
-                  k = mm_slli_si128(k, 8)
-                  l = mm_slli_si128(l, 12)
-                  let sourceVec = mm_or_si128(mm_or_si128(i, j), mm_or_si128(k, l))
+                  let sourceVec = pack4xAlphaValues(i, j, k, l)
                 else: # b is a Mask
                   let sourceVec = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
                 mm_storeu_si128(
