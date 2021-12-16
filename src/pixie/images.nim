@@ -750,6 +750,10 @@ proc drawUber(
     xStart = xStart.clamp(0, a.width)
     xStop = xStop.clamp(0, a.width)
 
+    # Skip this row if there is nothing in-bounds to draw
+    if xStart == a.width or xStop == 0:
+      continue
+
     if blendMode == bmMask:
       if xStart > 0:
         zeroMem(a.data[a.dataIndex(0, y)].addr, 4 * xStart)
