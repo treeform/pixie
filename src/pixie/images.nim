@@ -696,7 +696,7 @@ proc drawUber(
     filterBy2 *= 2
 
   let
-    hasRotation = not(dx == vec2(1, 0) and dy == vec2(0, 1))
+    hasRotationOrScaling = not(dx == vec2(1, 0) and dy == vec2(0, 1))
     smooth = not(
       dx.length == 1.0 and
       dy.length == 1.0 and
@@ -740,7 +740,7 @@ proc drawUber(
           xMax = max(xMax, at.x)
 
     var xStart, xStop: int
-    if hasRotation or smooth:
+    if hasRotationOrScaling or smooth:
       xStart = xMin.floor.int
       xStop = xMax.ceil.int
     else:
@@ -786,14 +786,15 @@ proc drawUber(
 
     else:
       var x = xStart
-      if not hasRotation:
+      if not hasRotationOrScaling:
+        let
+          srcPos = p + dx * x.float32 + dy * y.float32
+          sy = srcPos.y.int
+        var sx = srcPos.x.int
+
         when type(a) is Image and type(b) is Image:
           if blendMode in {bmNormal, bmOverwrite} and
             isOpaque(b.data, b.dataIndex(xStart, y), xStop - xStart):
-            let
-              srcPos = p + dx * x.float32 + dy * y.float32
-              sx = srcPos.x.int
-              sy = srcPos.y.int
             copyMem(
               a.data[a.dataIndex(x, y)].addr,
               b.data[b.dataIndex(sx, sy)].addr,
@@ -805,10 +806,6 @@ proc drawUber(
           case blendMode:
           of bmOverwrite:
             for _ in 0 ..< (xStop - xStart) div 16:
-              let
-                srcPos = p + dx * x.float32 + dy * y.float32
-                sx = srcPos.x.int
-                sy = srcPos.y.int
               when type(a) is Image:
                 when type(b) is Image:
                   for q in [0, 4, 8, 12]:
@@ -833,13 +830,10 @@ proc drawUber(
                   let sourceVec = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
                 mm_storeu_si128(a.data[a.dataIndex(x, y)].addr, sourceVec)
               x += 16
+              sx += 16
           of bmNormal:
             let vec255 = mm_set1_epi32(cast[int32](uint32.high))
             for _ in 0 ..< (xStop - xStart) div 16:
-              let
-                srcPos = p + dx * x.float32 + dy * y.float32
-                sx = srcPos.x.int
-                sy = srcPos.y.int
               when type(a) is Image:
                 when type(b) is Image:
                   for q in [0, 4, 8, 12]:
@@ -884,13 +878,10 @@ proc drawUber(
                   maskNormalInlineSimd(backdropVec, sourceVec)
                 )
               x += 16
+              sx += 16
           of bmMask:
             let vec255 = mm_set1_epi32(cast[int32](uint32.high))
             for _ in 0 ..< (xStop - xStart) div 16:
-              let
-                srcPos = p + dx * x.float32 + dy * y.float32
-                sx = srcPos.x.int
-                sy = srcPos.y.int
               when type(a) is Image:
                 when type(b) is Image:
                   for q in [0, 4, 8, 12]:
@@ -933,15 +924,12 @@ proc drawUber(
                   maskMaskInlineSimd(backdropVec, sourceVec)
                 )
               x += 16
+              sx += 16
           else:
             when type(a) is Image:
               if blendMode.hasSimdBlender():
                 let blenderSimd = blendMode.blenderSimd()
                 for _ in 0 ..< (xStop - xStart) div 16:
-                  let
-                    srcPos = p + dx * x.float32 + dy * y.float32
-                    sx = srcPos.x.int
-                    sy = srcPos.y.int
                   when type(b) is Image:
                     for q in [0, 4, 8, 12]:
                       let
@@ -964,15 +952,12 @@ proc drawUber(
                       # Shuffle 32 bits off for the next iteration
                       values = mm_srli_si128(values, 4)
                   x += 16
+                  sx += 16
             else: # is a Mask
               if blendMode.hasSimdMasker():
                 let maskerSimd = blendMode.maskerSimd()
                 for _ in 0 ..< (xStop - xStart) div 16:
-                  let
-                    srcPos = p + dx * x.float32 + dy * y.float32
-                    sx = srcPos.x.int
-                    sy = srcPos.y.int
-                    backdrop = mm_loadu_si128(a.data[a.dataIndex(x, y)].addr)
+                  let backdrop = mm_loadu_si128(a.data[a.dataIndex(x, y)].addr)
                   when type(b) is Image:
                     # Need to read 16 colors and pack their alpha values
                     let
@@ -989,6 +974,7 @@ proc drawUber(
                     maskerSimd(backdrop, source)
                   )
                   x += 16
+                  sx += 16
 
       var srcPos = p + dx * x.float32 + dy * y.float32
       srcPos = vec2(
