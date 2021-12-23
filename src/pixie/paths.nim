@@ -1601,11 +1601,16 @@ proc fillShapes(
     bounds = computeBounds(segments).snapToPixels()
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
+    pathWidth =
+      if startX < image.width:
+        min(bounds.w.int, image.width - startX)
+      else:
+        0
     pathHeight = min(image.height, (bounds.y + bounds.h).int)
     partitioning = partitionSegments(segments, startY, pathHeight - startY)
 
   var
-    coverages = newSeq[uint8](bounds.w.int)
+    coverages = newSeq[uint8](pathWidth)
     hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
     numHits: int
     aa: bool
@@ -1659,11 +1664,16 @@ proc fillShapes(
     bounds = computeBounds(segments).snapToPixels()
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
+    pathWidth =
+      if startX < mask.width:
+        min(bounds.w.int, mask.width - startX)
+      else:
+        0
     pathHeight = min(mask.height, (bounds.y + bounds.h).int)
     partitioning = partitionSegments(segments, startY, pathHeight)
 
   var
-    coverages = newSeq[uint8](bounds.w.int)
+    coverages = newSeq[uint8](pathWidth)
     hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
     numHits: int
     aa: bool
