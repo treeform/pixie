@@ -42,10 +42,10 @@ proc blurSlower*(
       for xx in x - radius ..< min(x + radius, 0):
         values += outOfBounds * kernel[xx - x + radius]
       for xx in max(x - radius, 0) .. min(x + radius, image.width - 1):
-        values += image.getRgbaUnsafe(xx, y) * kernel[xx - x + radius]
+        values += image.unsafe[xx, y] * kernel[xx - x + radius]
       for xx in max(x - radius, image.width) .. x + radius:
         values += outOfBounds * kernel[xx - x + radius]
-      blurX.setRgbaUnsafe(x, y, rgbx(values))
+      blurX.unsafe[x, y] = rgbx(values)
 
   # Blur in the Y direction.
   for y in 0 ..< image.height:
@@ -54,10 +54,10 @@ proc blurSlower*(
       for yy in y - radius ..< min(y + radius, 0):
         values += outOfBounds * kernel[yy - y + radius]
       for yy in max(y - radius, 0) .. min(y + radius, image.height - 1):
-        values += blurX.getRgbaUnsafe(x, yy) * kernel[yy - y + radius]
+        values += blurX.unsafe[x, yy] * kernel[yy - y + radius]
       for yy in max(y - radius, image.height) .. y + radius:
         values += outOfBounds * kernel[yy - y + radius]
-      image.setRgbaUnsafe(x, y, rgbx(values))
+      image.unsafe[x, y] = rgbx(values)
 
 let image = newImage(1920, 1080)
 
