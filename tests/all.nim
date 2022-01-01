@@ -10,6 +10,7 @@ import
   test_paints,
   test_paths,
   test_png,
+  test_qoi,
   test_svg,
   ../examples/text,
   ../examples/text_spans,
