@@ -1,13 +1,14 @@
 import bumpy, chroma, flatty/binny, os, pixie/common, pixie/contexts,
     pixie/fileformats/bmp, pixie/fileformats/gif, pixie/fileformats/jpg,
-    pixie/fileformats/png, pixie/fileformats/svg, pixie/fonts, pixie/images,
-    pixie/masks, pixie/paints, pixie/paths, strutils, vmath
+    pixie/fileformats/png, pixie/fileformats/qoi, pixie/fileformats/svg,
+    pixie/fonts, pixie/images, pixie/masks, pixie/paints, pixie/paths,
+    strutils, vmath
 
 export bumpy, chroma, common, contexts, fonts, images, masks, paints, paths, vmath
 
 type
   FileFormat* = enum
-    ffPng, ffBmp, ffJpg, ffGif
+    ffPng, ffBmp, ffJpg, ffGif, ffQoi
 
 converter autoStraightAlpha*(c: ColorRGBX): ColorRGBA {.inline, raises: [].} =
   ## Convert a premultiplied alpha RGBA to a straight alpha RGBA.
@@ -30,6 +31,8 @@ proc decodeImage*(data: string | seq[uint8]): Image {.raises: [PixieError].} =
     decodeSvg(data)
   elif data.len > 6 and data.readStr(0, 6) in gifSignatures:
     decodeGif(data)
+  elif data.len > (14+8) and data.readStr(0, 4) == qoiSignature:
+    decodeQoi(data)
   else:
     raise newException(PixieError, "Unsupported image file format")
 
@@ -63,6 +66,8 @@ proc encodeImage*(image: Image, fileFormat: FileFormat): string {.raises: [Pixie
     image.encodeJpg()
   of ffBmp:
     image.encodeBmp()
+  of ffQoi:
+    image.encodeQoi()
   of ffGif:
     raise newException(PixieError, "Unsupported file format")
 
@@ -80,6 +85,7 @@ proc writeFile*(image: Image, filePath: string) {.raises: [PixieError].} =
     of ".png": ffPng
     of ".bmp": ffBmp
     of ".jpg", ".jpeg": ffJpg
+    of ".qoi": ffQoi
     else:
       raise newException(PixieError, "Unsupported file extension")
 
@@ -94,6 +100,7 @@ proc writeFile*(mask: Mask, filePath: string) {.raises: [PixieError].} =
     of ".png": ffPng
     of ".bmp": ffBmp
     of ".jpg", ".jpeg": ffJpg
+    of ".qoi": ffQoi
     else:
       raise newException(PixieError, "Unsupported file extension")
 
