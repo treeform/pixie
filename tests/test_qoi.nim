@@ -1,15 +1,18 @@
-import pixie, pixie/fileformats/qoi, pixie/fileformats/png
+import pixie, pixie/fileformats/png, pixie/fileformats/qoi
 
 const tests = ["testcard", "testcard_rgba"]
 
 for name in tests:
-  var input = decodeQoi(readFile("tests/fileformats/qoi/" & name & ".qoi"))
-  var control = decodePng(readFile("tests/fileformats/qoi/" & name & ".png"))
-  doAssert(input.data == control.data, "input mismatch of " & name)
+  let
+    input = decodeQoi(readFile("tests/fileformats/qoi/" & name & ".qoi"))
+    control = decodePng(readFile("tests/fileformats/qoi/" & name & ".png"))
+  doAssert input.data == control.data, "input mismatch of " & name
+
+  decodeQoi(control.encodeQoi()).writeFile("tmp.png")
 
 for name in tests:
-  var
-    input: Qoi = decompressQoi(readFile("tests/fileformats/qoi/" & name & ".qoi"))
-    output: Qoi = decompressQoi(compressQoi(input))
-  doAssert(output.data.len == input.data.len)
-  doAssert(output.data == input.data)
+  let
+    input = decodeQoiRaw(readFile("tests/fileformats/qoi/" & name & ".qoi"))
+    output = decodeQoiRaw(encodeQoi(input))
+  doAssert output.data.len == input.data.len
+  doAssert output.data == input.data

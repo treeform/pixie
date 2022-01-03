@@ -1,8 +1,7 @@
 import bumpy, chroma, flatty/binny, os, pixie/common, pixie/contexts,
     pixie/fileformats/bmp, pixie/fileformats/gif, pixie/fileformats/jpg,
     pixie/fileformats/png, pixie/fileformats/qoi, pixie/fileformats/svg,
-    pixie/fonts, pixie/images, pixie/masks, pixie/paints, pixie/paths,
-    strutils, vmath
+    pixie/fonts, pixie/images, pixie/masks, pixie/paints, pixie/paths, strutils, vmath
 
 export bumpy, chroma, common, contexts, fonts, images, masks, paints, paths, vmath
 

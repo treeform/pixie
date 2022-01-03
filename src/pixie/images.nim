@@ -838,11 +838,14 @@ proc drawUber(
                 when type(b) is Image:
                   for q in [0, 4, 8, 12]:
                     let sourceVec = mm_loadu_si128(b.data[b.dataIndex(sx + q, sy)].addr)
-                    if mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, mm_setzero_si128())) != 0xffff:
-                      if (mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, vec255)) and 0x8888) == 0x8888:
+                    if mm_movemask_epi8(mm_cmpeq_epi8(sourceVec,
+                        mm_setzero_si128())) != 0xffff:
+                      if (mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, vec255)) and
+                          0x8888) == 0x8888:
                         mm_storeu_si128(a.data[a.dataIndex(x + q, y)].addr, sourceVec)
                       else:
-                        let backdropVec = mm_loadu_si128(a.data[a.dataIndex(x + q, y)].addr)
+                        let backdropVec = mm_loadu_si128(a.data[a.dataIndex(x +
+                            q, y)].addr)
                         mm_storeu_si128(
                           a.data[a.dataIndex(x + q, y)].addr,
                           blendNormalInlineSimd(backdropVec, sourceVec)
@@ -851,11 +854,14 @@ proc drawUber(
                   var values = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
                   for q in [0, 4, 8, 12]:
                     let sourceVec = unpackAlphaValues(values)
-                    if mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, mm_setzero_si128())) != 0xffff:
-                      if (mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, vec255)) and 0x8888) == 0x8888:
+                    if mm_movemask_epi8(mm_cmpeq_epi8(sourceVec,
+                        mm_setzero_si128())) != 0xffff:
+                      if (mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, vec255)) and
+                          0x8888) == 0x8888:
                         discard
                       else:
-                        let backdropVec = mm_loadu_si128(a.data[a.dataIndex(x + q, y)].addr)
+                        let backdropVec = mm_loadu_si128(a.data[a.dataIndex(x +
+                            q, y)].addr)
                         mm_storeu_si128(
                           a.data[a.dataIndex(x + q, y)].addr,
                           blendNormalInlineSimd(backdropVec, sourceVec)
@@ -886,8 +892,10 @@ proc drawUber(
                 when type(b) is Image:
                   for q in [0, 4, 8, 12]:
                     let sourceVec = mm_loadu_si128(b.data[b.dataIndex(sx + q, sy)].addr)
-                    if mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, mm_setzero_si128())) == 0xffff:
-                      mm_storeu_si128(a.data[a.dataIndex(x + q, y)].addr, mm_setzero_si128())
+                    if mm_movemask_epi8(mm_cmpeq_epi8(sourceVec,
+                        mm_setzero_si128())) == 0xffff:
+                      mm_storeu_si128(a.data[a.dataIndex(x + q, y)].addr,
+                          mm_setzero_si128())
                     elif mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, vec255)) != 0xffff:
                       let backdropVec = mm_loadu_si128(a.data[a.dataIndex(x + q, y)].addr)
                       mm_storeu_si128(
@@ -898,9 +906,12 @@ proc drawUber(
                   var values = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
                   for q in [0, 4, 8, 12]:
                     let sourceVec = unpackAlphaValues(values)
-                    if mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, mm_setzero_si128())) == 0xffff:
-                       mm_storeu_si128(a.data[a.dataIndex(x + q, y)].addr, mm_setzero_si128())
-                    elif (mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, vec255)) and 0x8888) != 0x8888:
+                    if mm_movemask_epi8(mm_cmpeq_epi8(sourceVec,
+                        mm_setzero_si128())) == 0xffff:
+                      mm_storeu_si128(a.data[a.dataIndex(x + q, y)].addr,
+                          mm_setzero_si128())
+                    elif (mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, vec255)) and
+                        0x8888) != 0x8888:
                       let backdropVec = mm_loadu_si128(a.data[a.dataIndex(x + q, y)].addr)
                       mm_storeu_si128(
                         a.data[a.dataIndex(x + q, y)].addr,
