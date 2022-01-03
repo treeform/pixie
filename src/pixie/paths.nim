@@ -1609,6 +1609,9 @@ proc fillShapes(
     pathHeight = min(image.height, (bounds.y + bounds.h).int)
     partitioning = partitionSegments(segments, startY, pathHeight - startY)
 
+  if pathWidth == 0:
+    return
+
   var
     coverages = newSeq[uint8](pathWidth)
     hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
