@@ -7,6 +7,7 @@ for name in tests:
     input = decodeQoi(readFile("tests/fileformats/qoi/" & name & ".qoi"))
     control = decodePng(readFile("tests/fileformats/qoi/" & name & ".png"))
   doAssert input.data == control.data, "input mismatch of " & name
+  discard encodeQoi(control)
 
 for name in tests:
   let
