@@ -1,4 +1,4 @@
-import random, pixie
+import pixie, random
 
 randomize()
 

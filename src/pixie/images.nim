@@ -899,7 +899,7 @@ proc drawUber(
                   for q in [0, 4, 8, 12]:
                     let sourceVec = unpackAlphaValues(values)
                     if mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, mm_setzero_si128())) == 0xffff:
-                       mm_storeu_si128(a.data[a.dataIndex(x + q, y)].addr, mm_setzero_si128())
+                      mm_storeu_si128(a.data[a.dataIndex(x + q, y)].addr, mm_setzero_si128())
                     elif (mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, vec255)) and 0x8888) != 0x8888:
                       let backdropVec = mm_loadu_si128(a.data[a.dataIndex(x + q, y)].addr)
                       mm_storeu_si128(

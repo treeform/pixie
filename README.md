@@ -34,6 +34,7 @@ Format        | Read          | Write         |
 PNG           | ✅           | ✅            |
 JPEG          | ✅           |               |
 BMP           | ✅           | ✅            |
+QOI           | ✅           | ✅            |
 GIF           | ✅           |               |
 SVG           | ✅           |               |
 
