@@ -561,14 +561,10 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     raise currentExceptionAsPixieError()
 
 proc decodeSvg*(
-  data: string, width = 0, height = 0
+  root: XmlNode, width = 0, height = 0
 ): Image {.raises: [PixieError].} =
-  ## Render SVG file and return the image. Defaults to the SVG's view box size.
+  ## Render SVG XML and return the image. Defaults to the SVG's view box size.
   try:
-    let root = parseXml(data)
-    if root.tag != "svg":
-      failInvalid()
-
     let
       viewBox = root.attr("viewBox")
       box = viewBox.split(" ")
@@ -602,3 +598,13 @@ proc decodeSvg*(
     raise e
   except:
     raise newException(PixieError, "Unable to load SVG")
+
+proc decodeSvg*(
+  data: string, width = 0, height = 0
+): Image {.raises: [PixieError].} =
+  ## Render SVG file and return the image. Defaults to the SVG's view box size.
+  var root: XmlNode
+  try: root = parseXml(data)
+  except: raise currentExceptionAsPixieError()
+  if root.tag != "svg": failInvalid()
+  decodeSvg(root, width, height)
