@@ -8,8 +8,6 @@ for name in tests:
     control = decodePng(readFile("tests/fileformats/qoi/" & name & ".png"))
   doAssert input.data == control.data, "input mismatch of " & name
 
-  decodeQoi(control.encodeQoi()).writeFile("tmp.png")
-
 for name in tests:
   let
     input = decodeQoiRaw(readFile("tests/fileformats/qoi/" & name & ".qoi"))
