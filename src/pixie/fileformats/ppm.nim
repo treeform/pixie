@@ -16,7 +16,7 @@ proc decodeHeader(data: string): PpmHeader {.raises: [PixieError].} =
   if data.len <= 10: # Each part + whitespace
     raise newException(PixieError, "Invalid PPM file header")
 
-  var commentMode: bool
+  var commentMode, readWhitespace: bool
   var i, readFields: int
   var field: string
   while readFields < 4:
@@ -26,8 +26,9 @@ proc decodeHeader(data: string): PpmHeader {.raises: [PixieError].} =
     elif c == '\n':
       commentMode = false
     if not commentMode:
-      if c in Whitespace:
+      if c in Whitespace and not readWhitespace:
         readFields += 1
+        readWhitespace = true
         try:
           case readFields:
             of 1:
@@ -42,8 +43,9 @@ proc decodeHeader(data: string): PpmHeader {.raises: [PixieError].} =
               discard
         except ValueError: failInvalid()
         field = ""
-      else:
+      elif not (c in Whitespace):
         field.add(c)
+        readWhitespace = false
     i += 1
 
     result.dataOffset = i
@@ -77,8 +79,16 @@ proc decodeP6Data(data: string, maxVal: int): seq[ColorRGBX] {.raises: [].} =
         blue = readUint16(data, i + 4 + (i * 4)).uint8 * valueMultiplier
       result[i] = rgbx(red, green, blue, 0xFF)
 
-proc decodeP3Data(data: string, maxVal: int): seq[ColorRGBX] {.raises: [].} =
-  result = newSeq[ColorRGBX](1)
+proc decodeP3Data(data: string, maxVal: int): seq[ColorRGBX] {.raises: [PixieError].} =
+  var p6data = newStringOfCap(data.splitWhitespace.len)
+  try:
+    for line in data.splitLines():
+      echo line
+      for sample in line.split('#', 1)[0].splitWhitespace():
+        p6data.add(parseInt(sample).chr)
+  except ValueError: failInvalid()
+
+  result = decodeP6Data(p6data, maxVal)
 
 proc decodePpm*(data: string): Image {.raises: [PixieError].} =
   ## Decodes Portable Pixel Map data into an Image.
@@ -116,7 +126,7 @@ proc encodePpm*(image: Image): string {.raises: [].} =
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       let rgb = image[x, y].rgba()
-      # alpha channel is ignored
+      # Alpha channel is ignored
       result.addUint8(rgb.r)
       result.addUint8(rgb.g)
       result.addUint8(rgb.b)
