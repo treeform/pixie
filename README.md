@@ -37,6 +37,7 @@ BMP           | ✅           | ✅            |
 QOI           | ✅           | ✅            |
 GIF           | ✅           |               |
 SVG           | ✅           |               |
+PPM           | ✅           | ✅            |
 
 ### Font file formats
 
