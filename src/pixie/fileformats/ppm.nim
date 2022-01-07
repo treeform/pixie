@@ -83,7 +83,6 @@ proc decodeP3Data(data: string, maxVal: int): seq[ColorRGBX] {.raises: [PixieErr
   var p6data = newStringOfCap(data.splitWhitespace.len)
   try:
     for line in data.splitLines():
-      echo line
       for sample in line.split('#', 1)[0].splitWhitespace():
         p6data.add(parseInt(sample).chr)
   except ValueError: failInvalid()
