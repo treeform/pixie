@@ -27,7 +27,7 @@ proc decodeHeader(data: string): PpmHeader {.raises: [PixieError].} =
       commentMode = false
     if not commentMode:
       if c in Whitespace and not readWhitespace:
-        readFields += 1
+        inc readFields
         readWhitespace = true
         try:
           case readFields:
@@ -46,22 +46,22 @@ proc decodeHeader(data: string): PpmHeader {.raises: [PixieError].} =
       elif not (c in Whitespace):
         field.add(c)
         readWhitespace = false
-    i += 1
+    inc i
 
     result.dataOffset = i
 
 proc decodeP6Data(data: string, maxVal: int): seq[ColorRGBX] {.raises: [].} =
   let needsUint16 = maxVal > 0xFF
 
-  result = newSeq[ColorRGBX]((
-    if needsUint16: data.len / 6
-    else: data.len / 3
-  ).int)
+  result = newSeq[ColorRGBX](
+    if needsUint16: data.len div 6
+    else: data.len div 3
+  )
 
   # Let's calculate the real maximum value multiplier.
   # rgbx() accepts a maximum value of 0xFF. Most of the time,
   # maxVal is set to 0xFF as well, so in most cases it is 1
-  let valueMultiplier = (0xFF / maxVal).uint8
+  let valueMultiplier = (0xFF div maxVal).uint8
 
   # if comparison in for loops is expensive, so let's unroll it
   if not needsUint16:
@@ -124,7 +124,7 @@ proc encodePpm*(image: Image): string {.raises: [].} =
   # PPM image data
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
-      let rgb = image[x, y].rgba()
+      let rgb = image[x, y]
       # Alpha channel is ignored
       result.addUint8(rgb.r)
       result.addUint8(rgb.g)
