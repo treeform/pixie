@@ -2126,7 +2126,7 @@ proc getGlyphId(opentype: OpenType, rune: Rune): uint16 =
 proc hasGlyph*(opentype: OpenType, rune: Rune): bool =
   rune in opentype.cmap.runeToGlyphId
 
-proc parseGlyfGlyph(opentype: OpenType, glyphId: uint16): Path {.raises: [PixieError].}
+proc parseGlyfGlyph(opentype: OpenType, glyphId: uint16): Path {.raises: [PixieError], gcsafe.}
 
 proc parseGlyphPath(
   buf: string, offset, numberOfContours: int
