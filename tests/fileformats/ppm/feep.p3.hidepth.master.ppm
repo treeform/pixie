@@ -1,0 +1,8 @@
+P3
+# feep.p3.hidepth.master.ppm
+4 4
+7919 # prime number chosen for test purposes
+ 0   0  0    0  0    0    0  0    0    7919 0 7919
+ 0   0  0    0 7919 3695  0  0    0     0   0  0
+ 0   0  0    0  0    0    0 7919 3695   0   0  0
+7919 0 7919  0  0    0    0  0    0     0   0  0

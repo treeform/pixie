@@ -61,30 +61,41 @@ proc decodeP6Data(data: string, maxVal: int): seq[ColorRGBX] {.raises: [].} =
   # Let's calculate the real maximum value multiplier.
   # rgbx() accepts a maximum value of 0xFF. Most of the time,
   # maxVal is set to 0xFF as well, so in most cases it is 1
-  let valueMultiplier = (0xFF div maxVal).uint8
+  let valueMultiplier = 0xFF / maxVal
 
   # if comparison in for loops is expensive, so let's unroll it
   if not needsUint16:
     for i in 0 ..< result.len:
       let
-        red = readUint8(data, i + (i * 2)) * valueMultiplier
-        green = readUint8(data, i + 1 + (i * 2)) * valueMultiplier
-        blue = readUint8(data, i + 2 + (i * 2)) * valueMultiplier
+        red = (readUint8(data, i + (i * 2)).float * valueMultiplier + 0.5).uint8
+        green = (readUint8(data, i + 1 + (i * 2)).float * valueMultiplier + 0.5).uint8
+        blue = (readUint8(data, i + 2 + (i * 2)).float * valueMultiplier + 0.5).uint8
       result[i] = rgbx(red, green, blue, 0xFF)
   else:
     for i in 0 ..< result.len:
       let
-        red = readUint16(data, i + (i * 4)).uint8 * valueMultiplier
-        green = readUint16(data, i + 2 + (i * 4)).uint8 * valueMultiplier
-        blue = readUint16(data, i + 4 + (i * 4)).uint8 * valueMultiplier
+        red = (readUint16(data, i + (i * 5)).swap.float * valueMultiplier + 0.5).uint8
+        green = (readUint16(data, i + 2 + (i * 5)).swap.float * valueMultiplier + 0.5).uint8
+        blue = (readUint16(data, i + 4 + (i * 5)).swap.float * valueMultiplier + 0.5).uint8
       result[i] = rgbx(red, green, blue, 0xFF)
 
 proc decodeP3Data(data: string, maxVal: int): seq[ColorRGBX] {.raises: [PixieError].} =
-  var p6data = newStringOfCap(data.splitWhitespace.len)
+  let needsUint16 = maxVal > 0xFF
+  let maxLen = (
+    if needsUint16: data.splitWhitespace.len * 2
+    else: data.splitWhitespace.len
+  )
+  var p6data = newStringOfCap(maxLen)
+
   try:
-    for line in data.splitLines():
-      for sample in line.split('#', 1)[0].splitWhitespace():
-        p6data.add(parseInt(sample).chr)
+    if not needsUint16:
+      for line in data.splitLines():
+        for sample in line.split('#', 1)[0].splitWhitespace():
+          p6data.add(parseInt(sample).chr)
+    else:
+      for line in data.splitLines():
+        for sample in line.split('#', 1)[0].splitWhitespace():
+          p6data.addUint16(parseInt(sample).uint16.swap)
   except ValueError: failInvalid()
 
   result = decodeP6Data(p6data, maxVal)
