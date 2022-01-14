@@ -1,13 +1,14 @@
 import bumpy, chroma, flatty/binny, os, pixie/common, pixie/contexts,
     pixie/fileformats/bmp, pixie/fileformats/gif, pixie/fileformats/jpg,
-    pixie/fileformats/png, pixie/fileformats/qoi, pixie/fileformats/svg,
-    pixie/fonts, pixie/images, pixie/masks, pixie/paints, pixie/paths, strutils, vmath
+    pixie/fileformats/png, pixie/fileformats/ppm, pixie/fileformats/qoi,
+    pixie/fileformats/svg, pixie/fonts, pixie/images, pixie/masks, pixie/paints,
+    pixie/paths, strutils, vmath
 
 export bumpy, chroma, common, contexts, fonts, images, masks, paints, paths, vmath
 
 type
   FileFormat* = enum
-    ffPng, ffBmp, ffJpg, ffGif, ffQoi
+    ffPng, ffBmp, ffJpg, ffGif, ffQoi, ffPpm
 
 converter autoStraightAlpha*(c: ColorRGBX): ColorRGBA {.inline, raises: [].} =
   ## Convert a premultiplied alpha RGBA to a straight alpha RGBA.
@@ -32,6 +33,8 @@ proc decodeImage*(data: string | seq[uint8]): Image {.raises: [PixieError].} =
     decodeGif(data)
   elif data.len > (14+8) and data.readStr(0, 4) == qoiSignature:
     decodeQoi(data)
+  elif data.len > 9 and data.readStr(0, 2) in ppmSignatures:
+    decodePpm(data)
   else:
     raise newException(PixieError, "Unsupported image file format")
 
@@ -69,6 +72,8 @@ proc encodeImage*(image: Image, fileFormat: FileFormat): string {.raises: [Pixie
     image.encodeQoi()
   of ffGif:
     raise newException(PixieError, "Unsupported file format")
+  of ffPpm:
+    image.encodePpm()
 
 proc encodeMask*(mask: Mask, fileFormat: FileFormat): string {.raises: [PixieError].} =
   ## Encodes a mask into memory.
@@ -85,6 +90,7 @@ proc writeFile*(image: Image, filePath: string) {.raises: [PixieError].} =
     of ".bmp": ffBmp
     of ".jpg", ".jpeg": ffJpg
     of ".qoi": ffQoi
+    of ".ppm": ffPpm
     else:
       raise newException(PixieError, "Unsupported file extension")
 
@@ -100,6 +106,7 @@ proc writeFile*(mask: Mask, filePath: string) {.raises: [PixieError].} =
     of ".bmp": ffBmp
     of ".jpg", ".jpeg": ffJpg
     of ".qoi": ffQoi
+    of ".ppm": ffPpm
     else:
       raise newException(PixieError, "Unsupported file extension")
 
