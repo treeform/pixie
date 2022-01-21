@@ -16,9 +16,10 @@ proc decodeHeader(data: string): PpmHeader {.raises: [PixieError].} =
   if data.len <= 10: # Each part + whitespace
     raise newException(PixieError, "Invalid PPM file header")
 
-  var commentMode, readWhitespace: bool
-  var i, readFields: int
-  var field: string
+  var
+    commentMode, readWhitespace: bool
+    i, readFields: int
+    field: string
   while readFields < 4:
     let c = readUint8(data, i).char
     if c == '#':
@@ -41,7 +42,8 @@ proc decodeHeader(data: string): PpmHeader {.raises: [PixieError].} =
               result.maxVal = parseInt(field)
             else:
               discard
-        except ValueError: failInvalid()
+        except ValueError:
+          failInvalid()
         field = ""
       elif not (c in Whitespace):
         field.add(c)
@@ -54,49 +56,64 @@ proc decodeP6Data(data: string, maxVal: int): seq[ColorRGBX] {.raises: [].} =
   let needsUint16 = maxVal > 0xFF
 
   result = newSeq[ColorRGBX](
-    if needsUint16: data.len div 6
-    else: data.len div 3
+    if needsUint16:
+      data.len div 6
+    else:
+      data.len div 3
   )
 
   # Let's calculate the real maximum value multiplier.
-  # rgbx() accepts a maximum value of 0xFF. Most of the time,
-  # maxVal is set to 0xFF as well, so in most cases it is 1
-  let valueMultiplier = 0xFF / maxVal
+  # rgbx() accepts a maximum value of 255. Most of the time,
+  # maxVal is set to 255 as well, so in most cases it is 1
+  let valueMultiplier = (255 / maxVal).float32
 
   # if comparison in for loops is expensive, so let's unroll it
   if not needsUint16:
     for i in 0 ..< result.len:
       let
-        red = (readUint8(data, i + (i * 2)).float * valueMultiplier + 0.5).uint8
-        green = (readUint8(data, i + 1 + (i * 2)).float * valueMultiplier + 0.5).uint8
-        blue = (readUint8(data, i + 2 + (i * 2)).float * valueMultiplier + 0.5).uint8
-      result[i] = rgbx(red, green, blue, 0xFF)
+        red = data.readUint8(i + (i * 2)).float32
+        green = data.readUint8(i + 1 + (i * 2)).float32
+        blue = data.readUint8(i + 2 + (i * 2)).float32
+      result[i] = rgbx(
+        (red * valueMultiplier + 0.5).uint8,
+        (green * valueMultiplier + 0.5).uint8,
+        (blue * valueMultiplier + 0.5).uint8,
+        255
+      )
   else:
     for i in 0 ..< result.len:
       let
-        red = (readUint16(data, i + (i * 5)).swap.float * valueMultiplier + 0.5).uint8
-        green = (readUint16(data, i + 2 + (i * 5)).swap.float * valueMultiplier + 0.5).uint8
-        blue = (readUint16(data, i + 4 + (i * 5)).swap.float * valueMultiplier + 0.5).uint8
-      result[i] = rgbx(red, green, blue, 0xFF)
+        red = data.readUint16(i + (i * 5)).swap.float32
+        green = data.readUint16(i + 2 + (i * 5)).swap.float32
+        blue = data.readUint16(i + 4 + (i * 5)).swap.float32
+      result[i] = rgbx(
+        (red * valueMultiplier + 0.5).uint8,
+        (green * valueMultiplier + 0.5).uint8,
+        (blue * valueMultiplier + 0.5).uint8,
+        255
+      )
 
 proc decodeP3Data(data: string, maxVal: int): seq[ColorRGBX] {.raises: [PixieError].} =
-  let needsUint16 = maxVal > 0xFF
-  let maxLen = (
-    if needsUint16: data.splitWhitespace.len * 2
-    else: data.splitWhitespace.len
-  )
-  var p6data = newStringOfCap(maxLen)
+  let
+    needsUint16 = maxVal > 0xFF
+    maxLen =
+      if needsUint16:
+        data.splitWhitespace.len * 2
+      else:
+        data.splitWhitespace.len
 
+  var p6data = newStringOfCap(maxLen)
   try:
     if not needsUint16:
       for line in data.splitLines():
         for sample in line.split('#', 1)[0].splitWhitespace():
-          p6data.add(parseInt(sample).chr)
+          p6data.add(parseInt(sample).char)
     else:
       for line in data.splitLines():
         for sample in line.split('#', 1)[0].splitWhitespace():
           p6data.addUint16(parseInt(sample).uint16.swap)
-  except ValueError: failInvalid()
+  except ValueError:
+    failInvalid()
 
   result = decodeP6Data(p6data, maxVal)
 
@@ -105,19 +122,19 @@ proc decodePpm*(data: string): Image {.raises: [PixieError].} =
 
   let header = decodeHeader(data)
 
-  if not (header.version in ppmSignatures): failInvalid()
-  if 0 > header.maxVal or header.maxVal > 0xFFFF: failInvalid()
+  if not (header.version in ppmSignatures):
+    failInvalid()
+
+  if 0 > header.maxVal or header.maxVal > 0xFFFF:
+    failInvalid()
 
   result = newImage(header.width, header.height)
   result.data = (
     if header.version == "P3":
       decodeP3Data(data[header.dataOffset .. ^1], header.maxVal)
-    else: decodeP6Data(data[header.dataOffset .. ^1], header.maxVal)
+    else:
+      decodeP6Data(data[header.dataOffset .. ^1], header.maxVal)
   )
-
-proc decodePpm*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
-  ## Decodes Portable Pixel Map data into an Image.
-  decodePpm(cast[string](data))
 
 proc encodePpm*(image: Image): string {.raises: [].} =
   ## Encodes an image into the PPM file format (version P6).
