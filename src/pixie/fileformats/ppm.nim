@@ -129,12 +129,11 @@ proc decodePpm*(data: string): Image {.raises: [PixieError].} =
     failInvalid()
 
   result = newImage(header.width, header.height)
-  result.data = (
+  result.data =
     if header.version == "P3":
       decodeP3Data(data[header.dataOffset .. ^1], header.maxVal)
     else:
       decodeP6Data(data[header.dataOffset .. ^1], header.maxVal)
-  )
 
 proc encodePpm*(image: Image): string {.raises: [].} =
   ## Encodes an image into the PPM file format (version P6).
