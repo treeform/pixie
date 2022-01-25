@@ -165,14 +165,31 @@ proc unfilter(
       discard # Not possible, parseHeader validates
 
 proc decodeImageData(
+  data: string,
   header: PngHeader,
   palette: seq[ColorRGB],
-  transparency, data: string
+  transparency: string,
+  idats: seq[(int, int)]
 ): seq[ColorRGBA] =
+  if idats.len == 0:
+    failInvalid()
+
   result.setLen(header.width * header.height)
 
   let
-    uncompressed = try: uncompress(data) except ZippyError: failInvalid()
+    uncompressed =
+      if idats.len > 1:
+        var imageData: string
+        for (start, len) in idats:
+          let op = imageData.len
+          imageData.setLen(imageData.len + len)
+          copyMem(imageData[op].addr, data[start].unsafeAddr, len)
+        try: uncompress(imageData) except ZippyError: failInvalid()
+      else:
+        let
+          (start, len) = idats[0]
+          p = data[start].unsafeAddr
+        try: uncompress(p, len) except ZippyError: failInvalid()
     valuesPerPixel =
       case header.colorType:
       of 0: 1
@@ -340,7 +357,8 @@ proc decodePngRaw*(data: string): Png {.raises: [PixieError].} =
     counts = ChunkCounts()
     header: PngHeader
     palette: seq[ColorRGB]
-    transparency, imageData: string
+    transparency: string
+    idats: seq[(int, int)]
     prevChunkType: string
 
   # First chunk must be IHDR
@@ -402,9 +420,7 @@ proc decodePngRaw*(data: string): Png {.raises: [PixieError].} =
         failInvalid()
       if header.colorType == 3 and counts.PLTE == 0:
         failInvalid()
-      let op = imageData.len
-      imageData.setLen(imageData.len + chunkLen)
-      copyMem(imageData[op].addr, data[pos].unsafeAddr, chunkLen)
+      idats.add((pos, chunkLen))
     of "IEND":
       if chunkLen != 0:
         failInvalid()
@@ -432,7 +448,7 @@ proc decodePngRaw*(data: string): Png {.raises: [PixieError].} =
   result.width = header.width
   result.height = header.height
   result.channels = 4
-  result.data = decodeImageData(header, palette, transparency, imageData)
+  result.data = decodeImageData(data, header, palette, transparency, idats)
 
 proc decodePng*(data: string): Image {.raises: [PixieError].} =
   ## Decodes the PNG data into an Image.

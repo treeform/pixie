@@ -101,7 +101,10 @@ proc decodeGif*(data: string): Image {.raises: [PixieError].} =
 
       # Turn full lzw data into bit stream.
       var
-        bs = initBitStream(lzwData)
+        bs = BitStreamReader(
+          src: cast[ptr UncheckedArray[uint8]](lzwData[0].addr),
+          len: lzwData.len
+        )
         bitSize = lzwMinBitSize + 1
         currentCodeTableMax = (1 shl (bitSize)) - 1
         codeLast: int = -1
@@ -110,10 +113,10 @@ proc decodeGif*(data: string): Image {.raises: [PixieError].} =
 
       # Main decode loop.
       while codeLast != endCode:
-        if bs.pos + bitSize.int > bs.data.len * 8: failInvalid()
+        if bs.pos + bitSize.int > bs.len * 8: failInvalid()
         var
           # Read variable bits out of the table.
-          codeId = bs.readBits(bitSize).int
+          codeId = bs.readBits(bitSize.int).int
           # Some time we need to carry over table information.
           carryOver: seq[int]
 
