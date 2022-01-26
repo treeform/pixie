@@ -561,7 +561,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     raise currentExceptionAsPixieError()
 
 proc decodeSvg*(
-  data: string, width = 0, height = 0
+  data: string | XmlNode, width = 0, height = 0
 ): Image {.raises: [PixieError].} =
   ## Render SVG XML and return the image. Defaults to the SVG's view box size.
   try:
@@ -595,48 +595,7 @@ proc decodeSvg*(
       rootCtx.transform = rootCtx.transform * scale(vec2(scaleX, scaleY))
 
     var ctxStack = @[rootCtx]
-    for node in root:
-      result.draw(node, ctxStack)
-  except PixieError as e:
-    raise e
-  except:
-    raise newException(PixieError, "Unable to load SVG")
-
-proc decodeSvg*(
-  root: XmlNode, width = 0, height = 0
-): Image {.raises: [PixieError].} =
-  ## Render SVG XML and return the image. Defaults to the SVG's view box size.
-  try:
-    if root.tag != "svg":
-      failInvalid()
-
-    let
-      viewBox = root.attr("viewBox")
-      box = viewBox.split(" ")
-      viewBoxMinX = parseInt(box[0])
-      viewBoxMinY = parseInt(box[1])
-      viewBoxWidth = parseInt(box[2])
-      viewBoxHeight = parseInt(box[3])
-
-    var rootCtx = initCtx()
-    rootCtx = decodeCtx(rootCtx, root)
-
-    if viewBoxMinX != 0 or viewBoxMinY != 0:
-      let viewBoxMin = vec2(-viewBoxMinX.float32, -viewBoxMinY.float32)
-      rootCtx.transform = rootCtx.transform * translate(viewBoxMin)
-
-    if width == 0 and height == 0: # Default to the view box size
-      result = newImage(viewBoxWidth, viewBoxHeight)
-    else:
-      result = newImage(width, height)
-
-      let
-        scaleX = width.float32 / viewBoxWidth.float32
-        scaleY = height.float32 / viewBoxHeight.float32
-      rootCtx.transform = rootCtx.transform * scale(vec2(scaleX, scaleY))
-
-    var ctxStack = @[rootCtx]
-    for node in root:
+    for node in root.items:
       result.draw(node, ctxStack)
   except PixieError as e:
     raise e
