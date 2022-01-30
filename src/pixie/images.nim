@@ -595,7 +595,7 @@ proc getRgbaSmooth*(
     topMix
 
 proc drawCorrect(
-  a, b: Image | Mask, transform = mat3(), tiled = false, blendMode = bmNormal
+  a, b: Image | Mask, transform = mat3(), blendMode = bmNormal, tiled = false
 ) {.raises: [PixieError].} =
   ## Draws one image onto another using matrix with color blending.
 
@@ -792,15 +792,16 @@ proc drawUber(
           sy = srcPos.y.int
         var sx = srcPos.x.int
 
-        when type(a) is Image and type(b) is Image:
-          if blendMode in {bmNormal, bmOverwrite} and
-            isOpaque(b.data, b.dataIndex(xStart, y), xStop - xStart):
-            copyMem(
-              a.data[a.dataIndex(x, y)].addr,
-              b.data[b.dataIndex(sx, sy)].addr,
-              (xStop - xStart) * 4
-            )
-            continue
+        # TODO Fix
+        # when type(a) is Image and type(b) is Image:
+        #   if blendMode in {bmNormal, bmOverwrite} and
+        #     isOpaque(b.data, b.dataIndex(sx, sy), xStop - sx):
+        #       copyMem(
+        #         a.data[a.dataIndex(x, y)].addr,
+        #         b.data[b.dataIndex(sx, sy)].addr,
+        #         (xStop - xStart) * 4
+        #       )
+        #       continue
 
         when defined(amd64) and not defined(pixieNoSimd):
           case blendMode:
@@ -1142,7 +1143,7 @@ proc draw*(
 proc drawTiled*(
   dst, src: Image, mat: Mat3, blendMode = bmNormal
 ) {.raises: [PixieError].} =
-  dst.drawCorrect(src, mat, true, blendMode)
+  dst.drawCorrect(src, mat, blendMode, true)
 
 proc resize*(srcImage: Image, width, height: int): Image {.raises: [PixieError].} =
   ## Resize an image to a given height and width.

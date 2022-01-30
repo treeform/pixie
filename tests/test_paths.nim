@@ -1,5 +1,24 @@
 import chroma, pixie, pixie/fileformats/png, strformat
 
+
+block:
+  let pathStr = """
+  M 0 0
+  L 20 0
+  L 20 20
+  L 0 20
+  z
+  """
+  let
+    image = newImage(20, 20)
+    strokeImage = newImage(20, 20)
+  image.fillPath(pathStr, color(1.0, 0.5, 0.25, 1.0))
+  strokeImage.strokePath(pathStr, color(1, 1, 1, 1), strokeWidth = 4)
+  image.draw(strokeImage)
+
+  image.writeFile("tests/paths/fillOptimization.png")
+  doAssert image[10, 10] == rgbx(255, 127, 63, 255)
+
 block:
   let pathStr = """
   m 1 2 3 4 5 6
