@@ -270,3 +270,49 @@ block:
     rock = readImage("tests/images/rock.png")
     minified = rock.minifyBy2(2)
   doDiff(minified, "rock_minified2")
+
+block:
+  let pathStr = """
+  M 0 0
+  L 20 0
+  L 20 20
+  L 0 20
+  z
+  """
+  let
+    image = newImage(20, 20)
+    strokeImage = newImage(20, 20)
+  image.fillPath(pathStr, color(1.0, 0.5, 0.25, 1.0))
+  strokeImage.strokePath(pathStr, color(1, 1, 1, 1), strokeWidth = 4)
+  image.draw(strokeImage)
+
+  image.writeFile("tests/images/fillOptimization.png")
+  doAssert image[10, 10] == rgbx(255, 127, 63, 255)
+
+block:
+  let a = newImage(100, 100)
+  a.fill(color(1, 1, 1, 1))
+
+
+  let draws = [
+    # Overlaps in bounds
+    (vec2(-50, -50), color(1, 0, 0, 1)),
+    (vec2(50, -50), color(1, 0, 0, 1)),
+    (vec2(50, 50), color(1, 0, 0, 1)),
+    (vec2(-50, 50), color(1, 0, 0, 1)),
+    # Out of bounds
+    (vec2(-100, 00), color(1, 0, 0, 1)),
+    (vec2(0, -100), color(1, 0, 0, 1)),
+    (vec2(100, 00), color(1, 0, 0, 1)),
+    (vec2(0, 100), color(1, 0, 0, 1))
+  ]
+  for (translation, color) in draws:
+    let
+      b = newImage(100, 100)
+      path = newPath()
+    path.rect(0, 0, b.width.float32, b.height.float32)
+    b.strokePath(path, color, strokeWidth = 20)
+
+    a.draw(b, translate(translation))
+
+  a.writeFile("tests/images/fillOptimization2.png")

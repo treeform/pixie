@@ -792,16 +792,15 @@ proc drawUber(
           sy = srcPos.y.int
         var sx = srcPos.x.int
 
-        # TODO Fix
-        # when type(a) is Image and type(b) is Image:
-        #   if blendMode in {bmNormal, bmOverwrite} and
-        #     isOpaque(b.data, b.dataIndex(sx, sy), xStop - sx):
-        #       copyMem(
-        #         a.data[a.dataIndex(x, y)].addr,
-        #         b.data[b.dataIndex(sx, sy)].addr,
-        #         (xStop - xStart) * 4
-        #       )
-        #       continue
+        when type(a) is Image and type(b) is Image:
+          if blendMode in {bmNormal, bmOverwrite} and
+            isOpaque(b.data, b.dataIndex(sx, sy), xStop - xStart):
+              copyMem(
+                a.data[a.dataIndex(x, y)].addr,
+                b.data[b.dataIndex(sx, sy)].addr,
+                (xStop - xStart) * 4
+              )
+              continue
 
         when defined(amd64) and not defined(pixieNoSimd):
           case blendMode:
