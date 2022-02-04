@@ -18,7 +18,7 @@ block:
 
 block:
   let paint = newPaint(pkImage)
-  paint.image = decodePng(readFile("tests/fileformats/png/baboon.png"))
+  paint.image = decodePng(readFile("tests/fileformats/png/mandrill.png"))
   paint.imageMat = scale(vec2(0.2, 0.2))
 
   let image = newImage(100, 100)
@@ -27,7 +27,7 @@ block:
 
 block:
   let paint = newPaint(pkImage)
-  paint.image = decodePng(readFile("tests/fileformats/png/baboon.png"))
+  paint.image = decodePng(readFile("tests/fileformats/png/mandrill.png"))
   paint.imageMat = scale(vec2(0.2, 0.2))
   paint.opacity = 0.5
 
@@ -37,7 +37,7 @@ block:
 
 block:
   let paint = newPaint(pkImageTiled)
-  paint.image = decodePng(readFile("tests/fileformats/png/baboon.png"))
+  paint.image = decodePng(readFile("tests/fileformats/png/mandrill.png"))
   paint.imageMat = scale(vec2(0.02, 0.02))
 
   let image = newImage(100, 100)
@@ -46,7 +46,7 @@ block:
 
 block:
   let paint = newPaint(pkImageTiled)
-  paint.image = decodePng(readFile("tests/fileformats/png/baboon.png"))
+  paint.image = decodePng(readFile("tests/fileformats/png/mandrill.png"))
   paint.imageMat = scale(vec2(0.02, 0.02))
   paint.opacity = 0.5
 

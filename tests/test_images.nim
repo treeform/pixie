@@ -113,9 +113,9 @@ block:
 
 block:
   let
-    a = readImage("tests/fileformats/png/baboon.png")
+    a = readImage("tests/fileformats/png/mandrill.png")
     b = a.minifyBy2()
-  b.writeFile("tests/images/minifiedBaboon.png")
+  b.writeFile("tests/images/minifiedMandrill.png")
 
 block:
   let a = newImage(100, 100)

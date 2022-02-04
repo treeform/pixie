@@ -11,7 +11,7 @@ path.polygon(
 )
 
 let paint = newPaint(pkImageTiled)
-paint.image = readImage("examples/data/baboon.png")
+paint.image = readImage("examples/data/mandrill.png")
 paint.imageMat = scale(vec2(0.08, 0.08))
 
 image.fillPath(path, paint)
