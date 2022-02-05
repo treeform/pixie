@@ -277,6 +277,8 @@ exportRefObject Context:
     setTransform
     transform(Context, Mat3)
     resetTransform
+    getLineDash
+    setLineDash
     drawImage(Context, Image, float32, float32)
     drawImage2
     drawImage3
