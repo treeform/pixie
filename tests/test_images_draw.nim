@@ -297,14 +297,14 @@ block:
   let draws = [
     # Overlaps in bounds
     (vec2(-50, -50), color(1, 0, 0, 1)),
-    (vec2(50, -50), color(1, 0, 0, 1)),
-    (vec2(50, 50), color(1, 0, 0, 1)),
-    (vec2(-50, 50), color(1, 0, 0, 1)),
+    (vec2(50, -50), color(0, 1, 0, 1)),
+    (vec2(50, 50), color(0, 0, 1, 1)),
+    (vec2(-50, 50), color(1, 1, 0, 1)),
     # Out of bounds
-    (vec2(-100, 00), color(1, 0, 0, 1)),
-    (vec2(0, -100), color(1, 0, 0, 1)),
-    (vec2(100, 00), color(1, 0, 0, 1)),
-    (vec2(0, 100), color(1, 0, 0, 1))
+    (vec2(-100, 00), color(1, 0, 1, 1)),
+    (vec2(0, -100), color(0, 1, 1, 1)),
+    (vec2(100, 00), color(0.5, 0.5, 0.5, 1)),
+    (vec2(0, 100), color(0.75, 0.75, 0, 1))
   ]
   for (translation, color) in draws:
     let
