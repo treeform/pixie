@@ -1,8 +1,11 @@
-import chroma, flatty/binny, pixie/common, pixie/images
+import bitops, chroma, flatty/binny, pixie/common, pixie/images
 
 # See: https://en.wikipedia.org/wiki/BMP_file_format
 
 const bmpSignature* = "BM"
+
+proc colorMaskShift(color: uint32, mask: uint32): uint8 =
+  ((color and mask) shr (mask.firstSetBit() - 1)).uint8
 
 proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
   ## Decodes bitmap data into an Image.
@@ -16,8 +19,21 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
     height = data.readInt32(22).int
     bits = data.readUint16(28).int
     compression = data.readUint32(30).int
+    dibHeader = data.readInt32(14).int
+
   var
     offset = data.readUInt32(10).int
+    # Default channels if header does not contain them:
+    redChan =   0x00FF0000.uint32
+    greenChan = 0x0000FF00.uint32
+    blueChan =  0x000000FF.uint32
+    alphaChan = 0xFF000000.uint32
+
+  if dibHeader == 108:
+    redChan = data.readUInt32(54)
+    greenChan = data.readUInt32(58)
+    blueChan = data.readUInt32(62)
+    alphaChan = data.readUInt32(66)
 
   if bits notin [32, 24]:
     raise newException(PixieError, "Unsupported BMP data format")
@@ -35,10 +51,11 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
     for x in 0 ..< result.width:
       var rgba: ColorRGBA
       if bits == 32:
-        rgba.r = data.readUint8(offset + 0)
-        rgba.g = data.readUint8(offset + 1)
-        rgba.b = data.readUint8(offset + 2)
-        rgba.a = data.readUint8(offset + 3)
+        let color = data.readUint32(offset)
+        rgba.r = color.colorMaskShift(redChan)
+        rgba.g = color.colorMaskShift(greenChan)
+        rgba.b = color.colorMaskShift(blueChan)
+        rgba.a = color.colorMaskShift(alphaChan)
         offset += 4
       elif bits == 24:
         rgba.r = data.readUint8(offset + 2)
