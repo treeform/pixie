@@ -37,7 +37,6 @@ block:
     ))
     writeFile("tests/fileformats/bmp/knight." & $bits & ".bmp", encodeBmp(image))
 
-
 block:
   let image = decodeBmp(readFile(
     "tests/fileformats/bmp/rgb.24.master.bmp"
