@@ -8,7 +8,7 @@ export bumpy, chroma, common, contexts, fonts, images, masks, paints, paths, vma
 
 type
   FileFormat* = enum
-    ffPng, ffBmp, ffJpg, ffGif, ffQoi, ffPpm
+    FormatPng, FormatBmp, FormatJpg, FormatGif, FormatQoi, FormatPpm
 
 converter autoStraightAlpha*(c: ColorRGBX): ColorRGBA {.inline, raises: [].} =
   ## Convert a premultiplied alpha RGBA to a straight alpha RGBA.
@@ -62,23 +62,23 @@ proc readMask*(filePath: string): Mask {.raises: [PixieError].} =
 proc encodeImage*(image: Image, fileFormat: FileFormat): string {.raises: [PixieError].} =
   ## Encodes an image into memory.
   case fileFormat:
-  of ffPng:
+  of FormatPng:
     image.encodePng()
-  of ffJpg:
+  of FormatJpg:
     image.encodeJpg()
-  of ffBmp:
+  of FormatBmp:
     image.encodeBmp()
-  of ffQoi:
+  of FormatQoi:
     image.encodeQoi()
-  of ffGif:
+  of FormatGif:
     raise newException(PixieError, "Unsupported file format")
-  of ffPpm:
+  of FormatPpm:
     image.encodePpm()
 
 proc encodeMask*(mask: Mask, fileFormat: FileFormat): string {.raises: [PixieError].} =
   ## Encodes a mask into memory.
   case fileFormat:
-  of ffPng:
+  of FormatPng:
     mask.encodePng()
   else:
     raise newException(PixieError, "Unsupported file format")
@@ -86,11 +86,11 @@ proc encodeMask*(mask: Mask, fileFormat: FileFormat): string {.raises: [PixieErr
 proc writeFile*(image: Image, filePath: string) {.raises: [PixieError].} =
   ## Writes an image to a file.
   let fileFormat = case splitFile(filePath).ext.toLowerAscii():
-    of ".png": ffPng
-    of ".bmp": ffBmp
-    of ".jpg", ".jpeg": ffJpg
-    of ".qoi": ffQoi
-    of ".ppm": ffPpm
+    of ".png": FormatPng
+    of ".bmp": FormatBmp
+    of ".jpg", ".jpeg": FormatJpg
+    of ".qoi": FormatQoi
+    of ".ppm": FormatPpm
     else:
       raise newException(PixieError, "Unsupported file extension")
 
@@ -102,11 +102,11 @@ proc writeFile*(image: Image, filePath: string) {.raises: [PixieError].} =
 proc writeFile*(mask: Mask, filePath: string) {.raises: [PixieError].} =
   ## Writes a mask to a file.
   let fileFormat = case splitFile(filePath).ext.toLowerAscii():
-    of ".png": ffPng
-    of ".bmp": ffBmp
-    of ".jpg", ".jpeg": ffJpg
-    of ".qoi": ffQoi
-    of ".ppm": ffPpm
+    of ".png": FormatPng
+    of ".bmp": FormatBmp
+    of ".jpg", ".jpeg": FormatJpg
+    of ".qoi": FormatQoi
+    of ".ppm": FormatPpm
     else:
       raise newException(PixieError, "Unsupported file extension")
 
