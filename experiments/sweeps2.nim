@@ -157,7 +157,7 @@ proc binaryInsert(arr: var seq[float32], v: float32) =
     arr.insert(v, L + 1)
 
 
-proc fillPath2(image: Image, p: Path, color: Color, windingRule = wrNonZero, blendMode = BlendNormal) =
+proc fillPath2(image: Image, p: Path, color: Color, windingRule = NonZero, blendMode = BlendNormal) =
   const q = 1/256.0
   let rgbx = color.rgbx
   var segments = p.commandsToShapes(true, 1.0).shapesToSegments()
@@ -380,7 +380,7 @@ when defined(release):
   {.pop.}
 
 
-template test(name: string, p: Path, a: static int = 1, wr = wrNonZero) =
+template test(name: string, p: Path, a: static int = 1, wr = NonZero) =
   echo name
   var image = newImage(200, 200)
   timeIt "  sweeps", a:
@@ -465,8 +465,8 @@ when defined(bench):
   test("halfAarc", halfAarc, 100)
   test("hourGlass", hourGlass, 100)
   test("hole", hole, 100)
-  test("holeNonZero", holeEvenOdd, 100, wr=wrNonZero)
-  test("holeEvenOdd", holeEvenOdd, 100, wr=wrEvenOdd)
+  test("holeNonZero", holeEvenOdd, 100, wr=NonZero)
+  test("holeEvenOdd", holeEvenOdd, 100, wr=EvenOdd)
   test("letterG", letterG, 100)
 else:
   # test("rect", rect)
@@ -475,7 +475,7 @@ else:
   # test("cricle", cricle)
   # test("halfAarc", halfAarc)
   # test("hourGlass", hourGlass)
-  #test("hole", hole, wr=wrEvenOdd)
-  test("holeNonZero", holeEvenOdd, wr=wrNonZero)
-  test("holeEvenOdd", holeEvenOdd, wr=wrEvenOdd)
+  #test("hole", hole, wr=EvenOdd)
+  test("holeNonZero", holeEvenOdd, wr=NonZero)
+  test("holeEvenOdd", holeEvenOdd, wr=EvenOdd)
   # test("letterG", letterG)

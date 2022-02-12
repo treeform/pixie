@@ -6,8 +6,8 @@ when defined(amd64) and not defined(pixieNoSimd):
 type
   WindingRule* = enum
     ## Winding rules.
-    wrNonZero
-    wrEvenOdd
+    NonZero
+    EvenOdd
 
   LineCap* = enum
     ## Line cap type for strokes.
@@ -1177,9 +1177,9 @@ proc shouldFill(
 ): bool {.inline.} =
   ## Should we fill based on the current winding rule and count?
   case windingRule:
-  of wrNonZero:
+  of NonZero:
     count != 0
-  of wrEvenOdd:
+  of EvenOdd:
     count mod 2 != 0
 
 iterator walk(
@@ -1207,7 +1207,7 @@ iterator walk(
             continue
           # Shortcut: we only care about when we stop filling (or the last hit).
           # If we continue filling, move to next hit.
-          if windingRule == wrNonZero and count + winding != 0:
+          if windingRule == NonZero and count + winding != 0:
             count += winding
             inc i
             continue
@@ -1882,7 +1882,7 @@ proc fillPath*(
   mask: Mask,
   path: SomePath,
   transform = mat3(),
-  windingRule = wrNonZero,
+  windingRule = NonZero,
   blendMode = BlendNormal
 ) {.raises: [PixieError].} =
   ## Fills a path.
@@ -1895,7 +1895,7 @@ proc fillPath*(
   path: SomePath,
   paint: Paint,
   transform = mat3(),
-  windingRule = wrNonZero
+  windingRule = NonZero
 ) {.raises: [PixieError].} =
   ## Fills a path.
   if paint.opacity == 0:
@@ -1962,7 +1962,7 @@ proc strokePath*(
     pixelScale
   )
   strokeShapes.transform(transform)
-  mask.fillShapes(strokeShapes, wrNonZero, blendMode)
+  mask.fillShapes(strokeShapes, NonZero, blendMode)
 
 proc strokePath*(
   image: Image,
@@ -1993,7 +1993,7 @@ proc strokePath*(
       strokeShapes.transform(transform)
       var color = paint.color
       color.a *= paint.opacity
-      image.fillShapes(strokeShapes, color, wrNonZero, paint.blendMode)
+      image.fillShapes(strokeShapes, color, NonZero, paint.blendMode)
     return
 
   let
@@ -2062,7 +2062,7 @@ proc fillOverlaps*(
   path: Path,
   test: Vec2,
   transform = mat3(), ## Applied to the path, not the test point.
-  windingRule = wrNonZero
+  windingRule = NonZero
 ): bool {.raises: [PixieError].} =
   ## Returns whether or not the specified point is contained in the current path.
   var shapes = path.commandsToShapes(true, transform.pixelScale())
@@ -2092,4 +2092,4 @@ proc strokeOverlaps*(
     pixelScale
   )
   strokeShapes.transform(transform)
-  strokeShapes.overlaps(test, wrNonZero)
+  strokeShapes.overlaps(test, NonZero)

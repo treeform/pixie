@@ -153,9 +153,9 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
   if fillRule == "":
     discard # Inherit
   elif fillRule == "nonzero":
-    result.fillRule = wrNonZero
+    result.fillRule = NonZero
   elif fillRule == "evenodd":
-    result.fillRule = wrEvenOdd
+    result.fillRule = EvenOdd
   else:
     raise newException(
       PixieError, "Invalid fill-rule value " & fillRule

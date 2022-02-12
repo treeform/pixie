@@ -61,7 +61,7 @@ block:
   region.closePath()
 
   ctx.fillStyle = "green"
-  ctx.fill(region, wrEvenOdd)
+  ctx.fill(region, EvenOdd)
 
   ctx.image.writeFile("tests/contexts/fill_1.png")
 
@@ -441,7 +441,7 @@ block:
   let region = newPath()
   region.rect(80, 10, 20, 130)
   region.rect(40, 50, 100, 50)
-  ctx.clip(region, wrEvenOdd)
+  ctx.clip(region, EvenOdd)
 
   ctx.fillStyle = "blue"
   ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)

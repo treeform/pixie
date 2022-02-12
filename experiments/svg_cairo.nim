@@ -24,7 +24,7 @@ proc prepare(
   paint: Paint,
   mat: Mat3,
   closeSubpaths: bool,
-  windingRule = wrNonZero
+  windingRule = NonZero
 ) =
   let
     color = paint.color
@@ -39,7 +39,7 @@ proc prepare(
   c.setSourceRgba(color.r, color.g, color.b, color.a)
   c.setMatrix(matrix.unsafeAddr)
   case windingRule:
-  of wrNonZero:
+  of NonZero:
     c.setFillRule(FillRuleWinding)
   else:
     c.setFillRule(FillRuleEvenOdd)
@@ -176,9 +176,9 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
   if fillRule == "":
     discard # Inherit
   elif fillRule == "nonzero":
-    result.fillRule = wrNonZero
+    result.fillRule = NonZero
   elif fillRule == "evenodd":
-    result.fillRule = wrEvenOdd
+    result.fillRule = EvenOdd
   else:
     raise newException(
       PixieError, "Invalid fill-rule value " & fillRule
