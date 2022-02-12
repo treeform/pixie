@@ -35,8 +35,8 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
     useAlpha = false
     flipVertical = false
 
-  if numColors < 0:
-    raise newException(PixieError, "Invalid BMP data")
+  if numColors < 0 or numColors > 256:
+    raise newException(PixieError, "Invalid number of colors")
   if dibHeader notin [40, 108]:
     raise newException(PixieError, "Invalid BMP data")
 
@@ -101,10 +101,10 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
       if padding > 0:
         offset += 4 - padding
       for x in 0 ..< result.width:
-        if offset >= data.len:
-          raise newException(PixieError, "Truncated BMP data")
         var rgba: ColorRGBA
         if haveBits == 0:
+          if offset >= data.len:
+            raise newException(PixieError, "Truncated BMP data")
           colorBits = data.readUint8(offset)
           haveBits = 8
           offset += 1
@@ -127,10 +127,10 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
       if padding > 0:
         offset += 4 - padding
       for x in 0 ..< result.width:
-        if offset >= data.len:
-          raise newException(PixieError, "Truncated BMP data")
         var rgba: ColorRGBA
         if haveBits == 0:
+          if offset >= data.len:
+            raise newException(PixieError, "Truncated BMP data")
           colorBits = data.readUint8(offset)
           haveBits = 8
           offset += 1
@@ -163,10 +163,10 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
     for y in 0 ..< result.height:
       # pad the row
       let padding = (offset - startOffset) mod 4
-      if padding >= 0:
+      if padding > 0:
         offset += 4 - padding
       for x in 0 ..< result.width:
-        if offset + 3 > data.len:
+        if offset + 2 >= data.len:
           raise newException(PixieError, "Truncated BMP data")
         var rgba: ColorRGBA
         rgba.r = data.readUint8(offset + 2)
@@ -176,10 +176,10 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
         offset += 3
         result[x, result.height - y - 1] = rgba.rgbx()
 
-  if bits == 32:
+  elif bits == 32:
     for y in 0 ..< result.height:
       for x in 0 ..< result.width:
-        if offset >= data.len - 2:
+        if offset + 3 >= data.len:
           raise newException(PixieError, "Truncated BMP data")
         var rgba: ColorRGBA
         let color = data.readUint32(offset)

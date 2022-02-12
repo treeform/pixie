@@ -45,5 +45,6 @@ block:
 
 block:
   for file in walkFiles("tests/fileformats/bmp/bmpsuite/*"):
+    # echo file
     let image = decodeBmp(readFile(file))
-    image.writeFile(file.replace("bmpsuite", "output") & ".png")
+    #image.writeFile(file.replace("bmpsuite", "output") & ".png")
