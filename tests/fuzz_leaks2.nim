@@ -16,8 +16,8 @@ for i in 0 ..< 100_000:
   ctx.rotate(rand(0.0 .. 2*PI))
 
   ctx.strokeStyle = "#000000"
-  ctx.lineCap = sample([lcRound, lcButt, lcSquare])
-  ctx.lineJoin = sample([ljMiter, ljRound, ljBevel])
+  ctx.lineCap = sample([RoundCap, ButtCap, SquareCap])
+  ctx.lineJoin = sample([MiterJoin, RoundJoin, BevelJoin])
   ctx.lineWidth = rand(0.1 .. 1.0)
 
   var first = true

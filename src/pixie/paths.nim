@@ -11,11 +11,11 @@ type
 
   LineCap* = enum
     ## Line cap type for strokes.
-    lcButt, lcRound, lcSquare
+    ButtCap, RoundCap, SquareCap
 
   LineJoin* = enum
     ## Line join type for strokes.
-    ljMiter, ljRound, ljBevel
+    MiterJoin, RoundJoin, BevelJoin
 
   PathCommandKind = enum
     ## Type of path commands
@@ -1759,7 +1759,7 @@ proc strokeShapes(
   proc addJoin(shape: var seq[seq[Vec2]], prevPos, pos, nextPos: Vec2) =
     let minArea = pixelErrorMargin / pixelScale
 
-    if lineJoin == ljRound:
+    if lineJoin == RoundJoin:
       let area = PI.float32 * halfStroke * halfStroke
       if area > minArea:
         shape.add makeCircle(pos)
@@ -1778,11 +1778,11 @@ proc strokeShapes(
         b = vec2(-b.y, b.x)
 
       var lineJoin = lineJoin
-      if lineJoin == ljMiter and abs(angle) < miterAngleLimit:
-        lineJoin = ljBevel
+      if lineJoin == MiterJoin and abs(angle) < miterAngleLimit:
+        lineJoin = BevelJoin
 
       case lineJoin:
-      of ljMiter:
+      of MiterJoin:
         let
           la = line(prevPos + a, pos + a)
           lb = line(nextPos + b, pos + b)
@@ -1796,12 +1796,12 @@ proc strokeShapes(
           if areaSq > (minArea * minArea):
             shape.add @[pos + a, at, pos + b, pos, pos + a]
 
-      of ljBevel:
+      of BevelJoin:
         let areaSq = 0.25.float32 * a.lengthSq * b.lengthSq
         if areaSq > (minArea * minArea):
           shape.add @[a + pos, b + pos, pos, a + pos]
 
-      of ljRound:
+      of RoundJoin:
         discard # Handled above, skipping angle calculation
 
   for shape in shapes:
@@ -1811,11 +1811,11 @@ proc strokeShapes(
       # This shape does not end at the same point it starts so draw the
       # first line cap.
       case lineCap:
-      of lcButt:
+      of ButtCap:
         discard
-      of lcRound:
+      of RoundCap:
         shapeStroke.add(makeCircle(shape[0]))
-      of lcSquare:
+      of SquareCap:
         let tangent = (shape[1] - shape[0]).normalize()
         shapeStroke.add(makeRect(
           shape[0] - tangent * halfStroke,
@@ -1856,11 +1856,11 @@ proc strokeShapes(
       shapeStroke.addJoin(shape[^2], shape[^1], shape[1])
     else:
       case lineCap:
-      of lcButt:
+      of ButtCap:
         discard
-      of lcRound:
+      of RoundCap:
         shapeStroke.add(makeCircle(shape[^1]))
-      of lcSquare:
+      of SquareCap:
         let tangent = (shape[^1] - shape[^2]).normalize()
         shapeStroke.add(makeRect(
           shape[^1] + tangent * halfStroke,
@@ -1944,8 +1944,8 @@ proc strokePath*(
   path: SomePath,
   transform = mat3(),
   strokeWidth: float32 = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
+  lineCap = ButtCap,
+  lineJoin = MiterJoin,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[],
   blendMode = BlendNormal
@@ -1970,8 +1970,8 @@ proc strokePath*(
   paint: Paint,
   transform = mat3(),
   strokeWidth: float32 = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
+  lineCap = ButtCap,
+  lineJoin = MiterJoin,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[]
 ) {.raises: [PixieError].} =
@@ -2074,8 +2074,8 @@ proc strokeOverlaps*(
   test: Vec2,
   transform = mat3(), ## Applied to the path, not the test point.
   strokeWidth: float32 = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
+  lineCap = ButtCap,
+  lineJoin = MiterJoin,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[],
 ): bool {.raises: [PixieError].} =

@@ -191,7 +191,7 @@ block:
 block:
   let ctx = newContext(newImage(300, 150))
 
-  ctx.lineJoin = ljBevel
+  ctx.lineJoin = BevelJoin
   ctx.lineWidth = 15
   ctx.strokeStyle = "#38f"
   ctx.strokeRect(30, 30, 160, 90)

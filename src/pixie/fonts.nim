@@ -500,8 +500,8 @@ proc textUber(
   arrangement: Arrangement,
   transform = mat3(),
   strokeWidth: float32 = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
+  lineCap = ButtCap,
+  lineJoin = MiterJoin,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[],
   stroke: static[bool] = false
@@ -611,8 +611,8 @@ proc strokeText*(
   arrangement: Arrangement,
   transform = mat3(),
   strokeWidth: float32 = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
+  lineCap = ButtCap,
+  lineJoin = MiterJoin,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[]
 ) {.inline, raises: [PixieError].} =
@@ -638,8 +638,8 @@ proc strokeText*(
   bounds = vec2(0, 0),
   hAlign = haLeft,
   vAlign = vaTop,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
+  lineCap = ButtCap,
+  lineJoin = MiterJoin,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[]
 ) {.inline, raises: [PixieError].} =

@@ -229,11 +229,11 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
   else:
     case strokeLineCap:
     of "butt":
-      result.strokeLineCap = lcButt
+      result.strokeLineCap = ButtCap
     of "round":
-      result.strokeLineCap = lcRound
+      result.strokeLineCap = RoundCap
     of "square":
-      result.strokeLineCap = lcSquare
+      result.strokeLineCap = SquareCap
     of "inherit":
       discard
     else:
@@ -246,11 +246,11 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
   else:
     case strokeLineJoin:
     of "miter":
-      result.strokeLineJoin = ljMiter
+      result.strokeLineJoin = MiterJoin
     of "round":
-      result.strokeLineJoin = ljRound
+      result.strokeLineJoin = RoundJoin
     of "bevel":
-      result.strokeLineJoin = ljBevel
+      result.strokeLineJoin = BevelJoin
     of "inherit":
       discard
     else:
@@ -343,20 +343,20 @@ proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
 
 proc cairoLineCap(lineCap: LineCap): cairo.LineCap =
   case lineCap:
-  of lcButt:
+  of ButtCap:
     LineCapButt
-  of lcRound:
+  of RoundCap:
     LineCapRound
-  of lcSquare:
+  of SquareCap:
     LineCapSquare
 
 proc cairoLineJoin(lineJoin: LineJoin): cairo.LineJoin =
   case lineJoin:
-  of ljMiter:
+  of MiterJoin:
     LineJoinMiter
-  of ljBevel:
+  of BevelJoin:
     LineJoinBevel
-  of ljRound:
+  of RoundJoin:
     LineJoinRound
 
 proc fill(c: ptr Context, ctx: Ctx, path: Path) {.inline.} =

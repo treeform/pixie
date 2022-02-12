@@ -128,8 +128,8 @@ proc strokeMask*(
   path: SomePath,
   width, height: int,
   strokeWidth: float32 = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
+  lineCap = ButtCap,
+  lineJoin = MiterJoin,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[]
 ): Mask =
@@ -151,8 +151,8 @@ proc strokeImage*(
   width, height: int,
   color: SomeColor,
   strokeWidth: float32 = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
+  lineCap = ButtCap,
+  lineJoin = MiterJoin,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[]
 ): Image =

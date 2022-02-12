@@ -212,11 +212,11 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
   else:
     case strokeLineCap:
     of "butt":
-      result.strokeLineCap = lcButt
+      result.strokeLineCap = ButtCap
     of "round":
-      result.strokeLineCap = lcRound
+      result.strokeLineCap = RoundCap
     of "square":
-      result.strokeLineCap = lcSquare
+      result.strokeLineCap = SquareCap
     of "inherit":
       discard
     else:
@@ -229,11 +229,11 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
   else:
     case strokeLineJoin:
     of "miter":
-      result.strokeLineJoin = ljMiter
+      result.strokeLineJoin = MiterJoin
     of "round":
-      result.strokeLineJoin = ljRound
+      result.strokeLineJoin = RoundJoin
     of "bevel":
-      result.strokeLineJoin = ljBevel
+      result.strokeLineJoin = BevelJoin
     of "inherit":
       discard
     else:
