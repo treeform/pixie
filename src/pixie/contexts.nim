@@ -370,7 +370,7 @@ proc clip*(
     ctx.mask = newMask(ctx.image.width, ctx.image.height)
     ctx.mask.fillPath(path, windingRule = windingRule)
   else:
-    ctx.mask.fillPath(path, windingRule = windingRule, blendMode = bmMask)
+    ctx.mask.fillPath(path, windingRule = windingRule, blendMode = BlendMask)
 
 proc clip*(
   ctx: Context, windingRule = wrNonZero
@@ -398,7 +398,7 @@ proc stroke*(ctx: Context) {.inline, raises: [PixieError].} =
 proc clearRect*(ctx: Context, rect: Rect) {.raises: [PixieError].} =
   ## Erases the pixels in a rectangular area.
   let paint = newPaint(pkSolid)
-  paint.blendMode = bmOverwrite
+  paint.blendMode = BlendOverwrite
 
   let path = newPath()
   path.rect(rect)

@@ -472,7 +472,7 @@ block:
 #   var mask = newMask(image)
 #   mask.fillPath2(p)
 
-#   image.draw(mask, blendMode = bmOverwrite)
+#   image.draw(mask, blendMode = BlendOverwrite)
 
 #   image.writeFile("experiments/trapezoids/heart.png")
 

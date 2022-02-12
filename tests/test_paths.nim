@@ -392,7 +392,7 @@ block:
 
   let paint = newPaint(pkSolid)
   paint.color = color(0, 1, 0, 1)
-  paint.blendMode = bmExcludeMask
+  paint.blendMode = BlendExcludeMask
 
   image.fillPath(
     "M 30 30 H 80 V 80 H 30 z",
@@ -409,7 +409,7 @@ block:
 
   let paint = newPaint(pkSolid)
   paint.color = color(0, 1, 0, 1)
-  paint.blendMode = bmExcludeMask
+  paint.blendMode = BlendExcludeMask
 
   image.fillPath(
     "M 30.1 30.1 H 80.1 V 80.1 H 30.1 z",
@@ -426,7 +426,7 @@ block:
 
   let paint = newPaint(pkSolid)
   paint.color = color(0, 1, 0, 1)
-  paint.blendMode = bmMask
+  paint.blendMode = BlendMask
 
   image.fillPath(
     "M 30 30 H 80 V 80 H 30 z",
@@ -443,7 +443,7 @@ block:
 
   let paint = newPaint(pkSolid)
   paint.color = color(0, 1, 0, 1)
-  paint.blendMode = bmMask
+  paint.blendMode = BlendMask
 
   image.fillPath(
     "M 30.1 30.1 H 80.1 V 80.1 H 30.1 z",
@@ -454,25 +454,25 @@ block:
 block:
   let mask = newMask(100, 100)
   mask.fillPath("M 10 10 H 60 V 60 H 10 z")
-  mask.fillPath("M 30 30 H 80 V 80 H 30 z", blendMode = bmExcludeMask)
+  mask.fillPath("M 30 30 H 80 V 80 H 30 z", blendMode = BlendExcludeMask)
   writeFile("tests/paths/maskRectExcludeMask.png", mask.encodePng())
 
 block:
   let mask = newMask(100, 100)
   mask.fillPath("M 10.1 10.1 H 60.1 V 60.1 H 10.1 z")
-  mask.fillPath("M 30.1 30.1 H 80.1 V 80.1 H 30.1 z", blendMode = bmExcludeMask)
+  mask.fillPath("M 30.1 30.1 H 80.1 V 80.1 H 30.1 z", blendMode = BlendExcludeMask)
   writeFile("tests/paths/maskRectExcludeMaskAA.png", mask.encodePng())
 
 block:
   let mask = newMask(100, 100)
   mask.fillPath("M 10 10 H 60 V 60 H 10 z")
-  mask.fillPath("M 30 30 H 80 V 80 H 30 z", blendMode = bmMask)
+  mask.fillPath("M 30 30 H 80 V 80 H 30 z", blendMode = BlendMask)
   writeFile("tests/paths/maskRectMask.png", mask.encodePng())
 
 block:
   let mask = newMask(100, 100)
   mask.fillPath("M 10.1 10.1 H 60.1 V 60.1 H 10.1 z")
-  mask.fillPath("M 30.1 30.1 H 80.1 V 80.1 H 30.1 z", blendMode = bmMask)
+  mask.fillPath("M 30.1 30.1 H 80.1 V 80.1 H 30.1 z", blendMode = BlendMask)
   writeFile("tests/paths/maskRectMaskAA.png", mask.encodePng())
 
 block:

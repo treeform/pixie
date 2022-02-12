@@ -360,7 +360,7 @@ block:
   var b: Image
   let paint = newPaint(pkSolid)
   paint.color = color(1, 0, 0, 0.5)
-  paint.blendMode = bmOverwrite
+  paint.blendMode = BlendOverwrite
 
   timeIt "pixie4 overwrite":
     b = newImage(1000, 1000)

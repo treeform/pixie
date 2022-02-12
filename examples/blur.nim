@@ -14,7 +14,7 @@ let mask = newMask(200, 200)
 mask.fillPath(path)
 
 blur.blur(20)
-blur.draw(mask, blendMode = bmMask)
+blur.draw(mask, blendMode = BlendMask)
 
 image.draw(trees)
 image.draw(blur)

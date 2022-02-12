@@ -528,7 +528,7 @@ block:
 
   let paint = newPaint(pkSolid)
   paint.color = color(0, 0, 1, 1)
-  paint.blendMode = bmExclusion
+  paint.blendMode = BlendExclusion
 
   ctx.fillStyle = paint
 
