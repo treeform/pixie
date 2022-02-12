@@ -223,7 +223,7 @@ block:
     font,
     "a b c d e f g h i j k l m n o p",
     bounds = vec2(200, 0),
-    hAlign = haRight
+    hAlign = AlignRight
   )
 
   doDiff(image, "basic10")
@@ -588,72 +588,72 @@ block:
     font,
     "TopLeft",
     bounds = image.wh,
-    hAlign = haLeft,
-    vAlign = vaTop
+    hAlign = AlignLeft,
+    vAlign = AlignTop
   )
 
   image.fillText(
     font,
     "TopCenter",
     bounds = image.wh,
-    hAlign = haCenter,
-    vAlign = vaTop
+    hAlign = AlignCenter,
+    vAlign = AlignTop
   )
 
   image.fillText(
     font,
     "TopRight",
     bounds = image.wh,
-    hAlign = haRight,
-    vAlign = vaTop
+    hAlign = AlignRight,
+    vAlign = AlignTop
   )
 
   image.fillText(
     font,
     "MiddleLeft",
     bounds = image.wh,
-    hAlign = haLeft,
-    vAlign = vaMiddle
+    hAlign = AlignLeft,
+    vAlign = AlignMiddle
   )
 
   image.fillText(
     font,
     "MiddleCenter",
     bounds = image.wh,
-    hAlign = haCenter,
-    vAlign = vaMiddle
+    hAlign = AlignCenter,
+    vAlign = AlignMiddle
   )
 
   image.fillText(
     font,
     "MiddleRight",
     bounds = image.wh,
-    hAlign = haRight,
-    vAlign = vaMiddle
+    hAlign = AlignRight,
+    vAlign = AlignMiddle
   )
 
   image.fillText(
     font,
     "BottomLeft",
     bounds = image.wh,
-    hAlign = haLeft,
-    vAlign = vaBottom
+    hAlign = AlignLeft,
+    vAlign = AlignBottom
   )
 
   image.fillText(
     font,
     "BottomCenter",
     bounds = image.wh,
-    hAlign = haCenter,
-    vAlign = vaBottom
+    hAlign = AlignCenter,
+    vAlign = AlignBottom
   )
 
   image.fillText(
     font,
     "BottomRight",
     bounds = image.wh,
-    hAlign = haRight,
-    vAlign = vaBottom
+    hAlign = AlignRight,
+    vAlign = AlignBottom
   )
 
   doDiff(image, "alignments")
