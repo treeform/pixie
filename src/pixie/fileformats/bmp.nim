@@ -24,16 +24,20 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
   var
     offset = data.readUInt32(10).int
     # Default channels if header does not contain them:
-    redChan =   0x00FF0000.uint32
-    greenChan = 0x0000FF00.uint32
-    blueChan =  0x000000FF.uint32
-    alphaChan = 0xFF000000.uint32
+    redChannel =   0x00FF0000.uint32
+    greenChannel = 0x0000FF00.uint32
+    blueChannel =  0x000000FF.uint32
+    alphaChannel = 0xFF000000.uint32
 
   if dibHeader == 108:
-    redChan = data.readUInt32(54)
-    greenChan = data.readUInt32(58)
-    blueChan = data.readUInt32(62)
-    alphaChan = data.readUInt32(66)
+    redChannel = data.readUInt32(54)
+    greenChannel = data.readUInt32(58)
+    blueChannel = data.readUInt32(62)
+    alphaChannel = data.readUInt32(66)
+
+  if redChannel == 0 or greenChannel == 0 or
+    blueChannel == 0 or alphaChannel == 0:
+      raise newException(PixieError, "Unsupported 0 channel mask.")
 
   if bits notin [32, 24]:
     raise newException(PixieError, "Unsupported BMP data format")
@@ -52,10 +56,10 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
       var rgba: ColorRGBA
       if bits == 32:
         let color = data.readUint32(offset)
-        rgba.r = color.colorMaskShift(redChan)
-        rgba.g = color.colorMaskShift(greenChan)
-        rgba.b = color.colorMaskShift(blueChan)
-        rgba.a = color.colorMaskShift(alphaChan)
+        rgba.r = color.colorMaskShift(redChannel)
+        rgba.g = color.colorMaskShift(greenChannel)
+        rgba.b = color.colorMaskShift(blueChannel)
+        rgba.a = color.colorMaskShift(alphaChannel)
         offset += 4
       elif bits == 24:
         rgba.r = data.readUint8(offset + 2)
