@@ -28,9 +28,9 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
     height = data.readInt32(22).int
     offset = data.readUInt32(10).int
     # Default channels if header does not contain them:
-    redChannel =   0x00FF0000.uint32
+    redChannel = 0x00FF0000.uint32
     greenChannel = 0x0000FF00.uint32
-    blueChannel =  0x000000FF.uint32
+    blueChannel = 0x000000FF.uint32
     alphaChannel = 0xFF000000.uint32
     useAlpha = false
     flipVertical = false
@@ -75,7 +75,7 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
 
   if redChannel == 0 or greenChannel == 0 or
     blueChannel == 0 or alphaChannel == 0:
-      raise newException(PixieError, "Unsupported 0 channel mask.")
+    raise newException(PixieError, "Unsupported 0 channel mask.")
 
   if bits notin [1, 4, 8, 32, 24]:
     raise newException(PixieError, "Unsupported BMP data format")
@@ -177,7 +177,6 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
         result[x, result.height - y - 1] = rgba.rgbx()
 
   if bits == 32:
-
     for y in 0 ..< result.height:
       for x in 0 ..< result.width:
         if offset >= data.len - 2:
