@@ -661,7 +661,7 @@ block:
 block:
   var font = readFont("tests/fonts/IBMPlexSans-Regular_2.ttf")
   font.size = 48
-  font.paint = newPaint(pkGradientLinear)
+  font.paint = newPaint(PaintGradientLinear)
   font.paint.gradientHandlePositions = @[
     vec2(0, 50),
     vec2(100, 50),

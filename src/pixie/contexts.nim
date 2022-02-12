@@ -53,9 +53,9 @@ proc newContext*(image: Image): Context {.raises: [].} =
   result.globalAlpha = 1
   result.lineWidth = 1
   result.miterLimit = 10
-  result.fillStyle = newPaint(pkSolid)
+  result.fillStyle = newPaint(PaintSolid)
   result.fillStyle.color = color(0, 0, 0, 1)
-  result.strokeStyle = newPaint(pkSolid)
+  result.strokeStyle = newPaint(PaintSolid)
   result.strokeStyle.color = color(0, 0, 0, 1)
   result.fontSize = 12
 
@@ -397,7 +397,7 @@ proc stroke*(ctx: Context) {.inline, raises: [PixieError].} =
 
 proc clearRect*(ctx: Context, rect: Rect) {.raises: [PixieError].} =
   ## Erases the pixels in a rectangular area.
-  let paint = newPaint(pkSolid)
+  let paint = newPaint(PaintSolid)
   paint.blendMode = BlendOverwrite
 
   let path = newPath()
@@ -541,7 +541,7 @@ proc drawImage*(
     ))
     savedFillStyle = ctx.fillStyle
 
-  ctx.fillStyle = newPaint(pkImage)
+  ctx.fillStyle = newPaint(PaintImage)
   ctx.fillStyle.image = image
   ctx.fillStyle.imageMat = imageMat
 

@@ -235,7 +235,7 @@ image.draw(lines)
 ### Gradient
 nim c -r [examples/gradient.nim](examples/gradient.nim)
 ```nim
-let paint = newPaint(pkGradientRadial)
+let paint = newPaint(PaintGradientRadial)
 paint.gradientHandlePositions = @[
   vec2(100, 100),
   vec2(200, 100),
@@ -270,7 +270,7 @@ path.polygon(
   sides = 8
 )
 
-let paint = newPaint(pkImageTiled)
+let paint = newPaint(PaintImageTiled)
 paint.image = readImage("examples/data/mandrill.png")
 paint.imageMat = scale(vec2(0.08, 0.08))
 

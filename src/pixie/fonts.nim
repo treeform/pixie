@@ -197,7 +197,7 @@ proc newFont*(typeface: Typeface): Font {.raises: [].} =
   result.typeface = typeface
   result.size = 12
   result.lineHeight = autoLineHeight
-  result.paint = newPaint(pkSolid)
+  result.paint = newPaint(PaintSolid)
   result.paint.color = color(0, 0, 0, 1)
 
 proc newSpan*(text: string, font: Font): Span {.raises: [].} =

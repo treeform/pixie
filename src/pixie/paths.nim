@@ -1901,7 +1901,7 @@ proc fillPath*(
   if paint.opacity == 0:
     return
 
-  if paint.kind == pkSolid:
+  if paint.kind == PaintSolid:
     if paint.color.a > 0 or paint.blendMode == BlendOverwrite:
       var shapes = parseSomePath(path, true, transform.pixelScale())
       shapes.transform(transform)
@@ -1922,13 +1922,13 @@ proc fillPath*(
   paint.opacity = 1
 
   case paint.kind:
-    of pkSolid:
+    of PaintSolid:
       discard # Handled above
-    of pkImage:
+    of PaintImage:
       fill.draw(paint.image, paint.imageMat)
-    of pkImageTiled:
+    of PaintImageTiled:
       fill.drawTiled(paint.image, paint.imageMat)
-    of pkGradientLinear, pkGradientRadial, pkGradientAngular:
+    of PaintGradientLinear, PaintGradientRadial, PaintGradientAngular:
       fill.fillGradient(paint)
 
   paint.opacity = savedOpacity
@@ -1979,7 +1979,7 @@ proc strokePath*(
   if paint.opacity == 0:
     return
 
-  if paint.kind == pkSolid:
+  if paint.kind == PaintSolid:
     if paint.color.a > 0 or paint.blendMode == BlendOverwrite:
       var strokeShapes = strokeShapes(
         parseSomePath(path, false, transform.pixelScale()),
@@ -2016,13 +2016,13 @@ proc strokePath*(
   paint.opacity = 1
 
   case paint.kind:
-    of pkSolid:
+    of PaintSolid:
       discard # Handled above
-    of pkImage:
+    of PaintImage:
       fill.draw(paint.image, paint.imageMat)
-    of pkImageTiled:
+    of PaintImageTiled:
       fill.drawTiled(paint.image, paint.imageMat)
-    of pkGradientLinear, pkGradientRadial, pkGradientAngular:
+    of PaintGradientLinear, PaintGradientRadial, PaintGradientAngular:
       fill.fillGradient(paint)
 
   paint.opacity = savedOpacity

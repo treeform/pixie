@@ -390,7 +390,7 @@ block:
     rgbx(255, 0, 0, 255)
   )
 
-  let paint = newPaint(pkSolid)
+  let paint = newPaint(PaintSolid)
   paint.color = color(0, 1, 0, 1)
   paint.blendMode = BlendExcludeMask
 
@@ -407,7 +407,7 @@ block:
     rgbx(255, 0, 0, 255)
   )
 
-  let paint = newPaint(pkSolid)
+  let paint = newPaint(PaintSolid)
   paint.color = color(0, 1, 0, 1)
   paint.blendMode = BlendExcludeMask
 
@@ -424,7 +424,7 @@ block:
     rgbx(255, 0, 0, 255)
   )
 
-  let paint = newPaint(pkSolid)
+  let paint = newPaint(PaintSolid)
   paint.color = color(0, 1, 0, 1)
   paint.blendMode = BlendMask
 
@@ -441,7 +441,7 @@ block:
     rgbx(255, 0, 0, 255)
   )
 
-  let paint = newPaint(pkSolid)
+  let paint = newPaint(PaintSolid)
   paint.color = color(0, 1, 0, 1)
   paint.blendMode = BlendMask
 
@@ -613,7 +613,7 @@ block:
   let path = newPath()
   path.circle(50, 50, 30)
 
-  let paint = newPaint(pkSolid)
+  let paint = newPaint(PaintSolid)
   paint.color = color(1, 0, 1, 1)
   paint.opacity = 0.5
 
@@ -626,7 +626,7 @@ block:
   let path = newPath()
   path.circle(50, 50, 30)
 
-  let paint = newPaint(pkSolid)
+  let paint = newPaint(PaintSolid)
   paint.color = color(1, 0, 1, 1)
   paint.opacity = 0.5
 

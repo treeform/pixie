@@ -526,7 +526,7 @@ block:
 
   image.fill(rgba(255, 255, 255, 255))
 
-  let paint = newPaint(pkSolid)
+  let paint = newPaint(PaintSolid)
   paint.color = color(0, 0, 1, 1)
   paint.blendMode = BlendExclusion
 
