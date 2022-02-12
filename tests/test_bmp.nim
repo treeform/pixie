@@ -1,4 +1,4 @@
-import chroma, pixie, pixie/fileformats/bmp
+import chroma, pixie, pixie/fileformats/bmp, os, strutils
 
 # block:
 #   var image = newImage(4, 2)
@@ -36,3 +36,15 @@ block:
       "tests/fileformats/bmp/knight." & $bits & ".master.bmp"
     ))
     writeFile("tests/fileformats/bmp/knight." & $bits & ".bmp", encodeBmp(image))
+
+block:
+  let image = decodeBmp(readFile(
+    "tests/fileformats/bmp/rgb.24.master.bmp"
+  ))
+  writeFile("tests/fileformats/bmp/rgb.24.bmp", encodeBmp(image))
+
+block:
+  for file in walkFiles("tests/fileformats/bmp/bmpsuite/*"):
+    # echo file
+    let image = decodeBmp(readFile(file))
+    #image.writeFile(file.replace("bmpsuite", "output") & ".png")
