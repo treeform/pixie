@@ -1,7 +1,5 @@
 import bitops, chroma, flatty/binny, pixie/common, pixie/images
 
-import print, strutils
-
 # See: https://en.wikipedia.org/wiki/BMP_file_format
 # See: https://bmptestsuite.sourceforge.io/
 
@@ -177,7 +175,6 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
         rgba.a = 255
         offset += 3
         result[x, result.height - y - 1] = rgba.rgbx()
-
 
   if bits == 32:
 
