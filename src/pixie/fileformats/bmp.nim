@@ -8,7 +8,7 @@ const bmpSignature* = "BM"
 template failInvalid() =
   raise newException(PixieError, "Invalid BMP buffer, unable to load")
 
-proc colorMaskShift(color: uint32, mask: uint32): uint8 =
+proc colorMaskShift(color, mask: uint32): uint8 {.inline.} =
   ((color and mask) shr (mask.firstSetBit() - 1)).uint8
 
 proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
