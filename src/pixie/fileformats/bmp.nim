@@ -5,6 +5,9 @@ import bitops, chroma, flatty/binny, pixie/common, pixie/images
 
 const bmpSignature* = "BM"
 
+template failInvalid() =
+  raise newException(PixieError, "Invalid BMP buffer, unable to load")
+
 proc colorMaskShift(color: uint32, mask: uint32): uint8 =
   ((color and mask) shr (mask.firstSetBit() - 1)).uint8
 
@@ -12,11 +15,11 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
   ## Decodes bitmap data into an Image.
 
   if data.len < 48:
-    raise newException(PixieError, "Invalid BMP data")
+    failInvalid()
 
   # BMP Header
   if data[0 .. 1] != "BM":
-    raise newException(PixieError, "Invalid BMP data")
+    failInvalid()
 
   let
     bits = data.readUint16(28).int
@@ -36,16 +39,16 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
     flipVertical = false
 
   if numColors < 0 or numColors > 256:
-    raise newException(PixieError, "Invalid number of colors")
+    failInvalid()
   if dibHeader notin [40, 108]:
-    raise newException(PixieError, "Invalid BMP data")
+    failInvalid()
 
   var
     colorTable = newSeq[ColorRGBA](numColors)
 
   if dibHeader == 108:
     if data.len < 14 + dibHeader:
-      raise newException(PixieError, "Invalid BMP data")
+      failInvalid()
 
     redChannel = data.readUInt32(54)
     greenChannel = data.readUInt32(58)
@@ -59,13 +62,13 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
 
   if numColors > 0:
     if data.len < 14 + dibHeader + numColors * 4:
-      raise newException(PixieError, "Invalid BMP data")
+      failInvalid()
 
     var colorOffset = dibHeader + 14
     for i in 0 ..< numColors:
       var rgba: ColorRGBA
       if colorOffset + 3 > data.len - 2:
-        raise newException(PixieError, "Truncated BMP data")
+        failInvalid()
       rgba.r = data.readUint8(colorOffset + 2)
       rgba.g = data.readUint8(colorOffset + 1)
       rgba.b = data.readUint8(colorOffset + 0)
@@ -75,7 +78,7 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
 
   if redChannel == 0 or greenChannel == 0 or
     blueChannel == 0 or alphaChannel == 0:
-    raise newException(PixieError, "Unsupported 0 channel mask.")
+    failInvalid()
 
   if bits notin [1, 4, 8, 32, 24]:
     raise newException(PixieError, "Unsupported BMP data format")
@@ -104,7 +107,7 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
         var rgba: ColorRGBA
         if haveBits == 0:
           if offset >= data.len:
-            raise newException(PixieError, "Truncated BMP data")
+            failInvalid()
           colorBits = data.readUint8(offset)
           haveBits = 8
           offset += 1
@@ -130,13 +133,13 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
         var rgba: ColorRGBA
         if haveBits == 0:
           if offset >= data.len:
-            raise newException(PixieError, "Truncated BMP data")
+            failInvalid()
           colorBits = data.readUint8(offset)
           haveBits = 8
           offset += 1
         let index = (colorBits and 0b1111_0000) shr 4
         if index.int >= numColors:
-          raise newException(PixieError, "Invalid BMP index")
+          failInvalid()
         rgba = colorTable[index]
         colorBits = colorBits shl 4
         haveBits -= 4
@@ -150,12 +153,12 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
         offset += 4 - padding
       for x in 0 ..< result.width:
         if offset >= data.len:
-          raise newException(PixieError, "Truncated BMP data")
+          failInvalid()
         var rgba: ColorRGBA
         let index = data.readUint8(offset)
         offset += 1
         if index.int >= numColors:
-          raise newException(PixieError, "Invalid BMP index")
+          failInvalid()
         rgba = colorTable[index]
         result[x, result.height - y - 1] = rgba.rgbx()
 
@@ -167,7 +170,7 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
         offset += 4 - padding
       for x in 0 ..< result.width:
         if offset + 2 >= data.len:
-          raise newException(PixieError, "Truncated BMP data")
+          failInvalid()
         var rgba: ColorRGBA
         rgba.r = data.readUint8(offset + 2)
         rgba.g = data.readUint8(offset + 1)
@@ -180,7 +183,7 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
     for y in 0 ..< result.height:
       for x in 0 ..< result.width:
         if offset + 3 >= data.len:
-          raise newException(PixieError, "Truncated BMP data")
+          failInvalid()
         var rgba: ColorRGBA
         let color = data.readUint32(offset)
         rgba.r = color.colorMaskShift(redChannel)
