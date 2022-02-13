@@ -196,10 +196,6 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
   if flipVertical:
     result.flipVertical()
 
-proc decodeBmp*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
-  ## Decodes bitmap data into an Image.
-  decodeBmp(cast[string](data))
-
 proc encodeBmp*(image: Image): string {.raises: [].} =
   ## Encodes an image into the BMP file format.
 
