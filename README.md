@@ -235,7 +235,7 @@ image.draw(lines)
 ### Gradient
 nim c -r [examples/gradient.nim](examples/gradient.nim)
 ```nim
-let paint = newPaint(PaintGradientRadial)
+let paint = newPaint(RadialGradientPaint)
 paint.gradientHandlePositions = @[
   vec2(100, 100),
   vec2(200, 100),
@@ -270,7 +270,7 @@ path.polygon(
   sides = 8
 )
 
-let paint = newPaint(PaintImageTiled)
+let paint = newPaint(TiledImagePaint)
 paint.image = readImage("examples/data/mandrill.png")
 paint.imageMat = scale(vec2(0.08, 0.08))
 
@@ -309,7 +309,7 @@ let mask = newMask(200, 200)
 mask.fillPath(path)
 
 blur.blur(20)
-blur.draw(mask, blendMode = BlendMask)
+blur.draw(mask, blendMode = MaskBlend)
 
 image.draw(trees)
 image.draw(blur)

@@ -14,19 +14,19 @@ block:
     heartShape,
     rgba(255, 0, 0, 255)
   )
-  image.writeFile("tests/paths/paintSolid.png")
+  image.writeFile("tests/paths/SolidPaint.png")
 
 block:
-  let paint = newPaint(PaintImage)
+  let paint = newPaint(ImagePaint)
   paint.image = decodePng(readFile("tests/fileformats/png/mandrill.png"))
   paint.imageMat = scale(vec2(0.2, 0.2))
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/paths/paintImage.png")
+  image.writeFile("tests/paths/ImagePaint.png")
 
 block:
-  let paint = newPaint(PaintImage)
+  let paint = newPaint(ImagePaint)
   paint.image = decodePng(readFile("tests/fileformats/png/mandrill.png"))
   paint.imageMat = scale(vec2(0.2, 0.2))
   paint.opacity = 0.5
@@ -36,16 +36,16 @@ block:
   image.writeFile("tests/paths/paintImageOpacity.png")
 
 block:
-  let paint = newPaint(PaintImageTiled)
+  let paint = newPaint(TiledImagePaint)
   paint.image = decodePng(readFile("tests/fileformats/png/mandrill.png"))
   paint.imageMat = scale(vec2(0.02, 0.02))
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/paths/paintImageTiled.png")
+  image.writeFile("tests/paths/TiledImagePaint.png")
 
 block:
-  let paint = newPaint(PaintImageTiled)
+  let paint = newPaint(TiledImagePaint)
   paint.image = decodePng(readFile("tests/fileformats/png/mandrill.png"))
   paint.imageMat = scale(vec2(0.02, 0.02))
   paint.opacity = 0.5
@@ -55,7 +55,7 @@ block:
   image.writeFile("tests/paths/paintImageTiledOpacity.png")
 
 block:
-  let paint = newPaint(PaintGradientLinear)
+  let paint = newPaint(LinearGradientPaint)
   paint.gradientHandlePositions = @[
     vec2(0, 50),
     vec2(100, 50),
@@ -70,7 +70,7 @@ block:
   image.writeFile("tests/paths/gradientLinear.png")
 
 block:
-  let paint = newPaint(PaintGradientLinear)
+  let paint = newPaint(LinearGradientPaint)
   paint.gradientHandlePositions = @[
     vec2(50, 0),
     vec2(50, 100),
@@ -85,7 +85,7 @@ block:
   image.writeFile("tests/paths/gradientLinear2.png")
 
 block:
-  let paint = newPaint(PaintGradientRadial)
+  let paint = newPaint(RadialGradientPaint)
   paint.gradientHandlePositions = @[
     vec2(50, 50),
     vec2(100, 50),
@@ -101,7 +101,7 @@ block:
   image.writeFile("tests/paths/gradientRadial.png")
 
 block:
-  let paint = newPaint(PaintGradientAngular)
+  let paint = newPaint(AngularGradientPaint)
   paint.gradientHandlePositions = @[
     vec2(50, 50),
     vec2(100, 50),
@@ -117,7 +117,7 @@ block:
   image.writeFile("tests/paths/gradientAngular.png")
 
 block:
-  let paint = newPaint(PaintGradientAngular)
+  let paint = newPaint(AngularGradientPaint)
   paint.gradientHandlePositions = @[
     vec2(50, 50),
     vec2(100, 50),

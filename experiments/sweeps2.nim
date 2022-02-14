@@ -157,7 +157,7 @@ proc binaryInsert(arr: var seq[float32], v: float32) =
     arr.insert(v, L + 1)
 
 
-proc fillPath2(image: Image, p: Path, color: Color, windingRule = NonZero, blendMode = BlendNormal) =
+proc fillPath2(image: Image, p: Path, color: Color, windingRule = NonZero, blendMode = NormalBlend) =
   const q = 1/256.0
   let rgbx = color.rgbx
   var segments = p.commandsToShapes(true, 1.0).shapesToSegments()

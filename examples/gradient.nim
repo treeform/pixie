@@ -3,7 +3,7 @@ import pixie
 let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
 
-let paint = newPaint(PaintGradientRadial)
+let paint = newPaint(RadialGradientPaint)
 paint.gradientHandlePositions = @[
   vec2(100, 100),
   vec2(200, 100),

@@ -425,28 +425,28 @@ proc blendOverwrite(backdrop, source: ColorRGBX): ColorRGBX =
 proc blender*(blendMode: BlendMode): Blender {.raises: [].} =
   ## Returns a blend function for a given blend mode.
   case blendMode:
-  of BlendNormal: blendNormal
-  of BlendDarken: blendDarken
-  of BlendMultiply: blendMultiply
+  of NormalBlend: blendNormal
+  of DarkenBlend: blendDarken
+  of MultiplyBlend: blendMultiply
   # of BlendLinearBurn: blendLinearBurn
-  of BlendColorBurn: blendColorBurn
-  of BlendLighten: blendLighten
-  of BlendScreen: blendScreen
+  of ColorBurnBlend: blendColorBurn
+  of LightenBlend: blendLighten
+  of ScreenBlend: blendScreen
   # of BlendLinearDodge: blendLinearDodge
-  of BlendColorDodge: blendColorDodge
-  of BlendOverlay: blendOverlay
-  of BlendSoftLight: blendSoftLight
-  of BlendHardLight: blendHardLight
-  of BlendDifference: blendDifference
-  of BlendExclusion: blendExclusion
-  of BlendHue: blendHue
-  of BlendSaturation: blendSaturation
-  of BlendColor: blendColor
-  of BlendLuminosity: blendLuminosity
-  of BlendMask: blendMask
-  of BlendOverwrite: blendOverwrite
-  of BlendSubtractMask: blendSubtractMask
-  of BlendExcludeMask: blendExcludeMask
+  of ColorDodgeBlend: blendColorDodge
+  of OverlayBlend: blendOverlay
+  of SoftLightBlend: blendSoftLight
+  of HardLightBlend: blendHardLight
+  of DifferenceBlend: blendDifference
+  of ExclusionBlend: blendExclusion
+  of HueBlend: blendHue
+  of SaturationBlend: blendSaturation
+  of ColorBlend: blendColor
+  of LuminosityBlend: blendLuminosity
+  of MaskBlend: blendMask
+  of OverwriteBlend: blendOverwrite
+  of SubtractMaskBlend: blendSubtractMask
+  of ExcludeMaskBlend: blendExcludeMask
 
 proc maskNormal(backdrop, source: uint8): uint8 =
   ## Blending masks
@@ -471,11 +471,11 @@ proc maskOverwrite(backdrop, source: uint8): uint8 =
 proc masker*(blendMode: BlendMode): Masker {.raises: [PixieError].} =
   ## Returns a blend masking function for a given blend masking mode.
   case blendMode:
-  of BlendNormal: maskNormal
-  of BlendMask: maskMask
-  of BlendOverwrite: maskOverwrite
-  of BlendSubtractMask: maskSubtract
-  of BlendExcludeMask: maskExclude
+  of NormalBlend: maskNormal
+  of MaskBlend: maskMask
+  of OverwriteBlend: maskOverwrite
+  of SubtractMaskBlend: maskSubtract
+  of ExcludeMaskBlend: maskExclude
   else:
     raise newException(PixieError, "No masker for " & $blendMode)
 
@@ -548,15 +548,15 @@ when defined(amd64) and not defined(pixieNoSimd):
   proc blenderSimd*(blendMode: BlendMode): BlenderSimd {.raises: [PixieError].} =
     ## Returns a blend function for a given blend mode with SIMD support.
     case blendMode:
-    of BlendNormal: blendNormalSimd
-    of BlendMask: blendMaskSimd
-    of BlendOverwrite: blendOverwriteSimd
+    of NormalBlend: blendNormalSimd
+    of MaskBlend: blendMaskSimd
+    of OverwriteBlend: blendOverwriteSimd
     else:
       raise newException(PixieError, "No SIMD blender for " & $blendMode)
 
   proc hasSimdBlender*(blendMode: BlendMode): bool {.inline, raises: [].} =
     ## Is there a blend function for a given blend mode with SIMD support?
-    blendMode in {BlendNormal, BlendMask, BlendOverwrite}
+    blendMode in {NormalBlend, MaskBlend, OverwriteBlend}
 
   proc maskNormalInlineSimd*(backdrop, source: M128i): M128i {.inline.} =
     ## Blending masks
@@ -625,15 +625,15 @@ when defined(amd64) and not defined(pixieNoSimd):
   proc maskerSimd*(blendMode: BlendMode): MaskerSimd {.raises: [PixieError].} =
     ## Returns a blend masking function with SIMD support.
     case blendMode:
-    of BlendNormal: maskNormalSimd
-    of BlendMask: maskMaskSimd
-    of BlendOverwrite: blendOverwriteSimd
+    of NormalBlend: maskNormalSimd
+    of MaskBlend: maskMaskSimd
+    of OverwriteBlend: blendOverwriteSimd
     else:
       raise newException(PixieError, "No SIMD masker for " & $blendMode)
 
   proc hasSimdMasker*(blendMode: BlendMode): bool {.inline, raises: [].} =
     ## Is there a blend masking function with SIMD support?
-    blendMode in {BlendNormal, BlendMask, BlendOverwrite}
+    blendMode in {NormalBlend, MaskBlend, OverwriteBlend}
 
 when defined(release):
   {.pop.}

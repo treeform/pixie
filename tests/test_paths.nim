@@ -390,9 +390,9 @@ block:
     rgbx(255, 0, 0, 255)
   )
 
-  let paint = newPaint(PaintSolid)
+  let paint = newPaint(SolidPaint)
   paint.color = color(0, 1, 0, 1)
-  paint.blendMode = BlendExcludeMask
+  paint.blendMode = ExcludeMaskBlend
 
   image.fillPath(
     "M 30 30 H 80 V 80 H 30 z",
@@ -407,9 +407,9 @@ block:
     rgbx(255, 0, 0, 255)
   )
 
-  let paint = newPaint(PaintSolid)
+  let paint = newPaint(SolidPaint)
   paint.color = color(0, 1, 0, 1)
-  paint.blendMode = BlendExcludeMask
+  paint.blendMode = ExcludeMaskBlend
 
   image.fillPath(
     "M 30.1 30.1 H 80.1 V 80.1 H 30.1 z",
@@ -424,9 +424,9 @@ block:
     rgbx(255, 0, 0, 255)
   )
 
-  let paint = newPaint(PaintSolid)
+  let paint = newPaint(SolidPaint)
   paint.color = color(0, 1, 0, 1)
-  paint.blendMode = BlendMask
+  paint.blendMode = MaskBlend
 
   image.fillPath(
     "M 30 30 H 80 V 80 H 30 z",
@@ -441,9 +441,9 @@ block:
     rgbx(255, 0, 0, 255)
   )
 
-  let paint = newPaint(PaintSolid)
+  let paint = newPaint(SolidPaint)
   paint.color = color(0, 1, 0, 1)
-  paint.blendMode = BlendMask
+  paint.blendMode = MaskBlend
 
   image.fillPath(
     "M 30.1 30.1 H 80.1 V 80.1 H 30.1 z",
@@ -454,25 +454,25 @@ block:
 block:
   let mask = newMask(100, 100)
   mask.fillPath("M 10 10 H 60 V 60 H 10 z")
-  mask.fillPath("M 30 30 H 80 V 80 H 30 z", blendMode = BlendExcludeMask)
+  mask.fillPath("M 30 30 H 80 V 80 H 30 z", blendMode = ExcludeMaskBlend)
   writeFile("tests/paths/maskRectExcludeMask.png", mask.encodePng())
 
 block:
   let mask = newMask(100, 100)
   mask.fillPath("M 10.1 10.1 H 60.1 V 60.1 H 10.1 z")
-  mask.fillPath("M 30.1 30.1 H 80.1 V 80.1 H 30.1 z", blendMode = BlendExcludeMask)
+  mask.fillPath("M 30.1 30.1 H 80.1 V 80.1 H 30.1 z", blendMode = ExcludeMaskBlend)
   writeFile("tests/paths/maskRectExcludeMaskAA.png", mask.encodePng())
 
 block:
   let mask = newMask(100, 100)
   mask.fillPath("M 10 10 H 60 V 60 H 10 z")
-  mask.fillPath("M 30 30 H 80 V 80 H 30 z", blendMode = BlendMask)
+  mask.fillPath("M 30 30 H 80 V 80 H 30 z", blendMode = MaskBlend)
   writeFile("tests/paths/maskRectMask.png", mask.encodePng())
 
 block:
   let mask = newMask(100, 100)
   mask.fillPath("M 10.1 10.1 H 60.1 V 60.1 H 10.1 z")
-  mask.fillPath("M 30.1 30.1 H 80.1 V 80.1 H 30.1 z", blendMode = BlendMask)
+  mask.fillPath("M 30.1 30.1 H 80.1 V 80.1 H 30.1 z", blendMode = MaskBlend)
   writeFile("tests/paths/maskRectMaskAA.png", mask.encodePng())
 
 block:
@@ -613,7 +613,7 @@ block:
   let path = newPath()
   path.circle(50, 50, 30)
 
-  let paint = newPaint(PaintSolid)
+  let paint = newPaint(SolidPaint)
   paint.color = color(1, 0, 1, 1)
   paint.opacity = 0.5
 
@@ -626,7 +626,7 @@ block:
   let path = newPath()
   path.circle(50, 50, 30)
 
-  let paint = newPaint(PaintSolid)
+  let paint = newPaint(SolidPaint)
   paint.color = color(1, 0, 1, 1)
   paint.opacity = 0.5
 

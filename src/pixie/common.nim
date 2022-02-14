@@ -4,29 +4,29 @@ type
   PixieError* = object of ValueError ## Raised if an operation fails.
 
   BlendMode* = enum
-    BlendNormal
-    BlendDarken
-    BlendMultiply
+    NormalBlend
+    DarkenBlend
+    MultiplyBlend
     # BlendLinearBurn
-    BlendColorBurn
-    BlendLighten
-    BlendScreen
+    ColorBurnBlend
+    LightenBlend
+    ScreenBlend
     # BlendLinearDodge
-    BlendColorDodge
-    BlendOverlay
-    BlendSoftLight
-    BlendHardLight
-    BlendDifference
-    BlendExclusion
-    BlendHue
-    BlendSaturation
-    BlendColor
-    BlendLuminosity
+    ColorDodgeBlend
+    OverlayBlend
+    SoftLightBlend
+    HardLightBlend
+    DifferenceBlend
+    ExclusionBlend
+    HueBlend
+    SaturationBlend
+    ColorBlend
+    LuminosityBlend
 
-    BlendMask         ## Special blend mode that is used for masking
-    BlendOverwrite    ## Special blend mode that just copies pixels
-    BlendSubtractMask ## Inverse mask
-    BlendExcludeMask
+    MaskBlend         ## Special blend mode that is used for masking
+    OverwriteBlend    ## Special blend mode that just copies pixels
+    SubtractMaskBlend ## Inverse mask
+    ExcludeMaskBlend
 
 proc mix*(a, b: uint8, t: float32): uint8 {.inline, raises: [].} =
   ## Linearly interpolate between a and b using t.

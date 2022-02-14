@@ -1335,10 +1335,10 @@ proc fillCoverage(
           # If the coverages are not all zero
           if mm_movemask_epi8(mm_cmpeq_epi32(coverageVec, vec255)) == 0xffff:
             # If the coverages are all 255
-            if blendMode == BlendOverwrite:
+            if blendMode == OverwriteBlend:
               for i in 0 ..< 4:
                 mm_storeu_si128(image.data[index + i * 4].addr, colorVec)
-            elif blendMode == BlendNormal:
+            elif blendMode == NormalBlend:
               if rgbx.a == 255:
                 for i in 0 ..< 4:
                   mm_storeu_si128(image.data[index + i * 4].addr, colorVec)
@@ -1378,7 +1378,7 @@ proc fillCoverage(
 
                 source = mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
 
-                if blendMode == BlendOverwrite:
+                if blendMode == OverwriteBlend:
                   mm_storeu_si128(image.data[index + i * 4].addr, source)
                 else:
                   let backdrop = mm_loadu_si128(image.data[index + i * 4].addr)
@@ -1389,12 +1389,12 @@ proc fillCoverage(
 
                 coverageVec = mm_srli_si128(coverageVec, 4)
 
-            if blendMode == BlendNormal:
+            if blendMode == NormalBlend:
               useCoverage(blendNormalInlineSimd)
             else:
               useCoverage(blenderSimd)
 
-        elif blendMode == BlendMask:
+        elif blendMode == MaskBlend:
           for i in 0 ..< 4:
             mm_storeu_si128(image.data[index + i * 4].addr, vecZero)
 
@@ -1403,8 +1403,8 @@ proc fillCoverage(
   let blender = blendMode.blender()
   for x in x ..< startX + coverages.len:
     let coverage = coverages[x - startX]
-    if coverage != 0 or blendMode == BlendExcludeMask:
-      if blendMode == BlendNormal and coverage == 255 and rgbx.a == 255:
+    if coverage != 0 or blendMode == ExcludeMaskBlend:
+      if blendMode == NormalBlend and coverage == 255 and rgbx.a == 255:
         # Skip blending
         image.unsafe[x, y] = rgbx
         continue
@@ -1416,15 +1416,15 @@ proc fillCoverage(
         source.b = ((source.b.uint32 * coverage) div 255).uint8
         source.a = ((source.a.uint32 * coverage) div 255).uint8
 
-      if blendMode == BlendOverwrite:
+      if blendMode == OverwriteBlend:
         image.unsafe[x, y] = source
       else:
         let backdrop = image.unsafe[x, y]
         image.unsafe[x, y] = blender(backdrop, source)
-    elif blendMode == BlendMask:
+    elif blendMode == MaskBlend:
       image.unsafe[x, y] = rgbx(0, 0, 0, 0)
 
-  if blendMode == BlendMask:
+  if blendMode == MaskBlend:
     image.clearUnsafe(0, y, startX, y)
     image.clearUnsafe(startX + coverages.len, y, image.width, y)
 
@@ -1446,7 +1446,7 @@ proc fillCoverage(
           coverageVec = mm_loadu_si128(coverages[x - startX].unsafeAddr)
         if mm_movemask_epi8(mm_cmpeq_epi16(coverageVec, vecZero)) != 0xffff:
           # If the coverages are not all zero
-          if blendMode == BlendOverwrite:
+          if blendMode == OverwriteBlend:
             mm_storeu_si128(mask.data[index].addr, coverageVec)
           else:
             let backdrop = mm_loadu_si128(mask.data[index].addr)
@@ -1454,23 +1454,23 @@ proc fillCoverage(
               mask.data[index].addr,
               maskerSimd(backdrop, coverageVec)
             )
-        elif blendMode == BlendMask:
+        elif blendMode == MaskBlend:
           mm_storeu_si128(mask.data[index].addr, vecZero)
         x += 16
 
   let masker = blendMode.masker()
   for x in x ..< startX + coverages.len:
     let coverage = coverages[x - startX]
-    if coverage != 0 or blendMode == BlendExcludeMask:
-      if blendMode == BlendOverwrite:
+    if coverage != 0 or blendMode == ExcludeMaskBlend:
+      if blendMode == OverwriteBlend:
         mask.unsafe[x, y] = coverage
       else:
         let backdrop = mask.unsafe[x, y]
         mask.unsafe[x, y] = masker(backdrop, coverage)
-    elif blendMode == BlendMask:
+    elif blendMode == MaskBlend:
       mask.unsafe[x, y] = 0
 
-  if blendMode == BlendMask:
+  if blendMode == MaskBlend:
     mask.clearUnsafe(0, y, startX, y)
     mask.clearUnsafe(startX + coverages.len, y, mask.width, y)
 
@@ -1496,7 +1496,7 @@ proc fillHits(
 
     filledTo = fillStart + fillLen
 
-    if blendMode == BlendOverwrite or (blendMode == BlendNormal and rgbx.a == 255):
+    if blendMode == OverwriteBlend or (blendMode == NormalBlend and rgbx.a == 255):
       fillUnsafe(image.data, rgbx, image.dataIndex(fillStart, y), fillLen)
       continue
 
@@ -1505,8 +1505,8 @@ proc fillHits(
       if blendMode.hasSimdBlender():
         # When supported, SIMD blend as much as possible
         let colorVec = mm_set1_epi32(cast[int32](rgbx))
-        if blendMode == BlendNormal:
-          # For path filling, BlendNormal is almost always used.
+        if blendMode == NormalBlend:
+          # For path filling, NormalBlend is almost always used.
           # Inline SIMD is faster here.
           for _ in 0 ..< fillLen div 4:
             let
@@ -1533,7 +1533,7 @@ proc fillHits(
       let backdrop = image.unsafe[x, y]
       image.unsafe[x, y] = blender(backdrop, rgbx)
 
-  if blendMode == BlendMask:
+  if blendMode == MaskBlend:
     image.clearUnsafe(0, y, startX, y)
     image.clearUnsafe(filledTo, y, image.width, y)
 
@@ -1558,7 +1558,7 @@ proc fillHits(
 
     filledTo = fillStart + fillLen
 
-    if blendMode in {BlendNormal, BlendOverwrite}:
+    if blendMode in {NormalBlend, OverwriteBlend}:
       fillUnsafe(mask.data, 255, mask.dataIndex(fillStart, y), fillLen)
       continue
 
@@ -1582,7 +1582,7 @@ proc fillHits(
       let backdrop = mask.unsafe[x, y]
       mask.unsafe[x, y] = masker(backdrop, 255)
 
-  if blendMode == BlendMask:
+  if blendMode == MaskBlend:
     mask.clearUnsafe(0, y, startX, y)
     mask.clearUnsafe(filledTo, y, mask.width, y)
 
@@ -1650,7 +1650,7 @@ proc fillShapes(
         blendMode
       )
 
-  if blendMode == BlendMask:
+  if blendMode == MaskBlend:
     image.clearUnsafe(0, 0, 0, startY)
     image.clearUnsafe(0, pathHeight, 0, image.height)
 
@@ -1699,7 +1699,7 @@ proc fillShapes(
     else:
       mask.fillHits(startX, y, hits, numHits, windingRule, blendMode)
 
-  if blendMode == BlendMask:
+  if blendMode == MaskBlend:
     mask.clearUnsafe(0, 0, 0, startY)
     mask.clearUnsafe(0, pathHeight, 0, mask.height)
 
@@ -1883,7 +1883,7 @@ proc fillPath*(
   path: SomePath,
   transform = mat3(),
   windingRule = NonZero,
-  blendMode = BlendNormal
+  blendMode = NormalBlend
 ) {.raises: [PixieError].} =
   ## Fills a path.
   var shapes = parseSomePath(path, true, transform.pixelScale())
@@ -1901,8 +1901,8 @@ proc fillPath*(
   if paint.opacity == 0:
     return
 
-  if paint.kind == PaintSolid:
-    if paint.color.a > 0 or paint.blendMode == BlendOverwrite:
+  if paint.kind == SolidPaint:
+    if paint.color.a > 0 or paint.blendMode == OverwriteBlend:
       var shapes = parseSomePath(path, true, transform.pixelScale())
       shapes.transform(transform)
       var color = paint.color
@@ -1922,13 +1922,13 @@ proc fillPath*(
   paint.opacity = 1
 
   case paint.kind:
-    of PaintSolid:
+    of SolidPaint:
       discard # Handled above
-    of PaintImage:
+    of ImagePaint:
       fill.draw(paint.image, paint.imageMat)
-    of PaintImageTiled:
+    of TiledImagePaint:
       fill.drawTiled(paint.image, paint.imageMat)
-    of PaintGradientLinear, PaintGradientRadial, PaintGradientAngular:
+    of LinearGradientPaint, RadialGradientPaint, AngularGradientPaint:
       fill.fillGradient(paint)
 
   paint.opacity = savedOpacity
@@ -1948,7 +1948,7 @@ proc strokePath*(
   lineJoin = MiterJoin,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[],
-  blendMode = BlendNormal
+  blendMode = NormalBlend
 ) {.raises: [PixieError].} =
   ## Strokes a path.
   let pixelScale = transform.pixelScale()
@@ -1979,8 +1979,8 @@ proc strokePath*(
   if paint.opacity == 0:
     return
 
-  if paint.kind == PaintSolid:
-    if paint.color.a > 0 or paint.blendMode == BlendOverwrite:
+  if paint.kind == SolidPaint:
+    if paint.color.a > 0 or paint.blendMode == OverwriteBlend:
       var strokeShapes = strokeShapes(
         parseSomePath(path, false, transform.pixelScale()),
         strokeWidth,
@@ -2016,13 +2016,13 @@ proc strokePath*(
   paint.opacity = 1
 
   case paint.kind:
-    of PaintSolid:
+    of SolidPaint:
       discard # Handled above
-    of PaintImage:
+    of ImagePaint:
       fill.draw(paint.image, paint.imageMat)
-    of PaintImageTiled:
+    of TiledImagePaint:
       fill.drawTiled(paint.image, paint.imageMat)
-    of PaintGradientLinear, PaintGradientRadial, PaintGradientAngular:
+    of LinearGradientPaint, RadialGradientPaint, AngularGradientPaint:
       fill.fillGradient(paint)
 
   paint.opacity = savedOpacity

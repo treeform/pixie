@@ -169,7 +169,7 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
     let id = fill[5 .. ^2]
     if id in result.linearGradients:
       let linearGradient = result.linearGradients[id]
-      result.fill = newPaint(PaintGradientLinear)
+      result.fill = newPaint(LinearGradientPaint)
       result.fill.gradientHandlePositions = @[
         result.transform * vec2(linearGradient.x1, linearGradient.y1),
         result.transform * vec2(linearGradient.x2, linearGradient.y2)

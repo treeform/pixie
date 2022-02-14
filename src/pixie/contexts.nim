@@ -53,9 +53,9 @@ proc newContext*(image: Image): Context {.raises: [].} =
   result.globalAlpha = 1
   result.lineWidth = 1
   result.miterLimit = 10
-  result.fillStyle = newPaint(PaintSolid)
+  result.fillStyle = newPaint(SolidPaint)
   result.fillStyle.color = color(0, 0, 0, 1)
-  result.strokeStyle = newPaint(PaintSolid)
+  result.strokeStyle = newPaint(SolidPaint)
   result.strokeStyle.color = color(0, 0, 0, 1)
   result.fontSize = 12
 
@@ -370,7 +370,7 @@ proc clip*(
     ctx.mask = newMask(ctx.image.width, ctx.image.height)
     ctx.mask.fillPath(path, windingRule = windingRule)
   else:
-    ctx.mask.fillPath(path, windingRule = windingRule, blendMode = BlendMask)
+    ctx.mask.fillPath(path, windingRule = windingRule, blendMode = MaskBlend)
 
 proc clip*(
   ctx: Context, windingRule = NonZero
@@ -397,8 +397,8 @@ proc stroke*(ctx: Context) {.inline, raises: [PixieError].} =
 
 proc clearRect*(ctx: Context, rect: Rect) {.raises: [PixieError].} =
   ## Erases the pixels in a rectangular area.
-  let paint = newPaint(PaintSolid)
-  paint.blendMode = BlendOverwrite
+  let paint = newPaint(SolidPaint)
+  paint.blendMode = OverwriteBlend
 
   let path = newPath()
   path.rect(rect)
@@ -541,7 +541,7 @@ proc drawImage*(
     ))
     savedFillStyle = ctx.fillStyle
 
-  ctx.fillStyle = newPaint(PaintImage)
+  ctx.fillStyle = newPaint(ImagePaint)
   ctx.fillStyle.image = image
   ctx.fillStyle.imageMat = imageMat
 

@@ -8,7 +8,7 @@ export bumpy, chroma, common, contexts, fonts, images, masks, paints, paths, vma
 
 type
   FileFormat* = enum
-    FormatPng, FormatBmp, FormatJpg, FormatGif, FormatQoi, FormatPpm
+    PngFormat, BmpFormat, JpgFormat, GifFormat, QoiFormat, PpmFormat
 
 converter autoStraightAlpha*(c: ColorRGBX): ColorRGBA {.inline, raises: [].} =
   ## Convert a premultiplied alpha RGBA to a straight alpha RGBA.
@@ -62,23 +62,23 @@ proc readMask*(filePath: string): Mask {.raises: [PixieError].} =
 proc encodeImage*(image: Image, fileFormat: FileFormat): string {.raises: [PixieError].} =
   ## Encodes an image into memory.
   case fileFormat:
-  of FormatPng:
+  of PngFormat:
     image.encodePng()
-  of FormatJpg:
+  of JpgFormat:
     image.encodeJpg()
-  of FormatBmp:
+  of BmpFormat:
     image.encodeBmp()
-  of FormatQoi:
+  of QoiFormat:
     image.encodeQoi()
-  of FormatGif:
+  of GifFormat:
     raise newException(PixieError, "Unsupported file format")
-  of FormatPpm:
+  of PpmFormat:
     image.encodePpm()
 
 proc encodeMask*(mask: Mask, fileFormat: FileFormat): string {.raises: [PixieError].} =
   ## Encodes a mask into memory.
   case fileFormat:
-  of FormatPng:
+  of PngFormat:
     mask.encodePng()
   else:
     raise newException(PixieError, "Unsupported file format")
@@ -86,11 +86,11 @@ proc encodeMask*(mask: Mask, fileFormat: FileFormat): string {.raises: [PixieErr
 proc writeFile*(image: Image, filePath: string) {.raises: [PixieError].} =
   ## Writes an image to a file.
   let fileFormat = case splitFile(filePath).ext.toLowerAscii():
-    of ".png": FormatPng
-    of ".bmp": FormatBmp
-    of ".jpg", ".jpeg": FormatJpg
-    of ".qoi": FormatQoi
-    of ".ppm": FormatPpm
+    of ".png": PngFormat
+    of ".bmp": BmpFormat
+    of ".jpg", ".jpeg": JpgFormat
+    of ".qoi": QoiFormat
+    of ".ppm": PpmFormat
     else:
       raise newException(PixieError, "Unsupported file extension")
 
@@ -102,11 +102,11 @@ proc writeFile*(image: Image, filePath: string) {.raises: [PixieError].} =
 proc writeFile*(mask: Mask, filePath: string) {.raises: [PixieError].} =
   ## Writes a mask to a file.
   let fileFormat = case splitFile(filePath).ext.toLowerAscii():
-    of ".png": FormatPng
-    of ".bmp": FormatBmp
-    of ".jpg", ".jpeg": FormatJpg
-    of ".qoi": FormatQoi
-    of ".ppm": FormatPpm
+    of ".png": PngFormat
+    of ".bmp": BmpFormat
+    of ".jpg", ".jpeg": JpgFormat
+    of ".qoi": QoiFormat
+    of ".ppm": PpmFormat
     else:
       raise newException(PixieError, "Unsupported file extension")
 

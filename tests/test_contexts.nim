@@ -526,9 +526,9 @@ block:
 
   image.fill(rgba(255, 255, 255, 255))
 
-  let paint = newPaint(PaintSolid)
+  let paint = newPaint(SolidPaint)
   paint.color = color(0, 0, 1, 1)
-  paint.blendMode = BlendExclusion
+  paint.blendMode = ExclusionBlend
 
   ctx.fillStyle = paint
 

@@ -223,7 +223,7 @@ block:
     font,
     "a b c d e f g h i j k l m n o p",
     bounds = vec2(200, 0),
-    hAlign = AlignRight
+    hAlign = RightAlign
   )
 
   doDiff(image, "basic10")
@@ -588,72 +588,72 @@ block:
     font,
     "TopLeft",
     bounds = image.wh,
-    hAlign = AlignLeft,
-    vAlign = AlignTop
+    hAlign = LeftAlign,
+    vAlign = TopAlign
   )
 
   image.fillText(
     font,
     "TopCenter",
     bounds = image.wh,
-    hAlign = AlignCenter,
-    vAlign = AlignTop
+    hAlign = CenterAlign,
+    vAlign = TopAlign
   )
 
   image.fillText(
     font,
     "TopRight",
     bounds = image.wh,
-    hAlign = AlignRight,
-    vAlign = AlignTop
+    hAlign = RightAlign,
+    vAlign = TopAlign
   )
 
   image.fillText(
     font,
     "MiddleLeft",
     bounds = image.wh,
-    hAlign = AlignLeft,
-    vAlign = AlignMiddle
+    hAlign = LeftAlign,
+    vAlign = MiddleAlign
   )
 
   image.fillText(
     font,
     "MiddleCenter",
     bounds = image.wh,
-    hAlign = AlignCenter,
-    vAlign = AlignMiddle
+    hAlign = CenterAlign,
+    vAlign = MiddleAlign
   )
 
   image.fillText(
     font,
     "MiddleRight",
     bounds = image.wh,
-    hAlign = AlignRight,
-    vAlign = AlignMiddle
+    hAlign = RightAlign,
+    vAlign = MiddleAlign
   )
 
   image.fillText(
     font,
     "BottomLeft",
     bounds = image.wh,
-    hAlign = AlignLeft,
-    vAlign = AlignBottom
+    hAlign = LeftAlign,
+    vAlign = BottomAlign
   )
 
   image.fillText(
     font,
     "BottomCenter",
     bounds = image.wh,
-    hAlign = AlignCenter,
-    vAlign = AlignBottom
+    hAlign = CenterAlign,
+    vAlign = BottomAlign
   )
 
   image.fillText(
     font,
     "BottomRight",
     bounds = image.wh,
-    hAlign = AlignRight,
-    vAlign = AlignBottom
+    hAlign = RightAlign,
+    vAlign = BottomAlign
   )
 
   doDiff(image, "alignments")
@@ -661,7 +661,7 @@ block:
 block:
   var font = readFont("tests/fonts/IBMPlexSans-Regular_2.ttf")
   font.size = 48
-  font.paint = newPaint(PaintGradientLinear)
+  font.paint = newPaint(LinearGradientPaint)
   font.paint.gradientHandlePositions = @[
     vec2(0, 50),
     vec2(100, 50),

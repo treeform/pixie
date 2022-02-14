@@ -37,19 +37,19 @@ type
     selectionRects*: seq[Rect] ## The selection rects for each glyph.
 
   HorizontalAlignment* = enum
-    AlignLeft
-    AlignCenter
-    AlignRight
+    LeftAlign
+    CenterAlign
+    RightAlign
 
   VerticalAlignment* = enum
-    AlignTop
-    AlignMiddle
-    AlignBottom
+    TopAlign
+    MiddleAlign
+    BottomAlign
 
   TextCase* = enum
     NormalCase
-    Uppercase
-    Lowercase
+    UpperCase
+    LowerCase
     TitleCase
     # tcSmallCaps
     # tcSmallCapsForced
@@ -197,7 +197,7 @@ proc newFont*(typeface: Typeface): Font {.raises: [].} =
   result.typeface = typeface
   result.size = 12
   result.lineHeight = autoLineHeight
-  result.paint = newPaint(PaintSolid)
+  result.paint = newPaint(SolidPaint)
   result.paint.color = color(0, 0, 0, 1)
 
 proc newSpan*(text: string, font: Font): Span {.raises: [].} =
@@ -210,10 +210,10 @@ proc convertTextCase(runes: var seq[Rune], textCase: TextCase) =
   case textCase:
   of NormalCase:
     discard
-  of Uppercase:
+  of UpperCase:
     for rune in runes.mitems:
       rune = rune.toUpper()
-  of Lowercase:
+  of LowerCase:
     for rune in runes.mitems:
       rune = rune.toLower()
   of TitleCase:
@@ -229,8 +229,8 @@ proc canWrap(rune: Rune): bool {.inline.} =
 proc typeset*(
   spans: seq[Span],
   bounds = vec2(0, 0),
-  hAlign = AlignLeft,
-  vAlign = AlignTop,
+  hAlign = LeftAlign,
+  vAlign = TopAlign,
   wrap = true
 ): Arrangement {.raises: [].} =
   ## Lays out the character glyphs and returns the arrangement.
@@ -325,7 +325,7 @@ proc typeset*(
 
     result.lines[^1][1] = result.runes.len - 1
 
-    if hAlign != AlignLeft:
+    if hAlign != LeftAlign:
       # Since horizontal alignment adjustments are different for each line,
       # find the start and stop of each line of text.
       for (start, stop) in result.lines:
@@ -337,11 +337,11 @@ proc typeset*(
 
         var xAdjustment: float32
         case hAlign:
-          of AlignLeft:
+          of LeftAlign:
             discard
-          of AlignCenter:
+          of CenterAlign:
             xAdjustment = (bounds.x - furthestX) / 2
-          of AlignRight:
+          of RightAlign:
             xAdjustment = bounds.x - furthestX
 
         if xAdjustment != 0:
@@ -415,18 +415,18 @@ proc typeset*(
             baseline - round(font.typeface.ascent * font.scale)
           result.selectionRects[runeIndex].h = lineHeight
 
-    if vAlign != AlignTop:
+    if vAlign != TopAlign:
       let
         finalSelectionRect = result.selectionRects[^1]
         furthestY = finalSelectionRect.y + finalSelectionRect.h
 
       var yAdjustment: float32
       case vAlign:
-        of AlignTop:
+        of TopAlign:
           discard
-        of AlignMiddle:
+        of MiddleAlign:
           yAdjustment = round((bounds.y - furthestY) / 2)
-        of AlignBottom:
+        of BottomAlign:
           yAdjustment = bounds.y - furthestY
 
       if yAdjustment != 0:
@@ -450,8 +450,8 @@ proc typeset*(
   font: Font,
   text: string,
   bounds = vec2(0, 0),
-  hAlign = AlignLeft,
-  vAlign = AlignTop,
+  hAlign = LeftAlign,
+  vAlign = TopAlign,
   wrap = true
 ): Arrangement {.inline, raises: [].} =
   ## Lays out the character glyphs and returns the arrangement.
@@ -596,8 +596,8 @@ proc fillText*(
   text: string,
   transform = mat3(),
   bounds = vec2(0, 0),
-  hAlign = AlignLeft,
-  vAlign = AlignTop
+  hAlign = LeftAlign,
+  vAlign = TopAlign
 ) {.inline, raises: [PixieError].} =
   ## Typesets and fills the text. Optional parameters:
   ## transform: translation or matrix to apply
@@ -636,8 +636,8 @@ proc strokeText*(
   transform = mat3(),
   strokeWidth: float32 = 1.0,
   bounds = vec2(0, 0),
-  hAlign = AlignLeft,
-  vAlign = AlignTop,
+  hAlign = LeftAlign,
+  vAlign = TopAlign,
   lineCap = ButtCap,
   lineJoin = MiterJoin,
   miterLimit = defaultMiterLimit,

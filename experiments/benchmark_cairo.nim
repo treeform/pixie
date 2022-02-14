@@ -358,9 +358,9 @@ block:
   # doDiff(readImage("cairo4.png"), a, "4")
 
   var b: Image
-  let paint = newPaint(PaintSolid)
+  let paint = newPaint(SolidPaint)
   paint.color = color(1, 0, 0, 0.5)
-  paint.blendMode = BlendOverwrite
+  paint.blendMode = OverwriteBlend
 
   timeIt "pixie4 overwrite":
     b = newImage(1000, 1000)
