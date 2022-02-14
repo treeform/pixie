@@ -10,7 +10,7 @@ block:
   b.fill(rgba(0, 255, 0, 255))
 
   timeIt "drawCorrect small-on-big":
-    a.drawCorrect(b, translate(vec2(25, 25)), blendMode = bmNormal)
+    a.drawCorrect(b, translate(vec2(25, 25)), blendMode = NormalBlend)
     keep(b)
 
 block:
@@ -21,7 +21,7 @@ block:
   b.fill(rgba(0, 255, 0, 255))
 
   timeIt "drawUber small-on-big":
-    a.drawUber(b, translate(vec2(25, 25)), blendMode = bmNormal)
+    a.drawUber(b, translate(vec2(25, 25)), blendMode = NormalBlend)
     keep(b)
 
 block:
@@ -32,7 +32,7 @@ block:
   b.fill(rgba(0, 255, 0, 255))
 
   timeIt "drawCorrect small-on-big smooth":
-    a.drawCorrect(b, translate(vec2(25.1, 25.1)), blendMode = bmNormal)
+    a.drawCorrect(b, translate(vec2(25.1, 25.1)), blendMode = NormalBlend)
     keep(b)
 
 block:
@@ -43,5 +43,5 @@ block:
   b.fill(rgba(0, 255, 0, 255))
 
   timeIt "drawUber small-on-big smooth":
-    a.drawUber(b, translate(vec2(25.1, 25.1)), blendMode = bmNormal)
+    a.drawUber(b, translate(vec2(25.1, 25.1)), blendMode = NormalBlend)
     keep(b)

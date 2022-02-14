@@ -6,16 +6,16 @@ when defined(amd64) and not defined(pixieNoSimd):
 type
   WindingRule* = enum
     ## Winding rules.
-    wrNonZero
-    wrEvenOdd
+    NonZero
+    EvenOdd
 
   LineCap* = enum
     ## Line cap type for strokes.
-    lcButt, lcRound, lcSquare
+    ButtCap, RoundCap, SquareCap
 
   LineJoin* = enum
     ## Line join type for strokes.
-    ljMiter, ljRound, ljBevel
+    MiterJoin, RoundJoin, BevelJoin
 
   PathCommandKind = enum
     ## Type of path commands
@@ -1177,9 +1177,9 @@ proc shouldFill(
 ): bool {.inline.} =
   ## Should we fill based on the current winding rule and count?
   case windingRule:
-  of wrNonZero:
+  of NonZero:
     count != 0
-  of wrEvenOdd:
+  of EvenOdd:
     count mod 2 != 0
 
 iterator walk(
@@ -1207,7 +1207,7 @@ iterator walk(
             continue
           # Shortcut: we only care about when we stop filling (or the last hit).
           # If we continue filling, move to next hit.
-          if windingRule == wrNonZero and count + winding != 0:
+          if windingRule == NonZero and count + winding != 0:
             count += winding
             inc i
             continue
@@ -1335,10 +1335,10 @@ proc fillCoverage(
           # If the coverages are not all zero
           if mm_movemask_epi8(mm_cmpeq_epi32(coverageVec, vec255)) == 0xffff:
             # If the coverages are all 255
-            if blendMode == bmOverwrite:
+            if blendMode == OverwriteBlend:
               for i in 0 ..< 4:
                 mm_storeu_si128(image.data[index + i * 4].addr, colorVec)
-            elif blendMode == bmNormal:
+            elif blendMode == NormalBlend:
               if rgbx.a == 255:
                 for i in 0 ..< 4:
                   mm_storeu_si128(image.data[index + i * 4].addr, colorVec)
@@ -1378,7 +1378,7 @@ proc fillCoverage(
 
                 source = mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
 
-                if blendMode == bmOverwrite:
+                if blendMode == OverwriteBlend:
                   mm_storeu_si128(image.data[index + i * 4].addr, source)
                 else:
                   let backdrop = mm_loadu_si128(image.data[index + i * 4].addr)
@@ -1389,12 +1389,12 @@ proc fillCoverage(
 
                 coverageVec = mm_srli_si128(coverageVec, 4)
 
-            if blendMode == bmNormal:
+            if blendMode == NormalBlend:
               useCoverage(blendNormalInlineSimd)
             else:
               useCoverage(blenderSimd)
 
-        elif blendMode == bmMask:
+        elif blendMode == MaskBlend:
           for i in 0 ..< 4:
             mm_storeu_si128(image.data[index + i * 4].addr, vecZero)
 
@@ -1403,8 +1403,8 @@ proc fillCoverage(
   let blender = blendMode.blender()
   for x in x ..< startX + coverages.len:
     let coverage = coverages[x - startX]
-    if coverage != 0 or blendMode == bmExcludeMask:
-      if blendMode == bmNormal and coverage == 255 and rgbx.a == 255:
+    if coverage != 0 or blendMode == ExcludeMaskBlend:
+      if blendMode == NormalBlend and coverage == 255 and rgbx.a == 255:
         # Skip blending
         image.unsafe[x, y] = rgbx
         continue
@@ -1416,15 +1416,15 @@ proc fillCoverage(
         source.b = ((source.b.uint32 * coverage) div 255).uint8
         source.a = ((source.a.uint32 * coverage) div 255).uint8
 
-      if blendMode == bmOverwrite:
+      if blendMode == OverwriteBlend:
         image.unsafe[x, y] = source
       else:
         let backdrop = image.unsafe[x, y]
         image.unsafe[x, y] = blender(backdrop, source)
-    elif blendMode == bmMask:
+    elif blendMode == MaskBlend:
       image.unsafe[x, y] = rgbx(0, 0, 0, 0)
 
-  if blendMode == bmMask:
+  if blendMode == MaskBlend:
     image.clearUnsafe(0, y, startX, y)
     image.clearUnsafe(startX + coverages.len, y, image.width, y)
 
@@ -1446,7 +1446,7 @@ proc fillCoverage(
           coverageVec = mm_loadu_si128(coverages[x - startX].unsafeAddr)
         if mm_movemask_epi8(mm_cmpeq_epi16(coverageVec, vecZero)) != 0xffff:
           # If the coverages are not all zero
-          if blendMode == bmOverwrite:
+          if blendMode == OverwriteBlend:
             mm_storeu_si128(mask.data[index].addr, coverageVec)
           else:
             let backdrop = mm_loadu_si128(mask.data[index].addr)
@@ -1454,23 +1454,23 @@ proc fillCoverage(
               mask.data[index].addr,
               maskerSimd(backdrop, coverageVec)
             )
-        elif blendMode == bmMask:
+        elif blendMode == MaskBlend:
           mm_storeu_si128(mask.data[index].addr, vecZero)
         x += 16
 
   let masker = blendMode.masker()
   for x in x ..< startX + coverages.len:
     let coverage = coverages[x - startX]
-    if coverage != 0 or blendMode == bmExcludeMask:
-      if blendMode == bmOverwrite:
+    if coverage != 0 or blendMode == ExcludeMaskBlend:
+      if blendMode == OverwriteBlend:
         mask.unsafe[x, y] = coverage
       else:
         let backdrop = mask.unsafe[x, y]
         mask.unsafe[x, y] = masker(backdrop, coverage)
-    elif blendMode == bmMask:
+    elif blendMode == MaskBlend:
       mask.unsafe[x, y] = 0
 
-  if blendMode == bmMask:
+  if blendMode == MaskBlend:
     mask.clearUnsafe(0, y, startX, y)
     mask.clearUnsafe(startX + coverages.len, y, mask.width, y)
 
@@ -1496,7 +1496,7 @@ proc fillHits(
 
     filledTo = fillStart + fillLen
 
-    if blendMode == bmOverwrite or (blendMode == bmNormal and rgbx.a == 255):
+    if blendMode == OverwriteBlend or (blendMode == NormalBlend and rgbx.a == 255):
       fillUnsafe(image.data, rgbx, image.dataIndex(fillStart, y), fillLen)
       continue
 
@@ -1505,8 +1505,8 @@ proc fillHits(
       if blendMode.hasSimdBlender():
         # When supported, SIMD blend as much as possible
         let colorVec = mm_set1_epi32(cast[int32](rgbx))
-        if blendMode == bmNormal:
-          # For path filling, bmNormal is almost always used.
+        if blendMode == NormalBlend:
+          # For path filling, NormalBlend is almost always used.
           # Inline SIMD is faster here.
           for _ in 0 ..< fillLen div 4:
             let
@@ -1533,7 +1533,7 @@ proc fillHits(
       let backdrop = image.unsafe[x, y]
       image.unsafe[x, y] = blender(backdrop, rgbx)
 
-  if blendMode == bmMask:
+  if blendMode == MaskBlend:
     image.clearUnsafe(0, y, startX, y)
     image.clearUnsafe(filledTo, y, image.width, y)
 
@@ -1558,7 +1558,7 @@ proc fillHits(
 
     filledTo = fillStart + fillLen
 
-    if blendMode in {bmNormal, bmOverwrite}:
+    if blendMode in {NormalBlend, OverwriteBlend}:
       fillUnsafe(mask.data, 255, mask.dataIndex(fillStart, y), fillLen)
       continue
 
@@ -1582,7 +1582,7 @@ proc fillHits(
       let backdrop = mask.unsafe[x, y]
       mask.unsafe[x, y] = masker(backdrop, 255)
 
-  if blendMode == bmMask:
+  if blendMode == MaskBlend:
     mask.clearUnsafe(0, y, startX, y)
     mask.clearUnsafe(filledTo, y, mask.width, y)
 
@@ -1650,7 +1650,7 @@ proc fillShapes(
         blendMode
       )
 
-  if blendMode == bmMask:
+  if blendMode == MaskBlend:
     image.clearUnsafe(0, 0, 0, startY)
     image.clearUnsafe(0, pathHeight, 0, image.height)
 
@@ -1699,7 +1699,7 @@ proc fillShapes(
     else:
       mask.fillHits(startX, y, hits, numHits, windingRule, blendMode)
 
-  if blendMode == bmMask:
+  if blendMode == MaskBlend:
     mask.clearUnsafe(0, 0, 0, startY)
     mask.clearUnsafe(0, pathHeight, 0, mask.height)
 
@@ -1759,7 +1759,7 @@ proc strokeShapes(
   proc addJoin(shape: var seq[seq[Vec2]], prevPos, pos, nextPos: Vec2) =
     let minArea = pixelErrorMargin / pixelScale
 
-    if lineJoin == ljRound:
+    if lineJoin == RoundJoin:
       let area = PI.float32 * halfStroke * halfStroke
       if area > minArea:
         shape.add makeCircle(pos)
@@ -1778,11 +1778,11 @@ proc strokeShapes(
         b = vec2(-b.y, b.x)
 
       var lineJoin = lineJoin
-      if lineJoin == ljMiter and abs(angle) < miterAngleLimit:
-        lineJoin = ljBevel
+      if lineJoin == MiterJoin and abs(angle) < miterAngleLimit:
+        lineJoin = BevelJoin
 
       case lineJoin:
-      of ljMiter:
+      of MiterJoin:
         let
           la = line(prevPos + a, pos + a)
           lb = line(nextPos + b, pos + b)
@@ -1796,12 +1796,12 @@ proc strokeShapes(
           if areaSq > (minArea * minArea):
             shape.add @[pos + a, at, pos + b, pos, pos + a]
 
-      of ljBevel:
+      of BevelJoin:
         let areaSq = 0.25.float32 * a.lengthSq * b.lengthSq
         if areaSq > (minArea * minArea):
           shape.add @[a + pos, b + pos, pos, a + pos]
 
-      of ljRound:
+      of RoundJoin:
         discard # Handled above, skipping angle calculation
 
   for shape in shapes:
@@ -1811,11 +1811,11 @@ proc strokeShapes(
       # This shape does not end at the same point it starts so draw the
       # first line cap.
       case lineCap:
-      of lcButt:
+      of ButtCap:
         discard
-      of lcRound:
+      of RoundCap:
         shapeStroke.add(makeCircle(shape[0]))
-      of lcSquare:
+      of SquareCap:
         let tangent = (shape[1] - shape[0]).normalize()
         shapeStroke.add(makeRect(
           shape[0] - tangent * halfStroke,
@@ -1856,11 +1856,11 @@ proc strokeShapes(
       shapeStroke.addJoin(shape[^2], shape[^1], shape[1])
     else:
       case lineCap:
-      of lcButt:
+      of ButtCap:
         discard
-      of lcRound:
+      of RoundCap:
         shapeStroke.add(makeCircle(shape[^1]))
-      of lcSquare:
+      of SquareCap:
         let tangent = (shape[^1] - shape[^2]).normalize()
         shapeStroke.add(makeRect(
           shape[^1] + tangent * halfStroke,
@@ -1882,8 +1882,8 @@ proc fillPath*(
   mask: Mask,
   path: SomePath,
   transform = mat3(),
-  windingRule = wrNonZero,
-  blendMode = bmNormal
+  windingRule = NonZero,
+  blendMode = NormalBlend
 ) {.raises: [PixieError].} =
   ## Fills a path.
   var shapes = parseSomePath(path, true, transform.pixelScale())
@@ -1895,14 +1895,14 @@ proc fillPath*(
   path: SomePath,
   paint: Paint,
   transform = mat3(),
-  windingRule = wrNonZero
+  windingRule = NonZero
 ) {.raises: [PixieError].} =
   ## Fills a path.
   if paint.opacity == 0:
     return
 
-  if paint.kind == pkSolid:
-    if paint.color.a > 0 or paint.blendMode == bmOverwrite:
+  if paint.kind == SolidPaint:
+    if paint.color.a > 0 or paint.blendMode == OverwriteBlend:
       var shapes = parseSomePath(path, true, transform.pixelScale())
       shapes.transform(transform)
       var color = paint.color
@@ -1922,13 +1922,13 @@ proc fillPath*(
   paint.opacity = 1
 
   case paint.kind:
-    of pkSolid:
+    of SolidPaint:
       discard # Handled above
-    of pkImage:
+    of ImagePaint:
       fill.draw(paint.image, paint.imageMat)
-    of pkImageTiled:
+    of TiledImagePaint:
       fill.drawTiled(paint.image, paint.imageMat)
-    of pkGradientLinear, pkGradientRadial, pkGradientAngular:
+    of LinearGradientPaint, RadialGradientPaint, AngularGradientPaint:
       fill.fillGradient(paint)
 
   paint.opacity = savedOpacity
@@ -1944,11 +1944,11 @@ proc strokePath*(
   path: SomePath,
   transform = mat3(),
   strokeWidth: float32 = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
+  lineCap = ButtCap,
+  lineJoin = MiterJoin,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[],
-  blendMode = bmNormal
+  blendMode = NormalBlend
 ) {.raises: [PixieError].} =
   ## Strokes a path.
   let pixelScale = transform.pixelScale()
@@ -1962,7 +1962,7 @@ proc strokePath*(
     pixelScale
   )
   strokeShapes.transform(transform)
-  mask.fillShapes(strokeShapes, wrNonZero, blendMode)
+  mask.fillShapes(strokeShapes, NonZero, blendMode)
 
 proc strokePath*(
   image: Image,
@@ -1970,8 +1970,8 @@ proc strokePath*(
   paint: Paint,
   transform = mat3(),
   strokeWidth: float32 = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
+  lineCap = ButtCap,
+  lineJoin = MiterJoin,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[]
 ) {.raises: [PixieError].} =
@@ -1979,8 +1979,8 @@ proc strokePath*(
   if paint.opacity == 0:
     return
 
-  if paint.kind == pkSolid:
-    if paint.color.a > 0 or paint.blendMode == bmOverwrite:
+  if paint.kind == SolidPaint:
+    if paint.color.a > 0 or paint.blendMode == OverwriteBlend:
       var strokeShapes = strokeShapes(
         parseSomePath(path, false, transform.pixelScale()),
         strokeWidth,
@@ -1993,7 +1993,7 @@ proc strokePath*(
       strokeShapes.transform(transform)
       var color = paint.color
       color.a *= paint.opacity
-      image.fillShapes(strokeShapes, color, wrNonZero, paint.blendMode)
+      image.fillShapes(strokeShapes, color, NonZero, paint.blendMode)
     return
 
   let
@@ -2016,13 +2016,13 @@ proc strokePath*(
   paint.opacity = 1
 
   case paint.kind:
-    of pkSolid:
+    of SolidPaint:
       discard # Handled above
-    of pkImage:
+    of ImagePaint:
       fill.draw(paint.image, paint.imageMat)
-    of pkImageTiled:
+    of TiledImagePaint:
       fill.drawTiled(paint.image, paint.imageMat)
-    of pkGradientLinear, pkGradientRadial, pkGradientAngular:
+    of LinearGradientPaint, RadialGradientPaint, AngularGradientPaint:
       fill.fillGradient(paint)
 
   paint.opacity = savedOpacity
@@ -2062,7 +2062,7 @@ proc fillOverlaps*(
   path: Path,
   test: Vec2,
   transform = mat3(), ## Applied to the path, not the test point.
-  windingRule = wrNonZero
+  windingRule = NonZero
 ): bool {.raises: [PixieError].} =
   ## Returns whether or not the specified point is contained in the current path.
   var shapes = path.commandsToShapes(true, transform.pixelScale())
@@ -2074,8 +2074,8 @@ proc strokeOverlaps*(
   test: Vec2,
   transform = mat3(), ## Applied to the path, not the test point.
   strokeWidth: float32 = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
+  lineCap = ButtCap,
+  lineJoin = MiterJoin,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[],
 ): bool {.raises: [PixieError].} =
@@ -2092,4 +2092,4 @@ proc strokeOverlaps*(
     pixelScale
   )
   strokeShapes.transform(transform)
-  strokeShapes.overlaps(test, wrNonZero)
+  strokeShapes.overlaps(test, NonZero)

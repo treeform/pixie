@@ -595,7 +595,7 @@ proc getRgbaSmooth*(
     topMix
 
 proc drawCorrect(
-  a, b: Image | Mask, transform = mat3(), blendMode = bmNormal, tiled = false
+  a, b: Image | Mask, transform = mat3(), blendMode = NormalBlend, tiled = false
 ) {.raises: [PixieError].} =
   ## Draws one image onto another using matrix with color blending.
 
@@ -719,7 +719,7 @@ proc drawUber(
   else: # a is a Mask
     let masker = blendMode.masker()
 
-  if blendMode == bmMask:
+  if blendMode == MaskBlend:
     if yMin > 0:
       zeroMem(a.data[0].addr, 4 * yMin * a.width)
 
@@ -754,7 +754,7 @@ proc drawUber(
     if xStart == a.width or xStop == 0:
       continue
 
-    if blendMode == bmMask:
+    if blendMode == MaskBlend:
       if xStart > 0:
         zeroMem(a.data[a.dataIndex(0, y)].addr, 4 * xStart)
 
@@ -793,7 +793,7 @@ proc drawUber(
         var sx = srcPos.x.int
 
         when type(a) is Image and type(b) is Image:
-          if blendMode in {bmNormal, bmOverwrite} and
+          if blendMode in {NormalBlend, OverwriteBlend} and
             isOpaque(b.data, b.dataIndex(sx, sy), xStop - xStart):
               copyMem(
                 a.data[a.dataIndex(x, y)].addr,
@@ -804,7 +804,7 @@ proc drawUber(
 
         when defined(amd64) and not defined(pixieNoSimd):
           case blendMode:
-          of bmOverwrite:
+          of OverwriteBlend:
             for _ in 0 ..< (xStop - xStart) div 16:
               when type(a) is Image:
                 when type(b) is Image:
@@ -831,7 +831,7 @@ proc drawUber(
                 mm_storeu_si128(a.data[a.dataIndex(x, y)].addr, sourceVec)
               x += 16
               sx += 16
-          of bmNormal:
+          of NormalBlend:
             let vec255 = mm_set1_epi32(cast[int32](uint32.high))
             for _ in 0 ..< (xStop - xStart) div 16:
               when type(a) is Image:
@@ -889,7 +889,7 @@ proc drawUber(
                 )
               x += 16
               sx += 16
-          of bmMask:
+          of MaskBlend:
             let vec255 = mm_set1_epi32(cast[int32](uint32.high))
             for _ in 0 ..< (xStop - xStart) div 16:
               when type(a) is Image:
@@ -1004,7 +1004,7 @@ proc drawUber(
       )
 
       case blendMode:
-      of bmOverwrite:
+      of OverwriteBlend:
         for x in x ..< xStop:
           let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
           when type(a) is Image:
@@ -1022,7 +1022,7 @@ proc drawUber(
             if source > 0:
               a.unsafe[x, y] = source
           srcPos += dx
-      of bmNormal:
+      of NormalBlend:
         for x in x ..< xStop:
           let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
           when type(a) is Image:
@@ -1048,7 +1048,7 @@ proc drawUber(
                 let backdrop = a.unsafe[x, y]
                 a.unsafe[x, y] = blendAlpha(backdrop, source)
           srcPos += dx
-      of bmMask:
+      of MaskBlend:
         for x in x ..< xStop:
           let samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
           when type(a) is Image:
@@ -1095,16 +1095,16 @@ proc drawUber(
             a.unsafe[x, y] = masker(backdrop, sample)
           srcPos += dx
 
-    if blendMode == bmMask:
+    if blendMode == MaskBlend:
       if a.width - xStop > 0:
         zeroMem(a.data[a.dataIndex(xStop, y)].addr, 4 * (a.width - xStop))
 
-  if blendMode == bmMask:
+  if blendMode == MaskBlend:
     if a.height - yMax > 0:
       zeroMem(a.data[a.dataIndex(0, yMax)].addr, 4 * a.width * (a.height - yMax))
 
 proc draw*(
-  a, b: Image, transform = mat3(), blendMode = bmNormal
+  a, b: Image, transform = mat3(), blendMode = NormalBlend
 ) {.inline, raises: [PixieError].} =
   ## Draws one image onto another using matrix with color blending.
   when type(transform) is Vec2:
@@ -1113,7 +1113,7 @@ proc draw*(
     a.drawUber(b, transform, blendMode)
 
 proc draw*(
-  a, b: Mask, transform = mat3(), blendMode = bmMask
+  a, b: Mask, transform = mat3(), blendMode = MaskBlend
 ) {.inline, raises: [PixieError].} =
   ## Draws a mask onto a mask using a matrix with color blending.
   when type(transform) is Vec2:
@@ -1122,7 +1122,7 @@ proc draw*(
     a.drawUber(b, transform, blendMode)
 
 proc draw*(
-  image: Image, mask: Mask, transform = mat3(), blendMode = bmMask
+  image: Image, mask: Mask, transform = mat3(), blendMode = MaskBlend
 ) {.inline, raises: [PixieError].} =
   ## Draws a mask onto an image using a matrix with color blending.
   when type(transform) is Vec2:
@@ -1131,7 +1131,7 @@ proc draw*(
     image.drawUber(mask, transform, blendMode)
 
 proc draw*(
-  mask: Mask, image: Image, transform = mat3(), blendMode = bmMask
+  mask: Mask, image: Image, transform = mat3(), blendMode = MaskBlend
 ) {.inline, raises: [PixieError].} =
   ## Draws a image onto a mask using a matrix with color blending.
   when type(transform) is Vec2:
@@ -1140,7 +1140,7 @@ proc draw*(
     mask.drawUber(image, transform, blendMode)
 
 proc drawTiled*(
-  dst, src: Image, mat: Mat3, blendMode = bmNormal
+  dst, src: Image, mat: Mat3, blendMode = NormalBlend
 ) {.raises: [PixieError].} =
   dst.drawCorrect(src, mat, blendMode, true)
 
@@ -1156,7 +1156,7 @@ proc resize*(srcImage: Image, width, height: int): Image {.raises: [PixieError].
         width.float32 / srcImage.width.float32,
         height.float32 / srcImage.height.float32
       )),
-      bmOverwrite
+      OverwriteBlend
     )
 
 proc shadow*(
@@ -1170,7 +1170,7 @@ proc shadow*(
     shifted = mask
   else:
     shifted = newMask(mask.width, mask.height)
-    shifted.draw(mask, translate(offset), bmOverwrite)
+    shifted.draw(mask, translate(offset), OverwriteBlend)
 
   shifted.spread(spread)
   shifted.blur(blur)
@@ -1188,7 +1188,7 @@ proc superImage*(image: Image, x, y, w, h: int): Image {.raises: [PixieError].} 
     result = newImage(w, h)
   else:
     result = newImage(w, h)
-    result.draw(image, translate(vec2(-x.float32, -y.float32)), bmOverwrite)
+    result.draw(image, translate(vec2(-x.float32, -y.float32)), OverwriteBlend)
 
 when defined(release):
   {.pop.}

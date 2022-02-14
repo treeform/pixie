@@ -78,7 +78,7 @@ block:
 
   timeIt "pixie draw overwrite":
     # tmp.fill(rgbx(127, 127, 127, 255))
-    tmp.draw(backdrop, blendMode = bmOverwrite)
+    tmp.draw(backdrop, blendMode = OverwriteBlend)
     tmp.draw(source)
 
   # tmp.writeFile("tmp2.png")
@@ -124,7 +124,7 @@ block:
 
   timeIt "pixie draw mask":
     tmp.draw(backdrop)
-    tmp.draw(source, blendMode = bmMask)
+    tmp.draw(source, blendMode = MaskBlend)
 
   # tmp.writeFile("tmp_masked2.png")
 

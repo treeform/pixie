@@ -4,7 +4,7 @@ import algorithm, chroma, pixie/images, vmath, benchy
 import pixie, pixie/paths {.all.}
 
 
-template test(name: string, p: Path, a: static int = 1, wr = wrNonZero) =
+template test(name: string, p: Path, a: static int = 1, wr = NonZero) =
   echo name
   var image = newImage(200, 200)
   timeIt "  sweeps", a:
@@ -92,11 +92,11 @@ when defined(bench):
   test("cricle", cricle, 100)
   test("halfAarc", halfAarc, 100)
   test("hourGlass", hourGlass, 100)
-  test("hourGlass2", hourGlass2, wr=wrNonZero)
-  test("hourGlass2", hourGlass2, wr=wrEvenOdd)
+  test("hourGlass2", hourGlass2, wr=NonZero)
+  test("hourGlass2", hourGlass2, wr=EvenOdd)
   test("hole", hole, 100)
-  test("holeEvenOdd", holeEvenOdd, 100, wr=wrNonZero)
-  test("holeEvenOdd", holeEvenOdd, 100, wr=wrEvenOdd)
+  test("holeEvenOdd", holeEvenOdd, 100, wr=NonZero)
+  test("holeEvenOdd", holeEvenOdd, 100, wr=EvenOdd)
   test("letterG", letterG, 100)
 else:
   # test("rect", rect)
@@ -105,8 +105,8 @@ else:
   # test("cricle", cricle)
   # test("halfAarc", halfAarc)
   # test("hourGlass", hourGlass)
-  test("hourGlass2", hourGlass2, wr=wrEvenOdd)
-  # test("hole", hole, wr=wrEvenOdd)
-  # test("holeEvenOdd", holeEvenOdd, wr=wrNonZero)
-  # test("holeEvenOdd", holeEvenOdd, wr=wrEvenOdd)
+  test("hourGlass2", hourGlass2, wr=EvenOdd)
+  # test("hole", hole, wr=EvenOdd)
+  # test("holeEvenOdd", holeEvenOdd, wr=NonZero)
+  # test("holeEvenOdd", holeEvenOdd, wr=EvenOdd)
   # test("letterG", letterG)

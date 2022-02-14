@@ -12,7 +12,7 @@ when defined(release):
   {.push checks: off.}
 
 proc fillMask(
-  shapes: seq[seq[Vec2]], width, height: int, windingRule = wrNonZero
+  shapes: seq[seq[Vec2]], width, height: int, windingRule = NonZero
 ): Mask =
   result = newMask(width, height)
 
@@ -48,7 +48,7 @@ proc fillMask(
         fillUnsafe(result.data, 255, startIndex, len)
 
 proc fillMask*(
-  path: SomePath, width, height: int, windingRule = wrNonZero
+  path: SomePath, width, height: int, windingRule = NonZero
 ): Mask =
   ## Returns a new mask with the path filled. This is a faster alternative
   ## to `newMask` + `fillPath`.
@@ -59,7 +59,7 @@ proc fillImage(
   shapes: seq[seq[Vec2]],
   width, height: int,
   color: SomeColor,
-  windingRule = wrNonZero
+  windingRule = NonZero
 ): Image =
   result = newImage(width, height)
 
@@ -117,7 +117,7 @@ proc fillImage(
       result.data[i].a = ((channels[3] * coverage) div 255).uint8
 
 proc fillImage*(
-  path: SomePath, width, height: int, color: SomeColor, windingRule = wrNonZero
+  path: SomePath, width, height: int, color: SomeColor, windingRule = NonZero
 ): Image =
   ## Returns a new image with the path filled. This is a faster alternative
   ## to `newImage` + `fillPath`.
@@ -128,8 +128,8 @@ proc strokeMask*(
   path: SomePath,
   width, height: int,
   strokeWidth: float32 = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
+  lineCap = ButtCap,
+  lineJoin = MiterJoin,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[]
 ): Mask =
@@ -144,15 +144,15 @@ proc strokeMask*(
     dashes,
     1
   )
-  result = strokeShapes.fillMask(width, height, wrNonZero)
+  result = strokeShapes.fillMask(width, height, NonZero)
 
 proc strokeImage*(
   path: SomePath,
   width, height: int,
   color: SomeColor,
   strokeWidth: float32 = 1.0,
-  lineCap = lcButt,
-  lineJoin = ljMiter,
+  lineCap = ButtCap,
+  lineJoin = MiterJoin,
   miterLimit = defaultMiterLimit,
   dashes: seq[float32] = @[]
 ): Image =
@@ -167,7 +167,7 @@ proc strokeImage*(
     dashes,
     1
   )
-  result = strokeShapes.fillImage(width, height, color, wrNonZero)
+  result = strokeShapes.fillImage(width, height, color, NonZero)
 
 when defined(release):
   {.pop.}
@@ -358,9 +358,9 @@ block:
   # doDiff(readImage("cairo4.png"), a, "4")
 
   var b: Image
-  let paint = newPaint(pkSolid)
+  let paint = newPaint(SolidPaint)
   paint.color = color(1, 0, 0, 0.5)
-  paint.blendMode = bmOverwrite
+  paint.blendMode = OverwriteBlend
 
   timeIt "pixie4 overwrite":
     b = newImage(1000, 1000)

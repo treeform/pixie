@@ -5,24 +5,24 @@ when defined(amd64) and not defined(pixieNoSimd):
 
 type
   PaintKind* = enum
-    pkSolid
-    pkImage
-    pkImageTiled
-    pkGradientLinear
-    pkGradientRadial
-    pkGradientAngular
+    SolidPaint
+    ImagePaint
+    TiledImagePaint
+    LinearGradientPaint
+    RadialGradientPaint
+    AngularGradientPaint
 
   Paint* = ref object
     ## Paint used to fill paths.
     kind*: PaintKind
     blendMode*: BlendMode               ## Blend mode.
     opacity*: float32
-    # pkSolid
+    # SolidPaint
     color*: Color                       ## Color to fill with.
-    # pkImage, pkImageTiled:
+    # ImagePaint, TiledImagePaint:
     image*: Image                       ## Image to fill with.
     imageMat*: Mat3                     ## Matrix of the filled image.
-    # pkGradientLinear, pkGradientRadial, pkGradientAngular:
+    # LinearGradientPaint, RadialGradientPaint, AngularGradientPaint:
     gradientHandlePositions*: seq[Vec2] ## Gradient positions (image space).
     gradientStops*: seq[ColorStop]      ## Color stops (gradient space).
 
@@ -51,13 +51,13 @@ proc newPaint*(paint: Paint): Paint {.raises: [].} =
 converter parseSomePaint*(paint: SomePaint): Paint {.inline.} =
   ## Given SomePaint, parse it in different ways.
   when type(paint) is string:
-    result = newPaint(pkSolid)
+    result = newPaint(SolidPaint)
     try:
       result.color = parseHtmlColor(paint)
     except:
       raise newException(PixieError, "Unable to parse color " & paint)
   elif type(paint) is SomeColor:
-    result = newPaint(pkSolid)
+    result = newPaint(SolidPaint)
     when type(paint) is Color:
       result.color = paint
     else:
@@ -229,11 +229,11 @@ proc fillGradient*(image: Image, paint: Paint) {.raises: [PixieError].} =
   ## Fills with the Paint gradient.
 
   case paint.kind:
-  of pkGradientLinear:
+  of LinearGradientPaint:
     image.fillGradientLinear(paint)
-  of pkGradientRadial:
+  of RadialGradientPaint:
     image.fillGradientRadial(paint)
-  of pkGradientAngular:
+  of AngularGradientPaint:
     image.fillGradientAngular(paint)
   else:
     raise newException(PixieError, "Paint must be a gradient")
