@@ -18,7 +18,7 @@ converter autoPremultipliedAlpha*(c: ColorRGBA): ColorRGBX {.inline, raises: [].
   ## Convert a straight alpha RGBA to a premultiplied alpha RGBA.
   c.rgbx()
 
-proc decodeImage*(data: string | seq[uint8]): Image {.raises: [PixieError].} =
+proc decodeImage*(data: string): Image {.raises: [PixieError].} =
   ## Loads an image from memory.
   if data.len > 8 and data.readUint64(0) == cast[uint64](pngSignature):
     decodePng(data)
@@ -38,7 +38,7 @@ proc decodeImage*(data: string | seq[uint8]): Image {.raises: [PixieError].} =
   else:
     raise newException(PixieError, "Unsupported image file format")
 
-proc decodeMask*(data: string | seq[uint8]): Mask {.raises: [PixieError].} =
+proc decodeMask*(data: string): Mask {.raises: [PixieError].} =
   ## Loads a mask from memory.
   if data.len > 8 and data.readUint64(0) == cast[uint64](pngSignature):
     newMask(decodePng(data))

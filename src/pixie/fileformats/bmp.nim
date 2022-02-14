@@ -2,100 +2,117 @@ import bitops, chroma, flatty/binny, pixie/common, pixie/images
 
 # See: https://en.wikipedia.org/wiki/BMP_file_format
 # See: https://bmptestsuite.sourceforge.io/
+# https://docs.microsoft.com/en-us/windows/win32/gdi/bitmap-header-types
+# https://stackoverflow.com/questions/61788908/windows-clipboard-getclipboarddata-for-cf-dibv5-causes-the-image-on-the-clip
+# https://stackoverflow.com/questions/44177115/copying-from-and-to-clipboard-loses-image-transparency/46424800#46424800
 
 const bmpSignature* = "BM"
 
-proc colorMaskShift(color: uint32, mask: uint32): uint8 =
+template failInvalid() =
+  raise newException(PixieError, "Invalid BMP buffer, unable to load")
+
+proc colorMaskShift(color, mask: uint32): uint8 {.inline.} =
   ((color and mask) shr (mask.firstSetBit() - 1)).uint8
 
-proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
-  ## Decodes bitmap data into an Image.
+proc decodeDib*(
+  data: pointer, len: int, lpBitmapInfo = false
+): Image {.raises: [PixieError].} =
+  ## Decodes DIB data into an Image.
 
-  if data.len < 48:
-    raise newException(PixieError, "Invalid BMP data")
+  if len < 40:
+    failInvalid()
 
-  # BMP Header
-  if data[0 .. 1] != "BM":
-    raise newException(PixieError, "Invalid BMP data")
+  let data = cast[ptr UncheckedArray[uint8]](data)
 
-  let
-    bits = data.readUint16(28).int
-    compression = data.readUint32(30).int
-    dibHeader = data.readInt32(14).int
+  # BITMAPINFOHEADER
   var
-    numColors = data.readInt32(46).int
-    width = data.readInt32(18).int
-    height = data.readInt32(22).int
-    offset = data.readUInt32(10).int
-    # Default channels if header does not contain them:
-    redChannel = 0x00FF0000.uint32
-    greenChannel = 0x0000FF00.uint32
-    blueChannel = 0x000000FF.uint32
-    alphaChannel = 0xFF000000.uint32
-    useAlpha = false
-    flipVertical = false
+    headerSize = data.readInt32(0).int
+    width = data.readInt32(4).int
+    height = data.readInt32(8).int
+    planes = data.readUint16(12).int
+    bits = data.readUint16(14).int
+    compression = data.readInt32(16).int
+    colorPaletteSize = data.readInt32(32).int
 
-  if numColors < 0 or numColors > 256:
-    raise newException(PixieError, "Invalid number of colors")
-  if dibHeader notin [40, 108]:
-    raise newException(PixieError, "Invalid BMP data")
+  if headerSize notin [40, 108, 124]:
+    failInvalid()
 
-  var
-    colorTable = newSeq[ColorRGBA](numColors)
+  if planes != 1:
+    failInvalid()
 
-  if dibHeader == 108:
-    if data.len < 14 + dibHeader:
-      raise newException(PixieError, "Invalid BMP data")
-
-    redChannel = data.readUInt32(54)
-    greenChannel = data.readUInt32(58)
-    blueChannel = data.readUInt32(62)
-    alphaChannel = data.readUInt32(66)
-    useAlpha = true
-
-  if bits == 8 and numColors == 0:
-    numColors = 256
-    colorTable = newSeq[ColorRGBA](numColors)
-
-  if numColors > 0:
-    if data.len < 14 + dibHeader + numColors * 4:
-      raise newException(PixieError, "Invalid BMP data")
-
-    var colorOffset = dibHeader + 14
-    for i in 0 ..< numColors:
-      var rgba: ColorRGBA
-      if colorOffset + 3 > data.len - 2:
-        raise newException(PixieError, "Truncated BMP data")
-      rgba.r = data.readUint8(colorOffset + 2)
-      rgba.g = data.readUint8(colorOffset + 1)
-      rgba.b = data.readUint8(colorOffset + 0)
-      rgba.a = 255
-      colorOffset += 4
-      colorTable[i] = rgba
-
-  if redChannel == 0 or greenChannel == 0 or
-    blueChannel == 0 or alphaChannel == 0:
-    raise newException(PixieError, "Unsupported 0 channel mask.")
-
-  if bits notin [1, 4, 8, 32, 24]:
-    raise newException(PixieError, "Unsupported BMP data format")
+  if bits notin [1, 4, 8, 24, 32]:
+    raise newException(PixieError, "Unsupported BMP bit count")
 
   if compression notin [0, 3]:
-    raise newException(PixieError, "Unsupported BMP data format")
+    raise newException(PixieError, "Unsupported BMP compression format")
+
+  var
+    redMask = 0x00FF0000.uint32
+    greenMask = 0x0000FF00.uint32
+    blueMask = 0x000000FF.uint32
+    alphaMask = 0xFF000000.uint32
+    flipVertical: bool
+    useAlpha: bool
+
+  if compression == 3:
+    if len < 52:
+      failInvalid()
+
+    redMask = data.readUInt32(40)
+    greenMask = data.readUInt32(44)
+    blueMask = data.readUInt32(48)
+
+    if redMask == 0 or blueMask == 0 or greenMask == 0:
+      failInvalid()
+
+  if headerSize > 40:
+    if len < 56:
+      failInvalid()
+
+    alphaMask = data.readUInt32(52)
+
+    useAlpha = alphaMask != 0
+
+  if colorPaletteSize < 0 or colorPaletteSize > 256:
+    failInvalid()
+
+  if bits == 8 and colorPaletteSize == 0:
+    colorPaletteSize = 256
+
+  var colorPalette = newSeq[ColorRGBA](colorPaletteSize)
+  if colorPaletteSize > 0:
+    if len < headerSize + colorPaletteSize * 4:
+      failInvalid()
+
+    var offset = headerSize
+    for i in 0 ..< colorPaletteSize:
+      var rgba: ColorRGBA
+      if offset + 3 > len - 2:
+        failInvalid()
+      rgba.r = data.readUint8(offset + 2)
+      rgba.g = data.readUint8(offset + 1)
+      rgba.b = data.readUint8(offset + 0)
+      rgba.a = 255
+      offset += 4
+      colorPalette[i] = rgba
 
   if height < 0:
     height = -height
     flipVertical = true
 
   result = newImage(width, height)
-  let startOffset = offset
+
+  var startOffset = headerSize + colorPaletteSize * 4
+  if compression == 3 and (headerSize == 40 or lpBitmapInfo):
+    startOffset += 12
+
+  var offset = startOffset
 
   if bits == 1:
     var
       haveBits = 0
       colorBits: uint8 = 0
     for y in 0 ..< result.height:
-      # pad the row
       haveBits = 0
       let padding = (offset - startOffset) mod 4
       if padding > 0:
@@ -103,25 +120,24 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
       for x in 0 ..< result.width:
         var rgba: ColorRGBA
         if haveBits == 0:
-          if offset >= data.len:
-            raise newException(PixieError, "Truncated BMP data")
+          if offset >= len:
+            failInvalid()
           colorBits = data.readUint8(offset)
           haveBits = 8
           offset += 1
         if (colorBits and 0b1000_0000) == 0:
-          rgba = colorTable[0]
+          rgba = colorPalette[0]
         else:
-          rgba = colorTable[1]
+          rgba = colorPalette[1]
         colorBits = colorBits shl 1
         dec haveBits
-        result[x, result.height - y - 1] = rgba.rgbx()
+        result.unsafe[x, result.height - y - 1] = rgba.rgbx()
 
   elif bits == 4:
     var
       haveBits = 0
       colorBits: uint8 = 0
     for y in 0 ..< result.height:
-      # pad the row
       haveBits = 0
       let padding = (offset - startOffset) mod 4
       if padding > 0:
@@ -129,76 +145,87 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
       for x in 0 ..< result.width:
         var rgba: ColorRGBA
         if haveBits == 0:
-          if offset >= data.len:
-            raise newException(PixieError, "Truncated BMP data")
+          if offset >= len:
+            failInvalid()
           colorBits = data.readUint8(offset)
           haveBits = 8
           offset += 1
         let index = (colorBits and 0b1111_0000) shr 4
-        if index.int >= numColors:
-          raise newException(PixieError, "Invalid BMP index")
-        rgba = colorTable[index]
+        if index.int >= colorPaletteSize:
+          failInvalid()
+        rgba = colorPalette[index]
         colorBits = colorBits shl 4
         haveBits -= 4
-        result[x, result.height - y - 1] = rgba.rgbx()
+        result.unsafe[x, result.height - y - 1] = rgba.rgbx()
 
   elif bits == 8:
     for y in 0 ..< result.height:
-      # pad the row
       let padding = (offset - startOffset) mod 4
       if padding > 0:
         offset += 4 - padding
       for x in 0 ..< result.width:
-        if offset >= data.len:
-          raise newException(PixieError, "Truncated BMP data")
+        if offset >= len:
+          failInvalid()
         var rgba: ColorRGBA
         let index = data.readUint8(offset)
         offset += 1
-        if index.int >= numColors:
-          raise newException(PixieError, "Invalid BMP index")
-        rgba = colorTable[index]
-        result[x, result.height - y - 1] = rgba.rgbx()
+        if index.int >= colorPaletteSize:
+          failInvalid()
+        rgba = colorPalette[index]
+        result.unsafe[x, result.height - y - 1] = rgba.rgbx()
 
   elif bits == 24:
     for y in 0 ..< result.height:
-      # pad the row
       let padding = (offset - startOffset) mod 4
       if padding > 0:
         offset += 4 - padding
       for x in 0 ..< result.width:
-        if offset + 2 >= data.len:
-          raise newException(PixieError, "Truncated BMP data")
+        if offset + 2 >= len:
+          failInvalid()
         var rgba: ColorRGBA
         rgba.r = data.readUint8(offset + 2)
         rgba.g = data.readUint8(offset + 1)
         rgba.b = data.readUint8(offset + 0)
         rgba.a = 255
         offset += 3
-        result[x, result.height - y - 1] = rgba.rgbx()
+        result.unsafe[x, result.height - y - 1] = rgba.rgbx()
 
   elif bits == 32:
     for y in 0 ..< result.height:
       for x in 0 ..< result.width:
-        if offset + 3 >= data.len:
-          raise newException(PixieError, "Truncated BMP data")
-        var rgba: ColorRGBA
+        if offset + 3 >= len:
+          failInvalid()
         let color = data.readUint32(offset)
-        rgba.r = color.colorMaskShift(redChannel)
-        rgba.g = color.colorMaskShift(greenChannel)
-        rgba.b = color.colorMaskShift(blueChannel)
         if useAlpha:
-          rgba.a = color.colorMaskShift(alphaChannel)
+          var rgbx: ColorRGBX
+          rgbx.r = color.colorMaskShift(redMask)
+          rgbx.g = color.colorMaskShift(greenMask)
+          rgbx.b = color.colorMaskShift(blueMask)
+          rgbx.a = color.colorMaskShift(alphaMask)
+          result.unsafe[x, result.height - y - 1] = rgbx
         else:
+          var rgba: ColorRGBA
+          rgba.r = color.colorMaskShift(redMask)
+          rgba.g = color.colorMaskShift(greenMask)
+          rgba.b = color.colorMaskShift(blueMask)
           rgba.a = 255
+          result.unsafe[x, result.height - y - 1] = rgba.rgbx()
         offset += 4
-        result[x, result.height - y - 1] = rgba.rgbx()
 
   if flipVertical:
     result.flipVertical()
 
-proc decodeBmp*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
+proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
   ## Decodes bitmap data into an Image.
-  decodeBmp(cast[string](data))
+
+  if data.len < 14:
+    failInvalid()
+
+  # BMP Header
+  if data[0 .. 1] != "BM":
+    failInvalid()
+
+  decodeDib(data[14].unsafeAddr, data.len - 14)
 
 proc encodeBmp*(image: Image): string {.raises: [].} =
   ## Encodes an image into the BMP file format.
