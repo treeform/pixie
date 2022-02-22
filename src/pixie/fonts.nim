@@ -82,6 +82,7 @@ proc lineGap*(typeface: Typeface): float32 {.raises: [].} =
 
 proc lineHeight*(typeface: Typeface): float32 {.inline, raises: [].} =
   ## The default line height in font units.
+  # The descent is negative number, so this is really ascent + descent + lineGap.
   typeface.ascent - typeface.descent + typeface.lineGap
 
 proc underlinePosition(typeface: Typeface): float32 =
@@ -367,9 +368,8 @@ proc typeset*(
               (lineHeight / font.scale) - font.typeface.lineHeight
             ) / 2
           maxInitialY = max(maxInitialY, round(fontUnitInitialY * font.scale))
-          for runeIndex in start .. stop:
-            if runeIndex == result.lines[0][1]:
-              break outer
+          if stop >= result.lines[0][1]:
+            break outer
       maxInitialY
 
     var lineHeights = newSeq[float32](result.lines.len)
