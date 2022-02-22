@@ -385,6 +385,8 @@ proc typeset*(
               font.defaultLineHeight
         lineHeights[line] = max(lineHeights[line], fontLineHeight)
         for runeIndex in start .. stop:
+          # This span could be many lines. This check can be made faster by
+          # hopping based on line endings instead of checking each index.
           if line + 1 < result.lines.len and
             runeIndex == result.lines[line + 1][0]:
             inc line
@@ -401,8 +403,8 @@ proc typeset*(
         let
           font = result.fonts[spanIndex]
           lineHeight =
-            if font.lineheight >= 0:
-              font.lineheight
+            if font.lineHeight >= 0:
+              font.lineHeight
             else:
               font.defaultLineHeight
         for runeIndex in start .. stop:
