@@ -187,6 +187,18 @@ proc defaultLineHeight*(font: Font): float32 {.inline, raises: [].} =
     font.typeface.ascent - font.typeface.descent + font.typeface.lineGap
   round(fontUnits * font.scale)
 
+proc lineGap(font: Font): float32 =
+  ## The line gap in font units for the current font size and line-height.
+  let lineHeight =
+    if font.lineHeight >= 0:
+      font.lineHeight
+    else:
+      font.defaultLineHeight
+  if lineHeight == font.defaultLineHeight:
+    font.typeface.lineGap
+  else:
+    (lineHeight / font.scale) - font.typeface.ascent + font.typeface.descent
+
 proc paint*(font: Font): Paint {.inline, raises: [].} =
   font.paints[0]
 
@@ -357,16 +369,7 @@ proc typeset*(
         for spanIndex, (start, stop) in result.spans:
           let
             font = result.fonts[spanIndex]
-            lineHeight =
-              if font.lineHeight >= 0:
-                font.lineHeight
-              else:
-                font.defaultLineHeight
-          var fontUnitInitialY = font.typeface.ascent + font.typeface.lineGap / 2
-          if lineHeight != font.defaultLineHeight:
-            fontUnitInitialY += (
-              (lineHeight / font.scale) - font.typeface.lineHeight
-            ) / 2
+            fontUnitInitialY = font.typeface.ascent + font.lineGap / 2
           maxInitialY = max(maxInitialY, round(fontUnitInitialY * font.scale))
           if stop >= result.lines[0][1]:
             break outer
@@ -413,8 +416,8 @@ proc typeset*(
             inc line
             baseline += lineHeights[line]
           result.positions[runeIndex].y = baseline
-          result.selectionRects[runeIndex].y =
-            baseline - round(font.typeface.ascent * font.scale)
+          result.selectionRects[runeIndex].y = baseline -
+            round((font.typeface.ascent + font.lineGap / 2) * font.scale)
           result.selectionRects[runeIndex].h = lineHeight
 
     if vAlign != TopAlign:

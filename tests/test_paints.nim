@@ -14,7 +14,7 @@ block:
     heartShape,
     rgba(255, 0, 0, 255)
   )
-  image.writeFile("tests/paths/SolidPaint.png")
+  image.writeFile("tests/paths/paintSolid.png")
 
 block:
   let paint = newPaint(ImagePaint)
@@ -23,7 +23,7 @@ block:
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/paths/ImagePaint.png")
+  image.writeFile("tests/paths/paintImage.png")
 
 block:
   let paint = newPaint(ImagePaint)
@@ -42,7 +42,7 @@ block:
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/paths/TiledImagePaint.png")
+  image.writeFile("tests/paths/paintImageTiled.png")
 
 block:
   let paint = newPaint(TiledImagePaint)

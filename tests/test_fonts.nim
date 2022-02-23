@@ -1101,3 +1101,61 @@ block:
   image.fillText(font, "This[]Advance!")
 
   doDiff(image, "tofu_advance")
+
+block:
+  let image = newImage(200, 200)
+  image.fill(color(1, 1, 1, 1))
+
+  let paint = newPaint(SolidPaint)
+  paint.color = color(1, 0, 0, 1)
+
+  let ctx = newContext(image)
+  ctx.lineWidth = 1
+  ctx.strokeStyle = paint
+  ctx.strokeRect(0, 60, 200, 80)
+
+  let text = "AbCd\naBcD"
+
+  let font = pixie.read_font("tests/fonts/Inter-Bold.ttf")
+  font.size = 40
+  font.line_height = 27
+
+  let arrangement1 = font.typeset(
+    text,
+    vec2(200, 80),
+    CenterAlign,
+    TopAlign
+  )
+
+  # let p1 = newPath()
+  # p1.rect(arrangement1.selectionRects[0])
+  # image.fillpath(p1, rgba(196, 196, 196, 255), translate(vec2(0, 266)))
+
+  font.paint.color = color(1, 0, 0, 1)
+  image.fillText(arrangement1, translate(vec2(0, 60)))
+
+  let arrangement2 = font.typeset(
+    text,
+    vec2(200, 80),
+    CenterAlign,
+    MiddleAlign
+  )
+
+  # let p2 = newPath()
+  # p2.rect(arrangement2.selectionRects[0])
+  # image.fillpath(p2, rgba(196, 196, 196, 255), translate(vec2(0, 266)))
+
+  font.paint.color = color(0, 1, 0, 1)
+  image.fillText(arrangement2, translate(vec2(0, 60)))
+
+  font.paint.color = color(0, 0, 1, 1)
+  image.fillText(
+      font,
+      text,
+      bounds = vec2(200, 80),
+      hAlign = CenterAlign,
+      vAlign = BottomAlign,
+      transform = translate(vec2(0, 60))
+  )
+
+  doDiff(image, "customlineheight")
