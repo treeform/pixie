@@ -82,6 +82,7 @@ proc lineGap*(typeface: Typeface): float32 {.raises: [].} =
 
 proc lineHeight*(typeface: Typeface): float32 {.inline, raises: [].} =
   ## The default line height in font units.
+  # The descent is negative number, so this is really ascent + descent + lineGap.
   typeface.ascent - typeface.descent + typeface.lineGap
 
 proc underlinePosition(typeface: Typeface): float32 =
@@ -185,6 +186,18 @@ proc defaultLineHeight*(font: Font): float32 {.inline, raises: [].} =
   let fontUnits =
     font.typeface.ascent - font.typeface.descent + font.typeface.lineGap
   round(fontUnits * font.scale)
+
+proc lineGap(font: Font): float32 =
+  ## The line gap in font units for the current font size and line-height.
+  let lineHeight =
+    if font.lineHeight >= 0:
+      font.lineHeight
+    else:
+      font.defaultLineHeight
+  if lineHeight == font.defaultLineHeight:
+    font.typeface.lineGap
+  else:
+    (lineHeight / font.scale) - font.typeface.ascent + font.typeface.descent
 
 proc paint*(font: Font): Paint {.inline, raises: [].} =
   font.paints[0]
@@ -356,20 +369,10 @@ proc typeset*(
         for spanIndex, (start, stop) in result.spans:
           let
             font = result.fonts[spanIndex]
-            lineHeight =
-              if font.lineHeight >= 0:
-                font.lineHeight
-              else:
-                font.defaultLineHeight
-          var fontUnitInitialY = font.typeface.ascent + font.typeface.lineGap / 2
-          if lineHeight != font.defaultLineHeight:
-            fontUnitInitialY += (
-              (lineHeight / font.scale) - font.typeface.lineHeight
-            ) / 2
+            fontUnitInitialY = font.typeface.ascent + font.lineGap / 2
           maxInitialY = max(maxInitialY, round(fontUnitInitialY * font.scale))
-          for runeIndex in start .. stop:
-            if runeIndex == result.lines[0][1]:
-              break outer
+          if stop >= result.lines[0][1]:
+            break outer
       maxInitialY
 
     var lineHeights = newSeq[float32](result.lines.len)
@@ -385,6 +388,8 @@ proc typeset*(
               font.defaultLineHeight
         lineHeights[line] = max(lineHeights[line], fontLineHeight)
         for runeIndex in start .. stop:
+          # This span could be many lines. This check can be made faster by
+          # hopping based on line endings instead of checking each index.
           if line + 1 < result.lines.len and
             runeIndex == result.lines[line + 1][0]:
             inc line
@@ -401,8 +406,8 @@ proc typeset*(
         let
           font = result.fonts[spanIndex]
           lineHeight =
-            if font.lineheight >= 0:
-              font.lineheight
+            if font.lineHeight >= 0:
+              font.lineHeight
             else:
               font.defaultLineHeight
         for runeIndex in start .. stop:
@@ -411,8 +416,8 @@ proc typeset*(
             inc line
             baseline += lineHeights[line]
           result.positions[runeIndex].y = baseline
-          result.selectionRects[runeIndex].y =
-            baseline - round(font.typeface.ascent * font.scale)
+          result.selectionRects[runeIndex].y = baseline -
+            round((font.typeface.ascent + font.lineGap / 2) * font.scale)
           result.selectionRects[runeIndex].h = lineHeight
 
     if vAlign != TopAlign:
