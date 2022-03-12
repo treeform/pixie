@@ -1825,6 +1825,10 @@ proc strokeShapes(
     var dashes = dashes
     if dashes.len mod 2 != 0:
       dashes.add(dashes)
+    # Make sure gaps and dashes are more then zero, otherwise it will hang.
+    for d in dashes:
+      if d <= 0.0:
+        raise newException(PixieError, "Invalid line dash value")
 
     for i in 1 ..< shape.len:
       let
