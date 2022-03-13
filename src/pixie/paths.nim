@@ -628,8 +628,12 @@ proc circle*(path: Path, circle: Circle) {.inline, raises: [].} =
   ## Adds a circle.
   path.ellipse(circle.pos.x, circle.pos.y, circle.radius, circle.radius)
 
-proc polygon*(path: Path, x, y, size: float32, sides: int) {.raises: [].} =
+proc polygon*(
+  path: Path, x, y, size: float32, sides: int
+) {.raises: [PixieError].} =
   ## Adds an n-sided regular polygon at (x, y) with the parameter size.
+  if sides <= 0:
+    raise newException(PixieError, "Invalid polygon sides value")
   path.moveTo(x + size * cos(0.0), y + size * sin(0.0))
   for side in 0 .. sides:
     path.lineTo(
@@ -639,7 +643,7 @@ proc polygon*(path: Path, x, y, size: float32, sides: int) {.raises: [].} =
 
 proc polygon*(
   path: Path, pos: Vec2, size: float32, sides: int
-) {.inline, raises: [].} =
+) {.inline, raises: [PixieError].} =
   ## Adds a n-sided regular polygon at (x, y) with the parameter size.
   path.polygon(pos.x, pos.y, size, sides)
 
