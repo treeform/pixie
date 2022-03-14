@@ -665,3 +665,13 @@ block:
     color = rgba(255, 0, 0, 255)
   image.fillPath(pathStr, color)
   image.writeFile("tests/paths/path0pxCover.png")
+
+block:
+  let image = newImage(200, 200)
+  image.fill(rgba(255, 255, 255, 255))
+
+  let ctx = newContext(image)
+  ctx.setLineDash(@[2.0.float32])
+
+  doAssertRaises PixieError:
+    ctx.strokePolygon(vec2(0.0, 0.0), 0.0, 0)

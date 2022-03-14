@@ -669,13 +669,13 @@ proc circle*(ctx: Context, circle: Circle) {.inline, raises: [].} =
 
 proc polygon*(
   ctx: Context, x, y, size: float32, sides: int
-) {.inline, raises: [].} =
+) {.inline, raises: [PixieError].} =
   ## Adds an n-sided regular polygon at (x, y) of size to the current path.
   ctx.path.polygon(x, y, size, sides)
 
 proc polygon*(
   ctx: Context, pos: Vec2, size: float32, sides: int
-) {.inline, raises: [].} =
+) {.inline, raises: [PixieError].} =
   ## Adds an n-sided regular polygon at (x, y) of size to the current path.
   ctx.path.polygon(pos, size, sides)
 
