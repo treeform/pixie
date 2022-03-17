@@ -675,3 +675,18 @@ block:
 
   doAssertRaises PixieError:
     ctx.strokePolygon(vec2(0.0, 0.0), 0.0, 0)
+
+block:
+  # Test zero width image fill.
+  let
+    image = newImage(100, 100)
+    pathStr = "M0 0 L0 1 L0 0 Z"
+    color = rgba(255, 0, 0, 255)
+  image.fillPath(pathStr, color)
+
+block:
+  # Test zero width mask fill.
+  let
+    mask = newMask(100, 100)
+    pathStr = "M0 0 L0 1 L0 0 Z"
+  mask.fillPath(pathStr)
