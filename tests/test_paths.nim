@@ -690,3 +690,12 @@ block:
     mask = newMask(100, 100)
     pathStr = "M0 0 L0 1 L0 0 Z"
   mask.fillPath(pathStr)
+
+block:
+  # Test different polygons.
+  for i in 3 .. 8:
+    let path = newPath()
+    path.polygon(vec2(50, 50), 30, i)
+    let mask = newMask(100, 100)
+    mask.fillPath(path)
+    mask.writeFile(&"tests/paths/polygon{i}.png")
