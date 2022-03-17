@@ -49,7 +49,7 @@ proc decodeQoiRaw*(data: string): Qoi {.raises: [PixieError].} =
   if channels notin {3, 4} or colorspace notin {0, 1}:
     raise newException(PixieError, "Invalid QOI header")
 
-  if width.int * height.int > uint32.high.int:
+  if width.int * height.int > uint32.high.int64:
     raise newException(PixieError, "QOI is too large to decode")
 
   result = Qoi()
@@ -128,7 +128,7 @@ proc decodeQoi*(data: string): Image {.raises: [PixieError].} =
 proc encodeQoi*(qoi: Qoi): string {.raises: [PixieError].} =
   ## Encodes raw QOI pixels to the QOI file format.
 
-  if qoi.width.int * qoi.height.int > uint32.high.int:
+  if qoi.width.int * qoi.height.int > uint32.high.int64:
     raise newException(PixieError, "QOI is too large to encode")
 
   # Allocate a buffer 3/4 the size of the pathological encoding
