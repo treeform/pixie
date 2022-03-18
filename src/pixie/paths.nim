@@ -632,13 +632,14 @@ proc polygon*(
   path: Path, x, y, size: float32, sides: int
 ) {.raises: [PixieError].} =
   ## Adds an n-sided regular polygon at (x, y) with the parameter size.
-  if sides <= 0:
+  ## Polygons "face" north.
+  if sides <= 2:
     raise newException(PixieError, "Invalid polygon sides value")
-  path.moveTo(x + size * cos(0.0), y + size * sin(0.0))
-  for side in 0 .. sides:
+  path.moveTo(x + size * sin(0.0), y - size * cos(0.0))
+  for side in 1 .. sides:
     path.lineTo(
-      x + size * cos(side.float32 * 2.0 * PI / sides.float32),
-      y + size * sin(side.float32 * 2.0 * PI / sides.float32)
+      x + size * sin(side.float32 * 2.0 * PI / sides.float32),
+      y - size * cos(side.float32 * 2.0 * PI / sides.float32)
     )
 
 proc polygon*(
