@@ -19,22 +19,6 @@ jobs:
     - run: nimble develop -y
 
     - run: nim c -r tests\test_paths
-    - run: nim c -r tests\test_paths
-    - run: nim c -r tests\test_paths
-    - run: nim c -r tests\test_paths
-    - run: nim c -r tests\test_paths
-    - run: nim c -r tests\test_paths
-    - run: nim c -r tests\test_paths
-    - run: nim c -r tests\test_paths
-    - run: nim c -r tests\test_paths
-
-    - run: nimble test -d:release -y
-    - run: nimble test -d:release -y
-    - run: nimble test -d:release -y
-    - run: nimble test -d:release -y
-    - run: nimble test -d:release -y
-    - run: nimble test -d:release -y
-    - run: nimble test -d:release -y
-    - run: nimble test -d:release -y
-    - run: nimble test -d:release -y
+    - run: nim c -r -d:release tests\test_paths
+    - run: nim c -r -d:release --mm:arc tests\test_paths
     - run: nimble test -d:release -y
