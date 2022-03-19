@@ -151,14 +151,6 @@ block:
   image.strokePath(pathStr, color, strokeWidth = 10)
   image.writeFile("tests/paths/pathStroke1Big.png")
 
-block:
-  echo "stroke 1 big maks"
-  let
-    image = newMask(100, 100)
-    pathStr = "M0 0 L200 200"
-  image.strokePath(pathStr, strokeWidth = 10)
-  image.writeFile("tests/paths/pathStroke1BigMask.png")
-
 
 
 block:
