@@ -1,4 +1,4 @@
-import pixie, pixie/fileformats/png
+import pixie
 
 block:
   echo "??? stroke zero polygon ???"
