@@ -729,8 +729,11 @@ block:
   let ctx = newContext(image)
   ctx.setLineDash(@[2.0.float32])
 
-#   doAssertRaises PixieError:
-#     ctx.strokePolygon(vec2(0.0, 0.0), 0.0, 0)
+  try:
+    ctx.strokePolygon(vec2(0.0, 0.0), 0.0, 0)
+    echo "no exception"
+  except PixieError:
+    echo getCurrentExceptionMsg()
 
 block:
   echo "zero width image fill"
