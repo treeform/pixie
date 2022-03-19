@@ -102,32 +102,6 @@ block:
   doAssert path.strokeOverlaps(vec2(20.1, 20.1))
   doAssert not path.strokeOverlaps(vec2(5, 5))
 
-block:
-  echo "fillOverlaps 4"
-  let path = newPath()
-  path.ellipse(20, 20, 20, 10)
-
-  doAssert not path.strokeOverlaps(vec2(0, 0))
-  doAssert not path.strokeOverlaps(vec2(20, 20))
-  doAssert path.strokeOverlaps(vec2(0, 20))
-  doAssert path.strokeOverlaps(vec2(39.9, 19.9))
-  doAssert path.strokeOverlaps(vec2(19.8, 30.2))
-  doAssert not path.strokeOverlaps(vec2(19.4, 30.6))
-
-block:
-  echo "opacity fill"
-  let path = newPath()
-  path.circle(50, 50, 30)
-
-  let paint = newPaint(SolidPaint)
-  paint.color = color(1, 0, 1, 1)
-  paint.opacity = 0.5
-
-  let image = newImage(100, 100)
-  image.fillPath(path, paint)
-
-  image.writeFile("tests/paths/opacityFill.png")
-
 
 
 block:
