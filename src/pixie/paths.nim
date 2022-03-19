@@ -2105,3 +2105,6 @@ proc strokeOverlaps*(
   )
   strokeShapes.transform(transform)
   strokeShapes.overlaps(test, NonZero)
+
+when defined(release):
+  {.pop.}
