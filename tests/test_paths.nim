@@ -159,14 +159,6 @@ block:
   image.strokePath(pathStr, strokeWidth = 10)
   image.writeFile("tests/paths/pathStroke1BigMask.png")
 
-block:
-  echo "1px cover"
-  let
-    image = newImage(100, 100)
-    pathStr = "M99 99 L999 99 L999 100 L99 100 Z"
-    color = rgba(255, 0, 0, 255)
-  image.fillPath(pathStr, color)
-  image.writeFile("tests/paths/path1pxCover.png")
 
 
 block:
