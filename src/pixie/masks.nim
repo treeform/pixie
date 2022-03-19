@@ -234,17 +234,28 @@ proc getValueSmooth*(mask: Mask, x, y: float32): uint8 {.raises: [].} =
   else:
     topMix
 
-proc invert(mask: Mask) {.raises: [].} =
-  ## Makes inverts all values - creates a negative of the mask.
-  for i in 0 ..< mask.data.len:
-    mask.data[i] = 255 - mask.data[i]
+proc invert*(mask: Mask) {.raises: [].} =
+  ## Inverts all of the values - creates a negative of the mask.
+  var i: int
+  when defined(amd64) and not defined(pixieNoSimd):
+    let vec255 = mm_set1_epi8(cast[int8](255))
+    let byteLen = mask.data.len
+    for _ in 0 ..< byteLen div 16:
+      let index = i
+      var values = mm_loadu_si128(mask.data[index].addr)
+      values = mm_sub_epi8(vec255, values)
+      mm_storeu_si128(mask.data[index].addr, values)
+      i += 16
+
+  for j in i ..< mask.data.len:
+    mask.data[j] = (255 - mask.data[j]).uint8
 
 proc spread*(mask: Mask, spread: float32) {.raises: [PixieError].} =
   ## Grows the mask by spread.
   let spread = round(spread).int
   if spread == 0:
     return
-  if spread < 0:
+  elif spread < 0:
     mask.invert()
     spread(mask, -spread.float32)
     mask.invert()
