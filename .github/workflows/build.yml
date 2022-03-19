@@ -15,7 +15,7 @@ jobs:
     - uses: jiro4989/setup-nim-action@v1
       with:
         nim-version: ${{ matrix.nim-version }}
-    - run: nimble test -d:release -y
-    - run: nimble test -d:release -d:pixieNoSimd -y
+    - run: nimble test --gc:arc -d:release -y
+    - run: nimble test --gc:arc -d:release -d:pixieNoSimd -y
     - run: nimble test --gc:orc -d:release -y
-    - run: nim cpp -d:release -r tests/all.nim
+    - run: nim cpp --gc:orc -d:release -r tests/all.nim
