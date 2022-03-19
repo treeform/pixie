@@ -114,19 +114,6 @@ block:
   doAssert path.strokeOverlaps(vec2(19.8, 30.2))
   doAssert not path.strokeOverlaps(vec2(19.4, 30.6))
 
-block:
-  echo "opacity fill"
-  let path = newPath()
-  path.circle(50, 50, 30)
-
-  let paint = newPaint(SolidPaint)
-  paint.color = color(1, 0, 1, 1)
-  paint.opacity = 0.5
-
-  let image = newImage(100, 100)
-  image.fillPath(path, paint)
-
-  image.writeFile("tests/paths/opacityFill.png")
 
 
 
