@@ -168,14 +168,6 @@ block:
   image.fillPath(pathStr, color)
   image.writeFile("tests/paths/path1pxCover.png")
 
-block:
-  echo "0px cover"
-  let
-    image = newImage(100, 100)
-    pathStr = "M100 100 L999 100 L999 101 L100 101 Z"
-    color = rgba(255, 0, 0, 255)
-  image.fillPath(pathStr, color)
-  image.writeFile("tests/paths/path0pxCover.png")
 
 block:
   echo "??? stroke zero polygon ???"
