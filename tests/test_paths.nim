@@ -102,17 +102,7 @@ block:
   doAssert path.strokeOverlaps(vec2(20.1, 20.1))
   doAssert not path.strokeOverlaps(vec2(5, 5))
 
-block:
-  echo "fillOverlaps 4"
-  let path = newPath()
-  path.ellipse(20, 20, 20, 10)
 
-  doAssert not path.strokeOverlaps(vec2(0, 0))
-  doAssert not path.strokeOverlaps(vec2(20, 20))
-  doAssert path.strokeOverlaps(vec2(0, 20))
-  doAssert path.strokeOverlaps(vec2(39.9, 19.9))
-  doAssert path.strokeOverlaps(vec2(19.8, 30.2))
-  doAssert not path.strokeOverlaps(vec2(19.4, 30.6))
 
 
 
