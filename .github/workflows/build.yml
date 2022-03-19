@@ -16,7 +16,7 @@ jobs:
       with:
         nim-version: ${{ matrix.nim-version }}
 
-    - run: nimble develop
+    - run: nimble develop -y
 
     - run: nim c -r tests\test_paths
     - run: nim c -r tests\test_paths
