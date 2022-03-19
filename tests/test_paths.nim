@@ -142,14 +142,6 @@ block:
 
   image.writeFile("tests/paths/opacityStroke.png")
 
-block:
-  echo "stroke 1 big"
-  let
-    image = newImage(100, 100)
-    pathStr = "M0 0 L200 200"
-    color = rgba(255, 0, 0, 255)
-  image.strokePath(pathStr, color, strokeWidth = 10)
-  image.writeFile("tests/paths/pathStroke1Big.png")
 
 
 
