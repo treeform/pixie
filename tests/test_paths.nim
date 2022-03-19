@@ -1,6 +1,17 @@
 import chroma, pixie, pixie/fileformats/png, strformat
 
 block:
+  echo "??? stroke zero polygon ???"
+
+  try:
+    echo "inside the try"
+    raise newException(PixieError, "Just the exception please")
+    echo "no exception wut?"
+  except PixieError:
+    echo "getCurrentExceptionMsg"
+    echo getCurrentExceptionMsg()
+
+block:
   echo "moves"
   let pathStr = """
   m 1 2 3 4 5 6
@@ -722,14 +733,27 @@ block:
   image.writeFile("tests/paths/path0pxCover.png")
 
 block:
-  echo "??? stroke zero polygon ???"
+  echo "zero width image fill"
+  let
+    image = newImage(100, 100)
+    pathStr = "M0 0 L0 1 L0 0 Z"
+    color = rgba(255, 0, 0, 255)
+  image.fillPath(pathStr, color)
 
-  try:
-    echo "inside the try"
-    raise newException(PixieError, "Just the exception please")
-    echo "no exception wut?"
-  except PixieError:
-    echo "getCurrentExceptionMsg"
-    echo getCurrentExceptionMsg()
+block:
+  echo "zero width mask fill"
+  let
+    mask = newMask(100, 100)
+    pathStr = "M0 0 L0 1 L0 0 Z"
+  mask.fillPath(pathStr)
+
+block:
+  echo "different polygons"
+  for i in 3 .. 8:
+    let path = newPath()
+    path.polygon(vec2(50, 50), 30, i)
+    let mask = newMask(100, 100)
+    mask.fillPath(path)
+    mask.writeFile(&"tests/paths/polygon{i}.png")
 
 echo "test completed"
