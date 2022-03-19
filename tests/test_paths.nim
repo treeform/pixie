@@ -128,54 +128,7 @@ block:
 
   image.writeFile("tests/paths/opacityFill.png")
 
-block:
-  echo "opacity stroke"
-  let path = newPath()
-  path.circle(50, 50, 30)
 
-  let paint = newPaint(SolidPaint)
-  paint.color = color(1, 0, 1, 1)
-  paint.opacity = 0.5
-
-  let image = newImage(100, 100)
-  image.strokePath(path, paint, strokeWidth = 10)
-
-  image.writeFile("tests/paths/opacityStroke.png")
-
-block:
-  echo "stroke 1 big"
-  let
-    image = newImage(100, 100)
-    pathStr = "M0 0 L200 200"
-    color = rgba(255, 0, 0, 255)
-  image.strokePath(pathStr, color, strokeWidth = 10)
-  image.writeFile("tests/paths/pathStroke1Big.png")
-
-block:
-  echo "stroke 1 big maks"
-  let
-    image = newMask(100, 100)
-    pathStr = "M0 0 L200 200"
-  image.strokePath(pathStr, strokeWidth = 10)
-  image.writeFile("tests/paths/pathStroke1BigMask.png")
-
-block:
-  echo "1px cover"
-  let
-    image = newImage(100, 100)
-    pathStr = "M99 99 L999 99 L999 100 L99 100 Z"
-    color = rgba(255, 0, 0, 255)
-  image.fillPath(pathStr, color)
-  image.writeFile("tests/paths/path1pxCover.png")
-
-block:
-  echo "0px cover"
-  let
-    image = newImage(100, 100)
-    pathStr = "M100 100 L999 100 L999 101 L100 101 Z"
-    color = rgba(255, 0, 0, 255)
-  image.fillPath(pathStr, color)
-  image.writeFile("tests/paths/path0pxCover.png")
 
 block:
   echo "??? stroke zero polygon ???"
