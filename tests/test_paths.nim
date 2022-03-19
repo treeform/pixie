@@ -1,4 +1,4 @@
-import chroma, pixie, pixie/fileformats/png
+import pixie, pixie/fileformats/png
 
 block:
   echo "??? stroke zero polygon ???"
