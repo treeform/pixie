@@ -93,14 +93,6 @@ block:
   doAssert path.fillOverlaps(vec2(10, 20))
   doAssert path.fillOverlaps(vec2(30, 20))
 
-block:
-  echo "fillOverlaps 3"
-  let path = newPath()
-  path.rect(10, 10, 10, 10)
-
-  doAssert path.strokeOverlaps(vec2(10, 10))
-  doAssert path.strokeOverlaps(vec2(20.1, 20.1))
-  doAssert not path.strokeOverlaps(vec2(5, 5))
 
 
 
