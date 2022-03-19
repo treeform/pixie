@@ -18,7 +18,7 @@ jobs:
 
     - run: nimble develop -y
     - run: nim -v
-    - run: nim c -r tests\test_paths
-    - run: nim c -r -d:release tests\test_paths
+    - run: nim c -r --exception:goto tests\test_paths
+    - run: nim c -r --exception:goto -d:release tests\test_paths
     - run: nim c -r -d:release --gc:arc tests\test_paths
-    - run: nimble test -d:release -y
+    - run: nimble test --exception:goto -d:release -y
