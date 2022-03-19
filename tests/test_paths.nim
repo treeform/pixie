@@ -721,16 +721,16 @@ block:
   image.fillPath(pathStr, color)
   image.writeFile("tests/paths/path0pxCover.png")
 
-block:
-  echo "stroke zero polygon"
-  let image = newImage(200, 200)
-  image.fill(rgba(255, 255, 255, 255))
+# block:
+#   echo "stroke zero polygon"
+#   let image = newImage(200, 200)
+#   image.fill(rgba(255, 255, 255, 255))
 
-  let ctx = newContext(image)
-  ctx.setLineDash(@[2.0.float32])
+#   let ctx = newContext(image)
+#   ctx.setLineDash(@[2.0.float32])
 
-  doAssertRaises PixieError:
-    ctx.strokePolygon(vec2(0.0, 0.0), 0.0, 0)
+#   doAssertRaises PixieError:
+#     ctx.strokePolygon(vec2(0.0, 0.0), 0.0, 0)
 
 block:
   echo "zero width image fill"
