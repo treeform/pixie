@@ -57,20 +57,7 @@ block:
 
   surface.writeFile("tests/paths/arcTo2.png")
 
-block:
-  echo "arcTo3"
-  var
-    surface = newImage(256, 256)
-    ctx = newContext(surface)
-  surface.fill(rgba(255, 255, 255, 255))
 
-  ctx.beginPath()
-  ctx.moveTo(180, 90)
-  ctx.arcTo(180, 130, 110, 130, 130)
-  ctx.lineTo(110, 130)
-  ctx.stroke()
-
-  surface.writeFile("tests/paths/arcTo3.png")
 
 
 
