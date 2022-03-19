@@ -234,14 +234,21 @@ proc getValueSmooth*(mask: Mask, x, y: float32): uint8 {.raises: [].} =
   else:
     topMix
 
+proc invert(mask: Mask) {.raises: [].} =
+  ## Makes inverts all values - creates a negative of the mask.
+  for i in 0 ..< mask.data.len:
+    mask.data[i] = 255 - mask.data[i]
+
 proc spread*(mask: Mask, spread: float32) {.raises: [PixieError].} =
   ## Grows the mask by spread.
   let spread = round(spread).int
   if spread == 0:
     return
   if spread < 0:
-    raise newException(PixieError, "Cannot apply negative spread")
-
+    mask.invert()
+    spread(mask, -spread.float32)
+    mask.invert()
+    return
   # Spread in the X direction. Store with dimensions swapped for reading later.
   let spreadX = newMask(mask.height, mask.width)
   for y in 0 ..< mask.height:

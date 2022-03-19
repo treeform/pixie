@@ -93,6 +93,17 @@ block:
   a.writeFile("tests/masks/spread.png")
 
 block:
+  let path = newPath()
+  path.rect(40, 40, 20, 20)
+
+  let a = newMask(100, 100)
+  a.fillPath(path)
+
+  a.spread(-5)
+
+  a.writeFile("tests/masks/negativeSpread.png")
+
+block:
   let mask = newMask(100, 100)
 
   let path = newPath()
