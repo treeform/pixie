@@ -53,8 +53,8 @@ const
   pixelErrorMargin: float32 = 0.2
   defaultMiterLimit*: float32 = 4
 
-when defined(release):
-  {.push checks: off.}
+# when defined(release):
+#   {.push checks: off.}
 
 proc newPath*(): Path {.raises: [].} =
   ## Create a new Path.
