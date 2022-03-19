@@ -128,19 +128,6 @@ block:
 
   image.writeFile("tests/paths/opacityFill.png")
 
-block:
-  echo "opacity stroke"
-  let path = newPath()
-  path.circle(50, 50, 30)
-
-  let paint = newPaint(SolidPaint)
-  paint.color = color(1, 0, 1, 1)
-  paint.opacity = 0.5
-
-  let image = newImage(100, 100)
-  image.strokePath(path, paint, strokeWidth = 10)
-
-  image.writeFile("tests/paths/opacityStroke.png")
 
 
 
