@@ -57,34 +57,6 @@ block:
 
   surface.writeFile("tests/paths/arcTo2.png")
 
-block:
-  echo "arcTo3"
-  var
-    surface = newImage(256, 256)
-    ctx = newContext(surface)
-  surface.fill(rgba(255, 255, 255, 255))
-
-  ctx.beginPath()
-  ctx.moveTo(180, 90)
-  ctx.arcTo(180, 130, 110, 130, 130)
-  ctx.lineTo(110, 130)
-  ctx.stroke()
-
-  surface.writeFile("tests/paths/arcTo3.png")
-
-block:
-  echo "fillOverlaps 1"
-  let path = newPath()
-  path.rect(0, 0, 10, 10)
-
-  doAssert path.fillOverlaps(vec2(5, 5))
-  doAssert path.fillOverlaps(vec2(0, 0))
-  doAssert path.fillOverlaps(vec2(9, 0))
-  doAssert path.fillOverlaps(vec2(0, 9))
-  doAssert not path.fillOverlaps(vec2(10, 10))
-
-
-
 
 block:
   echo "??? stroke zero polygon ???"
