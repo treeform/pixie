@@ -255,35 +255,60 @@ proc spread*(mask: Mask, spread: float32) {.raises: [PixieError].} =
   let spread = round(spread).int
   if spread == 0:
     return
-  elif spread < 0:
-    mask.invert()
-    spread(mask, -spread.float32)
-    mask.invert()
-    return
-  # Spread in the X direction. Store with dimensions swapped for reading later.
-  let spreadX = newMask(mask.height, mask.width)
-  for y in 0 ..< mask.height:
-    for x in 0 ..< mask.width:
-      var maxValue: uint8
-      for xx in max(x - spread, 0) .. min(x + spread, mask.width - 1):
-        let value = mask.unsafe[xx, y]
-        if value > maxValue:
-          maxValue = value
-        if maxValue == 255:
-          break
-      spreadX.unsafe[y, x] = maxValue
+  elif spread > 0:
 
-  # Spread in the Y direction and modify mask.
-  for y in 0 ..< mask.height:
-    for x in 0 ..< mask.width:
-      var maxValue: uint8
-      for yy in max(y - spread, 0) .. min(y + spread, mask.height - 1):
-        let value = spreadX.unsafe[yy, x]
-        if value > maxValue:
-          maxValue = value
-        if maxValue == 255:
-          break
-      mask.unsafe[x, y] = maxValue
+    # Spread in the X direction. Store with dimensions swapped for reading later.
+    let spreadX = newMask(mask.height, mask.width)
+    for y in 0 ..< mask.height:
+      for x in 0 ..< mask.width:
+        var maxValue: uint8
+        for xx in max(x - spread, 0) .. min(x + spread, mask.width - 1):
+          let value = mask.unsafe[xx, y]
+          if value > maxValue:
+            maxValue = value
+          if maxValue == 255:
+            break
+        spreadX.unsafe[y, x] = maxValue
+
+    # Spread in the Y direction and modify mask.
+    for y in 0 ..< mask.height:
+      for x in 0 ..< mask.width:
+        var maxValue: uint8
+        for yy in max(y - spread, 0) .. min(y + spread, mask.height - 1):
+          let value = spreadX.unsafe[yy, x]
+          if value > maxValue:
+            maxValue = value
+          if maxValue == 255:
+            break
+        mask.unsafe[x, y] = maxValue
+
+  elif spread < 0:
+
+    # Spread in the X direction. Store with dimensions swapped for reading later.
+    let spread = -spread
+    let spreadX = newMask(mask.height, mask.width)
+    for y in 0 ..< mask.height:
+      for x in 0 ..< mask.width:
+        var maxValue: uint8 = 255
+        for xx in max(x - spread, 0) .. min(x + spread, mask.width - 1):
+          let value = mask.unsafe[xx, y]
+          if value < maxValue:
+            maxValue = value
+          if maxValue == 0:
+            break
+        spreadX.unsafe[y, x] = maxValue
+
+    # Spread in the Y direction and modify mask.
+    for y in 0 ..< mask.height:
+      for x in 0 ..< mask.width:
+        var maxValue: uint8 = 255
+        for yy in max(y - spread, 0) .. min(y + spread, mask.height - 1):
+          let value = spreadX.unsafe[yy, x]
+          if value < maxValue:
+            maxValue = value
+          if maxValue == 0:
+            break
+        mask.unsafe[x, y] = maxValue
 
 proc ceil*(mask: Mask) {.raises: [].} =
   ## A value of 0 stays 0. Anything else turns into 255.
