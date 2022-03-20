@@ -585,6 +585,7 @@ proc textUber(
 
 proc computeBounds*(
   arrangement: Arrangement,
+  transform = mat3()
 ): Rect =
   var
     fullPath = newPath()
@@ -632,6 +633,7 @@ proc computeBounds*(
 
       fullPath.addPath(path)
 
+  fullPath.transform(transform)
   fullPath.computeBounds()
 
 proc fillText*(
