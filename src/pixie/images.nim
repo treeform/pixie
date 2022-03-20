@@ -434,45 +434,31 @@ proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
     for j in i ..< target.data.len:
       target.data[j] = ((target.data[j] * opacity) div 255).uint8
 
-proc invert*(target: Image | Mask) {.raises: [].} =
+proc invert*(target: Image) {.raises: [].} =
   ## Inverts all of the colors and alpha.
   var i: int
   when defined(amd64) and not defined(pixieNoSimd):
     let vec255 = mm_set1_epi8(cast[int8](255))
-
-    when type(target) is Image:
-      let byteLen = target.data.len * 4
-    else:
-      let byteLen = target.data.len
-
+    let byteLen = target.data.len * 4
     for _ in 0 ..< byteLen div 16:
-      when type(target) is Image:
-        let index = i div 4
-      else:
-        let index = i
-
+      let index = i div 4
       var values = mm_loadu_si128(target.data[index].addr)
       values = mm_sub_epi8(vec255, values)
       mm_storeu_si128(target.data[index].addr, values)
-
       i += 16
 
-  when type(target) is Image:
-    for j in i div 4 ..< target.data.len:
-      var rgba = target.data[j]
-      rgba.r = 255 - rgba.r
-      rgba.g = 255 - rgba.g
-      rgba.b = 255 - rgba.b
-      rgba.a = 255 - rgba.a
-      target.data[j] = rgba
+  for j in i div 4 ..< target.data.len:
+    var rgba = target.data[j]
+    rgba.r = 255 - rgba.r
+    rgba.g = 255 - rgba.g
+    rgba.b = 255 - rgba.b
+    rgba.a = 255 - rgba.a
+    target.data[j] = rgba
 
-    # Inverting rgbx(50, 100, 150, 200) becomes rgbx(205, 155, 105, 55). This
-    # is not a valid premultiplied alpha color.
-    # We need to convert back to premultiplied alpha after inverting.
-    target.data.toPremultipliedAlpha()
-  else:
-    for j in i ..< target.data.len:
-      target.data[j] = (255 - target.data[j]).uint8
+  # Inverting rgbx(50, 100, 150, 200) becomes rgbx(205, 155, 105, 55). This
+  # is not a valid premultiplied alpha color.
+  # We need to convert back to premultiplied alpha after inverting.
+  target.data.toPremultipliedAlpha()
 
 proc blur*(
   image: Image, radius: float32, outOfBounds: SomeColor = color(0, 0, 0, 0)
