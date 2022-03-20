@@ -467,7 +467,7 @@ proc typeset*(
   ## wrap: enable/disable text wrapping
   typeset(@[newSpan(text, font)], bounds, hAlign, vAlign, wrap)
 
-proc computeBounds*(arrangement: Arrangement): Vec2 {.raises: [].} =
+proc layoutBounds*(arrangement: Arrangement): Vec2 {.raises: [].} =
   ## Computes the width and height of the arrangement in pixels.
   if arrangement.runes.len > 0:
     for i in 0 ..< arrangement.runes.len:
@@ -481,13 +481,13 @@ proc computeBounds*(arrangement: Arrangement): Vec2 {.raises: [].} =
       # If the text ends with a new line, we need add another line height.
       result.y += finalRect.h
 
-proc computeBounds*(font: Font, text: string): Vec2 {.inline, raises: [].} =
+proc layoutBounds*(font: Font, text: string): Vec2 {.inline, raises: [].} =
   ## Computes the width and height of the text in pixels.
-  font.typeset(text).computeBounds()
+  font.typeset(text).layoutBounds()
 
-proc computeBounds*(spans: seq[Span]): Vec2 {.inline, raises: [].} =
+proc layoutBounds*(spans: seq[Span]): Vec2 {.inline, raises: [].} =
   ## Computes the width and height of the spans in pixels.
-  typeset(spans).computeBounds()
+  typeset(spans).layoutBounds()
 
 proc parseOtf*(buf: string): Typeface {.raises: [PixieError].} =
   result = Typeface()
@@ -582,6 +582,57 @@ proc textUber(
             target.fillPath(path, paint, transform)
         else: # target is Mask
           target.fillPath(path, transform)
+
+proc computeBounds*(
+  arrangement: Arrangement,
+): Rect =
+  var
+    fullPath = newPath()
+    line: int
+  for spanIndex, (start, stop) in arrangement.spans:
+    let
+      font = arrangement.fonts[spanIndex]
+      underlineThickness = font.typeface.underlineThickness * font.scale
+      underlinePosition = font.typeface.underlinePosition * font.scale
+      strikeoutThickness = font.typeface.strikeoutThickness * font.scale
+      strikeoutPosition = font.typeface.strikeoutPosition * font.scale
+    for runeIndex in start .. stop:
+      let position = arrangement.positions[runeIndex]
+
+      let path = font.typeface.getGlyphPath(arrangement.runes[runeIndex])
+      path.transform(
+        translate(position) *
+        scale(vec2(font.scale))
+      )
+
+      var applyDecoration = true
+      if runeIndex == arrangement.lines[line][1]:
+        inc line
+        if arrangement.runes[runeIndex] == SP:
+          # Do not apply decoration to the space at end of lines
+          applyDecoration = false
+
+      if applyDecoration:
+        if font.underline:
+          path.rect(
+            arrangement.selectionRects[runeIndex].x,
+            position.y - underlinePosition + underlineThickness / 2,
+            arrangement.selectionRects[runeIndex].w,
+            underlineThickness,
+            font.typeface.isCCW()
+          )
+        if font.strikethrough:
+          path.rect(
+            arrangement.selectionRects[runeIndex].x,
+            position.y - strikeoutPosition,
+            arrangement.selectionRects[runeIndex].w,
+            strikeoutThickness,
+            font.typeface.isCCW()
+          )
+
+      fullPath.addPath(path)
+
+  fullPath.computeBounds()
 
 proc fillText*(
   target: Image | Mask,

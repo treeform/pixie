@@ -482,7 +482,7 @@ proc measureText*(ctx: Context, text: string): TextMetrics {.raises: [PixieError
   ## text (such as its width, for example).
   let
     font = newFont(ctx)
-    bounds = typeset(font, text).computeBounds()
+    bounds = typeset(font, text).layoutBounds()
   result.width = bounds.x
 
 proc getLineDash*(ctx: Context): seq[float32] {.inline, raises: [].} =
