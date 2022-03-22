@@ -694,7 +694,7 @@ proc commandsToShapes(
         halfway = compute(at, ctrl1, ctrl2, to, t + step / 4)
         step /= 2
         if step == 0:
-          raise newException(PixieError, "Unable to discretize arc")
+          raise newException(PixieError, "Unable to discretize cubic")
       else:
         shape.addSegment(prev, next)
         t += step
@@ -729,7 +729,7 @@ proc commandsToShapes(
         halfStepping = true
         step /= 2
         if step == 0:
-          raise newException(PixieError, "Unable to discretize arc")
+          raise newException(PixieError, "Unable to discretize quadratic")
       else:
         shape.addSegment(prev, next)
         t += step
