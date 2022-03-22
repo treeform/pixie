@@ -8,13 +8,13 @@ import bumpy, chroma, pixie/common, pixie/fonts, pixie/images, pixie/masks,
 
 type
 
-  BaseLineAlignment* = enum
-    TopBaseAlign
-    HangingBaseAlign
-    MiddleBaseAlign
-    AlphabeticBaseAlign
-    IdeographicBaseAlign
-    BottomBaseAlign
+  BaselineAlignment* = enum
+    TopBaseline
+    HangingBaseline
+    MiddleBaseline
+    AlphabeticBaseline
+    IdeographicBaseline
+    BottomBaseline
 
   Context* = ref object
     image*: Image
@@ -27,7 +27,7 @@ type
     font*: string ## File path to a .ttf or .otf file.
     fontSize*: float32
     textAlign*: HorizontalAlignment
-    textBaseline*: BaseLineAlignment
+    textBaseline*: BaselineAlignment
     lineDash: seq[float32]
     path: Path
     mat: Mat3
@@ -68,7 +68,7 @@ proc newContext*(image: Image): Context {.raises: [].} =
   result.strokeStyle = newPaint(SolidPaint)
   result.strokeStyle.color = color(0, 0, 0, 1)
   result.fontSize = 12
-  result.textBaseline = AlphabeticBaseAlign
+  result.textBaseline = AlphabeticBaseline
 
 proc newContext*(width, height: int): Context {.inline, raises: [PixieError].} =
   ## Create a new Context that will draw to a new image of width and height.
@@ -198,19 +198,19 @@ proc fillText(ctx: Context, image: Image, text: string, at: Vec2) =
   var at = at
 
   case ctx.textBaseline:
-    of TopBaseAlign:
+    of TopBaseline:
       discard
-    of HangingBaseAlign:
+    of HangingBaseline:
       # TODO: make accurate (Used by Tibetan and other Indic scripts.)
       discard
-    of MiddleBaseAlign:
+    of MiddleBaseline:
       at.y -= round((font.typeface.ascent - font.typeface.descent) / 2 * font.scale)
-    of AlphabeticBaseAlign:
+    of AlphabeticBaseline:
       at.y -= round(font.typeface.ascent * font.scale)
-    of IdeographicBaseAlign:
+    of IdeographicBaseline:
       # TODO: make accurate (Used by Chinese, Japanese, and Korean scripts.)
       at.y -= round((font.typeface.ascent - font.typeface.descent) * font.scale)
-    of BottomBaseAlign:
+    of BottomBaseline:
       at.y -= round((font.typeface.ascent - font.typeface.descent) * font.scale)
 
   font.paint = ctx.fillStyle

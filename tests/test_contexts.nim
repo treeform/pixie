@@ -653,12 +653,12 @@ block:
   image.fill(rgba(255, 255, 255, 255))
 
   const baselines = @[
-    TopBaseAlign,
-    HangingBaseAlign,
-    MiddleBaseAlign,
-    AlphabeticBaseAlign,
-    IdeographicBaseAlign,
-    BottomBaseAlign,
+    TopBaseline,
+    HangingBaseline,
+    MiddleBaseline,
+    AlphabeticBaseline,
+    IdeographicBaseline,
+    BottomBaseline,
   ]
 
   ctx.font = "tests/fonts/Roboto-Regular_1.ttf"
