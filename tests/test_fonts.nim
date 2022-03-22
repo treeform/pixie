@@ -16,14 +16,14 @@ block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 24
 
-  let bounds = font.computeBounds("Word")
+  let bounds = font.layoutBounds("Word")
   doAssert bounds == vec2(56, 28)
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
   font.size = 24
 
-  let bounds = font.computeBounds("Word\n")
+  let bounds = font.layoutBounds("Word\n")
   doAssert bounds == vec2(56, 56)
 
 block:
@@ -995,6 +995,43 @@ block:
   image.fillText(arrangement, translate(vec2(20, 20)))
 
   doDiff(image, "spans6")
+
+block:
+
+  let typeface1 = readTypeface("tests/fonts/PinyonScript.ttf")
+
+  var font1 = newFont(typeface1)
+  font1.size = 82
+  font1.lineHeight = 60
+  font1.paint = "#000000"
+
+  let spans = @[
+    newSpan("Fancy text", font1),
+  ]
+
+  let image = newImage(400, 400)
+  image.fill(rgba(255, 255, 255, 255))
+  let ctx = newContext(image)
+  ctx.fillStyle = "#FFD6D6"
+  ctx.fillRect(rect(40, 170, 320, 60))
+
+  let
+    arrangement = typeset(spans, bounds = vec2(320, 60))
+    snappedBounds = arrangement.computeBounds().snapToPixels()
+    textImage = newImage(snappedBounds.w.int, snappedBounds.h.int)
+  textImage.fillText(arrangement, translate(-snappedBounds.xy))
+
+  image.draw(textImage, translate(snappedBounds.xy + vec2(40, 170)))
+
+  # Enable this to show bounds
+  # ctx.strokeStyle = "#FF0000"
+  # ctx.translate(vec2(40, 170))
+  # ctx.strokeRect(arrangement.computeBounds())
+
+  # Enable this to show how text is drawing directly
+  # image.fillText(arrangement, translate(vec2(40, 170)))
+
+  doDiff(image, "spans7")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
