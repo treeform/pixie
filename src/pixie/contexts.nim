@@ -199,10 +199,10 @@ proc fillText(ctx: Context, image: Image, text: string, at: Vec2) =
 
   case ctx.textBaseline:
     of TopBaseAlign:
-      at.y += 0
+      discard
     of HangingBaseAlign:
       # TODO: make accurate (Used by Tibetan and other Indic scripts.)
-      at.y += 0
+      discard
     of MiddleBaseAlign:
       at.y -= round((font.typeface.ascent - font.typeface.descent) / 2 * font.scale)
     of AlphabeticBaseAlign:
