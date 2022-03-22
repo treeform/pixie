@@ -500,6 +500,60 @@ proc parseSvgFont*(buf: string): Typeface {.raises: [PixieError].} =
   result = Typeface()
   result.svgFont = svgfont.parseSvgFont(buf)
 
+
+proc computePaths(
+  arrangement: Arrangement
+): seq[Path] =
+  ## Takes an Arrangement and computes Paths for drawing.
+  ## Returns a seq of paths that match the Spans in the arrangement.
+  ## If you only have one Span you should only get one Path.
+  var line: int
+  for spanIndex, (start, stop) in arrangement.spans:
+    var spanPath = Path()
+    let
+      font = arrangement.fonts[spanIndex]
+      underlineThickness = font.typeface.underlineThickness * font.scale
+      underlinePosition = font.typeface.underlinePosition * font.scale
+      strikeoutThickness = font.typeface.strikeoutThickness * font.scale
+      strikeoutPosition = font.typeface.strikeoutPosition * font.scale
+    for runeIndex in start .. stop:
+      let position = arrangement.positions[runeIndex]
+
+      let path = font.typeface.getGlyphPath(arrangement.runes[runeIndex])
+      path.transform(
+        translate(position) *
+        scale(vec2(font.scale))
+      )
+
+      var applyDecoration = true
+      if runeIndex == arrangement.lines[line][1]:
+        inc line
+        if arrangement.runes[runeIndex] == SP:
+          # Do not apply decoration to the space at end of lines
+          applyDecoration = false
+
+      if applyDecoration:
+        if font.underline:
+          path.rect(
+            arrangement.selectionRects[runeIndex].x,
+            position.y - underlinePosition + underlineThickness / 2,
+            arrangement.selectionRects[runeIndex].w,
+            underlineThickness,
+            font.typeface.isCCW()
+          )
+        if font.strikethrough:
+          path.rect(
+            arrangement.selectionRects[runeIndex].x,
+            position.y - strikeoutPosition,
+            arrangement.selectionRects[runeIndex].w,
+            strikeoutThickness,
+            font.typeface.isCCW()
+          )
+
+      spanPath.addPath(path)
+
+    result.add(spanPath)
+
 proc textUber(
   target: Image | Mask,
   arrangement: Arrangement,
@@ -512,6 +566,7 @@ proc textUber(
   stroke: static[bool] = false
 ) =
   var line: int
+  let spanPaths = arrangement.computePaths()
   for spanIndex, (start, stop) in arrangement.spans:
     let
       font = arrangement.fonts[spanIndex]
@@ -519,56 +574,15 @@ proc textUber(
       underlinePosition = font.typeface.underlinePosition * font.scale
       strikeoutThickness = font.typeface.strikeoutThickness * font.scale
       strikeoutPosition = font.typeface.strikeoutPosition * font.scale
-    for runeIndex in start .. stop:
-      let position = arrangement.positions[runeIndex]
 
-      let path = font.typeface.getGlyphPath(arrangement.runes[runeIndex])
-      path.transform(
-        translate(position) *
-        scale(vec2(font.scale))
-      )
+    let path = spanPaths[spanIndex]
 
-      var applyDecoration = true
-      if runeIndex == arrangement.lines[line][1]:
-        inc line
-        if arrangement.runes[runeIndex] == SP:
-          # Do not apply decoration to the space at end of lines
-          applyDecoration = false
-
-      if applyDecoration:
-        if font.underline:
-          path.rect(
-            arrangement.selectionRects[runeIndex].x,
-            position.y - underlinePosition + underlineThickness / 2,
-            arrangement.selectionRects[runeIndex].w,
-            underlineThickness,
-            font.typeface.isCCW()
-          )
-        if font.strikethrough:
-          path.rect(
-            arrangement.selectionRects[runeIndex].x,
-            position.y - strikeoutPosition,
-            arrangement.selectionRects[runeIndex].w,
-            strikeoutThickness,
-            font.typeface.isCCW()
-          )
-
-      when stroke:
-        when type(target) is Image:
-          for paint in font.paints:
-            target.strokePath(
-              path,
-              paint,
-              transform,
-              strokeWidth,
-              lineCap,
-              lineJoin,
-              miterLimit,
-              dashes
-            )
-        else: # target is Mask
+    when stroke:
+      when type(target) is Image:
+        for paint in font.paints:
           target.strokePath(
             path,
+            paint,
             transform,
             strokeWidth,
             lineCap,
@@ -576,63 +590,31 @@ proc textUber(
             miterLimit,
             dashes
           )
-      else:
-        when type(target) is Image:
-          for paint in font.paints:
-            target.fillPath(path, paint, transform)
-        else: # target is Mask
-          target.fillPath(path, transform)
+      else: # target is Mask
+        target.strokePath(
+          path,
+          transform,
+          strokeWidth,
+          lineCap,
+          lineJoin,
+          miterLimit,
+          dashes
+        )
+    else:
+      when type(target) is Image:
+        for paint in font.paints:
+          #echo transform
+          target.fillPath(path, paint, transform)
+      else: # target is Mask
+        target.fillPath(path, transform)
 
 proc computeBounds*(
   arrangement: Arrangement,
   transform = mat3()
 ): Rect =
-  var
-    fullPath = newPath()
-    line: int
-  for spanIndex, (start, stop) in arrangement.spans:
-    let
-      font = arrangement.fonts[spanIndex]
-      underlineThickness = font.typeface.underlineThickness * font.scale
-      underlinePosition = font.typeface.underlinePosition * font.scale
-      strikeoutThickness = font.typeface.strikeoutThickness * font.scale
-      strikeoutPosition = font.typeface.strikeoutPosition * font.scale
-    for runeIndex in start .. stop:
-      let position = arrangement.positions[runeIndex]
-
-      let path = font.typeface.getGlyphPath(arrangement.runes[runeIndex])
-      path.transform(
-        translate(position) *
-        scale(vec2(font.scale))
-      )
-
-      var applyDecoration = true
-      if runeIndex == arrangement.lines[line][1]:
-        inc line
-        if arrangement.runes[runeIndex] == SP:
-          # Do not apply decoration to the space at end of lines
-          applyDecoration = false
-
-      if applyDecoration:
-        if font.underline:
-          path.rect(
-            arrangement.selectionRects[runeIndex].x,
-            position.y - underlinePosition + underlineThickness / 2,
-            arrangement.selectionRects[runeIndex].w,
-            underlineThickness,
-            font.typeface.isCCW()
-          )
-        if font.strikethrough:
-          path.rect(
-            arrangement.selectionRects[runeIndex].x,
-            position.y - strikeoutPosition,
-            arrangement.selectionRects[runeIndex].w,
-            strikeoutThickness,
-            font.typeface.isCCW()
-          )
-
-      fullPath.addPath(path)
-
+  var fullPath = newPath()
+  for path in arrangement.computePaths():
+    fullPath.addPath(path)
   fullPath.transform(transform)
   fullPath.computeBounds()
 
