@@ -7,6 +7,15 @@ import bumpy, chroma, pixie/common, pixie/fonts, pixie/images, pixie/masks,
 ## https://developer.mozilla.org/en-US/docs/Web/API/ContextRenderingContext2D
 
 type
+
+  BaseLineAlignment* = enum
+    TopBaseAlign
+    HangingBaseAlign
+    MiddleBaseAlign
+    AlphabeticBaseAlign
+    IdeographicBaseAlign
+    BottomBaseAlign
+
   Context* = ref object
     image*: Image
     fillStyle*, strokeStyle*: Paint
@@ -18,6 +27,7 @@ type
     font*: string ## File path to a .ttf or .otf file.
     fontSize*: float32
     textAlign*: HorizontalAlignment
+    textBaseline*: BaseLineAlignment
     lineDash: seq[float32]
     path: Path
     mat: Mat3
@@ -58,6 +68,7 @@ proc newContext*(image: Image): Context {.raises: [].} =
   result.strokeStyle = newPaint(SolidPaint)
   result.strokeStyle.color = color(0, 0, 0, 1)
   result.fontSize = 12
+  result.textBaseline = AlphabeticBaseAlign
 
 proc newContext*(width, height: int): Context {.inline, raises: [PixieError].} =
   ## Create a new Context that will draw to a new image of width and height.
@@ -185,7 +196,22 @@ proc fillText(ctx: Context, image: Image, text: string, at: Vec2) =
 
   # Canvas positions text relative to the alphabetic baseline by default
   var at = at
-  at.y -= round(font.typeface.ascent * font.scale)
+
+  case ctx.textBaseline:
+    of TopBaseAlign:
+      at.y += 0
+    of HangingBaseAlign:
+      # TODO: make accurate (Used by Tibetan and other Indic scripts.)
+      at.y += 0
+    of MiddleBaseAlign:
+      at.y -= round((font.typeface.ascent - font.typeface.descent) / 2 * font.scale)
+    of AlphabeticBaseAlign:
+      at.y -= round(font.typeface.ascent * font.scale)
+    of IdeographicBaseAlign:
+      # TODO: make accurate (Used by Chinese, Japanese, and Korean scripts.)
+      at.y -= round((font.typeface.ascent - font.typeface.descent) * font.scale)
+    of BottomBaseAlign:
+      at.y -= round((font.typeface.ascent - font.typeface.descent) * font.scale)
 
   font.paint = ctx.fillStyle
 
