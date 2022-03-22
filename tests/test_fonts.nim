@@ -1015,15 +1015,10 @@ block:
   ctx.fillStyle = "#FFD6D6"
   ctx.fillRect(rect(40, 170, 320, 60))
 
-  let arrangement = typeset(spans, bounds = vec2(320, 60))
-
-  echo arrangement.layoutBounds()
-  echo arrangement.computeBounds()
-  echo arrangement.computeBounds().snapToPixels()
-
-  let snappedBounds = arrangement.computeBounds().snapToPixels()
-
-  let textImage = newImage(snappedBounds.w.int, snappedBounds.h.int)
+  let
+    arrangement = typeset(spans, bounds = vec2(320, 60))
+    snappedBounds = arrangement.computeBounds().snapToPixels()
+    textImage = newImage(snappedBounds.w.int, snappedBounds.h.int)
   textImage.fillText(arrangement, translate(-snappedBounds.xy))
 
   image.draw(textImage, translate(snappedBounds.xy + vec2(40, 170)))

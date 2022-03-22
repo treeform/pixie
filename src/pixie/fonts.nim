@@ -500,30 +500,27 @@ proc parseSvgFont*(buf: string): Typeface {.raises: [PixieError].} =
   result = Typeface()
   result.svgFont = svgfont.parseSvgFont(buf)
 
-proc computePaths(
-  arrangement: Arrangement
-): seq[Path] =
+proc computePaths(arrangement: Arrangement): seq[Path] =
   ## Takes an Arrangement and computes Paths for drawing.
   ## Returns a seq of paths that match the seq of Spans in the arrangement.
   ## If you only have one Span you will only get one Path.
   var line: int
   for spanIndex, (start, stop) in arrangement.spans:
-    var spanPath = Path()
     let
+      spanPath = newPath()
       font = arrangement.fonts[spanIndex]
       underlineThickness = font.typeface.underlineThickness * font.scale
       underlinePosition = font.typeface.underlinePosition * font.scale
       strikeoutThickness = font.typeface.strikeoutThickness * font.scale
       strikeoutPosition = font.typeface.strikeoutPosition * font.scale
     for runeIndex in start .. stop:
-      let position = arrangement.positions[runeIndex]
-
-      let path = font.typeface.getGlyphPath(arrangement.runes[runeIndex])
+      let
+        position = arrangement.positions[runeIndex]
+        path = font.typeface.getGlyphPath(arrangement.runes[runeIndex])
       path.transform(
         translate(position) *
         scale(vec2(font.scale))
       )
-
       var applyDecoration = true
       if runeIndex == arrangement.lines[line][1]:
         inc line
@@ -564,7 +561,7 @@ proc textUber(
   stroke: static[bool] = false
 ) =
   let spanPaths = arrangement.computePaths()
-  for spanIndex, (start, stop) in arrangement.spans:
+  for spanIndex in 0 ..< arrangement.spans.len:
     let path = spanPaths[spanIndex]
     when stroke:
       when type(target) is Image:
@@ -594,7 +591,6 @@ proc textUber(
       when type(target) is Image:
         let font = arrangement.fonts[spanIndex]
         for paint in font.paints:
-          #echo transform
           target.fillPath(path, paint, transform)
       else: # target is Mask
         target.fillPath(path, transform)
@@ -603,7 +599,7 @@ proc computeBounds*(
   arrangement: Arrangement,
   transform = mat3()
 ): Rect =
-  var fullPath = newPath()
+  let fullPath = newPath()
   for path in arrangement.computePaths():
     fullPath.addPath(path)
   fullPath.transform(transform)
