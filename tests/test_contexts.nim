@@ -644,3 +644,34 @@ block:
   ctx.restore()
   ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
   ctx.image.writeFile("tests/contexts/paintSaveRestore.png")
+
+block:
+  # From https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/textBaseline
+  let
+    image = newImage(550, 500)
+    ctx = newContext(image)
+  image.fill(rgba(255, 255, 255, 255))
+
+  const baselines = @[
+    TopBaseline,
+    HangingBaseline,
+    MiddleBaseline,
+    AlphabeticBaseline,
+    IdeographicBaseline,
+    BottomBaseline,
+  ]
+
+  ctx.font = "tests/fonts/Roboto-Regular_1.ttf"
+  ctx.fontSize = 28
+  ctx.strokeStyle = "red"
+
+  for index, baseline in baselines:
+    ctx.textBaseline = baseline
+    let y = (75 + index * 75).float32
+    ctx.beginPath()
+    ctx.moveTo(0, y + 0.5)
+    ctx.lineTo(550, y + 0.5)
+    ctx.stroke()
+    ctx.fillText("Abcdefghijklmnop (" & $baseline & ")", 0, y)
+
+  ctx.image.writeFile("tests/contexts/textBaseline_1.png")
