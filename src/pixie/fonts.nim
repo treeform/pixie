@@ -500,13 +500,12 @@ proc parseSvgFont*(buf: string): Typeface {.raises: [PixieError].} =
   result = Typeface()
   result.svgFont = svgfont.parseSvgFont(buf)
 
-
 proc computePaths(
   arrangement: Arrangement
 ): seq[Path] =
   ## Takes an Arrangement and computes Paths for drawing.
-  ## Returns a seq of paths that match the Spans in the arrangement.
-  ## If you only have one Span you should only get one Path.
+  ## Returns a seq of paths that match the seq of Spans in the arrangement.
+  ## If you only have one Span you will only get one Path.
   var line: int
   for spanIndex, (start, stop) in arrangement.spans:
     var spanPath = Path()
@@ -551,7 +550,6 @@ proc computePaths(
           )
 
       spanPath.addPath(path)
-
     result.add(spanPath)
 
 proc textUber(
@@ -565,20 +563,12 @@ proc textUber(
   dashes: seq[float32] = @[],
   stroke: static[bool] = false
 ) =
-  var line: int
   let spanPaths = arrangement.computePaths()
   for spanIndex, (start, stop) in arrangement.spans:
-    let
-      font = arrangement.fonts[spanIndex]
-      underlineThickness = font.typeface.underlineThickness * font.scale
-      underlinePosition = font.typeface.underlinePosition * font.scale
-      strikeoutThickness = font.typeface.strikeoutThickness * font.scale
-      strikeoutPosition = font.typeface.strikeoutPosition * font.scale
-
     let path = spanPaths[spanIndex]
-
     when stroke:
       when type(target) is Image:
+        let font = arrangement.fonts[spanIndex]
         for paint in font.paints:
           target.strokePath(
             path,
@@ -602,6 +592,7 @@ proc textUber(
         )
     else:
       when type(target) is Image:
+        let font = arrangement.fonts[spanIndex]
         for paint in font.paints:
           #echo transform
           target.fillPath(path, paint, transform)
