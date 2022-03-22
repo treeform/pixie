@@ -699,3 +699,25 @@ block:
     let mask = newMask(100, 100)
     mask.fillPath(path)
     mask.writeFile(&"tests/paths/polygon{i}.png")
+
+block:
+  let image = newImage(200, 200)
+  image.fill(rgba(255, 255, 255, 255))
+
+  let
+    pathStr ="""
+  L -16370.0 -18156.0
+  A 4100 4100 0 1 0 -19670 -14134
+  Z
+  """
+
+  let path = parsePath(pathStr)
+
+  let paint = newPaint(SolidPaint)
+  paint.color = color(255, 255, 255, 255)
+
+  doAssertRaises PixieError:
+    image.strokePath(
+      path,
+      paint
+    )
