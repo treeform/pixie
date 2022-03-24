@@ -704,8 +704,7 @@ block:
   let image = newImage(200, 200)
   image.fill(rgba(255, 255, 255, 255))
 
-  let
-    pathStr ="""
+  let pathStr ="""
   L -16370.0 -18156.0
   A 4100 4100 0 1 0 -19670 -14134
   Z
@@ -720,4 +719,26 @@ block:
     image.strokePath(
       path,
       paint
+    )
+
+block:
+  let image = newImage(200, 200)
+  image.fill(rgba(255, 255, 255, 255))
+
+  let pathStr = """
+  L 3473901.0 1136732.75
+  A 31888.0 31888.0 0 0 1 3493390.25 1076022.375
+  L 32563.0 -2081.0"""
+
+  let paint = newPaint(SolidPaint)
+  paint.color = color(255, 255, 255, 255)
+
+  let path = parsePath(pathStr)
+
+  doAssertRaises PixieError:
+    image.fillPath(
+      path,
+      paint,
+      mat3(),
+      NonZero
     )

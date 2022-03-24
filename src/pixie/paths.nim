@@ -1,4 +1,4 @@
-import blends, bumpy, chroma, common, images, internal, masks, paints, strutils, vmath
+import blends, bumpy, chroma, common, images, internal, masks, paints, strutils, vmath, fenv
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -686,6 +686,8 @@ proc commandsToShapes(
       next = compute(at, ctrl1, ctrl2, to, t + step)
       halfway = compute(at, ctrl1, ctrl2, to, t + step / 2)
     while true:
+      if step <= epsilon(float32):
+        raise newException(PixieError, "Unable to discretize cubic")
       let
         midpoint = (prev + next) / 2
         error = (midpoint - halfway).lengthSq
@@ -693,8 +695,6 @@ proc commandsToShapes(
         next = halfway
         halfway = compute(at, ctrl1, ctrl2, to, t + step / 4)
         step /= 2
-        if step == 0:
-          raise newException(PixieError, "Unable to discretize cubic")
       else:
         shape.addSegment(prev, next)
         t += step
@@ -720,6 +720,8 @@ proc commandsToShapes(
       halfway = compute(at, ctrl, to, t + step / 2)
       halfStepping = false
     while true:
+      if step <= epsilon(float32):
+        raise newException(PixieError, "Unable to discretize quadratic")
       let
         midpoint = (prev + next) / 2
         error = (midpoint - halfway).lengthSq
@@ -728,8 +730,6 @@ proc commandsToShapes(
         halfway = compute(at, ctrl, to, t + step / 4)
         halfStepping = true
         step /= 2
-        if step == 0:
-          raise newException(PixieError, "Unable to discretize quadratic")
       else:
         shape.addSegment(prev, next)
         t += step
@@ -838,6 +838,8 @@ proc commandsToShapes(
       step = 1.float32 # How far we want to try to move along the curve
       prev = at
     while t != 1:
+      if step <= epsilon(float32):
+        raise newException(PixieError, "Unable to discretize arc")
       let
         aPrev = arc.theta + arc.delta * t
         a = arc.theta + arc.delta * (t + step)
@@ -857,8 +859,6 @@ proc commandsToShapes(
           step = min(step / 2, 1 - t) # Assume next steps hould be the same size
         else:
           step = step / 4 # We know a half-step is too big
-        if step == 0:
-          raise newException(PixieError, "Unable to discretize arc")
       else:
         shape.addSegment(prev, next)
         prev = next
