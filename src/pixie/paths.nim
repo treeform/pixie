@@ -1623,6 +1623,9 @@ proc fillShapes(
   if pathWidth == 0:
     return
 
+  if pathWidth < 0:
+    raise newException(PixieError, "Path int overflow detected")
+
   var
     coverages = newSeq[uint8](pathWidth)
     hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
@@ -1688,6 +1691,9 @@ proc fillShapes(
 
   if pathWidth == 0:
     return
+
+  if pathWidth < 0:
+    raise newException(PixieError, "Path int overflow detected")
 
   var
     coverages = newSeq[uint8](pathWidth)
