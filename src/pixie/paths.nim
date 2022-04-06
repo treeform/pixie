@@ -650,11 +650,11 @@ proc polygon*(
 
 proc commandsToShapes(
   path: Path, closeSubpaths: bool, pixelScale: float32
-): seq[seq[Vec2]] =
+): seq[Polygon] =
   ## Converts SVG-like commands to sequences of vectors.
   var
     start, at: Vec2
-    shape: seq[Vec2]
+    shape: Polygon
 
   # Some commands use data from the previous command
   var
@@ -663,7 +663,7 @@ proc commandsToShapes(
 
   let errorMarginSq = pow(pixelErrorMargin / pixelScale, 2)
 
-  proc addSegment(shape: var seq[Vec2], at, to: Vec2) =
+  proc addSegment(shape: var Polygon, at, to: Vec2) =
     # Don't add any 0 length lines
     if at - to != vec2(0, 0):
       # Don't double up points
@@ -671,7 +671,7 @@ proc commandsToShapes(
         shape.add(at)
       shape.add(to)
 
-  proc addCubic(shape: var seq[Vec2], at, ctrl1, ctrl2, to: Vec2) =
+  proc addCubic(shape: var Polygon, at, ctrl1, ctrl2, to: Vec2) =
     ## Adds cubic segments to shape.
     proc compute(at, ctrl1, ctrl2, to: Vec2, t: float32): Vec2 {.inline.} =
       pow(1 - t, 3) * at +
@@ -705,7 +705,7 @@ proc commandsToShapes(
         next = compute(at, ctrl1, ctrl2, to, t + step)
         halfway = compute(at, ctrl1, ctrl2, to, t + step / 2)
 
-  proc addQuadratic(shape: var seq[Vec2], at, ctrl, to: Vec2) =
+  proc addQuadratic(shape: var Polygon, at, ctrl, to: Vec2) =
     ## Adds quadratic segments to shape.
     proc compute(at, ctrl, to: Vec2, t: float32): Vec2 {.inline.} =
       pow(1 - t, 2) * at +
@@ -744,7 +744,7 @@ proc commandsToShapes(
         halfway = compute(at, ctrl, to, t + step / 2)
 
   proc addArc(
-    shape: var seq[Vec2],
+    shape: var Polygon,
     at, radii: Vec2,
     rotation: float32,
     large, sweep: bool,
@@ -1036,7 +1036,7 @@ proc commandsToShapes(
       shape.addSegment(at, start)
     result.add(shape)
 
-proc shapesToSegments(shapes: seq[seq[Vec2]]): seq[(Segment, int16)] =
+proc shapesToSegments(shapes: seq[Polygon]): seq[(Segment, int16)] =
   ## Converts the shapes into a set of filtered segments with winding value.
   for shape in shapes:
     for segment in shape.segments:
@@ -1051,7 +1051,7 @@ proc shapesToSegments(shapes: seq[seq[Vec2]]): seq[(Segment, int16)] =
 
       result.add((segment, winding))
 
-proc transform(shapes: var seq[seq[Vec2]], transform: Mat3) =
+proc transform(shapes: var seq[Polygon], transform: Mat3) =
   if transform != mat3():
     for shape in shapes.mitems:
       for vec in shape.mitems:
@@ -1599,7 +1599,7 @@ proc fillHits(
 
 proc fillShapes(
   image: Image,
-  shapes: seq[seq[Vec2]],
+  shapes: seq[Polygon],
   color: SomeColor,
   windingRule: WindingRule,
   blendMode: BlendMode
@@ -1670,7 +1670,7 @@ proc fillShapes(
 
 proc fillShapes(
   mask: Mask,
-  shapes: seq[seq[Vec2]],
+  shapes: seq[Polygon],
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
@@ -1732,14 +1732,14 @@ proc angleToMiterLimit*(angle: float32): float32 {.inline.} =
   1 / sin(angle / 2)
 
 proc strokeShapes(
-  shapes: seq[seq[Vec2]],
+  shapes: seq[Polygon],
   strokeWidth: float32,
   lineCap: LineCap,
   lineJoin: LineJoin,
   miterLimit: float32,
   dashes: seq[float32],
   pixelScale: float32
-): seq[seq[Vec2]] =
+): seq[Polygon] =
   if strokeWidth <= 0:
     return
 
@@ -1747,12 +1747,12 @@ proc strokeShapes(
     halfStroke = strokeWidth / 2
     miterAngleLimit = miterLimitToAngle(miterLimit)
 
-  proc makeCircle(at: Vec2): seq[Vec2] =
+  proc makeCircle(at: Vec2): Polygon =
     let path = newPath()
     path.ellipse(at, halfStroke, halfStroke)
     path.commandsToShapes(true, pixelScale)[0]
 
-  proc makeRect(at, to: Vec2): seq[Vec2] =
+  proc makeRect(at, to: Vec2): Polygon =
     # Rectangle corners
     let
       tangent = (to - at).normalize()
@@ -1776,7 +1776,7 @@ proc strokeShapes(
 
     @[a, b, c, d, a]
 
-  proc addJoin(shape: var seq[seq[Vec2]], prevPos, pos, nextPos: Vec2) =
+  proc addJoin(shape: var seq[Polygon], prevPos, pos, nextPos: Vec2) =
     let minArea = pixelErrorMargin / pixelScale
 
     if lineJoin == RoundJoin:
@@ -1825,7 +1825,7 @@ proc strokeShapes(
         discard # Handled above, skipping angle calculation
 
   for shape in shapes:
-    var shapeStroke: seq[seq[Vec2]]
+    var shapeStroke: seq[Polygon]
 
     if shape[0] != shape[^1]:
       # This shape does not end at the same point it starts so draw the
@@ -1895,7 +1895,7 @@ proc strokeShapes(
 
 proc parseSomePath(
   path: SomePath, closeSubpaths: bool, pixelScale: float32
-): seq[seq[Vec2]] {.inline.} =
+): seq[Polygon] {.inline.} =
   ## Given SomePath, parse it in different ways.
   when type(path) is string:
     parsePath(path).commandsToShapes(closeSubpaths, pixelScale)
@@ -2058,7 +2058,7 @@ proc strokePath*(
   image.draw(fill, blendMode = paint.blendMode)
 
 proc overlaps(
-  shapes: seq[seq[Vec2]],
+  shapes: seq[Polygon],
   test: Vec2,
   windingRule: WindingRule
 ): bool =
