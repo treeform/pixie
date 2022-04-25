@@ -104,6 +104,7 @@ proc fillGradientLinear(image: Image, paint: Paint) =
   if paint.gradientStops.len == 0:
     raise newException(PixieError, "Gradient must have at least 1 color stop")
 
+  paint.opacity = clamp(paint.opacity, 0, 1)
   if paint.opacity == 0:
     return
 
@@ -177,6 +178,7 @@ proc fillGradientRadial(image: Image, paint: Paint) =
   if paint.gradientStops.len == 0:
     raise newException(PixieError, "Gradient must have at least 1 color stop")
 
+  paint.opacity = clamp(paint.opacity, 0, 1)
   if paint.opacity == 0:
     return
 
@@ -208,6 +210,7 @@ proc fillGradientAngular(image: Image, paint: Paint) =
   if paint.gradientStops.len == 0:
     raise newException(PixieError, "Gradient must have at least 1 color stop")
 
+  paint.opacity = clamp(paint.opacity, 0, 1)
   if paint.opacity == 0:
     return
 

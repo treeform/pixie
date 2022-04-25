@@ -1922,6 +1922,8 @@ proc fillPath*(
   windingRule = NonZero
 ) {.raises: [PixieError].} =
   ## Fills a path.
+  paint.opacity = clamp(paint.opacity, 0, 1)
+
   if paint.opacity == 0:
     return
 
@@ -2000,6 +2002,8 @@ proc strokePath*(
   dashes: seq[float32] = @[]
 ) {.raises: [PixieError].} =
   ## Strokes a path.
+  paint.opacity = clamp(paint.opacity, 0, 1)
+
   if paint.opacity == 0:
     return
 
