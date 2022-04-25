@@ -1,4 +1,4 @@
-import chroma, pixie, pixie/fileformats/bmp, os, strutils
+import chroma, os, pixie, pixie/fileformats/bmp, strutils
 
 # block:
 #   var image = newImage(4, 2)
