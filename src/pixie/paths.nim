@@ -1,4 +1,5 @@
-import blends, bumpy, chroma, common, images, internal, masks, paints, strutils, vmath, fenv
+import blends, bumpy, chroma, common, fenv, images, internal, masks, paints,
+    strutils, vmath
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -1922,6 +1923,8 @@ proc fillPath*(
   windingRule = NonZero
 ) {.raises: [PixieError].} =
   ## Fills a path.
+  paint.opacity = clamp(paint.opacity, 0, 1)
+
   if paint.opacity == 0:
     return
 
@@ -2000,6 +2003,8 @@ proc strokePath*(
   dashes: seq[float32] = @[]
 ) {.raises: [PixieError].} =
   ## Strokes a path.
+  paint.opacity = clamp(paint.opacity, 0, 1)
+
   if paint.opacity == 0:
     return
 

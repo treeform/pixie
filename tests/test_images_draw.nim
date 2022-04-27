@@ -293,7 +293,6 @@ block:
   let a = newImage(100, 100)
   a.fill(color(1, 1, 1, 1))
 
-
   let draws = [
     # Overlaps in bounds
     (vec2(-50, -50), color(1, 0, 0, 1)),

@@ -1,4 +1,4 @@
-import pixie/common, pixie/fileformats/bmp, random, strformat, flatty/binny, os
+import flatty/binny, os, pixie/common, pixie/fileformats/bmp, random, strformat
 
 randomize()
 

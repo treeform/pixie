@@ -598,7 +598,7 @@ proc textUber(
 proc computeBounds*(
   arrangement: Arrangement,
   transform = mat3()
-): Rect =
+): Rect {.raises: [PixieError].} =
   let fullPath = newPath()
   for path in arrangement.computePaths():
     fullPath.addPath(path)

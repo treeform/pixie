@@ -99,7 +99,7 @@ exportSeq seq[float32]:
 exportSeq seq[Span]:
   procs:
     typeset(seq[Span], Vec2, HorizontalAlignment, VerticalAlignment, bool)
-    computeBounds(seq[Span])
+    layoutBounds(seq[Span])
 
 exportRefObject Image:
   fields:
@@ -232,7 +232,7 @@ exportRefObject Font:
     scale(Font)
     defaultLineHeight
     typeset(Font, string, Vec2, HorizontalAlignment, VerticalAlignment, bool)
-    computeBounds(Font, string)
+    layoutBounds(Font, string)
 
 exportRefObject Span:
   fields:
@@ -243,7 +243,8 @@ exportRefObject Span:
 
 exportRefObject Arrangement:
   procs:
-    computeBounds(Arrangement)
+    layoutBounds(Arrangement)
+    computeBounds(Arrangement, Mat3)
 
 exportRefObject Context:
   fields:
