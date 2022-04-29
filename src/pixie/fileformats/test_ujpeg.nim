@@ -6,30 +6,30 @@ type
   ujImage = pointer
 
 proc ujCreate() : ujImage {.cdecl, importc: "ujCreate".}
-#proc ujDecode(img: ujImage, data: ptr cuchar, size: int) : ujImage {.cdecl, importc: "ujDecode".}
-proc ujDecodeFile(img: ujImage, filename: cstring) : ujImage {.cdecl, importc: "ujDecodeFile".}
+proc ujDecode(img: ujImage, data: ptr cuchar, size: cint) : ujImage {.cdecl, importc: "ujDecode".}
 proc ujGetWidth(img: ujImage) : int {.cdecl, importc: "ujGetWidth".}
 proc ujGetHeight(img: ujImage) : int {.cdecl, importc: "ujGetHeight".}
 proc ujGetImageSize(img: ujImage) : int {.cdecl, importc: "ujGetImageSize".}
-proc ujGetImage(img: ujImage, dest: cstring) : cstring {.cdecl, importc: "ujGetImage".}
+proc ujGetImage(img: ujImage, dest: cstring) {.cdecl, importc: "ujGetImage".}
 proc ujDestroy(img: ujImage) {.cdecl, importc: "ujDestroy".}
 
-
 proc loadImageJPG(fileName: string): Image =
+  echo fileName
   var jpg = ujCreate()
   if jpg == nil:
     echo "nil ujCreate"
     return nil
-
-  if ujDecodeFile(jpg, cstring(fileName)) != nil:
+  let rawData = readFile(fileName)
+  if ujDecode(jpg, cast[ptr cuchar](rawData[0].unsafeAddr), rawData.len.cint) != nil:
     let
       size = ujGetImageSize(jpg)
       width = ujGetWidth(jpg)
       height = ujGetHeight(jpg)
+    echo "size ", size
     echo width, "x", height
     result = newImage(width, height)
     let data = newString(size * 3)
-    discard ujGetImage(jpg, cstring(data))
+    ujGetImage(jpg, cstring(data))
     for i in 0 ..< size div 3:
       let
         r = data[i*3+0].uint8
@@ -42,12 +42,27 @@ proc loadImageJPG(fileName: string): Image =
     echo "nil ujDecodeFile"
     result = nil
 
-# echo "here"
-# var image = ujCreate()
-# var image2 = ujDecodeFile(image, "tests/jpeg420exif.jpg")
-# ujDestroy(image)
+echo "start"
 
-# echo "done"
+var files = @[
+  "tests/fileformats/jpg/jpeg420exif.jpg",
+  "tests/fileformats/jpg/mandrill.jpg",
 
-var img = loadImageJPG("tests/fileformats/jpg/jpeg420exif.jpg")
-img.writeFile("tests/fileformats/jpg/jpeg420exif.png")
+  "tests/fileformats/jpg/red.jpg",
+  "tests/fileformats/jpg/green.jpg",
+  "tests/fileformats/jpg/blue.jpg",
+  "tests/fileformats/jpg/white.jpg",
+  "tests/fileformats/jpg/black.jpg",
+
+  "tests/fileformats/jpg/quality_01.jpg",
+  "tests/fileformats/jpg/quality_10.jpg",
+  "tests/fileformats/jpg/quality_25.jpg",
+  "tests/fileformats/jpg/quality_50.jpg",
+  "tests/fileformats/jpg/quality_100.jpg",
+]
+
+for file in files:
+  var img = loadImageJPG(file)
+  img.writeFile(file & ".png")
+
+echo "done"
