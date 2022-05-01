@@ -12,16 +12,16 @@ const
   fastBits = 9
   jpgStartOfImage* = [0xFF.uint8, 0xD8]
   deZigZag = [
-    0.uint8, 1, 8, 16, 9, 2, 3, 10,
-    17, 24, 32, 25, 18, 11,  4,  5,
-    12, 19, 26, 33, 40, 48, 41, 34,
-    27, 20, 13,  6,  7, 14, 21, 28,
-    35, 42, 49, 56, 57, 50, 43, 36,
-    29, 22, 15, 23, 30, 37, 44, 51,
-    58, 59, 52, 45, 38, 31, 39, 46,
-    53, 60, 61, 54, 47, 55, 62, 63
+    uint8 00, 01, 08, 16, 09, 02, 03, 10,
+    uint8 17, 24, 32, 25, 18, 11, 04, 05,
+    uint8 12, 19, 26, 33, 40, 48, 41, 34,
+    uint8 27, 20, 13, 06, 07, 14, 21, 28,
+    uint8 35, 42, 49, 56, 57, 50, 43, 36,
+    uint8 29, 22, 15, 23, 30, 37, 44, 51,
+    uint8 58, 59, 52, 45, 38, 31, 39, 46,
+    uint8 53, 60, 61, 54, 47, 55, 62, 63
   ]
-  bitmasks = [ # (1 shr n) - 1
+  bitMasks = [ # (1 shr n) - 1
     0.uint32, 1, 3, 7, 15, 31, 63, 127, 255, 511,
     1023, 2047, 4095, 8191, 16383, 32767, 65535
   ]
@@ -50,8 +50,8 @@ type
     resample: ResampleProc
 
   Component = object
-    id, quantizationTable: uint8
-    horizontalSamplingFactor, verticalSamplingFactor: int
+    id, quantizationTableId: uint8
+    yScale, xScale: int
     width, height: int
     widthStride, heightStride: int
     huffmanDC, huffmanAC: int
@@ -70,7 +70,7 @@ type
     scanComponents: int
     spectralStart, spectralEnd: int
     successiveApproxLow, successiveApproxHigh: int
-    maxHorizontalSamplingFactor, maxVerticalSamplingFactor: int
+    maxYScale, maxXScale: int
     mcuWidth, mcuHeight, numMcuWide, numMcuHigh: int
     componentOrder: seq[int]
     progressive, hitEOI: bool
@@ -216,30 +216,30 @@ proc decodeSOF0(state: var DecoderState) =
       info = state.readUint8()
       vertical = info and 15
       horizontal = info shr 4
-      quantizationTable = state.readUint8()
+      quantizationTableId = state.readUint8()
 
-    if quantizationTable > 3:
+    if quantizationTableId > 3:
       failInvalid("invalid quantization table id")
 
     if vertical == 0 or vertical > 4 or horizontal == 0 or horizontal > 4:
       failInvalid("invalid component scaling factor")
 
-    state.components[i].verticalSamplingFactor = vertical.int
-    state.components[i].horizontalSamplingFactor = horizontal.int
-    state.components[i].quantizationTable = quantizationTable
+    state.components[i].xScale = vertical.int
+    state.components[i].yScale = horizontal.int
+    state.components[i].quantizationTableId = quantizationTableId
 
   for i in 0 ..< state.components.len:
-    state.maxVerticalSamplingFactor = max(
-      state.maxVerticalSamplingFactor,
-      state.components[i].verticalSamplingFactor
+    state.maxXScale = max(
+      state.maxXScale,
+      state.components[i].xScale
     )
-    state.maxHorizontalSamplingFactor = max(
-      state.maxHorizontalSamplingFactor,
-      state.components[i].horizontalSamplingFactor
+    state.maxYScale = max(
+      state.maxYScale,
+      state.components[i].yScale
     )
 
-  state.mcuWidth = state.maxHorizontalSamplingFactor * 8
-  state.mcuHeight = state.maxVerticalSamplingFactor * 8
+  state.mcuWidth = state.maxYScale * 8
+  state.mcuHeight = state.maxXScale * 8
   state.numMcuWide =
     (state.imageWidth + state.mcuWidth - 1) div state.mcuWidth
   state.numMcuHigh =
@@ -248,19 +248,19 @@ proc decodeSOF0(state: var DecoderState) =
   for i in 0 ..< state.components.len:
     state.components[i].width = (
       state.imageWidth *
-      state.components[i].horizontalSamplingFactor +
-      state.maxHorizontalSamplingFactor - 1
-    ) div state.maxHorizontalSamplingFactor
+      state.components[i].yScale +
+      state.maxYScale - 1
+    ) div state.maxYScale
     state.components[i].height = (
       state.imageHeight *
-      state.components[i].verticalSamplingFactor +
-      state.maxVerticalSamplingFactor - 1
-    ) div state.maxVerticalSamplingFactor
+      state.components[i].xScale +
+      state.maxXScale - 1
+    ) div state.maxXScale
 
     state.components[i].widthStride =
-      state.numMcuWide * state.components[i].horizontalSamplingFactor * 8
+      state.numMcuWide * state.components[i].yScale * 8
     state.components[i].heightStride =
-      state.numMcuHigh * state.components[i].verticalSamplingFactor * 8
+      state.numMcuHigh * state.components[i].xScale * 8
 
     state.components[i].data.setLen(
       state.components[i].widthStride * state.components[i].heightStride
@@ -396,8 +396,8 @@ proc extendReceive(state: var DecoderState, t: int): int {.inline.} =
 
   let sign = cast[int32](state.bits) shr 31
   var k = lrot(state.bits, t)
-  state.bits = k and (not bitmasks[t])
-  k = k and bitmasks[t]
+  state.bits = k and (not bitMasks[t])
+  k = k and bitMasks[t]
   state.bitCount -= t
   result = k.int + (biases[t] and (not sign))
 
@@ -417,7 +417,7 @@ proc decodeBlock(
     dc = state.components[component].dcPred + diff
   state.components[component].dcPred = dc
   result[0] = (dc * state.quantizationTables[
-    state.components[component].quantizationTable
+    state.components[component].quantizationTableId
   ][0].int).int16
 
   var i = 1
@@ -436,7 +436,7 @@ proc decodeBlock(
       i += r.int
       let zig = deZigZag[i]
       result[zig] = (state.extendReceive(s.int) * state.quantizationTables[
-        state.components[component].quantizationTable
+        state.components[component].quantizationTableId
       ][zig].int).int16
       inc i
 
@@ -559,7 +559,7 @@ proc idctBlock(component: var Component, offset: int, data: array[64, int16]) =
 proc idctBlockDC(component: var Component, offset: int) =
   discard
 
-proc decodeScanData(state: var DecoderState) =
+proc decodeBlocks(state: var DecoderState) =
   ## Decodes scan data blocks that follow a SOS block.
   if state.progressive:
     if state.scanComponents == 1:
@@ -570,15 +570,15 @@ proc decodeScanData(state: var DecoderState) =
     for y in 0 ..< state.numMcuHigh:
       for x in 0 ..< state.numMcuWide:
         for comp in state.componentOrder:
-          for j in 0 ..< state.components[comp].verticalSamplingFactor:
-            for i in 0 ..< state.components[comp].horizontalSamplingFactor:
+          for j in 0 ..< state.components[comp].xScale:
+            for i in 0 ..< state.components[comp].yScale:
               let
                 data = state.decodeBlock(comp)
                 rowPos = (
-                  x * state.components[comp].horizontalSamplingFactor + i
+                  x * state.components[comp].yScale + i
                 ) * 8
                 column = (
-                  y * state.components[comp].verticalSamplingFactor + j
+                  y * state.components[comp].xScale + j
                 ) * 8
               state.components[comp].idctBlock(
                 state.components[comp].widthStride * column + rowPos,
@@ -692,11 +692,11 @@ proc buildImage(state: var DecoderState): Image =
   var resamples: array[3, Resample]
   for i in 0 ..< state.components.len:
     resamples[i].horizontalExpansionFactor =
-      state.maxHorizontalSamplingFactor div
-      state.components[i].horizontalSamplingFactor
+      state.maxYScale div
+      state.components[i].yScale
     resamples[i].verticalExpansionFactor =
-      state.maxVerticalSamplingFactor div
-      state.components[i].verticalSamplingFactor
+      state.maxXScale div
+      state.components[i].xScale
     resamples[i].yStep = resamples[i].verticalExpansionFactor shr 1
     resamples[i].widthPreExpansion = (
       state.imageWidth + resamples[i].horizontalExpansionFactor - 1
@@ -809,7 +809,7 @@ proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
         # Start Of Scan
         state.decodeSOS()
         # Encoded data
-        state.decodeScanData()
+        state.decodeBlocks()
         # Most likely its the end here.
       of 0XE0:
         # Application-specific
