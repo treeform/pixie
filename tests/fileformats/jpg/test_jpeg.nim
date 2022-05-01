@@ -21,8 +21,8 @@ var files = @[
   # "tests/fileformats/jpg/master/quality_100.jpg",
 
   # "tests/fileformats/jpg/master/exif_overrun.jpg",
-  "tests/fileformats/jpg/master/grayscale_test.jpg",
-  # "tests/fileformats/jpg/master/progressive.jpg",
+  # "tests/fileformats/jpg/master/grayscale_test.jpg",
+  # # # "tests/fileformats/jpg/master/progressive.jpg",
 
   # "tests/fileformats/jpg/master/exif-Tulips.jpg",
   # "tests/fileformats/jpg/master/exif-rocks.jpg",
@@ -39,8 +39,7 @@ var files = @[
   # "tests/fileformats/jpg/master/cat_4_4_4_fast_int.jpg",
   # "tests/fileformats/jpg/master/cat_4_2_0_fast_int.jpg",
 
-  # "tests/fileformats/jpg/master/cat_4_1_1.jpg",  # x4 not supported
-
+  "tests/fileformats/jpg/master/cat_4_1_1.jpg",  # x4 not supported
 ]
 
 for file in files:

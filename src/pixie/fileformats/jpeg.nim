@@ -66,7 +66,6 @@ type
     imageHeight, imageWidth: int
     quantizationTables: array[4, array[64, uint8]]
     huffmanTables: array[2, array[4, Huffman]] # 0 = DC, 1 = AC
-    numComponents: int
     components: seq[Component]
     scanComponents: int
     spectralStart, spectralEnd: int
@@ -216,18 +215,11 @@ proc decodeSOF(state: var DecoderState) =
   if state.imageWidth == 0:
     failInvalid("image invalid 0 width")
 
-  state.numComponents = state.readUint8().int
-  if state.numComponents notin {1, 3}:
+  let numComponents = state.readUint8().int
+  if numComponents notin {1, 3}:
     failInvalid("unsupported component count, must be 1 or 3")
 
-  echo "state.numComponents ", state.numComponents
-  # len -= 15
-  # echo "len ", len
-
-  # if len != 0:
-  #   failInvalid()
-
-  for i in 0 ..< state.numComponents:
+  for i in 0 ..< numComponents:
     state.components.add(Component())
     state.components[i].id = state.readUint8()
     let
@@ -246,7 +238,7 @@ proc decodeSOF(state: var DecoderState) =
     state.components[i].horizontalSamplingFactor = horizontal.int
     state.components[i].quantizationTable = quantizationTable
 
-  for i in 0 ..< state.numComponents:
+  for i in 0 ..< state.components.len:
     state.maxVerticalSamplingFactor = max(
       state.maxVerticalSamplingFactor,
       state.components[i].verticalSamplingFactor
@@ -263,7 +255,7 @@ proc decodeSOF(state: var DecoderState) =
   state.numMcuHigh =
     (state.imageHeight + state.mcuHeight - 1) div state.mcuHeight
 
-  for i in 0 ..< state.numComponents:
+  for i in 0 ..< state.components.len:
     state.components[i].width = (
       state.imageWidth *
       state.components[i].horizontalSamplingFactor +
@@ -633,6 +625,14 @@ proc resampleRowH2V1(
     dst[widthPreExpansion * 2 + 1] = (a[widthPreExpansion - 1]) shr 2
   dst
 
+proc resampleRowH4V1(
+  dst, a, b: ptr UncheckedArray[uint8],
+  widthPreExpansion, horizontalExpansionFactor: int
+): ptr UncheckedArray[uint8] =
+  for i in 0 ..< widthPreExpansion * 4:
+    dst[i] = a[i div 4]
+  dst
+
 proc resampleRowH2V2(
   dst, a, b: ptr UncheckedArray[uint8],
   widthPreExpansion, horizontalExpansionFactor: int
@@ -685,7 +685,6 @@ proc grayScaleToRgbx(dst, gray: ptr UncheckedArray[uint8], width: int) =
     dst[pos + 3] = 255
     pos += 4
 
-
 proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
   ## Decodes the JPEG into an Image.
 
@@ -720,7 +719,7 @@ proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
   result = newImage(state.imageWidth, state.imageHeight)
 
   var resamples: array[3, Resample]
-  for i in 0 ..< state.numComponents:
+  for i in 0 ..< state.components.len:
     resamples[i].horizontalExpansionFactor =
       state.maxHorizontalSamplingFactor div
       state.components[i].horizontalSamplingFactor
@@ -752,12 +751,15 @@ proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
     elif resamples[i].horizontalExpansionFactor == 2 and
       resamples[i].verticalExpansionFactor == 2:
       resamples[i].resample = resampleRowH2V2
+    elif resamples[i].horizontalExpansionFactor == 4 and
+      resamples[i].verticalExpansionFactor == 1:
+      resamples[i].resample = resampleRowH4V1
     else:
       failInvalid()
 
   var componentOutputs: array[3, ptr UncheckedArray[uint8]]
   for y in 0 ..< state.imageHeight:
-    for i in 0 ..< state.numComponents:
+    for i in 0 ..< state.components.len:
       let yBottom =
         resamples[i].yStep >= (resamples[i].verticalExpansionFactor shr 1)
       componentOutputs[i] = resamples[i].resample(
@@ -784,7 +786,7 @@ proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
       result.data[state.imageWidth * y].addr
     )
 
-    if state.numComponents == 3:
+    if state.components.len == 3:
       yCbCrToRgbx(
         dst,
         componentOutputs[0],
@@ -792,7 +794,7 @@ proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
         componentOutputs[2],
         state.imageWidth
       )
-    elif state.numComponents == 1:
+    elif state.components.len == 1:
       grayScaleToRgbx(
         dst,
         componentOutputs[0],
