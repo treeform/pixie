@@ -16,6 +16,11 @@
 ##  4. If anything other than configuration, indentation or comments have been
 ##     altered in the code, the original author(s) must receive a copy of the
 ##     modified code.
+##
+##  * https://github.com/daviddrysdale/libjpeg
+##  * https://www.youtube.com/watch?v=Kv1Hiv3ox8I
+##  * https://dev.exiv2.org/projects/exiv2/wiki/The_Metadata_in_JPEG_files
+##  * https://www.media.mit.edu/pia/Research/deepview/exif.html
 
 
 proc printf(formatstr: cstring) {.header: "<stdio.h>", varargs.}
@@ -349,7 +354,7 @@ proc ujByteAlign*(uj: ptr ujContext) =
   uj.bufbits = uj.bufbits and 0xF8
 
 proc ujSkip*(uj: ptr ujContext; count: int32) =
-  printf("ujSkip %i\n", count)
+  ## printf("ujSkip %i\n", count);
   inc(uj.pos, count)
   dec(uj.size, count)
   dec(uj.length, count)
@@ -359,11 +364,11 @@ proc ujSkip*(uj: ptr ujContext; count: int32) =
 
 proc ujDecode16*(pos: ptr uint8): int32 =
   var res: int32 = ((cast[int32](pos[0]) shl 8) or cast[int32](pos[1]))
-  printf("ujDecode16 %i\n", res)
+  ## printf("ujDecode16 %i\n", res);
   return res
 
 proc ujDecodeLength*(uj: ptr ujContext) =
-  printf("ujDecodeLength\n")
+  ## printf("ujDecodeLength\n");
   if uj.size < 2:
     printf("UJ_SYNTAX_ERROR\n")
     exit(-1)
@@ -579,7 +584,7 @@ proc ujGetVLC*(uj: ptr ujContext; vlc: ptr ujVLCCode; code: ptr uint8): int32 =
   return value
 
 proc ujDecodeBlock*(uj: ptr ujContext; c: ptr ujComponent; data: ptr uint8) =
-  printf("ujDecodeBlock\n")
+  ##  printf("ujDecodeBlock\n");
   var code: uint8 = 0
   var
     value: int32
@@ -625,6 +630,7 @@ proc ujDecodeScan*(uj: ptr ujContext) =
     nextrst: int32 = 0
   var c: ptr ujComponent
   ujDecodeLength(uj)
+  printf("ujDecodeScan length %i\n", uj.length)
   if uj.length < (4 + 2 * uj.ncomp):
     printf("UJ_SYNTAX_ERROR\n")
     exit(-1)
@@ -824,116 +830,104 @@ proc SF*(x: uint8): uint8 =
 
 proc ujUpsampleHCoSited*(c: ptr ujComponent) =
   printf("ujUpsampleHCoSited\n")
-  var xmax: int32 = c.width - 1
-  var
-    data: ptr uint8
-    lin: ptr uint8
-    lout: ptr uint8
-  var
-    x: int32
-    y: int32
-  data = cast[ptr uint8](malloc((c.width * c.height) shl 1))
-  lin = c.pixels
-  lout = data
-  y = c.height
-  while y != 0:
-    lout[0] = lin[0]
-    lout[1] = SF((lin[0] shl 3) + 9 * lin[1] - lin[2])
-    lout[2] = lin[1]
-    x = 2
-    while x < xmax:
-      lout[(x shl 1) - 1] = SF(9 * (lin[x - 1] + lin[x]) - (lin[x - 2] + lin[x + 1]))
-      lout[x shl 1] = lin[x]
-      inc(x)
-    inc(lin, c.stride)
-    inc(lout, c.width shl 1)
-    lout[-3] = SF((lin[-1] shl 3) + 9 * lin[-2] - lin[-3])
-    lout[-2] = lin[-1]
-    lout[-1] = SF(17 * lin[-1] - lin[-2])
-    dec(y)
-  c.width = c.width shl 1
-  c.stride = c.width
-  free(c.pixels)
-  c.pixels = data
+  printf("Co-Sited not supported\n")
+  exit(-1)
+  ##  int32 xmax = c->width - 1;
+  ##  uint8 *data, *lin, *lout;
+  ##  int32 x, y;
+  ##  data = (uint8*)malloc((c->width * c->height) << 1);
+  ##  lin = c->pixels;
+  ##  lout = data;
+  ##  for (y = c->height; y != 0; --y)
+  ##  {
+  ##      lout[0] = lin[0];
+  ##      lout[1] = SF((lin[0] << 3) + 9 * lin[1] - lin[2]);
+  ##      lout[2] = lin[1];
+  ##      for (x = 2; x < xmax; ++x)
+  ##      {
+  ##          lout[(x << 1) - 1] = SF(9 * (lin[x - 1] + lin[x]) - (lin[x - 2] + lin[x + 1]));
+  ##          lout[x << 1] = lin[x];
+  ##      }
+  ##      lin += c->stride;
+  ##      lout += c->width << 1;
+  ##      lout[-3] = SF((lin[-1] << 3) + 9 * lin[-2] - lin[-3]);
+  ##      lout[-2] = lin[-1];
+  ##      lout[-1] = SF(17 * lin[-1] - lin[-2]);
+  ##  }
+  ##  c->width <<= 1;
+  ##  c->stride = c->width;
+  ##  free(c->pixels);
+  ##  c->pixels = data;
 
 proc ujUpsampleVCoSited*(c: ptr ujComponent) =
   printf("ujUpsampleVCoSited\n")
-  var
-    w: int32 = c.width
-    s1: int32 = c.stride
-    s2: int32 = s1 + s1
-  var
-    data: ptr uint8
-    cin: ptr uint8
-    cout: ptr uint8
-  var
-    x: int32
-    y: int32
-  data = cast[ptr uint8](malloc((c.width * c.height) shl 1))
-  x = 0
-  while x < w:
-    cin = addr(c.pixels[x])
-    cout = addr(data[x])
-    cout[] = cin[0]
-    inc(cout, w)
-    cout[] = SF((cin[0] shl 3) + 9 * cin[s1] - cin[s2])
-    inc(cout, w)
-    cout[] = cin[s1]
-    inc(cout, w)
-    inc(cin, s1)
-    y = c.height - 3
-    while y != 0:
-      cout[] = SF(9 * (cin[0] + cin[s1]) - (cin[-s1] + cin[s2]))
-      inc(cout, w)
-      cout[] = cin[s1]
-      inc(cout, w)
-      inc(cin, s1)
-      dec(y)
-    cout[] = SF((cin[s1] shl 3) + 9 * cin[0] - cin[-s1])
-    inc(cout, w)
-    cout[] = cin[-s1]
-    inc(cout, w)
-    cout[] = SF(17 * cin[s1] - cin[0])
-    inc(x)
-  c.height = c.height shl 1
-  c.stride = c.width
-  free(c.pixels)
-  c.pixels = data
+  printf("Co-Sited not supported\n")
+  exit(-1)
+  ##  int32 w = c->width, s1 = c->stride, s2 = s1 + s1;
+  ##  uint8 *data, *cin, *cout;
+  ##  int32 x, y;
+  ##  data = (uint8*)malloc((c->width * c->height) << 1);
+  ##  for (x = 0; x < w; ++x)
+  ##  {
+  ##      cin = &c->pixels[x];
+  ##      cout = &data[x];
+  ##      *cout = cin[0];
+  ##      cout += w;
+  ##      *cout = SF((cin[0] << 3) + 9 * cin[s1] - cin[s2]);
+  ##      cout += w;
+  ##      *cout = cin[s1];
+  ##      cout += w;
+  ##      cin += s1;
+  ##      for (y = c->height - 3; y != 0; --y)
+  ##      {
+  ##          *cout = SF(9 * (cin[0] + cin[s1]) - (cin[-s1] + cin[s2]));
+  ##          cout += w;
+  ##          *cout = cin[s1];
+  ##          cout += w;
+  ##          cin += s1;
+  ##      }
+  ##      *cout = SF((cin[s1] << 3) + 9 * cin[0] - cin[-s1]);
+  ##      cout += w;
+  ##      *cout = cin[-s1];
+  ##      cout += w;
+  ##      *cout = SF(17 * cin[s1] - cin[0]);
+  ##  }
+  ##  c->height <<= 1;
+  ##  c->stride = c->width;
+  ##  free(c->pixels);
+  ##  c->pixels = data;
 
 proc ujUpsampleFast*(uj: ptr ujContext; c: ptr ujComponent) =
   printf("ujUpsampleFast\n")
-  var
-    x: int32
-    y: int32
-    xshift: int32 = 0
-    yshift: int32 = 0
-  var
-    data: ptr uint8
-    lin: ptr uint8
-    lout: ptr uint8
-  while c.width < uj.width:
-    c.width = c.width shl 1
-    inc(xshift)
-  while c.height < uj.height:
-    c.height = c.height shl 1
-    inc(yshift)
-  if xshift == 0 and yshift == 0:
-    return
-  data = cast[ptr uint8](malloc(c.width * c.height))
-  lin = c.pixels
-  lout = data
-  y = 0
-  while y < c.height:
-    lin = addr(c.pixels[(y shr yshift) * c.stride])
-    x = 0
-    while x < c.width:
-      lout[x] = lin[x shr xshift]
-      inc(x)
-    inc(lout, c.width)
-    inc(y)
-  c.stride = c.width
-  free(c.pixels)
-  c.pixels = data
+  printf("Upsample Fast not supported\n")
+  exit(-1)
+  ##  int32 x, y, xshift = 0, yshift = 0;
+  ##  uint8 *data, *lin, *lout;
+  ##  while (c->width < uj->width)
+  ##  {
+  ##      c->width <<= 1;
+  ##      ++xshift;
+  ##  }
+  ##  while (c->height < uj->height)
+  ##  {
+  ##      c->height <<= 1;
+  ##      ++yshift;
+  ##  }
+  ##  if (xshift == 0 && yshift == 0)
+  ##      return;
+  ##  data = (uint8*)malloc(c->width * c->height);
+  ##  lin = c->pixels;
+  ##  lout = data;
+  ##  for (y = 0; y < c->height; ++y)
+  ##  {
+  ##      lin = &c->pixels[(y >> yshift) * c->stride];
+  ##      for (x = 0; x < c->width; ++x)
+  ##          lout[x] = lin[x >> xshift];
+  ##      lout += c->width;
+  ##  }
+  ##  c->stride = c->width;
+  ##  free(c->pixels);
+  ##  c->pixels = data;
 
 proc ujConvert*(uj: ptr ujContext; pout2: ptr uint8) =
   var pout: ptr uint8 = pout2
@@ -963,6 +957,7 @@ proc ujConvert*(uj: ptr ujContext; pout2: ptr uint8) =
     inc(i)
     inc(c)
   if uj.ncomp == 3:
+    printf("RGB!!!!\n")
     ##  convert to RGB
     var
       x: int32
@@ -983,21 +978,44 @@ proc ujConvert*(uj: ptr ujContext; pout2: ptr uint8) =
         inc(pout)
         pout[] = ujClip((y + 454 * cb + 128) shr 8)
         inc(pout)
+        pout[] = 255
+        inc(pout)
         inc(x)
       inc(py, uj.comp[0].stride)
       inc(pcb, uj.comp[1].stride)
       inc(pcr, uj.comp[2].stride)
       dec(yy)
   else:
+    printf("grayscale!!!!\n")
     ##  grayscale -> only remove stride
-    var pin: ptr uint8 = addr(uj.comp[0].pixels[uj.comp[0].stride])
-    var y: int32
-    y = uj.height - 1
-    while y != 0:
-      memcpy(pout, pin, uj.width)
-      inc(pin, uj.comp[0].stride)
-      inc(pout, uj.width)
-      dec(y)
+    ##  uint8 *pin = &uj->comp[0].pixels[uj->comp[0].stride];
+    ##  int32 y;
+    ##  for (y = uj->height - 1; y != 0; --y)
+    ##  {
+    ##      memcpy(pout, pin, uj->width);
+    ##      pin += uj->comp[0].stride;
+    ##      pout += uj->width;
+    ##  }
+    var
+      x: int32
+      yy: int32
+    var p: ptr uint8 = uj.comp[0].pixels
+    yy = uj.height
+    while yy != 0:
+      x = 0
+      while x < uj.width:
+        var g: uint8 = cast[uint8](p[x])
+        pout[] = g
+        inc(pout)
+        pout[] = g
+        inc(pout)
+        pout[] = g
+        inc(pout)
+        pout[] = 255
+        inc(pout)
+        inc(x)
+      inc(p, uj.comp[0].stride)
+      dec(yy)
 
 proc ujDone*(uj: ptr ujContext) =
   printf("ujDone\n")
@@ -1036,7 +1054,8 @@ proc ujGetExif32*(uj: ptr ujContext; p: ptr uint8): int32 =
         (cast[int32](p[2]) shl 8) + cast[int32](p[3])
 
 proc ujDecodeExif*(uj: ptr ujContext) =
-  var `ptr`: ptr uint8
+  printf("ujDecodeExif\n")
+  var pos: ptr uint8
   var
     size: int32
     count: int32
@@ -1045,40 +1064,45 @@ proc ujDecodeExif*(uj: ptr ujContext) =
     ujSkipMarker(uj)
     return
   ujDecodeLength(uj)
-  `ptr` = uj.pos
+  pos = uj.pos
   size = uj.length
   ujSkip(uj, uj.length)
   if size < 18:
     return
-  if memcmp(`ptr`, "Exif\x00\x00II*\x00", 10) == 0:
+  if memcmp(pos, "Exif\x00\x00II*\x00", 10) == 0:
     printf("exif_le = 1\n")
     uj.exif_le = 1
-  elif memcmp(`ptr`, "Exif\x00\x00MM\x00*", 10) == 0:
+  elif memcmp(pos, "Exif\x00\x00MM\x00*", 10) == 0:
     printf("exif_le = 0\n")
     uj.exif_le = 0
   else:
     return
     ##  invalid Exif header
-  i = ujGetExif32(uj, `ptr` + 10) + 6
+  i = ujGetExif32(uj, pos + 10) + 6
   if (i < 14) or (i > (size - 2)):
     return
-  inc(`ptr`, i)
+  printf("ujGetExif32\n")
+  inc(pos, i)
   dec(size, i)
-  count = cast[int32](ujGetExif16(uj, `ptr`))
+  count = cast[int32](ujGetExif16(uj, pos))
+  printf("count = %i\n", count)
   i = (size - 2) div 12
   if count > i:
+    printf("count > i, i = %i\n", i)
     return
-  inc(`ptr`, 2)
-  dec(count)
+  inc(pos, 2)
   while count != 0:
-    if (ujGetExif16(uj, `ptr`) == 0x0213) and
-        (ujGetExif16(uj, `ptr` + 2) == 3) and
-        (ujGetExif32(uj, `ptr` + 4) == 1): ##  tag = YCbCrPositioning
+    dec(count)
+    if (ujGetExif16(uj, pos) == 0x0213) and
+        (ujGetExif16(uj, pos + 2) == 3) and
+        (ujGetExif32(uj, pos + 4) == 1): ##  tag = YCbCrPositioning
     ##  type = SHORT
     ##  length = 1
-      uj.co_sited_chroma = (int32)(ujGetExif16(uj, `ptr` + 8) == 2)
+      uj.co_sited_chroma = (int32)(ujGetExif16(uj, pos + 8) == 2)
+      printf("co_sited_chroma = %i\n", uj.co_sited_chroma)
       return
-    inc(`ptr`, 12)
+    inc(pos, 12)
+  printf("done jklkf\n")
 
 ## /////////////////////////////////////////////////////////////////////////////
 
@@ -1108,25 +1132,30 @@ proc ujDecode*(img: ujImage; jpeg: pointer; size: int32): int32 =
       break
     ujSkip(uj, 2)
     case uj.pos[-1]
-    of 0xC0:
+    of 0xC0:                   ##  Start Of Frame (Baseline DCT)
       ujDecodeSOF(uj)
-    of 0xC4:
+    of 0xC4:                   ##  Define Huffman Table
       ujDecodeDHT(uj)
-    of 0xDB:
+    of 0xDB:                   ##  Define Quantization Table(s)
       ujDecodeDQT(uj)
-    of 0xDD:
+    of 0xDD:                   ##  Define Restart Interval
       ujDecodeDRI(uj)
-    of 0xDA:
+    of 0xDA:                   ##  Start Of Scan
       ujDecodeScan(uj)
-    of 0xFE:
+    of 0xFE:                   ##  Comment
       ujSkipMarker(uj)
     of 0xE1:
       ujDecodeExif(uj)
+    of 0xC2:                   ##  SOF2
+      printf("Progressive DCT not supported\n")
+      exit(-1)
+      ##  case 0xEn: Application-specific
+      ##  case 0xD9: Endd Of Image
     else:
       if (uj.pos[-1] and 0xF0) == 0xE0:
         ujSkipMarker(uj)
       else:
-        printf("UJ_UNSUPPORTED")
+        printf("UJ_UNSUPPORTED %i\n", uj.pos[-1])
         exit(-1)
   return 1
 
@@ -1150,11 +1179,7 @@ proc ujGetImage*(img: ujImage; dest: ptr uint8) =
   printf("ujGetImage\n")
   var uj: ptr ujContext = cast[ptr ujContext](img)
   if dest != nil:
-    if uj.rgb != nil:
-      printf("memcpy???\n")
-      memcpy(dest, uj.rgb, uj.width * uj.height * uj.ncomp)
-    else:
-      ujConvert(uj, dest)
+    ujConvert(uj, dest)
 
 proc ujDestroy*(img: ujImage) =
   ujDone(cast[ptr ujContext](img))

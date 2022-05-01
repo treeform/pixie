@@ -1,15 +1,17 @@
 import pixie/common, pixie/images
 
-when defined(pixieUseStb):
-  import pixie/fileformats/stb_image/stb_image
-
 const
   jpgStartOfImage* = [0xFF.uint8, 0xD8]
+
+when defined(pixieUseStb):
+  import pixie/fileformats/stb_image/stb_image
+else:
+  import pixie/fileformats/jpeg
 
 proc decodeJpg*(data: string): Image {.inline, raises: [PixieError].} =
   ## Decodes the JPEG into an Image.
   when not defined(pixieUseStb):
-    raise newException(PixieError, "Decoding JPG requires -d:pixieUseStb")
+    decodeJpeg(data)
   else:
     var
       width: int
