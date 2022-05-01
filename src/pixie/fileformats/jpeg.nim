@@ -66,13 +66,14 @@ type
     imageHeight, imageWidth: int
     quantizationTables: array[4, array[64, uint8]]
     huffmanTables: array[2, array[4, Huffman]] # 0 = DC, 1 = AC
-    components: array[3, Component]
+    numComponents: int
+    components: seq[Component]
     scanComponents: int
     spectralStart, spectralEnd: int
     successiveApproxLow, successiveApproxHigh: int
     maxHorizontalSamplingFactor, maxVerticalSamplingFactor: int
     mcuWidth, mcuHeight, numMcuWide, numMcuHigh: int
-    componentOrder: array[3, int]
+    componentOrder: seq[int]
     progressive, hitEOI: bool
 
 template failInvalid(msg = "unable to load") =
@@ -81,7 +82,7 @@ template failInvalid(msg = "unable to load") =
 proc readUint8(state: var DecoderState): uint8 {.inline.} =
   if state.pos >= state.buffer.len:
     failInvalid()
-  echo state.pos, ": 0x", state.buffer[state.pos].toHex()
+  # echo state.pos, ": 0x", state.buffer[state.pos].toHex()
   result = state.buffer[state.pos]
   inc state.pos
 
@@ -102,26 +103,27 @@ proc seekToMarker(state: var DecoderState): uint8 =
   x
 
 proc decodeDQT(state: var DecoderState) =
+  ## decode Define Quantization Table(s)
   var len = state.readUint16be() - 2
   while len > 0:
     let
       info = state.readUint8()
-      table = info and 15
+      tableId = info and 15
       precision = info shr 4
 
     if precision != 0:
-      failInvalid("unsuppored JPG qantization table precision")
+      failInvalid("unsupported quantization table precision")
 
-    if table > 3:
+    if tableId > 3:
       failInvalid()
 
     for i in 0 ..< 64:
-      state.quantizationTables[table][deZigZag[i]] = state.readUint8()
+      state.quantizationTables[tableId][deZigZag[i]] = state.readUint8()
 
     len -= 65
 
   if len != 0:
-    failInvalid()
+    failInvalid("DQT table length did not match")
 
 proc decodeDHT(state: var DecoderState) =
   proc buildHuffman(huffman: var Huffman, counts: array[16, uint8]) =
@@ -209,19 +211,24 @@ proc decodeSOF(state: var DecoderState) =
   state.imageHeight = state.readUint16be().int
   state.imageWidth = state.readUint16be().int
 
-  if state.imageHeight == 0 or state.imageWidth == 0:
-    failInvalid()
+  if state.imageHeight == 0:
+    failInvalid("image invalid 0 height")
+  if state.imageWidth == 0:
+    failInvalid("image invalid 0 width")
 
-  let components = state.readUint8()
-  if components != 3:
-    failInvalid("unsupported component count, must be 3")
+  state.numComponents = state.readUint8().int
+  if state.numComponents notin {1, 3}:
+    failInvalid("unsupported component count, must be 1 or 3")
 
-  len -= 15
+  echo "state.numComponents ", state.numComponents
+  # len -= 15
+  # echo "len ", len
 
-  if len != 0:
-    failInvalid()
+  # if len != 0:
+  #   failInvalid()
 
-  for i in 0 ..< 3:
+  for i in 0 ..< state.numComponents:
+    state.components.add(Component())
     state.components[i].id = state.readUint8()
     let
       info = state.readUint8()
@@ -239,7 +246,7 @@ proc decodeSOF(state: var DecoderState) =
     state.components[i].horizontalSamplingFactor = horizontal.int
     state.components[i].quantizationTable = quantizationTable
 
-  for i in 0 ..< 3:
+  for i in 0 ..< state.numComponents:
     state.maxVerticalSamplingFactor = max(
       state.maxVerticalSamplingFactor,
       state.components[i].verticalSamplingFactor
@@ -256,7 +263,7 @@ proc decodeSOF(state: var DecoderState) =
   state.numMcuHigh =
     (state.imageHeight + state.mcuHeight - 1) div state.mcuHeight
 
-  for i in 0 ..< 3:
+  for i in 0 ..< state.numComponents:
     state.components[i].width = (
       state.imageWidth *
       state.components[i].horizontalSamplingFactor +
@@ -292,7 +299,7 @@ proc decodeSOS(state: var DecoderState) =
   if state.scanComponents notin [1, 3]:
     failInvalid("unsupported scan component count")
 
-  if not state.progressive and state.scanComponents != 3:
+  if not state.progressive and state.scanComponents notin [1, 3]:
     failInvalid("unsupported scan component count")
 
   for i in 0 ..< state.scanComponents:
@@ -315,7 +322,7 @@ proc decodeSOS(state: var DecoderState) =
 
     state.components[component].huffmanAC = huffmanAC.int
     state.components[component].huffmanDC = huffmanDC.int
-    state.componentOrder[i] = component
+    state.componentOrder.add(component)
 
   state.spectralStart = state.readUint8().int
   state.spectralEnd = state.readUint8().int
@@ -668,6 +675,17 @@ proc yCbCrToRgbx(dst, py, pcb, pcr: ptr UncheckedArray[uint8], width: int) =
     dst[pos + 3] = 255
     pos += 4
 
+proc grayScaleToRgbx(dst, gray: ptr UncheckedArray[uint8], width: int) =
+  var pos: int
+  for i in 0 ..< width:
+    let g = gray[i]
+    dst[pos + 0] = g
+    dst[pos + 1] = g
+    dst[pos + 2] = g
+    dst[pos + 3] = 255
+    pos += 4
+
+
 proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
   ## Decodes the JPEG into an Image.
 
@@ -702,7 +720,7 @@ proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
   result = newImage(state.imageWidth, state.imageHeight)
 
   var resamples: array[3, Resample]
-  for i in 0 ..< 3:
+  for i in 0 ..< state.numComponents:
     resamples[i].horizontalExpansionFactor =
       state.maxHorizontalSamplingFactor div
       state.components[i].horizontalSamplingFactor
@@ -739,7 +757,7 @@ proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
 
   var componentOutputs: array[3, ptr UncheckedArray[uint8]]
   for y in 0 ..< state.imageHeight:
-    for i in 0 ..< 3:
+    for i in 0 ..< state.numComponents:
       let yBottom =
         resamples[i].yStep >= (resamples[i].verticalExpansionFactor shr 1)
       componentOutputs[i] = resamples[i].resample(
@@ -765,13 +783,23 @@ proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
     let dst = cast[ptr UncheckedArray[uint8]](
       result.data[state.imageWidth * y].addr
     )
-    yCbCrToRgbx(
-      dst,
-      componentOutputs[0],
-      componentOutputs[1],
-      componentOutputs[2],
-      state.imageWidth
-    )
+
+    if state.numComponents == 3:
+      yCbCrToRgbx(
+        dst,
+        componentOutputs[0],
+        componentOutputs[1],
+        componentOutputs[2],
+        state.imageWidth
+      )
+    elif state.numComponents == 1:
+      grayScaleToRgbx(
+        dst,
+        componentOutputs[0],
+        state.imageWidth,
+      )
+    else:
+      failInvalid()
 
 proc decodeJpeg*(data: string): Image {.inline, raises: [PixieError].} =
   decodeJpeg(cast[seq[uint8]](data))
