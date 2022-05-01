@@ -75,10 +75,12 @@ type
     componentOrder: seq[int]
     progressive, hitEOI: bool
 
-template failInvalid(msg = "unable to load") =
-  raise newException(PixieError, "Invalid JPEG, " & msg)
+template failInvalid(reason = "unable to load") =
+  ## Throw exception with a reason.
+  raise newException(PixieError, "Invalid JPEG, " & reason)
 
 proc readUint8(state: var DecoderState): uint8 {.inline.} =
+  ## Reads a byte.
   if state.pos >= state.buffer.len:
     failInvalid()
   # echo state.pos, ": 0x", state.buffer[state.pos].toHex()
@@ -86,23 +88,22 @@ proc readUint8(state: var DecoderState): uint8 {.inline.} =
   inc state.pos
 
 proc readUint16be(state: var DecoderState): uint16 =
+  ## Reads uint16 big-endian.
   (state.readUint8().uint16 shl 8) or state.readUint8()
 
 proc skipBytes(state: var DecoderState, n: int) =
+  ## Skips a number of bytes.
   if state.pos + n > state.buffer.len:
     failInvalid()
   state.pos += n
 
-proc seekToMarker(state: var DecoderState): uint8 =
-  var x = state.readUint8()
-  while x != 0xFF:
-    x = state.readUint8()
-  while x == 0xFF:
-    x = state.readUint8()
-  x
+proc skipChunk(state: var DecoderState) =
+  ## Skips current chunk.
+  let len = state.readUint16be() - 2
+  state.skipBytes(len.int)
 
 proc decodeDQT(state: var DecoderState) =
-  ## decode Define Quantization Table(s)
+  ## Decode Define Quantization Table(s)
   var len = state.readUint16be() - 2
   while len > 0:
     let
@@ -125,6 +126,7 @@ proc decodeDQT(state: var DecoderState) =
     failInvalid("DQT table length did not match")
 
 proc decodeDHT(state: var DecoderState) =
+  ## Decode Define Huffman Table
   proc buildHuffman(huffman: var Huffman, counts: array[16, uint8]) =
     block:
       var k: int
@@ -187,20 +189,8 @@ proc decodeDHT(state: var DecoderState) =
   if len != 0:
     failInvalid()
 
-proc decodeSegment(state: var DecoderState, marker: uint8) =
-  case marker:
-  of 0xDB: # Define Quantanization Table(s)
-    state.decodeDQT()
-  of 0xC4: # Define Huffman Tables
-    state.decodeDHT()
-  else:
-    if (marker >= 0xE0 and marker <= 0xEF) or marker == 0xFE:
-      let len = state.readUint16be() - 2
-      state.skipBytes(len.int)
-    else:
-      failInvalid("unexpected segment marker " & toHex(marker))
-
-proc decodeSOF(state: var DecoderState) =
+proc decodeSOF0(state: var DecoderState) =
+  ## Decode start of Frame
   var len = state.readUint16be() - 2
 
   let precision = state.readUint8()
@@ -229,10 +219,10 @@ proc decodeSOF(state: var DecoderState) =
       quantizationTable = state.readUint8()
 
     if quantizationTable > 3:
-      failInvalid()
+      failInvalid("invalid quantization table id")
 
     if vertical == 0 or vertical > 4 or horizontal == 0 or horizontal > 4:
-      failInvalid()
+      failInvalid("invalid component scaling factor")
 
     state.components[i].verticalSamplingFactor = vertical.int
     state.components[i].horizontalSamplingFactor = horizontal.int
@@ -283,7 +273,11 @@ proc decodeSOF(state: var DecoderState) =
         state.components[i].widthStride * state.components[i].heightStride
       )
 
+proc decodeSOF2(state: var DecoderState) =
+  failInvalid("unsupported progressive format")
+
 proc decodeSOS(state: var DecoderState) =
+  ## decode Start of Scan - header before the block data.
   var len = state.readUint16be() - 2
 
   state.scanComponents = state.readUint8().int
@@ -344,7 +338,10 @@ proc decodeSOS(state: var DecoderState) =
 
 proc fillBits(state: var DecoderState) =
   while state.bitCount <= 24:
-    let b = if state.hitEOI: 0.uint32 else: state.readUint8().uint32
+    let b = if state.hitEOI:
+        0.uint32
+      else:
+        state.readUint8().uint32
     if b == 0xFF:
       let c = state.readUint8()
       if c == 0:
@@ -390,6 +387,7 @@ proc huffmanDecode(state: var DecoderState, tableCurrent, table: int): uint8 =
     state.bitCount -= i
 
 template lrot(value: uint32, shift: int): uint32 =
+  ## Left rotate - used for huffman decoding.
   (value shl shift) or (value shr (32 - shift))
 
 proc extendReceive(state: var DecoderState, t: int): int {.inline.} =
@@ -406,12 +404,16 @@ proc extendReceive(state: var DecoderState, t: int): int {.inline.} =
 proc decodeBlock(
   state: var DecoderState, component: int
 ): array[64, int16] =
+  ## Decodes a block.
   let t = state.huffmanDecode(0, state.components[component].huffmanDC).int
   if t < 0:
     failInvalid()
 
   let
-    diff = if t == 0: 0 else: state.extendReceive(t)
+    diff = if t == 0:
+      0
+    else:
+      state.extendReceive(t)
     dc = state.components[component].dcPred + diff
   state.components[component].dcPred = dc
   result[0] = (dc * state.quantizationTables[
@@ -439,12 +441,7 @@ proc decodeBlock(
       inc i
 
 proc clamp(x: int): uint8 {.inline.} =
-  if cast[uint](x) > 255:
-    if x < 0:
-      return 0
-    if x > 255:
-      return 255
-  x.uint8
+  clamp(x, 0, 0xFF).uint8
 
 template idct1D(s0, s1, s2, s3, s4, s5, s6, s7: int32) =
   template f2f(x: float32): int32 = (x * 4096 + 0.5).int32
@@ -563,6 +560,7 @@ proc idctBlockDC(component: var Component, offset: int) =
   discard
 
 proc decodeScanData(state: var DecoderState) =
+  ## Decodes scan data blocks that follow a SOS block.
   if state.progressive:
     if state.scanComponents == 1:
       discard
@@ -654,6 +652,7 @@ proc resampleRowH2V2(
   dst
 
 proc yCbCrToRgbx(dst, py, pcb, pcr: ptr UncheckedArray[uint8], width: int) =
+  ## Takes a 3 component outputs and populates image.
   template float2Fixed(x: float32): int =
     (x * 4096 + 0.5).int shl 8
 
@@ -676,6 +675,7 @@ proc yCbCrToRgbx(dst, py, pcb, pcr: ptr UncheckedArray[uint8], width: int) =
     pos += 4
 
 proc grayScaleToRgbx(dst, gray: ptr UncheckedArray[uint8], width: int) =
+  ## Takes a single gray scale component output and populates image.
   var pos: int
   for i in 0 ..< width:
     let g = gray[i]
@@ -685,37 +685,8 @@ proc grayScaleToRgbx(dst, gray: ptr UncheckedArray[uint8], width: int) =
     dst[pos + 3] = 255
     pos += 4
 
-proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
-  ## Decodes the JPEG into an Image.
-
-  var state = DecoderState()
-  state.buffer = data
-
-  if state.readUint8() != 0xFF or state.readUint8() != 0xD8: # SOI
-    failInvalid()
-
-  var marker = state.seekToMarker()
-  while marker != 0xC0 and marker != 0xC1 and marker != 0xC2:
-    # Baseline DCT or Extended DCT or Progressive DCT
-    state.decodeSegment(marker)
-    marker = state.seekToMarker()
-
-  state.progressive = marker == 0xC2
-  state.decodeSOF()
-
-  while true:
-    marker = state.seekToMarker()
-    if marker == 0xDA: # Start of Scan
-      state.decodeSOS()
-      state.decodeScanData()
-    else:
-      state.decodeSegment(marker)
-    if state.hitEOI:
-      break
-
-  if state.progressive:
-    state.finishProgressive()
-
+proc buildImage(state: var DecoderState): Image =
+  ## Takes a jpeg image object and builds a pixie Image from it.
   result = newImage(state.imageWidth, state.imageHeight)
 
   var resamples: array[3, Resample]
@@ -757,12 +728,12 @@ proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
     else:
       failInvalid()
 
-  var componentOutputs: array[3, ptr UncheckedArray[uint8]]
   for y in 0 ..< state.imageHeight:
+    var componentOutputs: seq[ptr UncheckedArray[uint8]]
     for i in 0 ..< state.components.len:
       let yBottom =
         resamples[i].yStep >= (resamples[i].verticalExpansionFactor shr 1)
-      componentOutputs[i] = resamples[i].resample(
+      componentOutputs.add resamples[i].resample(
         cast[ptr UncheckedArray[uint8]](state.components[i].lineBuf[0].addr),
         if yBottom: resamples[i].line1 else: resamples[i].line0,
         if yBottom: resamples[i].line0 else: resamples[i].line1,
@@ -802,6 +773,65 @@ proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
       )
     else:
       failInvalid()
+
+proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
+  ## Decodes the JPEG into an Image.
+
+  var state = DecoderState()
+  state.buffer = data
+
+  # Read header SOI
+  if state.readUint16be() != 0xFFD8:
+    failInvalid("invalid header")
+
+  while not state.hitEOI:
+    if state.readUint8() != 0xFF:
+      failInvalid("invalid chunk marker")
+    let chunkId = state.readUint8()
+    case chunkId:
+      of 0xC0:
+        # Start Of Frame (Baseline DCT)
+        state.decodeSOF0()
+      of 0xC2:
+        # Start Of Frame (Progressive DCT)
+        state.decodeSOF2()
+      of 0xC4:
+        # Define Huffman Table
+        state.decodeDHT()
+      of 0xDB:
+        # Define Quantization Table(s)
+        state.decodeDQT()
+      of 0xDD:
+        # Define Restart Interval
+        # state.decodeDRI()
+        state.skipChunk()
+      of 0xDA:
+        # Start Of Scan
+        state.decodeSOS()
+        # Encoded data
+        state.decodeScanData()
+        # Most likely its the end here.
+      of 0XE0:
+        # Application-specific
+        # state.decodeAPP0(data, at)
+        state.skipChunk()
+      of 0xE1:
+        # Exif
+        # state.decodeExif(data, at)
+        state.skipChunk()
+      of 0xE2..0xEF:
+        # Application-specific
+        state.skipChunk()
+      of 0xFE:
+        # Comment
+        state.skipChunk()
+      else:
+        failInvalid("invalid chunk " & chunkId.toHex())
+
+  # # if state.progressive:
+  # #   state.finishProgressive()
+
+  state.buildImage()
 
 proc decodeJpeg*(data: string): Image {.inline, raises: [PixieError].} =
   decodeJpeg(cast[seq[uint8]](data))
