@@ -1,5 +1,13 @@
 import pixie/common, pixie/images, strutils, tables
 
+# This JPEG decoder is loosely based on stb_image which is public domain.
+
+# JPEG is a complex format, this decoder only supports the most common features:
+# * yCbCr format
+# * gray scale format
+# * 4:4:4, 4:2:2, 4:1:1, 4:2:0 resampling modes
+# * progressive
+
 # * https://github.com/daviddrysdale/libjpeg
 # * https://www.youtube.com/watch?v=Kv1Hiv3ox8I
 # * https://dev.exiv2.org/projects/exiv2/wiki/The_Metadata_in_JPEG_files
@@ -88,15 +96,14 @@ template failInvalid(reason = "unable to load") =
   raise newException(PixieError, "Invalid JPEG, " & reason)
 
 proc readUint8(state: var DecoderState): uint8 {.inline.} =
-  ## Reads a byte.
+  ## Reads a byte from the input stream.
   if state.pos >= state.buffer.len:
     failInvalid()
-  # echo state.pos, ": 0x", state.buffer[state.pos].toHex()
   result = state.buffer[state.pos]
   inc state.pos
 
 proc readUint16be(state: var DecoderState): uint16 =
-  ## Reads uint16 big-endian.
+  ## Reads uint16 big-endian from the input stream.
   (state.readUint8().uint16 shl 8) or state.readUint8()
 
 proc skipBytes(state: var DecoderState, n: int) =
@@ -113,11 +120,9 @@ proc skipChunk(state: var DecoderState) =
 proc decodeDRI(state: var DecoderState) =
   ## Decode Define Restart Interval
   var len = state.readUint16be() - 2
-  echo len
   if len != 2:
     failInvalid("invalid DRI length")
   state.restartInterval = state.readUint16be().int
-  echo state.restartInterval
   quit()
 
 proc decodeDQT(state: var DecoderState) =
@@ -128,18 +133,13 @@ proc decodeDQT(state: var DecoderState) =
       info = state.readUint8()
       tableId = info and 15
       precision = info shr 4
-
     if precision != 0:
       failInvalid("unsupported quantization table precision")
-
     if tableId > 3:
       failInvalid()
-
     for i in 0 ..< 64:
       state.quantizationTables[tableId][deZigZag[i]] = state.readUint8()
-
     len -= 65
-
   if len != 0:
     failInvalid("DQT table length did not match")
 
@@ -197,7 +197,6 @@ proc decodeDHT(state: var DecoderState) =
 
     len -= 17
 
-    echo "update huffmanTables ", tableCurrent, " ", table
     state.huffmanTables[tableCurrent][table] = Huffman()
     state.huffmanTables[tableCurrent][table].buildHuffman(counts)
 
@@ -297,17 +296,16 @@ proc decodeSOF1(state: var DecoderState) =
   failInvalid("unsupported extended sequential DCT format")
 
 proc decodeSOF2(state: var DecoderState) =
-  # failInvalid("unsupported progressive DCT format")
+  ## Decode Start of Image (Progressive DCT format)
   # Same as SOF0
   state.decodeSOF0()
   state.progressive = true
 
 proc decodeSOS(state: var DecoderState) =
-  ## decode Start of Scan - header before the block data.
+  ## Decode Start of Scan - header before the block data.
   var len = state.readUint16be() - 2
 
   state.scanComponents = state.readUint8().int
-  echo "scanComponents ", state.scanComponents
 
   if state.scanComponents notin [1, 3]:
     failInvalid("unsupported scan component count")
@@ -346,7 +344,6 @@ proc decodeSOS(state: var DecoderState) =
   state.successiveApproxLow = aa and 15
   state.successiveApproxHigh = aa shr 4
 
-  echo "reset code_buffer"
   state.bits = 0
   state.bitCount = 0
   state.hitEnd = false
@@ -356,10 +353,8 @@ proc decodeSOS(state: var DecoderState) =
   else:
     state.todo = 0x7fffffff
   state.eobRun = 0
-  echo "todo ", state.todo, " eobRun ", state.eobRun
 
   if state.progressive:
-    echo "progressive"
     if state.spectralStart > 63 or state.spectralEnd > 63:
       failInvalid()
     if state.spectralEnd > state.spectralEnd:
@@ -379,32 +374,29 @@ proc decodeSOS(state: var DecoderState) =
     failInvalid()
 
 proc fillBits(state: var DecoderState) =
-  echo "fillBits"
+  ## When we are low on bits, we need to call this to populate some more.
   while true:
     let b = if state.hitEnd:
         0.uint32
       else:
         state.readUint8().uint32
-    echo "b ", b
     if b == 0xFF:
       var c = state.readUint8()
       while c == 0xFF: c = state.readUint8()
-      echo "c ", c
       if c != 0:
-        echo "break fillBits"
         dec state.pos
         dec state.pos
         state.hitEnd = true
         return
     state.bits = state.bits or (b shl (24 - state.bitCount))
-    echo "1 state.bits = ", state.bits
     state.bitCount += 8
 
     if not(state.bitCount <= 24):
       break
 
 proc huffmanDecode(state: var DecoderState, tableCurrent, table: int): uint8 =
-  echo "huffmanDecode"
+  ## Decode a uint8 from the huffman table.
+
   if state.bitCount < 16:
     state.fillBits()
 
@@ -416,7 +408,6 @@ proc huffmanDecode(state: var DecoderState, tableCurrent, table: int): uint8 =
     if size > state.bitCount:
       failInvalid()
     state.bits = state.bits shl size
-    echo "2 state.bits = ", state.bits
     state.bitCount -= size
     return state.huffmanTables[tableCurrent][table].symbols[fast]
 
@@ -429,14 +420,12 @@ proc huffmanDecode(state: var DecoderState, tableCurrent, table: int): uint8 =
     inc i
 
   if i == 17 or i > state.bitCount:
-    echo "i ", i, " state.bitCount ", state.bitCount
     failInvalid()
 
   let symbolId = (state.bits shr (32 - i)).int +
     state.huffmanTables[tableCurrent][table].deltas[i]
 
   state.bits = state.bits shl i
-  echo "3 state.bits = ", state.bits
   state.bitCount -= i
   return state.huffmanTables[tableCurrent][table].symbols[symbolId]
 
@@ -444,24 +433,40 @@ template lrot(value: uint32, shift: int): uint32 =
   ## Left rotate - used for huffman decoding.
   (value shl shift) or (value shr (32 - shift))
 
-proc extendReceive(state: var DecoderState, t: int): int {.inline.} =
-  echo "extendReceive"
-  if state.bitCount < t:
+proc stbi_jpeg_get_bit(state: var DecoderState): int =
+  ## Get a single bit.
+  if state.bitCount < 1:
     state.fillBits()
+  let k = state.bits
+  state.bits = state.bits shl 1
+  dec state.bitCount
+  return (k.int and 0x80000000.int)
 
+proc extendReceive(state: var DecoderState, n: int): int {.inline.} =
+  ## Get n number of bits as a signed integer.
+  if state.bitCount < n:
+    state.fillBits()
   let sign = cast[int32](state.bits) shr 31
-  var k = lrot(state.bits, t)
-  state.bits = k and (not bitMasks[t])
-  echo "4 state.bits = ", state.bits
-  k = k and bitMasks[t]
-  state.bitCount -= t
-  result = k.int + (biases[t] and (not sign))
+  var k = lrot(state.bits, n)
+  state.bits = k and (not bitMasks[n])
+  k = k and bitMasks[n]
+  state.bitCount -= n
+  result = k.int + (biases[n] and (not sign))
+
+proc stbi_jpeg_get_bits(state: var DecoderState, n: int): int =
+  ## Get n number of bits as a unsigned integer.
+  if state.bitCount < n:
+    state.fillBits()
+  var k = lrot(state.bits, n)
+  state.bits = k and (not bitMasks[n])
+  k = k and bitMasks[n]
+  state.bitCount -= n
+  return k.int
 
 proc decodeBlock(
   state: var DecoderState, component: int
 ): array[64, int16] =
-  ## Decodes a block.
-  echo "decodeBlock"
+  ## Decodes a whole block.
 
   if state.bitCount < 16:
     state.fillBits()
@@ -486,8 +491,6 @@ proc decodeBlock(
   while i < 64:
     if state.bitCount < 16:
       state.fillBits()
-    # TODO fast-AC path???
-
     let
       rs = state.huffmanDecode(1, state.components[component].huffmanAC)
       s = rs and 15
@@ -504,74 +507,36 @@ proc decodeBlock(
       ][zig].int).int16
       inc i
 
-proc stbi_jpeg_get_bit(state: var DecoderState): int =
-  if state.bitCount < 1: state.fillBits()
-  let k = state.bits
-  state.bits = state.bits shl 1
-  dec state.bitCount
-  echo "5 state.bits = ", state.bits
-  return (k.int and 0x80000000.int)
-
-proc stbi_jpeg_get_bits(state: var DecoderState, n: int): int =
-  if state.bitCount < n: state.fillBits()
-  var k = lrot(state.bits, n)
-  echo "k ", k
-  state.bits = k and (not bitMasks[n])
-  echo "8 state.bits = ", state.bits
-  k = k and bitMasks[n]
-  state.bitCount -= n
-  return k.int
-
 proc decodeProgressiveBlock(
   state: var DecoderState, component: int, data: array[64, int16]
 ): array[64, int16] =
-  ## Decodes a block.
+  ## Decodes a progressive block.
 
   result = data
-
-  echo "DC"
 
   if state.spectralEnd != 0:
     failInvalid("can't merge dc and ac")
 
-  echo "decode 0 {"
-  if state.bitCount < 16: state.fillBits()
-  echo "}"
+  if state.bitCount < 16:
+    state.fillBits()
 
   if state.successiveApproxHigh == 0:
-
-    # Not need to clear data
-
-    echo "decode 1 {"
     let t = state.huffmanDecode(0, state.components[component].huffmanDC).int
-    echo "}"
-
-    echo "t ", t
     if t < 0 or t > 15:
       failInvalid()
-
-    echo "decode 2 {"
     let
       diff = if t != 0:
         state.extendReceive(t)
       else:
         0
-    echo "}"
-    echo "diff ", diff
-
     let
       dc = state.components[component].dcPred + diff
     state.components[component].dcPred = dc
-
-    echo "successiveApproxLow ", state.successiveApproxLow
     result[0] = int16(dc * (1 shl state.successiveApproxLow))
-    echo "result[0] ", result[0]
 
   else:
-    echo "decode 3 {"
     if stbi_jpeg_get_bit(state) != 0:
       result[0] += (1 shl state.successiveApproxLow).int16
-    echo "}"
 
 proc decodeProgressiveBlockContinuation(
   state: var DecoderState, component: int, data: array[64, int16]
@@ -579,38 +544,21 @@ proc decodeProgressiveBlockContinuation(
 
   result = data
 
-  echo "AC"
-  echo "bits ", state.bits
-  echo "spectralStart ", state.spectralStart
-  echo "spectralEnd ", state.spectralEnd
-  echo "successiveApproxLow ", state.successiveApproxLow
-  echo "successiveApproxHigh ", state.successiveApproxHigh
-
   if state.spectralStart == 0:
     failInvalid("can't merge progressive blocks")
 
   if state.successiveApproxHigh == 0:
-    echo "j->succ_high == 0"
     var shift = state.successiveApproxLow
-    echo "shift ", shift
 
     if state.eobRun != 0:
-      echo "j->eob_run ", state.eobRun
       dec state.eobRun
       return
 
     var k = state.spectralStart
     while true:
-      echo "high loop k ", k
       if state.bitCount < 16:
         state.fillBits()
-      echo "j->code_buffer ", state.bits
       let c = (state.bits shr (32 - fastBits)) and ((1 shl fastBits) - 1)
-      echo "c ", c
-      # var r = state.components[component].huffmanAC
-      # echo "r ", r
-
-      # TODO fast-AC path???
 
       let
         rs = state.huffmanDecode(1, state.components[component].huffmanAC)
@@ -621,36 +569,25 @@ proc decodeProgressiveBlockContinuation(
         r = rs.int shr 4
       if s == 0:
         if r < 15:
-          # TODO eob?
-          echo "eob_run 2???"
           state.eobRun = 1 shl r
           if r != 0:
             state.eobRun += state.stbi_jpeg_get_bits(r)
           dec state.eobRun
-          echo "eobRun ", state.eobRun
           break
         k += 16
       else:
         k += r.int
         let zig = deZigZag[k]
-        echo "zig ", zig
         inc k
         result[zig] = (state.extendReceive(s.int) * (1 shl shift)).int16
-        echo "data[", zig, "] = ", result[zig]
 
       if not(k <= state.spectralEnd):
         break
 
   else:
-    echo "j->succ_high != 0"
-
-
     var bit = 1 shl state.successiveApproxLow
-    echo "bit ", bit
-
 
     if state.eobRun != 0:
-      echo "eob_run ", state.eobRun
       dec state.eobRun
       for k in state.spectralStart ..< state.spectralEnd:
         let zig = deZigZag[k]
@@ -662,11 +599,8 @@ proc decodeProgressiveBlockContinuation(
               else:
                 result[zig] -= bit.int16
     else:
-
       var k = state.spectralStart
-      echo "k ", k
       while true:
-        echo "low loop k ", k
         let
           rs = state.huffmanDecode(1, state.components[component].huffmanAC)
         if rs < 0:
@@ -676,11 +610,9 @@ proc decodeProgressiveBlockContinuation(
           r = rs.int shr 4
         if s == 0:
           if r < 15:
-            echo "eob_run 3???"
             state.eobRun = (1 shl r) - 1
             if r != 0:
               state.eobRun += state.stbi_jpeg_get_bits(r)
-            echo "eobRun ", state.eobRun
             r = 64 # force end of block
           else:
             discard
@@ -692,18 +624,12 @@ proc decodeProgressiveBlockContinuation(
           else:
             s = -bit.int
 
-        echo "s ", s
-
-        # advance by r
         while k <= state.spectralEnd:
           let zig = deZigZag[k]
           inc k
-          # let p = result[zig]
           if result[zig] != 0:
-            echo "result[zig] != 0"
             if stbi_jpeg_get_bit(state) != 0:
               if (result[zig] and bit) == 0:
-                echo "result[", zig, "] = ", result[zig]
                 if result[zig] > 0:
                   result[zig] += bit.int16
                 else:
@@ -716,8 +642,6 @@ proc decodeProgressiveBlockContinuation(
 
         if not (k <= state.spectralEnd):
           break
-
-  echo "DONE AC"
 
 proc clamp(x: int): uint8 {.inline.} =
   clamp(x, 0, 0xFF).uint8
@@ -844,7 +768,7 @@ proc decodeBlocks(state: var DecoderState) =
   if state.progressive:
 
     if state.scanComponents == 1:
-      echo "non-interleaved"
+      # Single component pass.
       let
         comp = state.componentOrder[0]
         w = (state.components[comp].width + 7) shr 3
@@ -864,15 +788,6 @@ proc decodeBlocks(state: var DecoderState) =
             except:
               failInvalid()
 
-          echo "1 comp ", comp, " row ", row, " column ", column
-
-          # echo "pre data"
-          # for yy in 0 ..< 8:
-          #   var line = ""
-          #   for xx in 0 ..< 8:
-          #     line.add " " & $data[xx+yy*8]
-          #   echo line
-
           if state.spectralStart == 0:
             data = state.decodeProgressiveBlock(comp, data)
           else:
@@ -883,17 +798,8 @@ proc decodeBlocks(state: var DecoderState) =
           except:
             failInvalid()
 
-          # echo "post data"
-          # for yy in 0 ..< 8:
-          #   var line = ""
-          #   for xx in 0 ..< 8:
-          #     line.add " " & $data[xx+yy*8]
-          #   echo line
-
-
     else:
-      echo "interleaved"
-
+      # Interleaved component pass.
       for y in 0 ..< state.numMcuHigh:
         for x in 0 ..< state.numMcuWide:
           for comp in state.componentOrder:
@@ -915,15 +821,6 @@ proc decodeBlocks(state: var DecoderState) =
                   except:
                     failInvalid()
 
-                echo "2 comp ", comp, " row ", row, " column ", column
-
-                # echo "pre data"
-                # for yy in 0 ..< 8:
-                #   var line = ""
-                #   for xx in 0 ..< 8:
-                #     line.add " " & $data[xx+yy*8]
-                #   echo line
-
                 if state.spectralStart == 0:
                   data = state.decodeProgressiveBlock(comp, data)
                 else:
@@ -934,20 +831,7 @@ proc decodeBlocks(state: var DecoderState) =
                 except:
                   failInvalid()
 
-                # echo "post data"
-                # for yy in 0 ..< 8:
-                #   var line = ""
-                #   for xx in 0 ..< 8:
-                #     line.add " " & $data[xx+yy*8]
-                #   echo line
-
-
   else:
-    if state.scanComponents == 1:
-      echo "non-interleaved"
-    else:
-      echo "interleaved"
-
     for y in 0 ..< state.numMcuHigh:
       for x in 0 ..< state.numMcuWide:
         for comp in state.componentOrder:
@@ -962,23 +846,14 @@ proc decodeBlocks(state: var DecoderState) =
                   y * state.components[comp].xScale + j
                 ) * 8
 
-              echo "2 comp ", comp, " row ", row, " column ", column
-              # echo "post data"
-              # for yy in 0 ..< 8:
-              #   var line = ""
-              #   for xx in 0 ..< 8:
-              #     line.add " " & $data[xx+yy*8]
-              #   echo line
-
               state.progressiveData[(comp, row, column)] = data
               state.components[comp].idctBlock(
                 state.components[comp].widthStride * column + row,
                 data
               )
 
-proc finish(state: var DecoderState) =
-  echo "dequantize and idct the data"
-
+proc finishProgressive(state: var DecoderState) =
+  ## Does quantization and IDCT.
   for comp in 0 ..< state.components.len:
     let
       w = (state.components[comp].width + 7) shr 3
@@ -986,49 +861,25 @@ proc finish(state: var DecoderState) =
 
     for j in 0 ..< h:
       for i in 0 ..< w:
+        let
+          row = i * 8
+          column = j * 8
 
-            let
-              row = i * 8
-              column = j * 8
+        var data: array[64, int16]
 
-            var data: array[64, int16]
+        if (comp, row, column) in state.progressiveData:
+          try:
+            data = state.progressiveData[(comp, row, column)]
+          except:
+            failInvalid()
 
-            if (comp, row, column) in state.progressiveData:
-              try:
-                data = state.progressiveData[(comp, row, column)]
-              except:
-                failInvalid()
+        for i in 0 ..< 64:
+          data[i] = data[i] * state.quantizationTables[state.components[comp].quantizationTableId][i].int16
 
-            echo "comp ", comp, " row ", row, " column ", column
-
-            # echo "pre data"
-            # for yy in 0 ..< 8:
-            #   var line = ""
-            #   for xx in 0 ..< 8:
-            #     line.add " " & $data[xx+yy*8]
-            #   echo line
-
-            # echo "q table"
-            # for yy in 0 ..< 8:
-            #   var line = ""
-            #   for xx in 0 ..< 8:
-            #     line.add " " & $state.quantizationTables[state.components[comp].quantizationTableId][xx+yy*8]
-            #   echo line
-
-            for i in 0 ..< 64:
-              data[i] = data[i] * state.quantizationTables[state.components[comp].quantizationTableId][i].int16
-
-            # echo "post data"
-            # for yy in 0 ..< 8:
-            #   var line = ""
-            #   for xx in 0 ..< 8:
-            #     line.add " " & $data[xx+yy*8]
-            #   echo line
-
-            state.components[comp].idctBlock(
-              state.components[comp].widthStride * column + row,
-              data
-            )
+        state.components[comp].idctBlock(
+          state.components[comp].widthStride * column + row,
+          data
+        )
 
 proc resampleRowH1V1(
   dst, a, b: ptr UncheckedArray[uint8],
@@ -1236,7 +1087,6 @@ proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
       failInvalid("invalid chunk marker")
 
     let chunkId = state.readUint8()
-    # echo chunkId.toHex()
     case chunkId:
       of 0xC0:
         # Start Of Frame (Baseline DCT)
@@ -1248,7 +1098,6 @@ proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
         # Start Of Frame (Progressive DCT)
         state.decodeSOF2()
       of 0xC4:
-        echo "DHT"
         # Define Huffman Table
         state.decodeDHT()
       of 0xD8:
@@ -1259,14 +1108,12 @@ proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
         break
       of 0xDB:
         # Define Quantization Table(s)
-        echo "DQT"
         state.decodeDQT()
       of 0xDD:
         # Define Restart Interval
         state.decodeDRI()
       of 0xDA:
         # Start Of Scan
-        echo "SOS"
         state.decodeSOS()
         # Encoded data
         state.decodeBlocks()
@@ -1288,7 +1135,7 @@ proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
         failInvalid("invalid chunk " & chunkId.toHex())
 
   if state.progressive:
-    state.finish()
+    state.finishProgressive()
 
   state.buildImage()
 
