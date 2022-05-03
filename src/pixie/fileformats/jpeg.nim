@@ -433,7 +433,7 @@ template lrot(value: uint32, shift: int): uint32 =
   ## Left rotate - used for huffman decoding.
   (value shl shift) or (value shr (32 - shift))
 
-proc stbi_jpeg_get_bit(state: var DecoderState): int =
+proc getBit(state: var DecoderState): int =
   ## Get a single bit.
   if state.bitCount < 1:
     state.fillBits()
@@ -442,7 +442,7 @@ proc stbi_jpeg_get_bit(state: var DecoderState): int =
   dec state.bitCount
   return (k.int and 0x80000000.int)
 
-proc extendReceive(state: var DecoderState, n: int): int {.inline.} =
+proc getBitsAsSignedInt(state: var DecoderState, n: int): int {.inline.} =
   ## Get n number of bits as a signed integer.
   if state.bitCount < n:
     state.fillBits()
@@ -453,7 +453,7 @@ proc extendReceive(state: var DecoderState, n: int): int {.inline.} =
   state.bitCount -= n
   result = k.int + (biases[n] and (not sign))
 
-proc stbi_jpeg_get_bits(state: var DecoderState, n: int): int =
+proc getBitsAsUnsignedInt(state: var DecoderState, n: int): int =
   ## Get n number of bits as a unsigned integer.
   if state.bitCount < n:
     state.fillBits()
@@ -467,10 +467,6 @@ proc decodeRegularBlock(
   state: var DecoderState, component: int, data: var array[64, int16]
 ) =
   ## Decodes a whole block.
-
-  if state.bitCount < 16:
-    state.fillBits()
-
   let t = state.huffmanDecode(0, state.components[component].huffmanDC).int
   if t < 0:
     failInvalid()
@@ -479,15 +475,13 @@ proc decodeRegularBlock(
     diff = if t == 0:
       0
     else:
-      state.extendReceive(t)
+      state.getBitsAsSignedInt(t)
     dc = state.components[component].dcPred + diff
   state.components[component].dcPred = dc
   data[0] = dc.int16
 
   var i = 1
   while i < 64:
-    if state.bitCount < 16:
-      state.fillBits()
     let
       rs = state.huffmanDecode(1, state.components[component].huffmanAC)
       s = rs and 15
@@ -499,18 +493,15 @@ proc decodeRegularBlock(
     else:
       i += r.int
       let zig = deZigZag[i]
-      data[zig] = state.extendReceive(s.int).int16
+      data[zig] = state.getBitsAsSignedInt(s.int).int16
       inc i
 
 proc decodeProgressiveBlock(
   state: var DecoderState, component: int, data: var array[64, int16]
 ) =
-  ## Decodes a progressive block.
+  ## Decode a Progressive Start Block
   if state.spectralEnd != 0:
     failInvalid("can't merge dc and ac")
-
-  if state.bitCount < 16:
-    state.fillBits()
 
   if state.successiveApproxHigh == 0:
     let t = state.huffmanDecode(0, state.components[component].huffmanDC).int
@@ -518,7 +509,7 @@ proc decodeProgressiveBlock(
       failInvalid()
     let
       diff = if t != 0:
-        state.extendReceive(t)
+        state.getBitsAsSignedInt(t)
       else:
         0
     let
@@ -527,13 +518,13 @@ proc decodeProgressiveBlock(
     data[0] = int16(dc * (1 shl state.successiveApproxLow))
 
   else:
-    if stbi_jpeg_get_bit(state) != 0:
+    if getBit(state) != 0:
       data[0] += (1 shl state.successiveApproxLow).int16
 
-proc decodeProgressiveBlockContinuation(
+proc decodeProgressiveContinuationBlock(
   state: var DecoderState, component: int, data: var array[64, int16]
 ) =
-  ## Decode
+  ## Decode a Progressive Continuation Block
   if state.spectralStart == 0:
     failInvalid("can't merge progressive blocks")
 
@@ -546,10 +537,6 @@ proc decodeProgressiveBlockContinuation(
 
     var k = state.spectralStart
     while true:
-      if state.bitCount < 16:
-        state.fillBits()
-      let c = (state.bits shr (32 - fastBits)) and ((1 shl fastBits) - 1)
-
       let
         rs = state.huffmanDecode(1, state.components[component].huffmanAC)
       if rs < 0:
@@ -561,7 +548,7 @@ proc decodeProgressiveBlockContinuation(
         if r < 15:
           state.eobRun = 1 shl r
           if r != 0:
-            state.eobRun += state.stbi_jpeg_get_bits(r)
+            state.eobRun += state.getBitsAsUnsignedInt(r)
           dec state.eobRun
           break
         k += 16
@@ -569,7 +556,7 @@ proc decodeProgressiveBlockContinuation(
         k += r.int
         let zig = deZigZag[k]
         inc k
-        data[zig] = (state.extendReceive(s.int) * (1 shl shift)).int16
+        data[zig] = (state.getBitsAsSignedInt(s.int) * (1 shl shift)).int16
 
       if not(k <= state.spectralEnd):
         break
@@ -582,7 +569,7 @@ proc decodeProgressiveBlockContinuation(
       for k in state.spectralStart ..< state.spectralEnd:
         let zig = deZigZag[k]
         if data[zig] != 0:
-          if state.stbi_jpeg_get_bit() != 0:
+          if state.getBit() != 0:
             if (data[zig] and bit) == 0:
               if data[zig] > 0:
                 data[zig] += bit.int16
@@ -602,14 +589,14 @@ proc decodeProgressiveBlockContinuation(
           if r < 15:
             state.eobRun = (1 shl r) - 1
             if r != 0:
-              state.eobRun += state.stbi_jpeg_get_bits(r)
+              state.eobRun += state.getBitsAsUnsignedInt(r)
             r = 64 # force end of block
           else:
             discard
         else:
           if s != 1:
             failInvalid("bad huffman code")
-          if stbi_jpeg_get_bit(state) != 0:
+          if getBit(state) != 0:
             s = bit.int
           else:
             s = -bit.int
@@ -618,7 +605,7 @@ proc decodeProgressiveBlockContinuation(
           let zig = deZigZag[k]
           inc k
           if data[zig] != 0:
-            if stbi_jpeg_get_bit(state) != 0:
+            if getBit(state) != 0:
               if (data[zig] and bit) == 0:
                 if data[zig] > 0:
                   data[zig] += bit.int16
@@ -634,6 +621,7 @@ proc decodeProgressiveBlockContinuation(
           break
 
 proc clamp(x: int): uint8 {.inline.} =
+  ## Clamp integer into byte range.
   clamp(x, 0, 0xFF).uint8
 
 template idct1D(s0, s1, s2, s3, s4, s5, s6, s7: int32) =
@@ -750,7 +738,7 @@ proc idctBlock(component: var Component, offset: int, data: array[64, int16]) =
     component.data[outPos + 4] = clamp((x3 - t0) shr 17)
 
 proc decodeBlock(state: var DecoderState, comp, row, column: int) =
-
+  ## Decodes a block.
   var data: array[64, int16]
   if (comp, row, column) in state.progressiveData:
     try:
@@ -761,7 +749,7 @@ proc decodeBlock(state: var DecoderState, comp, row, column: int) =
     if state.spectralStart == 0:
       state.decodeProgressiveBlock(comp, data)
     else:
-      state.decodeProgressiveBlockContinuation(comp, data)
+      state.decodeProgressiveContinuationBlock(comp, data)
   else:
     state.decodeRegularBlock(comp, data)
   try:
@@ -771,7 +759,6 @@ proc decodeBlock(state: var DecoderState, comp, row, column: int) =
 
 proc decodeBlocks(state: var DecoderState) =
   ## Decodes scan data blocks that follow a SOS block.
-
   if state.progressive:
     if state.scanComponents == 1:
       # Single component pass.
@@ -901,7 +888,7 @@ proc resampleRowH2V2(
   dst
 
 proc yCbCrToRgbx(dst, py, pcb, pcr: ptr UncheckedArray[uint8], width: int) =
-  ## Takes a 3 component outputs and populates image.
+  ## Takes a 3 component yCbCr outputs and populates image.
   template float2Fixed(x: float32): int =
     (x * 4096 + 0.5).int shl 8
 
