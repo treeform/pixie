@@ -463,9 +463,9 @@ proc stbi_jpeg_get_bits(state: var DecoderState, n: int): int =
   state.bitCount -= n
   return k.int
 
-proc decodeBlock(
-  state: var DecoderState, component: int
-): array[64, int16] =
+proc decodeRegularBlock(
+  state: var DecoderState, component: int, data: var array[64, int16]
+) =
   ## Decodes a whole block.
 
   if state.bitCount < 16:
@@ -482,10 +482,7 @@ proc decodeBlock(
       state.extendReceive(t)
     dc = state.components[component].dcPred + diff
   state.components[component].dcPred = dc
-
-  result[0] = (dc * state.quantizationTables[
-    state.components[component].quantizationTableId
-  ][0].int).int16
+  data[0] = dc.int16
 
   var i = 1
   while i < 64:
@@ -502,18 +499,13 @@ proc decodeBlock(
     else:
       i += r.int
       let zig = deZigZag[i]
-      result[zig] = (state.extendReceive(s.int) * state.quantizationTables[
-        state.components[component].quantizationTableId
-      ][zig].int).int16
+      data[zig] = state.extendReceive(s.int).int16
       inc i
 
 proc decodeProgressiveBlock(
-  state: var DecoderState, component: int, data: array[64, int16]
-): array[64, int16] =
+  state: var DecoderState, component: int, data: var array[64, int16]
+) =
   ## Decodes a progressive block.
-
-  result = data
-
   if state.spectralEnd != 0:
     failInvalid("can't merge dc and ac")
 
@@ -532,18 +524,16 @@ proc decodeProgressiveBlock(
     let
       dc = state.components[component].dcPred + diff
     state.components[component].dcPred = dc
-    result[0] = int16(dc * (1 shl state.successiveApproxLow))
+    data[0] = int16(dc * (1 shl state.successiveApproxLow))
 
   else:
     if stbi_jpeg_get_bit(state) != 0:
-      result[0] += (1 shl state.successiveApproxLow).int16
+      data[0] += (1 shl state.successiveApproxLow).int16
 
 proc decodeProgressiveBlockContinuation(
-  state: var DecoderState, component: int, data: array[64, int16]
-): array[64, int16] =
-
-  result = data
-
+  state: var DecoderState, component: int, data: var array[64, int16]
+) =
+  ## Decode
   if state.spectralStart == 0:
     failInvalid("can't merge progressive blocks")
 
@@ -579,7 +569,7 @@ proc decodeProgressiveBlockContinuation(
         k += r.int
         let zig = deZigZag[k]
         inc k
-        result[zig] = (state.extendReceive(s.int) * (1 shl shift)).int16
+        data[zig] = (state.extendReceive(s.int) * (1 shl shift)).int16
 
       if not(k <= state.spectralEnd):
         break
@@ -591,13 +581,13 @@ proc decodeProgressiveBlockContinuation(
       dec state.eobRun
       for k in state.spectralStart ..< state.spectralEnd:
         let zig = deZigZag[k]
-        if result[zig] != 0:
+        if data[zig] != 0:
           if state.stbi_jpeg_get_bit() != 0:
-            if (result[zig] and bit) == 0:
-              if result[zig] > 0:
-                result[zig] += bit.int16
+            if (data[zig] and bit) == 0:
+              if data[zig] > 0:
+                data[zig] += bit.int16
               else:
-                result[zig] -= bit.int16
+                data[zig] -= bit.int16
     else:
       var k = state.spectralStart
       while true:
@@ -627,16 +617,16 @@ proc decodeProgressiveBlockContinuation(
         while k <= state.spectralEnd:
           let zig = deZigZag[k]
           inc k
-          if result[zig] != 0:
+          if data[zig] != 0:
             if stbi_jpeg_get_bit(state) != 0:
-              if (result[zig] and bit) == 0:
-                if result[zig] > 0:
-                  result[zig] += bit.int16
+              if (data[zig] and bit) == 0:
+                if data[zig] > 0:
+                  data[zig] += bit.int16
                 else:
-                  result[zig] -= bit.int16
+                  data[zig] -= bit.int16
           else:
             if r == 0:
-              result[zig] = s.int16
+              data[zig] = s.int16
               break
             dec r
 
@@ -759,45 +749,42 @@ proc idctBlock(component: var Component, offset: int, data: array[64, int16]) =
     component.data[outPos + 3] = clamp((x3 + t0) shr 17)
     component.data[outPos + 4] = clamp((x3 - t0) shr 17)
 
-proc idctBlockDC(component: var Component, offset: int) =
-  discard
+proc decodeBlock(state: var DecoderState, comp, row, column: int) =
+
+  var data: array[64, int16]
+  if (comp, row, column) in state.progressiveData:
+    try:
+      data = state.progressiveData[(comp, row, column)]
+    except:
+      failInvalid()
+  if state.progressive:
+    if state.spectralStart == 0:
+      state.decodeProgressiveBlock(comp, data)
+    else:
+      state.decodeProgressiveBlockContinuation(comp, data)
+  else:
+    state.decodeRegularBlock(comp, data)
+  try:
+    state.progressiveData[(comp, row, column)] = data
+  except:
+    failInvalid()
 
 proc decodeBlocks(state: var DecoderState) =
   ## Decodes scan data blocks that follow a SOS block.
 
   if state.progressive:
-
     if state.scanComponents == 1:
       # Single component pass.
       let
         comp = state.componentOrder[0]
         w = (state.components[comp].width + 7) shr 3
         h = (state.components[comp].height + 7) shr 3
-
       for j in 0 ..< h:
         for i in 0 ..< w:
           let
             row = i * 8
             column = j * 8
-
-          var data: array[64, int16]
-
-          if (comp, row, column) in state.progressiveData:
-            try:
-              data = state.progressiveData[(comp, row, column)]
-            except:
-              failInvalid()
-
-          if state.spectralStart == 0:
-            data = state.decodeProgressiveBlock(comp, data)
-          else:
-            data = state.decodeProgressiveBlockContinuation(comp, data)
-
-          try:
-            state.progressiveData[(comp, row, column)] = data
-          except:
-            failInvalid()
-
+          state.decodeBlock(comp, row, column)
     else:
       # Interleaved component pass.
       for y in 0 ..< state.numMcuHigh:
@@ -806,53 +793,22 @@ proc decodeBlocks(state: var DecoderState) =
             for j in 0 ..< state.components[comp].yScale:
               for i in 0 ..< state.components[comp].xScale:
                 let
-                  row = (
-                    x * state.components[comp].xScale + i
-                  ) * 8
-                  column = (
-                    y * state.components[comp].yScale + j
-                  ) * 8
-
-                var data: array[64, int16]
-
-                if (comp, row, column) in state.progressiveData:
-                  try:
-                    data = state.progressiveData[(comp, row, column)]
-                  except:
-                    failInvalid()
-
-                if state.spectralStart == 0:
-                  data = state.decodeProgressiveBlock(comp, data)
-                else:
-                  data = state.decodeProgressiveBlockContinuation(comp, data)
-
-                try:
-                  state.progressiveData[(comp, row, column)] = data
-                except:
-                  failInvalid()
-
+                  row = (x * state.components[comp].xScale + i) * 8
+                  column = (y * state.components[comp].yScale + j) * 8
+                state.decodeBlock(comp, row, column)
   else:
+    # Interleaved regular component pass.
     for y in 0 ..< state.numMcuHigh:
       for x in 0 ..< state.numMcuWide:
         for comp in state.componentOrder:
           for j in 0 ..< state.components[comp].xScale:
             for i in 0 ..< state.components[comp].yScale:
               let
-                data = state.decodeBlock(comp)
-                row = (
-                  x * state.components[comp].yScale + i
-                ) * 8
-                column = (
-                  y * state.components[comp].xScale + j
-                ) * 8
+                row = (x * state.components[comp].yScale + i) * 8
+                column = (y * state.components[comp].xScale + j) * 8
+              state.decodeBlock(comp, row, column)
 
-              state.progressiveData[(comp, row, column)] = data
-              state.components[comp].idctBlock(
-                state.components[comp].widthStride * column + row,
-                data
-              )
-
-proc finishProgressive(state: var DecoderState) =
+proc quantizationAndIDCTPass(state: var DecoderState) =
   ## Does quantization and IDCT.
   for comp in 0 ..< state.components.len:
     let
@@ -1134,8 +1090,7 @@ proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
       else:
         failInvalid("invalid chunk " & chunkId.toHex())
 
-  if state.progressive:
-    state.finishProgressive()
+  state.quantizationAndIDCTPass()
 
   state.buildImage()
 
