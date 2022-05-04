@@ -58,12 +58,12 @@ for i in 0 ..< 10_000:
     value = rand(255).uint8
   data[pos] = value.char
   echo &"{i} {pos} {value}"
+
   try:
     let img = decodeJpg(data)
     doAssert img.height > 0 and img.width > 0
   except PixieError:
     discard
-
   data = data[0 ..< pos]
   try:
     let img = decodeJpg(data)

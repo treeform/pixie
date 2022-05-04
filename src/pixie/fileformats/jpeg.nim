@@ -330,10 +330,10 @@ proc decodeSOS(state: var DecoderState) =
 
   state.scanComponents = state.readUint8().int
 
-  if state.scanComponents notin [1, 3]:
-    failInvalid("unsupported scan component count")
+  if state.scanComponents > state.components.len:
+    failInvalid("extra components")
 
-  if not state.progressive and state.scanComponents notin [1, 3]:
+  if state.scanComponents notin [1, 3]:
     failInvalid("unsupported scan component count")
 
   state.componentOrder = @[]
@@ -481,14 +481,12 @@ proc getBitsAsUnsignedInt(state: var DecoderState, n: int): int =
   state.bitCount -= n
   return k.int
 
+{.push overflowChecks: off.}
+
 proc decodeRegularBlock(
   state: var DecoderState, component: int, data: var array[64, int16]
 ) =
   ## Decodes a whole block.
-
-  if state.bitCount < 16:
-    state.fillBits()
-
   let t = state.huffmanDecode(0, state.components[component].huffmanDC).int
   if t < 0:
     failInvalid()
@@ -500,12 +498,10 @@ proc decodeRegularBlock(
       state.getBitsAsSignedInt(t)
     dc = state.components[component].dcPred + diff
   state.components[component].dcPred = dc
-  data[0] = dc.int16
+  data[0] = clampInt16(dc)
 
   var i = 1
   while true:
-    if state.bitCount < 16:
-      state.fillBits()
     let
       rs = state.huffmanDecode(1, state.components[component].huffmanAC)
       s = rs and 15
@@ -544,7 +540,7 @@ proc decodeProgressiveBlock(
     let
       dc = state.components[component].dcPred + diff
     state.components[component].dcPred = dc
-    data[0] = int16(dc * (1 shl state.successiveApproxLow))
+    data[0] = clampInt16(dc * (1 shl state.successiveApproxLow))
 
   else:
     if getBit(state) != 0:
@@ -653,7 +649,7 @@ proc decodeProgressiveContinuationBlock(
         if not (k <= state.spectralEnd):
           break
 
-{.push overflowChecks: off.}
+
 
 template idct1D(s0, s1, s2, s3, s4, s5, s6, s7: int32) =
   template f2f(x: float32): int32 = (x * 4096 + 0.5).int32

@@ -33,7 +33,6 @@ var files = @[
   "tests/fileformats/jpg/master/cat_restart_markers_5_progressive.jpg",
 
   "tests/fileformats/jpg/master/mandrill.jpg",
-
   "tests/fileformats/jpg/master/exif_overrun.jpg",
   "tests/fileformats/jpg/master/grayscale_test.jpg",
   "tests/fileformats/jpg/master/progressive.jpg",
