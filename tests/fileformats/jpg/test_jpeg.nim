@@ -23,13 +23,14 @@ var files = @[
   "tests/fileformats/jpg/master/quality_50.jpg",
   "tests/fileformats/jpg/master/quality_100.jpg",
 
-  "tests/fileformats/jpg/master/cat_4_2_0_int.jpg",
-  "tests/fileformats/jpg/master/cat_4_2_2_int.jpg",
-  "tests/fileformats/jpg/master/cat_4_4_4_int.jpg",
-  "tests/fileformats/jpg/master/cat_4_4_4_fast_int.jpg",
-  "tests/fileformats/jpg/master/cat_4_2_0_fast_int.jpg",
+  "tests/fileformats/jpg/master/cat_4_4_4.jpg",
+  "tests/fileformats/jpg/master/cat_4_4_4.jpg",
+  "tests/fileformats/jpg/master/cat_4_2_2.jpg",
+  "tests/fileformats/jpg/master/cat_4_2_0.jpg",
   "tests/fileformats/jpg/master/cat_4_1_1.jpg",
   "tests/fileformats/jpg/master/cat_4_4_4_progressive.jpg",
+  "tests/fileformats/jpg/master/cat_restart_markers_5.jpg",
+  "tests/fileformats/jpg/master/cat_restart_markers_5_progressive.jpg",
 
   "tests/fileformats/jpg/master/mandrill.jpg",
 
