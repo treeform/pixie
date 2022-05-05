@@ -1,4 +1,4 @@
-import pixie/common, pixie/images, strutils, tables
+import pixie/common, pixie/images, sequtils, strutils
 
 # This JPEG decoder is loosely based on stb_image which is public domain.
 
@@ -69,6 +69,7 @@ type
     dcPred: int
     widthCoeff, heightCoeff: int
     data, coeff, lineBuf: seq[uint8]
+    blocks: seq[seq[array[64, int16]]]
 
   DecoderState = object
     buffer: seq[uint8]
@@ -86,8 +87,6 @@ type
     mcuWidth, mcuHeight, numMcuWide, numMcuHigh: int
     componentOrder: seq[int]
     progressive: bool
-    decodedBlocks: Table[(int, int, int), array[64, int16]]
-
     restartInterval: int
     todo: int
     eobRun: int
@@ -286,6 +285,14 @@ proc decodeSOF0(state: var DecoderState) =
       state.components[i].xScale +
       state.maxXScale - 1
     ) div state.maxXScale
+
+    # Allocate block data structures.
+    state.components[i].blocks = newSeqWith(
+      state.components[i].width,
+      newSeq[array[64, int16]](
+        state.components[i].height
+      )
+    )
 
     state.components[i].widthStride =
       state.numMcuWide * state.components[i].yScale * 8
@@ -766,12 +773,7 @@ proc idctBlock(component: var Component, offset: int, data: array[64, int16]) =
 
 proc decodeBlock(state: var DecoderState, comp, row, column: int) =
   ## Decodes a block.
-  var data: array[64, int16]
-  if (comp, row, column) in state.decodedBlocks:
-    try:
-      data = state.decodedBlocks[(comp, row, column)]
-    except:
-      failInvalid()
+  var data = state.components[comp].blocks[row][column]
   if state.progressive:
     if state.spectralStart == 0:
       state.decodeProgressiveBlock(comp, data)
@@ -779,10 +781,7 @@ proc decodeBlock(state: var DecoderState, comp, row, column: int) =
       state.decodeProgressiveContinuationBlock(comp, data)
   else:
     state.decodeRegularBlock(comp, data)
-  try:
-    state.decodedBlocks[(comp, row, column)] = data
-  except:
-    failInvalid()
+  state.components[comp].blocks[row][column] = data
 
 template checkReset(state: var DecoderState) =
   dec state.todo
@@ -807,11 +806,8 @@ proc decodeBlocks(state: var DecoderState) =
         comp = state.componentOrder[0]
         w = (state.components[comp].width + 7) shr 3
         h = (state.components[comp].height + 7) shr 3
-      for j in 0 ..< h:
-        for i in 0 ..< w:
-          let
-            row = i * 8
-            column = j * 8
+      for column in 0 ..< h:
+        for row in 0 ..< w:
           state.decodeBlock(comp, row, column)
           state.checkReset()
     else:
@@ -822,8 +818,8 @@ proc decodeBlocks(state: var DecoderState) =
             for j in 0 ..< state.components[comp].yScale:
               for i in 0 ..< state.components[comp].xScale:
                 let
-                  row = (x * state.components[comp].xScale + i) * 8
-                  column = (y * state.components[comp].yScale + j) * 8
+                  row = (x * state.components[comp].xScale + i)
+                  column = (y * state.components[comp].yScale + j)
                 state.decodeBlock(comp, row, column)
           state.checkReset()
   else:
@@ -834,8 +830,8 @@ proc decodeBlocks(state: var DecoderState) =
           for j in 0 ..< state.components[comp].xScale:
             for i in 0 ..< state.components[comp].yScale:
               let
-                row = (x * state.components[comp].yScale + i) * 8
-                column = (y * state.components[comp].xScale + j) * 8
+                row = (x * state.components[comp].yScale + i)
+                column = (y * state.components[comp].xScale + j)
               state.decodeBlock(comp, row, column)
         state.checkReset()
 
@@ -846,19 +842,9 @@ proc quantizationAndIDCTPass(state: var DecoderState) =
       w = (state.components[comp].width + 7) shr 3
       h = (state.components[comp].height + 7) shr 3
 
-    for j in 0 ..< h:
-      for i in 0 ..< w:
-        let
-          row = i * 8
-          column = j * 8
-
-        var data: array[64, int16]
-
-        if (comp, row, column) in state.decodedBlocks:
-          try:
-            data = state.decodedBlocks[(comp, row, column)]
-          except:
-            failInvalid()
+    for column in 0 ..< h:
+      for row in 0 ..< w:
+        var data = state.components[comp].blocks[row][column]
 
         for i in 0 ..< 64:
           let qTableId = state.components[comp].quantizationTableId
@@ -867,7 +853,7 @@ proc quantizationAndIDCTPass(state: var DecoderState) =
           data[i] = clampInt16(data[i] * state.quantizationTables[qTableId][i].int)
 
         state.components[comp].idctBlock(
-          state.components[comp].widthStride * column + row,
+          state.components[comp].widthStride * column * 8 + row * 8,
           data
         )
 
