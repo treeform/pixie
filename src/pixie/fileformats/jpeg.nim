@@ -86,7 +86,7 @@ type
     mcuWidth, mcuHeight, numMcuWide, numMcuHigh: int
     componentOrder: seq[int]
     progressive: bool
-    progressiveData: Table[(int, int, int), array[64, int16]]
+    decodedBlocks: Table[(int, int, int), array[64, int16]]
 
     restartInterval: int
     todo: int
@@ -456,7 +456,7 @@ proc getBit(state: var DecoderState): int =
   dec state.bitCount
   return (k.int and 0x80000000.int)
 
-proc getBitsAsSignedInt(state: var DecoderState, n: int): int {.inline.} =
+proc getBitsAsSignedInt(state: var DecoderState, n: int): int =
   ## Get n number of bits as a signed integer.
   if n notin 0 .. 16:
     failInvalid()
@@ -649,8 +649,6 @@ proc decodeProgressiveContinuationBlock(
         if not (k <= state.spectralEnd):
           break
 
-
-
 template idct1D(s0, s1, s2, s3, s4, s5, s6, s7: int32) =
   template f2f(x: float32): int32 = (x * 4096 + 0.5).int32
   template fsh(x: int32): int32 = x * 4096
@@ -769,9 +767,9 @@ proc idctBlock(component: var Component, offset: int, data: array[64, int16]) =
 proc decodeBlock(state: var DecoderState, comp, row, column: int) =
   ## Decodes a block.
   var data: array[64, int16]
-  if (comp, row, column) in state.progressiveData:
+  if (comp, row, column) in state.decodedBlocks:
     try:
-      data = state.progressiveData[(comp, row, column)]
+      data = state.decodedBlocks[(comp, row, column)]
     except:
       failInvalid()
   if state.progressive:
@@ -782,7 +780,7 @@ proc decodeBlock(state: var DecoderState, comp, row, column: int) =
   else:
     state.decodeRegularBlock(comp, data)
   try:
-    state.progressiveData[(comp, row, column)] = data
+    state.decodedBlocks[(comp, row, column)] = data
   except:
     failInvalid()
 
@@ -856,9 +854,9 @@ proc quantizationAndIDCTPass(state: var DecoderState) =
 
         var data: array[64, int16]
 
-        if (comp, row, column) in state.progressiveData:
+        if (comp, row, column) in state.decodedBlocks:
           try:
-            data = state.progressiveData[(comp, row, column)]
+            data = state.decodedBlocks[(comp, row, column)]
           except:
             failInvalid()
 
@@ -1020,12 +1018,11 @@ proc buildImage(state: var DecoderState): Image =
         resamples[i].yStep >= (resamples[i].verticalExpansionFactor shr 1)
 
       # TODO
-      # for x in smaple ^ 2
-      #   resmaple x dir
+      # for x in sample ^ 2
+      #   resample x dir
 
-      # for y in smaple ^ 2
-      #   resmaple y dir
-
+      # for y in sample ^ 2
+      #   resample y dir
 
       componentOutputs.add resamples[i].resample(
         cast[ptr UncheckedArray[uint8]](state.components[i].lineBuf[0].addr),
@@ -1068,7 +1065,7 @@ proc buildImage(state: var DecoderState): Image =
     else:
       failInvalid()
 
-proc decodeJpeg*(data: seq[uint8]): Image {.inline, raises: [PixieError].} =
+proc decodeJpeg*(data: seq[uint8]): Image {.raises: [PixieError].} =
   ## Decodes the JPEG into an Image.
 
   var state = DecoderState()

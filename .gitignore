@@ -14,4 +14,4 @@ __pycache__
 bindings/generated
 *.dSYM
 dump.txt
-tests/fileformats/jpg/generated
+tests/fileformats/jpeg/generated
