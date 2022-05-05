@@ -42,7 +42,6 @@ var files = @[
   "tests/fileformats/jpeg/master/testprog.jpg",
 ]
 
-
 for i in 0 ..< 10_000:
   let original = readFile(sample(files))
 
