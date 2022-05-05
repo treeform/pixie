@@ -2,8 +2,6 @@ import pixie, strutils
 
 import pixie/fileformats/jpg
 
-echo "start"
-
 var files = @[
   "tests/fileformats/jpeg/master/red.jpg",
   "tests/fileformats/jpeg/master/green.jpg",
@@ -44,8 +42,5 @@ var files = @[
 ]
 
 for file in files:
-  echo file
   var img = decodeJpg(readFile(file))
-  img.writeFile(file.replace("master", "generated").replace(".jpg", ".jpeg.png"))
-
-echo "done"
+  # img.writeFile(file.replace("master", "generated").replace(".jpg", ".jpeg.png"))
