@@ -24,6 +24,7 @@ var files = @[
   "tests/fileformats/jpeg/master/cat_4_2_2.jpg",
   "tests/fileformats/jpeg/master/cat_4_2_0.jpg",
   "tests/fileformats/jpeg/master/cat_4_1_1.jpg",
+  "tests/fileformats/jpeg/master/cat_4_2_0_progressive.jpg",
   "tests/fileformats/jpeg/master/cat_4_4_4_progressive.jpg",
   "tests/fileformats/jpeg/master/cat_restart_markers_5.jpg",
   "tests/fileformats/jpeg/master/cat_restart_markers_5_progressive.jpg",
