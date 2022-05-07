@@ -344,7 +344,7 @@ proc decodeSOS(state: var DecoderState) =
   if state.scanComponents notin [1, 3]:
     failInvalid("unsupported scan component count")
 
-  state.componentOrder = @[]
+  state.componentOrder.setLen(0)
 
   for i in 0 ..< state.scanComponents:
     let
@@ -799,40 +799,28 @@ template checkReset(state: var DecoderState) =
 
 proc decodeBlocks(state: var DecoderState) =
   ## Decodes scan data blocks that follow a SOS block.
-  if state.progressive:
-    if state.scanComponents == 1:
-      # Single component pass.
-      let
-        comp = state.componentOrder[0]
-        w = (state.components[comp].width + 7) shr 3
-        h = (state.components[comp].height + 7) shr 3
-      for column in 0 ..< h:
-        for row in 0 ..< w:
-          state.decodeBlock(comp, row, column)
-          state.checkReset()
-    else:
-      # Interleaved component pass.
-      for y in 0 ..< state.numMcuHigh:
-        for x in 0 ..< state.numMcuWide:
-          for comp in state.componentOrder:
-            for j in 0 ..< state.components[comp].yScale:
-              for i in 0 ..< state.components[comp].xScale:
-                let
-                  row = (x * state.components[comp].xScale + i)
-                  column = (y * state.components[comp].yScale + j)
-                state.decodeBlock(comp, row, column)
-          state.checkReset()
+  if state.scanComponents == 1:
+    # Single component pass.
+
+    let
+      comp = state.componentOrder[0]
+      w = (state.components[comp].width + 7) shr 3
+      h = (state.components[comp].height + 7) shr 3
+    for column in 0 ..< h:
+      for row in 0 ..< w:
+        state.decodeBlock(comp, row, column)
+        state.checkReset()
   else:
     # Interleaved regular component pass.
-    for y in 0 ..< state.numMcuHigh:
-      for x in 0 ..< state.numMcuWide:
+    for mcuY in 0 ..< state.numMcuHigh:
+      for mcuX in 0 ..< state.numMcuWide:
         for comp in state.componentOrder:
-          for j in 0 ..< state.components[comp].xScale:
-            for i in 0 ..< state.components[comp].yScale:
+          for compY in 0 ..< state.components[comp].xScale:
+            for compX in 0 ..< state.components[comp].yScale:
               let
-                row = (x * state.components[comp].yScale + i)
-                column = (y * state.components[comp].xScale + j)
-              state.decodeBlock(comp, row, column)
+                row = (mcuX * state.components[comp].yScale + compX)
+                col = (mcuY * state.components[comp].xScale + compY)
+              state.decodeBlock(comp, row, col)
         state.checkReset()
 
 proc quantizationAndIDCTPass(state: var DecoderState) =
