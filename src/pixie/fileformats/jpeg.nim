@@ -50,16 +50,6 @@ type
     maxCodes: array[18, int]
     fast: array[1 shl fastBits, uint8]
 
-  ResampleProc = proc(dst, line0, line1: ptr UncheckedArray[uint8],
-    widthPreExpansion, horizontalExpansionFactor: int
-  ): ptr UncheckedArray[uint8] {.raises: [].}
-
-  Resample = object
-    horizontalExpansionFactor, verticalExpansionFactor: int
-    yStep, yPos, widthPreExpansion: int
-    line0, line1: ptr UncheckedArray[uint8]
-    resample: ResampleProc
-
   Component = object
     id, quantizationTableId: uint8
     yScale, xScale: int
@@ -151,6 +141,7 @@ proc decodeDQT(state: var DecoderState) =
     failInvalid("DQT table length did not match")
 
 proc buildHuffman(huffman: var Huffman, counts: array[16, uint8]) =
+  ## Builds the huffman data structure.
   block:
     var k: int
     for i in 0.uint8 ..< 16:
@@ -187,7 +178,6 @@ proc buildHuffman(huffman: var Huffman, counts: array[16, uint8]) =
 
 proc decodeDHT(state: var DecoderState) =
   ## Decode Define Huffman Table
-
   var len = state.readUint16be() - 2
   while len > 0:
     let
@@ -259,14 +249,8 @@ proc decodeSOF0(state: var DecoderState) =
     state.components.add(component)
 
   for component in state.components.mitems:
-    state.maxXScale = max(
-      state.maxXScale,
-      component.xScale
-    )
-    state.maxYScale = max(
-      state.maxYScale,
-      component.yScale
-    )
+    state.maxXScale = max(state.maxXScale, component.xScale)
+    state.maxYScale = max(state.maxYScale, component.yScale)
 
   state.mcuWidth = state.maxYScale * 8
   state.mcuHeight = state.maxXScale * 8
@@ -295,10 +279,8 @@ proc decodeSOF0(state: var DecoderState) =
       )
     )
 
-    component.widthStride =
-      state.numMcuWide * component.yScale * 8
-    component.heightStride =
-      state.numMcuHigh * component.xScale * 8
+    component.widthStride = state.numMcuWide * component.yScale * 8
+    component.heightStride = state.numMcuHigh * component.xScale * 8
 
     component.channel = newMask(
       component.widthStride, component.heightStride
@@ -321,6 +303,7 @@ proc decodeSOF2(state: var DecoderState) =
   state.progressive = true
 
 proc reset(state: var DecoderState) =
+  ## Rests the decoder state need for reset markers.
   state.bits = 0
   state.bitCount = 0
   for component in 0 ..< state.components.len:
