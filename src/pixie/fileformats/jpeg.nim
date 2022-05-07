@@ -489,7 +489,7 @@ proc getBitsAsUnsignedInt(state: var DecoderState, n: int): int =
   state.bitCount -= n
   return k.int
 
-{.push overflowChecks: off.}
+{.push overflowChecks: off, rangeChecks: off.}
 
 proc decodeRegularBlock(
   state: var DecoderState, component: int, data: var array[64, int16]
