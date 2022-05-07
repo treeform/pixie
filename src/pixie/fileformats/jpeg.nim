@@ -770,8 +770,6 @@ proc idctBlock(component: var Component, offset: int, data: array[64, int16]) =
     component.channel.data[outPos + 3] = clampByte((x3 + t0) shr 17)
     component.channel.data[outPos + 4] = clampByte((x3 - t0) shr 17)
 
-{.pop.}
-
 proc decodeBlock(state: var DecoderState, comp, row, column: int) =
   ## Decodes a block.
   var data = state.components[comp].blocks[row][column]
@@ -907,6 +905,8 @@ proc magnifyYBy2(mask: Mask): Mask =
       else:
         result[x, y * 2 + 0] = mask[x, y] div 2 + mask[x, y-1] div 2
         result[x, y * 2 + 1] = mask[x, y] div 2 + mask[x, y+1] div 2
+
+{.pop.}
 
 proc buildImage(state: var DecoderState): Image =
   ## Takes a jpeg image object and builds a pixie Image from it.
