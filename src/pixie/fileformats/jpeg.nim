@@ -1,4 +1,4 @@
-import pixie/common, pixie/images, pixie/masks, sequtils, strutils, chroma
+import pixie/common, pixie/images, pixie/masks, sequtils, strutils, chroma, std/decls
 
 # This JPEG decoder is loosely based on stb_image which is public domain.
 
@@ -658,6 +658,7 @@ proc decodeProgressiveContinuationBlock(
           break
 
 template idct1D(s0, s1, s2, s3, s4, s5, s6, s7: int32) =
+  ## Inverse discrete cosine transform 1D
   template f2f(x: float32): int32 = (x * 4096 + 0.5).int32
   template fsh(x: int32): int32 = x * 4096
   p2 = s2
@@ -696,6 +697,7 @@ template idct1D(s0, s1, s2, s3, s4, s5, s6, s7: int32) =
   t0 += p1 + p3
 
 proc idctBlock(component: var Component, offset: int, data: array[64, int16]) =
+  ## Inverse discrete cosine transform whole block.
   var values: array[64, int32]
   for i in 0 ..< 8:
     if data[i + 8] == 0 and
@@ -772,7 +774,7 @@ proc idctBlock(component: var Component, offset: int, data: array[64, int16]) =
 
 proc decodeBlock(state: var DecoderState, comp, row, column: int) =
   ## Decodes a block.
-  var data = state.components[comp].blocks[row][column]
+  var data {.byaddr.} = state.components[comp].blocks[row][column]
   if state.progressive:
     if state.spectralStart == 0:
       state.decodeProgressiveBlock(comp, data)
@@ -780,9 +782,9 @@ proc decodeBlock(state: var DecoderState, comp, row, column: int) =
       state.decodeProgressiveContinuationBlock(comp, data)
   else:
     state.decodeRegularBlock(comp, data)
-  state.components[comp].blocks[row][column] = data
 
 template checkReset(state: var DecoderState) =
+  ## Check if we might have run into a reset marker, then deal with it.
   dec state.todo
   if state.todo <= 0:
     if state.bitCount < 24:
@@ -793,7 +795,6 @@ template checkReset(state: var DecoderState) =
         state.pos += 2
       else:
         failInvalid("did not get expected reset marker")
-
     state.reset()
 
 proc decodeBlocks(state: var DecoderState) =
