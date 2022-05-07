@@ -1,4 +1,4 @@
-import pixie/common, pixie/images, sequtils, strutils
+import pixie/common, pixie/images, pixie/masks, sequtils, strutils, chroma
 
 # This JPEG decoder is loosely based on stb_image which is public domain.
 
@@ -68,8 +68,9 @@ type
     huffmanDC, huffmanAC: int
     dcPred: int
     widthCoeff, heightCoeff: int
-    data, coeff, lineBuf: seq[uint8]
+    coeff, lineBuf: seq[uint8]
     blocks: seq[seq[array[64, int16]]]
+    channel: Mask
 
   DecoderState = object
     buffer: seq[uint8]
@@ -90,6 +91,9 @@ type
     restartInterval: int
     todo: int
     eobRun: int
+
+when defined(release):
+  {.push checks: off.}
 
 template failInvalid(reason = "unable to load") =
   ## Throw exception with a reason.
@@ -299,8 +303,8 @@ proc decodeSOF0(state: var DecoderState) =
     state.components[i].heightStride =
       state.numMcuHigh * state.components[i].xScale * 8
 
-    state.components[i].data.setLen(
-      state.components[i].widthStride * state.components[i].heightStride
+    state.components[i].channel = newMask(
+      state.components[i].widthStride, state.components[i].heightStride
     )
 
     if state.progressive:
@@ -760,14 +764,14 @@ proc idctBlock(component: var Component, offset: int, data: array[64, int16]) =
     x2 += 65536 + (128 shl 17)
     x3 += 65536 + (128 shl 17)
 
-    component.data[outPos + 0] = clampByte((x0 + t3) shr 17)
-    component.data[outPos + 7] = clampByte((x0 - t3) shr 17)
-    component.data[outPos + 1] = clampByte((x1 + t2) shr 17)
-    component.data[outPos + 6] = clampByte((x1 - t2) shr 17)
-    component.data[outPos + 2] = clampByte((x2 + t1) shr 17)
-    component.data[outPos + 5] = clampByte((x2 - t1) shr 17)
-    component.data[outPos + 3] = clampByte((x3 + t0) shr 17)
-    component.data[outPos + 4] = clampByte((x3 - t0) shr 17)
+    component.channel.data[outPos + 0] = clampByte((x0 + t3) shr 17)
+    component.channel.data[outPos + 7] = clampByte((x0 - t3) shr 17)
+    component.channel.data[outPos + 1] = clampByte((x1 + t2) shr 17)
+    component.channel.data[outPos + 6] = clampByte((x1 - t2) shr 17)
+    component.channel.data[outPos + 2] = clampByte((x2 + t1) shr 17)
+    component.channel.data[outPos + 5] = clampByte((x2 - t1) shr 17)
+    component.channel.data[outPos + 3] = clampByte((x3 + t0) shr 17)
+    component.channel.data[outPos + 4] = clampByte((x3 - t0) shr 17)
 
 {.pop.}
 
@@ -857,199 +861,95 @@ proc quantizationAndIDCTPass(state: var DecoderState) =
           data
         )
 
-proc resampleRowH1V1(
-  dst, a, b: ptr UncheckedArray[uint8],
-  widthPreExpansion, horizontalExpansionFactor: int
-): ptr UncheckedArray[uint8] =
-  a
-
-proc resampleRowH1V2(
-  dst, a, b: ptr UncheckedArray[uint8],
-  widthPreExpansion, horizontalExpansionFactor: int
-): ptr UncheckedArray[uint8] =
-  for i in 0 ..< widthPreExpansion:
-    dst[i] = ((3 * a[i].int + b[i].int + 2) shr 2).uint8
-  dst
-
-proc resampleRowH2V1(
-  dst, a, b: ptr UncheckedArray[uint8],
-  widthPreExpansion, horizontalExpansionFactor: int
-): ptr UncheckedArray[uint8] =
-  if widthPreExpansion == 1:
-    dst[0] = a[0]
-    dst[1] = dst[0]
-  else:
-    dst[0] = a[0]
-    dst[1] = ((a[0].int * 3 + a[1].int + 2) shr 2).uint8
-    for i in 1 ..< widthPreExpansion - 1:
-      let n = 3 * a[i].int + 2
-      dst[i * 2 + 0] = ((n + a[i - 1].int) shr 2).uint8
-      dst[i * 2 + 1] = ((n + a[i + 1].int) shr 2).uint8
-
-    dst[widthPreExpansion * 2 + 0] = ((
-      a[widthPreExpansion - 2].int * 3 + a[widthPreExpansion - 1].int + 2
-    ) shr 2).uint8
-    dst[widthPreExpansion * 2 + 1] = (a[widthPreExpansion - 1]) shr 2
-  dst
-
-proc resampleRowH4V1(
-  dst, a, b: ptr UncheckedArray[uint8],
-  widthPreExpansion, horizontalExpansionFactor: int
-): ptr UncheckedArray[uint8] =
-  for i in 0 ..< widthPreExpansion * 4:
-    dst[i] = a[i div 4]
-  dst
-
-proc resampleRowH2V2(
-  dst, a, b: ptr UncheckedArray[uint8],
-  widthPreExpansion, horizontalExpansionFactor: int
-): ptr UncheckedArray[uint8] =
-  if widthPreExpansion == 1:
-    dst[0] = ((3 * a[0].int + b[0].int + 2) shr 2).uint8
-    dst[1] = dst[0]
-  else:
-    var
-      t0: int
-      t1 = 3 * a[0].int + b[0].int
-    dst[0] = ((t1 + 2) shr 2).uint8
-    for i in 1 ..< widthPreExpansion:
-      t0 = t1
-      t1 = 3 * a[i].int + b[i].int
-      dst[i * 2 - 1] = ((3 * t0 + t1 + 8) shr 4).uint8
-      dst[i * 2 + 0] = ((3 * t1 + t0 + 8) shr 4).uint8
-    dst[widthPreExpansion * 2 - 1] = ((t1 + 2) shr 2).uint8
-  dst
-
-proc yCbCrToRgbx(dst, py, pcb, pcr: ptr UncheckedArray[uint8], width: int) =
+proc yCbCrToRgbx(py, pcb, pcr: uint8): ColorRGBX =
   ## Takes a 3 component yCbCr outputs and populates image.
   template float2Fixed(x: float32): int =
     (x * 4096 + 0.5).int shl 8
 
-  var pos: int
-  for i in 0 ..< width:
-    let
-      yFixed = (py[][i].int shl 20) + (1 shl 19)
-      cb = pcb[][i].int - 128
-      cr = pcr[][i].int - 128
-    var
-      r = yFixed + cr * float2Fixed(1.40200)
-      g = yFixed +
-        (cr * -float2Fixed(0.71414)) +
-        ((cb * -float2Fixed(0.34414)) and -65536)
-      b = yFixed + cb * float2Fixed(1.77200)
-    dst[pos + 0] = clampByte(r shr 20)
-    dst[pos + 1] = clampByte(g shr 20)
-    dst[pos + 2] = clampByte(b shr 20)
-    dst[pos + 3] = 255
-    pos += 4
+  let
+    yFixed = (py.int shl 20) + (1 shl 19)
+    cb = pcb.int - 128
+    cr = pcr.int - 128
+  var
+    r = yFixed + cr * float2Fixed(1.40200)
+    g = yFixed +
+      (cr * -float2Fixed(0.71414)) +
+      ((cb * -float2Fixed(0.34414)) and -65536)
+    b = yFixed + cb * float2Fixed(1.77200)
+  result.r = clampByte(r shr 20)
+  result.g = clampByte(g shr 20)
+  result.b = clampByte(b shr 20)
+  result.a = 255
 
-proc grayScaleToRgbx(dst, gray: ptr UncheckedArray[uint8], width: int) =
+proc grayScaleToRgbx(gray: uint8): ColorRGBX =
   ## Takes a single gray scale component output and populates image.
-  var pos: int
-  for i in 0 ..< width:
-    let g = gray[i]
-    dst[pos + 0] = g
-    dst[pos + 1] = g
-    dst[pos + 2] = g
-    dst[pos + 3] = 255
-    pos += 4
+  let g = gray
+  result.r = g
+  result.g = g
+  result.b = g
+  result.a = 255
+
+proc magnifyXBy2(mask: Mask): Mask =
+  result = newMask(mask.width * 2, mask.height)
+  for y in 0 ..< mask.height:
+    for x in 0 ..< mask.width:
+      if x == 0 or x == mask.width - 1:
+        result[x * 2 + 0, y] = mask[x, y]
+        result[x * 2 + 1, y] = mask[x, y]
+      else:
+        result[x * 2 + 0, y] = mask[x, y] div 2 + mask[x-1, y] div 2
+        result[x * 2 + 1, y] = mask[x, y] div 2 + mask[x+1, y] div 2
+
+proc magnifyYBy2(mask: Mask): Mask =
+  result = newMask(mask.width, mask.height * 2)
+  for y in 0 ..< mask.height:
+    for x in 0 ..< mask.width:
+      if y == 0 or y == mask.width - 1:
+        result[x, y * 2 + 0] = mask[x, y]
+        result[x, y * 2 + 1] = mask[x, y]
+      else:
+        result[x, y * 2 + 0] = mask[x, y] div 2 + mask[x, y-1] div 2
+        result[x, y * 2 + 1] = mask[x, y] div 2 + mask[x, y+1] div 2
 
 proc buildImage(state: var DecoderState): Image =
   ## Takes a jpeg image object and builds a pixie Image from it.
+
+  if state.components.len == 3:
+    for componentIdx, component in state.components.mpairs:
+
+      while component.xScale < state.maxXScale:
+        component.channel = component.channel.magnifyYBy2()
+        component.xScale *= 2
+
+      while component.yScale < state.maxYScale:
+        component.channel = component.channel.magnifyXBy2()
+        component.yScale *= 2
+
   result = newImage(state.imageWidth, state.imageHeight)
 
-  var resamples: array[3, Resample]
-  for i in 0 ..< state.components.len:
-    resamples[i].horizontalExpansionFactor =
-      state.maxYScale div
-      state.components[i].yScale
-    resamples[i].verticalExpansionFactor =
-      state.maxXScale div
-      state.components[i].xScale
-    resamples[i].yStep = resamples[i].verticalExpansionFactor shr 1
-    resamples[i].widthPreExpansion = (
-      state.imageWidth + resamples[i].horizontalExpansionFactor - 1
-    ) div resamples[i].horizontalExpansionFactor
+  if state.components.len == 3:
+    let
+      cy = state.components[0].channel
+      cb = state.components[1].channel
+      cr = state.components[2].channel
+    for y in 0 ..< state.imageHeight:
+      for x in 0 ..< state.imageWidth:
+        result[x, y] = yCbCrToRgbx(
+          cy[x, y],
+          cb[x, y],
+          cr[x, y],
+        )
 
-    resamples[i].line0 = cast[ptr UncheckedArray[uint8]](
-      state.components[i].data[0].addr
-    )
-    resamples[i].line1 = cast[ptr UncheckedArray[uint8]](
-      state.components[i].data[0].addr
-    )
-    state.components[i].lineBuf.setLen(state.imageWidth + 3)
-
-    if resamples[i].horizontalExpansionFactor == 1 and
-      resamples[i].verticalExpansionFactor == 1:
-      resamples[i].resample = resampleRowH1V1
-    elif resamples[i].horizontalExpansionFactor == 1 and
-      resamples[i].verticalExpansionFactor == 2:
-      resamples[i].resample = resampleRowH1V2
-    elif resamples[i].horizontalExpansionFactor == 2 and
-      resamples[i].verticalExpansionFactor == 1:
-      resamples[i].resample = resampleRowH2V1
-    elif resamples[i].horizontalExpansionFactor == 2 and
-      resamples[i].verticalExpansionFactor == 2:
-      resamples[i].resample = resampleRowH2V2
-    elif resamples[i].horizontalExpansionFactor == 4 and
-      resamples[i].verticalExpansionFactor == 1:
-      resamples[i].resample = resampleRowH4V1
-    else:
-      failInvalid()
-
-  for y in 0 ..< state.imageHeight:
-    var componentOutputs: seq[ptr UncheckedArray[uint8]]
-    for i in 0 ..< state.components.len:
-      let yBottom =
-        resamples[i].yStep >= (resamples[i].verticalExpansionFactor shr 1)
-
-      # TODO
-      # for x in sample ^ 2
-      #   resample x dir
-
-      # for y in sample ^ 2
-      #   resample y dir
-
-      componentOutputs.add resamples[i].resample(
-        cast[ptr UncheckedArray[uint8]](state.components[i].lineBuf[0].addr),
-        if yBottom: resamples[i].line1 else: resamples[i].line0,
-        if yBottom: resamples[i].line0 else: resamples[i].line1,
-        resamples[i].widthPreExpansion,
-        resamples[i].horizontalExpansionFactor
-      )
-
-      inc resamples[i].yStep
-      if resamples[i].yStep >= resamples[i].verticalExpansionFactor:
-        resamples[i].yStep = 0
-        resamples[i].line0 = resamples[i].line1
-        inc resamples[i].yPos
-        if resamples[i].yPos < state.components[i].height:
-          resamples[i].line1 = cast[ptr UncheckedArray[uint8]](
-            state.components[i].data[
-              resamples[i].yPos * state.components[i].widthStride
-            ].addr
-          )
-
-    let dst = cast[ptr UncheckedArray[uint8]](
-      result.data[state.imageWidth * y].addr
-    )
-
-    if state.components.len == 3:
-      yCbCrToRgbx(
-        dst,
-        componentOutputs[0],
-        componentOutputs[1],
-        componentOutputs[2],
-        state.imageWidth
-      )
-    elif state.components.len == 1:
-      grayScaleToRgbx(
-        dst,
-        componentOutputs[0],
-        state.imageWidth,
-      )
-    else:
-      failInvalid()
+  elif state.components.len == 1:
+    let
+      cy = state.components[0].channel
+    for y in 0 ..< state.imageHeight:
+      for x in 0 ..< state.imageWidth:
+        result[x, y] = grayScaleToRgbx(
+          cy[x, y],
+        )
+  else:
+    failInvalid()
 
 proc decodeJpeg*(data: seq[uint8]): Image {.raises: [PixieError].} =
   ## Decodes the JPEG into an Image.
@@ -1121,3 +1021,6 @@ proc decodeJpeg*(data: string): Image {.inline, raises: [PixieError].} =
 
 proc encodeJpeg*(image: Image): string =
   raise newException(PixieError, "Encoding JPG not supported yet")
+
+when defined(release):
+  {.pop.}
