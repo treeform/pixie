@@ -10,7 +10,7 @@ type
     data*: seq[uint8]
 
   UnsafeMask = object
-    mask: Mask
+    mask*: Mask
 
 when defined(release):
   {.push checks: off.}

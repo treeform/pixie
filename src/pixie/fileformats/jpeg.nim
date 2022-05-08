@@ -828,6 +828,38 @@ proc quantizationAndIDCTPass(state: var DecoderState) =
           data
         )
 
+proc magnifyXBy2(mask: Mask): Mask =
+  ## Smooth magnify by power of 2 only in the X direction.
+  result = newMask(mask.width * 2, mask.height)
+  for y in 0 ..< mask.height:
+    for x in 0 ..< mask.width:
+      let n = 3 * mask.unsafe[x, y].uint16
+      if x == 0:
+        result.unsafe[x * 2 + 0, y] = mask.unsafe[x, y]
+        result.unsafe[x * 2 + 1, y] = ((n + mask.unsafe[x+1, y].uint16 + 2) div 4).uint8
+      elif x == mask.width - 1:
+        result.unsafe[x * 2 + 0, y] = ((n + mask.unsafe[x-1, y].uint16 + 2) div 4).uint8
+        result.unsafe[x * 2 + 1, y] = mask.unsafe[x, y]
+      else:
+        result.unsafe[x * 2 + 0, y] = ((n + mask.unsafe[x-1, y].uint16) div 4).uint8
+        result.unsafe[x * 2 + 1, y] = ((n + mask.unsafe[x+1, y].uint16) div 4).uint8
+
+proc magnifyYBy2(mask: Mask): Mask =
+  ## Smooth magnify by power of 2 only in the Y direction.
+  result = newMask(mask.width, mask.height * 2)
+  for y in 0 ..< mask.height:
+    for x in 0 ..< mask.width:
+      let n = 3 * mask.unsafe[x, y].uint16
+      if y == 0:
+        result.unsafe[x, y * 2 + 0] = mask.unsafe[x, y]
+        result.unsafe[x, y * 2 + 1] = ((n + mask.unsafe[x, y+1].uint16 + 2) div 4).uint8
+      elif y == mask.height - 1:
+        result.unsafe[x, y * 2 + 0] = ((n + mask.unsafe[x, y-1].uint16 + 2) div 4).uint8
+        result.unsafe[x, y * 2 + 1] = mask.unsafe[x, y]
+      else:
+        result.unsafe[x, y * 2 + 0] = ((n + mask.unsafe[x, y-1].uint16) div 4).uint8
+        result.unsafe[x, y * 2 + 1] = ((n + mask.unsafe[x, y+1].uint16) div 4).uint8
+
 proc yCbCrToRgbx(py, pcb, pcr: uint8): ColorRGBX =
   ## Takes a 3 component yCbCr outputs and populates image.
   template float2Fixed(x: float32): int =
@@ -856,43 +888,20 @@ proc grayScaleToRgbx(gray: uint8): ColorRGBX =
   result.b = g
   result.a = 255
 
-proc magnifyXBy2(mask: Mask): Mask =
-  result = newMask(mask.width * 2, mask.height)
-  for y in 0 ..< mask.height:
-    for x in 0 ..< mask.width:
-      if x == 0 or x == mask.width - 1:
-        result[x * 2 + 0, y] = mask[x, y]
-        result[x * 2 + 1, y] = mask[x, y]
-      else:
-        result[x * 2 + 0, y] = mask[x, y] div 2 + mask[x-1, y] div 2
-        result[x * 2 + 1, y] = mask[x, y] div 2 + mask[x+1, y] div 2
-
-proc magnifyYBy2(mask: Mask): Mask =
-  result = newMask(mask.width, mask.height * 2)
-  for y in 0 ..< mask.height:
-    for x in 0 ..< mask.width:
-      if y == 0 or y == mask.width - 1:
-        result[x, y * 2 + 0] = mask[x, y]
-        result[x, y * 2 + 1] = mask[x, y]
-      else:
-        result[x, y * 2 + 0] = mask[x, y] div 2 + mask[x, y-1] div 2
-        result[x, y * 2 + 1] = mask[x, y] div 2 + mask[x, y+1] div 2
-
 {.pop.}
 
 proc buildImage(state: var DecoderState): Image =
   ## Takes a jpeg image object and builds a pixie Image from it.
 
   if state.components.len == 3:
-    for componentIdx, component in state.components.mpairs:
+    for component in state.components.mitems:
+      while component.yScale < state.maxYScale:
+        component.channel = component.channel.magnifyXBy2()
+        component.yScale *= 2
 
       while component.xScale < state.maxXScale:
         component.channel = component.channel.magnifyYBy2()
         component.xScale *= 2
-
-      while component.yScale < state.maxYScale:
-        component.channel = component.channel.magnifyXBy2()
-        component.yScale *= 2
 
   result = newImage(state.imageWidth, state.imageHeight)
 
@@ -903,10 +912,10 @@ proc buildImage(state: var DecoderState): Image =
       cr = state.components[2].channel
     for y in 0 ..< state.imageHeight:
       for x in 0 ..< state.imageWidth:
-        result[x, y] = yCbCrToRgbx(
-          cy[x, y],
-          cb[x, y],
-          cr[x, y],
+        result.unsafe[x, y] = yCbCrToRgbx(
+          cy.unsafe[x, y],
+          cb.unsafe[x, y],
+          cr.unsafe[x, y],
         )
 
   elif state.components.len == 1:
@@ -914,8 +923,8 @@ proc buildImage(state: var DecoderState): Image =
       cy = state.components[0].channel
     for y in 0 ..< state.imageHeight:
       for x in 0 ..< state.imageWidth:
-        result[x, y] = grayScaleToRgbx(
-          cy[x, y],
+        result.unsafe[x, y] = grayScaleToRgbx(
+          cy.unsafe[x, y],
         )
   else:
     failInvalid()
