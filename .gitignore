@@ -15,4 +15,4 @@ bindings/generated
 *.dSYM
 dump.txt
 tests/fileformats/jpeg/generated
-tests/fileformats/jpeg/diff
+tests/fileformats/jpeg/diffs
