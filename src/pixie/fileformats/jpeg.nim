@@ -1,4 +1,4 @@
-import pixie/common, pixie/images, sequtils, strutils
+import pixie/common, pixie/images, pixie/masks, sequtils, strutils, chroma, std/decls
 
 # This JPEG decoder is loosely based on stb_image which is public domain.
 
@@ -50,16 +50,6 @@ type
     maxCodes: array[18, int]
     fast: array[1 shl fastBits, uint8]
 
-  ResampleProc = proc(dst, line0, line1: ptr UncheckedArray[uint8],
-    widthPreExpansion, horizontalExpansionFactor: int
-  ): ptr UncheckedArray[uint8] {.raises: [].}
-
-  Resample = object
-    horizontalExpansionFactor, verticalExpansionFactor: int
-    yStep, yPos, widthPreExpansion: int
-    line0, line1: ptr UncheckedArray[uint8]
-    resample: ResampleProc
-
   Component = object
     id, quantizationTableId: uint8
     yScale, xScale: int
@@ -68,8 +58,9 @@ type
     huffmanDC, huffmanAC: int
     dcPred: int
     widthCoeff, heightCoeff: int
-    data, coeff, lineBuf: seq[uint8]
+    coeff, lineBuf: seq[uint8]
     blocks: seq[seq[array[64, int16]]]
+    channel: Mask
 
   DecoderState = object
     buffer: seq[uint8]
@@ -91,6 +82,9 @@ type
     todo: int
     eobRun: int
 
+when defined(release):
+  {.push checks: off.}
+
 template failInvalid(reason = "unable to load") =
   ## Throw exception with a reason.
   raise newException(PixieError, "Invalid JPEG, " & reason)
@@ -98,10 +92,6 @@ template failInvalid(reason = "unable to load") =
 template clampByte(x): uint8 =
   ## Clamp integer into byte range.
   clamp(x, 0, 0xFF).uint8
-
-template clampInt16(x): int16 =
-  ## Clamp integer into byte range.
-  clamp(x, -32768, 32767).int16
 
 proc readUint8(state: var DecoderState): uint8 =
   ## Reads a byte from the input stream.
@@ -151,6 +141,7 @@ proc decodeDQT(state: var DecoderState) =
     failInvalid("DQT table length did not match")
 
 proc buildHuffman(huffman: var Huffman, counts: array[16, uint8]) =
+  ## Builds the huffman data structure.
   block:
     var k: int
     for i in 0.uint8 ..< 16:
@@ -187,7 +178,6 @@ proc buildHuffman(huffman: var Huffman, counts: array[16, uint8]) =
 
 proc decodeDHT(state: var DecoderState) =
   ## Decode Define Huffman Table
-
   var len = state.readUint16be() - 2
   while len > 0:
     let
@@ -239,8 +229,8 @@ proc decodeSOF0(state: var DecoderState) =
     failInvalid("unsupported component count, must be 1 or 3")
 
   for i in 0 ..< numComponents:
-    state.components.add(Component())
-    state.components[i].id = state.readUint8()
+    var component = Component()
+    component.id = state.readUint8()
     let
       info = state.readUint8()
       vertical = info and 15
@@ -253,19 +243,14 @@ proc decodeSOF0(state: var DecoderState) =
     if vertical == 0 or vertical > 4 or horizontal == 0 or horizontal > 4:
       failInvalid("invalid component scaling factor")
 
-    state.components[i].xScale = vertical.int
-    state.components[i].yScale = horizontal.int
-    state.components[i].quantizationTableId = quantizationTableId
+    component.xScale = vertical.int
+    component.yScale = horizontal.int
+    component.quantizationTableId = quantizationTableId
+    state.components.add(component)
 
-  for i in 0 ..< state.components.len:
-    state.maxXScale = max(
-      state.maxXScale,
-      state.components[i].xScale
-    )
-    state.maxYScale = max(
-      state.maxYScale,
-      state.components[i].yScale
-    )
+  for component in state.components.mitems:
+    state.maxXScale = max(state.maxXScale, component.xScale)
+    state.maxYScale = max(state.maxYScale, component.yScale)
 
   state.mcuWidth = state.maxYScale * 8
   state.mcuHeight = state.maxXScale * 8
@@ -274,40 +259,38 @@ proc decodeSOF0(state: var DecoderState) =
   state.numMcuHigh =
     (state.imageHeight + state.mcuHeight - 1) div state.mcuHeight
 
-  for i in 0 ..< state.components.len:
-    state.components[i].width = (
+  for component in state.components.mitems:
+    component.width = (
       state.imageWidth *
-      state.components[i].yScale +
+      component.yScale +
       state.maxYScale - 1
     ) div state.maxYScale
-    state.components[i].height = (
+    component.height = (
       state.imageHeight *
-      state.components[i].xScale +
+      component.xScale +
       state.maxXScale - 1
     ) div state.maxXScale
 
     # Allocate block data structures.
-    state.components[i].blocks = newSeqWith(
-      state.components[i].width,
+    component.blocks = newSeqWith(
+      component.width,
       newSeq[array[64, int16]](
-        state.components[i].height
+        component.height
       )
     )
 
-    state.components[i].widthStride =
-      state.numMcuWide * state.components[i].yScale * 8
-    state.components[i].heightStride =
-      state.numMcuHigh * state.components[i].xScale * 8
+    component.widthStride = state.numMcuWide * component.yScale * 8
+    component.heightStride = state.numMcuHigh * component.xScale * 8
 
-    state.components[i].data.setLen(
-      state.components[i].widthStride * state.components[i].heightStride
+    component.channel = newMask(
+      component.widthStride, component.heightStride
     )
 
     if state.progressive:
-      state.components[i].widthCoeff = state.components[i].widthStride div 8
-      state.components[i].heightCoeff = state.components[i].heightStride div 8
-      state.components[i].coeff.setLen(
-        state.components[i].widthStride * state.components[i].heightStride
+      component.widthCoeff = component.widthStride div 8
+      component.heightCoeff = component.heightStride div 8
+      component.coeff.setLen(
+        component.widthStride * component.heightStride
       )
 
 proc decodeSOF1(state: var DecoderState) =
@@ -320,6 +303,7 @@ proc decodeSOF2(state: var DecoderState) =
   state.progressive = true
 
 proc reset(state: var DecoderState) =
+  ## Rests the decoder state need for reset markers.
   state.bits = 0
   state.bitCount = 0
   for component in 0 ..< state.components.len:
@@ -343,7 +327,7 @@ proc decodeSOS(state: var DecoderState) =
   if state.scanComponents notin [1, 3]:
     failInvalid("unsupported scan component count")
 
-  state.componentOrder = @[]
+  state.componentOrder.setLen(0)
 
   for i in 0 ..< state.scanComponents:
     let
@@ -488,7 +472,7 @@ proc getBitsAsUnsignedInt(state: var DecoderState, n: int): int =
   state.bitCount -= n
   return k.int
 
-{.push overflowChecks: off.}
+{.push overflowChecks: off, rangeChecks: off.}
 
 proc decodeRegularBlock(
   state: var DecoderState, component: int, data: var array[64, int16]
@@ -505,7 +489,7 @@ proc decodeRegularBlock(
       state.getBitsAsSignedInt(t)
     dc = state.components[component].dcPred + diff
   state.components[component].dcPred = dc
-  data[0] = clampInt16(dc)
+  data[0] = dc.int16
 
   var i = 1
   while true:
@@ -547,7 +531,7 @@ proc decodeProgressiveBlock(
     let
       dc = state.components[component].dcPred + diff
     state.components[component].dcPred = dc
-    data[0] = clampInt16(dc * (1 shl state.successiveApproxLow))
+    data[0] = (dc * (1 shl state.successiveApproxLow)).int16
 
   else:
     if getBit(state) != 0:
@@ -592,7 +576,7 @@ proc decodeProgressiveContinuationBlock(
         inc k
         if s >= 15:
           failInvalid()
-        data[zig] = clampInt16(state.getBitsAsSignedInt(s.int) * (1 shl shift))
+        data[zig] = (state.getBitsAsSignedInt(s.int) * (1 shl shift)).int16
 
       if not(k <= state.spectralEnd):
         break
@@ -657,6 +641,7 @@ proc decodeProgressiveContinuationBlock(
           break
 
 template idct1D(s0, s1, s2, s3, s4, s5, s6, s7: int32) =
+  ## Inverse discrete cosine transform 1D
   template f2f(x: float32): int32 = (x * 4096 + 0.5).int32
   template fsh(x: int32): int32 = x * 4096
   p2 = s2
@@ -695,6 +680,7 @@ template idct1D(s0, s1, s2, s3, s4, s5, s6, s7: int32) =
   t0 += p1 + p3
 
 proc idctBlock(component: var Component, offset: int, data: array[64, int16]) =
+  ## Inverse discrete cosine transform whole block.
   var values: array[64, int32]
   for i in 0 ..< 8:
     if data[i + 8] == 0 and
@@ -704,7 +690,7 @@ proc idctBlock(component: var Component, offset: int, data: array[64, int16]) =
       data[i + 40] == 0 and
       data[i + 48] == 0 and
       data[i + 56] == 0:
-      let dcterm = clampInt16(data[i].int * 4.int)
+      let dcterm = data[i] * 4
       values[i + 0] = dcterm
       values[i + 8] = dcterm
       values[i + 16] = dcterm
@@ -760,20 +746,18 @@ proc idctBlock(component: var Component, offset: int, data: array[64, int16]) =
     x2 += 65536 + (128 shl 17)
     x3 += 65536 + (128 shl 17)
 
-    component.data[outPos + 0] = clampByte((x0 + t3) shr 17)
-    component.data[outPos + 7] = clampByte((x0 - t3) shr 17)
-    component.data[outPos + 1] = clampByte((x1 + t2) shr 17)
-    component.data[outPos + 6] = clampByte((x1 - t2) shr 17)
-    component.data[outPos + 2] = clampByte((x2 + t1) shr 17)
-    component.data[outPos + 5] = clampByte((x2 - t1) shr 17)
-    component.data[outPos + 3] = clampByte((x3 + t0) shr 17)
-    component.data[outPos + 4] = clampByte((x3 - t0) shr 17)
-
-{.pop.}
+    component.channel.data[outPos + 0] = clampByte((x0 + t3) shr 17)
+    component.channel.data[outPos + 7] = clampByte((x0 - t3) shr 17)
+    component.channel.data[outPos + 1] = clampByte((x1 + t2) shr 17)
+    component.channel.data[outPos + 6] = clampByte((x1 - t2) shr 17)
+    component.channel.data[outPos + 2] = clampByte((x2 + t1) shr 17)
+    component.channel.data[outPos + 5] = clampByte((x2 - t1) shr 17)
+    component.channel.data[outPos + 3] = clampByte((x3 + t0) shr 17)
+    component.channel.data[outPos + 4] = clampByte((x3 - t0) shr 17)
 
 proc decodeBlock(state: var DecoderState, comp, row, column: int) =
   ## Decodes a block.
-  var data = state.components[comp].blocks[row][column]
+  var data {.byaddr.} = state.components[comp].blocks[row][column]
   if state.progressive:
     if state.spectralStart == 0:
       state.decodeProgressiveBlock(comp, data)
@@ -781,9 +765,9 @@ proc decodeBlock(state: var DecoderState, comp, row, column: int) =
       state.decodeProgressiveContinuationBlock(comp, data)
   else:
     state.decodeRegularBlock(comp, data)
-  state.components[comp].blocks[row][column] = data
 
 template checkReset(state: var DecoderState) =
+  ## Check if we might have run into a reset marker, then deal with it.
   dec state.todo
   if state.todo <= 0:
     if state.bitCount < 24:
@@ -794,45 +778,32 @@ template checkReset(state: var DecoderState) =
         state.pos += 2
       else:
         failInvalid("did not get expected reset marker")
-
     state.reset()
 
 proc decodeBlocks(state: var DecoderState) =
   ## Decodes scan data blocks that follow a SOS block.
-  if state.progressive:
-    if state.scanComponents == 1:
-      # Single component pass.
-      let
-        comp = state.componentOrder[0]
-        w = (state.components[comp].width + 7) shr 3
-        h = (state.components[comp].height + 7) shr 3
-      for column in 0 ..< h:
-        for row in 0 ..< w:
-          state.decodeBlock(comp, row, column)
-          state.checkReset()
-    else:
-      # Interleaved component pass.
-      for y in 0 ..< state.numMcuHigh:
-        for x in 0 ..< state.numMcuWide:
-          for comp in state.componentOrder:
-            for j in 0 ..< state.components[comp].yScale:
-              for i in 0 ..< state.components[comp].xScale:
-                let
-                  row = (x * state.components[comp].xScale + i)
-                  column = (y * state.components[comp].yScale + j)
-                state.decodeBlock(comp, row, column)
-          state.checkReset()
+  if state.scanComponents == 1:
+    # Single component pass.
+
+    let
+      comp = state.componentOrder[0]
+      w = (state.components[comp].width + 7) shr 3
+      h = (state.components[comp].height + 7) shr 3
+    for column in 0 ..< h:
+      for row in 0 ..< w:
+        state.decodeBlock(comp, row, column)
+        state.checkReset()
   else:
     # Interleaved regular component pass.
-    for y in 0 ..< state.numMcuHigh:
-      for x in 0 ..< state.numMcuWide:
+    for mcuY in 0 ..< state.numMcuHigh:
+      for mcuX in 0 ..< state.numMcuWide:
         for comp in state.componentOrder:
-          for j in 0 ..< state.components[comp].xScale:
-            for i in 0 ..< state.components[comp].yScale:
+          for compY in 0 ..< state.components[comp].xScale:
+            for compX in 0 ..< state.components[comp].yScale:
               let
-                row = (x * state.components[comp].yScale + i)
-                column = (y * state.components[comp].xScale + j)
-              state.decodeBlock(comp, row, column)
+                row = (mcuX * state.components[comp].yScale + compX)
+                col = (mcuY * state.components[comp].xScale + compY)
+              state.decodeBlock(comp, row, col)
         state.checkReset()
 
 proc quantizationAndIDCTPass(state: var DecoderState) =
@@ -850,206 +821,113 @@ proc quantizationAndIDCTPass(state: var DecoderState) =
           let qTableId = state.components[comp].quantizationTableId
           if qTableId.int notin 0 ..< state.quantizationTables.len:
             failInvalid()
-          data[i] = clampInt16(data[i] * state.quantizationTables[qTableId][i].int)
+          data[i] = data[i] * state.quantizationTables[qTableId][i].int16
 
         state.components[comp].idctBlock(
           state.components[comp].widthStride * column * 8 + row * 8,
           data
         )
 
-proc resampleRowH1V1(
-  dst, a, b: ptr UncheckedArray[uint8],
-  widthPreExpansion, horizontalExpansionFactor: int
-): ptr UncheckedArray[uint8] =
-  a
+proc magnifyXBy2(mask: Mask): Mask =
+  ## Smooth magnify by power of 2 only in the X direction.
+  result = newMask(mask.width * 2, mask.height)
+  for y in 0 ..< mask.height:
+    for x in 0 ..< mask.width:
+      let n = 3 * mask.unsafe[x, y].uint16
+      if x == 0:
+        result.unsafe[x * 2 + 0, y] = mask.unsafe[x, y]
+        result.unsafe[x * 2 + 1, y] = ((n + mask.unsafe[x+1, y].uint16 + 2) div 4).uint8
+      elif x == mask.width - 1:
+        result.unsafe[x * 2 + 0, y] = ((n + mask.unsafe[x-1, y].uint16 + 2) div 4).uint8
+        result.unsafe[x * 2 + 1, y] = mask.unsafe[x, y]
+      else:
+        result.unsafe[x * 2 + 0, y] = ((n + mask.unsafe[x-1, y].uint16) div 4).uint8
+        result.unsafe[x * 2 + 1, y] = ((n + mask.unsafe[x+1, y].uint16) div 4).uint8
 
-proc resampleRowH1V2(
-  dst, a, b: ptr UncheckedArray[uint8],
-  widthPreExpansion, horizontalExpansionFactor: int
-): ptr UncheckedArray[uint8] =
-  for i in 0 ..< widthPreExpansion:
-    dst[i] = ((3 * a[i].int + b[i].int + 2) shr 2).uint8
-  dst
+proc magnifyYBy2(mask: Mask): Mask =
+  ## Smooth magnify by power of 2 only in the Y direction.
+  result = newMask(mask.width, mask.height * 2)
+  for y in 0 ..< mask.height:
+    for x in 0 ..< mask.width:
+      let n = 3 * mask.unsafe[x, y].uint16
+      if y == 0:
+        result.unsafe[x, y * 2 + 0] = mask.unsafe[x, y]
+        result.unsafe[x, y * 2 + 1] = ((n + mask.unsafe[x, y+1].uint16 + 2) div 4).uint8
+      elif y == mask.height - 1:
+        result.unsafe[x, y * 2 + 0] = ((n + mask.unsafe[x, y-1].uint16 + 2) div 4).uint8
+        result.unsafe[x, y * 2 + 1] = mask.unsafe[x, y]
+      else:
+        result.unsafe[x, y * 2 + 0] = ((n + mask.unsafe[x, y-1].uint16) div 4).uint8
+        result.unsafe[x, y * 2 + 1] = ((n + mask.unsafe[x, y+1].uint16) div 4).uint8
 
-proc resampleRowH2V1(
-  dst, a, b: ptr UncheckedArray[uint8],
-  widthPreExpansion, horizontalExpansionFactor: int
-): ptr UncheckedArray[uint8] =
-  if widthPreExpansion == 1:
-    dst[0] = a[0]
-    dst[1] = dst[0]
-  else:
-    dst[0] = a[0]
-    dst[1] = ((a[0].int * 3 + a[1].int + 2) shr 2).uint8
-    for i in 1 ..< widthPreExpansion - 1:
-      let n = 3 * a[i].int + 2
-      dst[i * 2 + 0] = ((n + a[i - 1].int) shr 2).uint8
-      dst[i * 2 + 1] = ((n + a[i + 1].int) shr 2).uint8
-
-    dst[widthPreExpansion * 2 + 0] = ((
-      a[widthPreExpansion - 2].int * 3 + a[widthPreExpansion - 1].int + 2
-    ) shr 2).uint8
-    dst[widthPreExpansion * 2 + 1] = (a[widthPreExpansion - 1]) shr 2
-  dst
-
-proc resampleRowH4V1(
-  dst, a, b: ptr UncheckedArray[uint8],
-  widthPreExpansion, horizontalExpansionFactor: int
-): ptr UncheckedArray[uint8] =
-  for i in 0 ..< widthPreExpansion * 4:
-    dst[i] = a[i div 4]
-  dst
-
-proc resampleRowH2V2(
-  dst, a, b: ptr UncheckedArray[uint8],
-  widthPreExpansion, horizontalExpansionFactor: int
-): ptr UncheckedArray[uint8] =
-  if widthPreExpansion == 1:
-    dst[0] = ((3 * a[0].int + b[0].int + 2) shr 2).uint8
-    dst[1] = dst[0]
-  else:
-    var
-      t0: int
-      t1 = 3 * a[0].int + b[0].int
-    dst[0] = ((t1 + 2) shr 2).uint8
-    for i in 1 ..< widthPreExpansion:
-      t0 = t1
-      t1 = 3 * a[i].int + b[i].int
-      dst[i * 2 - 1] = ((3 * t0 + t1 + 8) shr 4).uint8
-      dst[i * 2 + 0] = ((3 * t1 + t0 + 8) shr 4).uint8
-    dst[widthPreExpansion * 2 - 1] = ((t1 + 2) shr 2).uint8
-  dst
-
-proc yCbCrToRgbx(dst, py, pcb, pcr: ptr UncheckedArray[uint8], width: int) =
+proc yCbCrToRgbx(py, pcb, pcr: uint8): ColorRGBX =
   ## Takes a 3 component yCbCr outputs and populates image.
   template float2Fixed(x: float32): int =
     (x * 4096 + 0.5).int shl 8
 
-  var pos: int
-  for i in 0 ..< width:
-    let
-      yFixed = (py[][i].int shl 20) + (1 shl 19)
-      cb = pcb[][i].int - 128
-      cr = pcr[][i].int - 128
-    var
-      r = yFixed + cr * float2Fixed(1.40200)
-      g = yFixed +
-        (cr * -float2Fixed(0.71414)) +
-        ((cb * -float2Fixed(0.34414)) and -65536)
-      b = yFixed + cb * float2Fixed(1.77200)
-    dst[pos + 0] = clampByte(r shr 20)
-    dst[pos + 1] = clampByte(g shr 20)
-    dst[pos + 2] = clampByte(b shr 20)
-    dst[pos + 3] = 255
-    pos += 4
+  let
+    yFixed = (py.int shl 20) + (1 shl 19)
+    cb = pcb.int - 128
+    cr = pcr.int - 128
+  var
+    r = yFixed + cr * float2Fixed(1.40200)
+    g = yFixed +
+      (cr * -float2Fixed(0.71414)) +
+      ((cb * -float2Fixed(0.34414)) and -65536)
+    b = yFixed + cb * float2Fixed(1.77200)
+  result.r = clampByte(r shr 20)
+  result.g = clampByte(g shr 20)
+  result.b = clampByte(b shr 20)
+  result.a = 255
 
-proc grayScaleToRgbx(dst, gray: ptr UncheckedArray[uint8], width: int) =
+proc grayScaleToRgbx(gray: uint8): ColorRGBX =
   ## Takes a single gray scale component output and populates image.
-  var pos: int
-  for i in 0 ..< width:
-    let g = gray[i]
-    dst[pos + 0] = g
-    dst[pos + 1] = g
-    dst[pos + 2] = g
-    dst[pos + 3] = 255
-    pos += 4
+  let g = gray
+  result.r = g
+  result.g = g
+  result.b = g
+  result.a = 255
+
+{.pop.}
 
 proc buildImage(state: var DecoderState): Image =
   ## Takes a jpeg image object and builds a pixie Image from it.
+
+  if state.components.len == 3:
+    for component in state.components.mitems:
+      while component.yScale < state.maxYScale:
+        component.channel = component.channel.magnifyXBy2()
+        component.yScale *= 2
+
+      while component.xScale < state.maxXScale:
+        component.channel = component.channel.magnifyYBy2()
+        component.xScale *= 2
+
   result = newImage(state.imageWidth, state.imageHeight)
 
-  var resamples: array[3, Resample]
-  for i in 0 ..< state.components.len:
-    resamples[i].horizontalExpansionFactor =
-      state.maxYScale div
-      state.components[i].yScale
-    resamples[i].verticalExpansionFactor =
-      state.maxXScale div
-      state.components[i].xScale
-    resamples[i].yStep = resamples[i].verticalExpansionFactor shr 1
-    resamples[i].widthPreExpansion = (
-      state.imageWidth + resamples[i].horizontalExpansionFactor - 1
-    ) div resamples[i].horizontalExpansionFactor
+  if state.components.len == 3:
+    let
+      cy = state.components[0].channel
+      cb = state.components[1].channel
+      cr = state.components[2].channel
+    for y in 0 ..< state.imageHeight:
+      for x in 0 ..< state.imageWidth:
+        result.unsafe[x, y] = yCbCrToRgbx(
+          cy.unsafe[x, y],
+          cb.unsafe[x, y],
+          cr.unsafe[x, y],
+        )
 
-    resamples[i].line0 = cast[ptr UncheckedArray[uint8]](
-      state.components[i].data[0].addr
-    )
-    resamples[i].line1 = cast[ptr UncheckedArray[uint8]](
-      state.components[i].data[0].addr
-    )
-    state.components[i].lineBuf.setLen(state.imageWidth + 3)
-
-    if resamples[i].horizontalExpansionFactor == 1 and
-      resamples[i].verticalExpansionFactor == 1:
-      resamples[i].resample = resampleRowH1V1
-    elif resamples[i].horizontalExpansionFactor == 1 and
-      resamples[i].verticalExpansionFactor == 2:
-      resamples[i].resample = resampleRowH1V2
-    elif resamples[i].horizontalExpansionFactor == 2 and
-      resamples[i].verticalExpansionFactor == 1:
-      resamples[i].resample = resampleRowH2V1
-    elif resamples[i].horizontalExpansionFactor == 2 and
-      resamples[i].verticalExpansionFactor == 2:
-      resamples[i].resample = resampleRowH2V2
-    elif resamples[i].horizontalExpansionFactor == 4 and
-      resamples[i].verticalExpansionFactor == 1:
-      resamples[i].resample = resampleRowH4V1
-    else:
-      failInvalid()
-
-  for y in 0 ..< state.imageHeight:
-    var componentOutputs: seq[ptr UncheckedArray[uint8]]
-    for i in 0 ..< state.components.len:
-      let yBottom =
-        resamples[i].yStep >= (resamples[i].verticalExpansionFactor shr 1)
-
-      # TODO
-      # for x in sample ^ 2
-      #   resample x dir
-
-      # for y in sample ^ 2
-      #   resample y dir
-
-      componentOutputs.add resamples[i].resample(
-        cast[ptr UncheckedArray[uint8]](state.components[i].lineBuf[0].addr),
-        if yBottom: resamples[i].line1 else: resamples[i].line0,
-        if yBottom: resamples[i].line0 else: resamples[i].line1,
-        resamples[i].widthPreExpansion,
-        resamples[i].horizontalExpansionFactor
-      )
-
-      inc resamples[i].yStep
-      if resamples[i].yStep >= resamples[i].verticalExpansionFactor:
-        resamples[i].yStep = 0
-        resamples[i].line0 = resamples[i].line1
-        inc resamples[i].yPos
-        if resamples[i].yPos < state.components[i].height:
-          resamples[i].line1 = cast[ptr UncheckedArray[uint8]](
-            state.components[i].data[
-              resamples[i].yPos * state.components[i].widthStride
-            ].addr
-          )
-
-    let dst = cast[ptr UncheckedArray[uint8]](
-      result.data[state.imageWidth * y].addr
-    )
-
-    if state.components.len == 3:
-      yCbCrToRgbx(
-        dst,
-        componentOutputs[0],
-        componentOutputs[1],
-        componentOutputs[2],
-        state.imageWidth
-      )
-    elif state.components.len == 1:
-      grayScaleToRgbx(
-        dst,
-        componentOutputs[0],
-        state.imageWidth,
-      )
-    else:
-      failInvalid()
+  elif state.components.len == 1:
+    let
+      cy = state.components[0].channel
+    for y in 0 ..< state.imageHeight:
+      for x in 0 ..< state.imageWidth:
+        result.unsafe[x, y] = grayScaleToRgbx(
+          cy.unsafe[x, y],
+        )
+  else:
+    failInvalid()
 
 proc decodeJpeg*(data: seq[uint8]): Image {.raises: [PixieError].} =
   ## Decodes the JPEG into an Image.
@@ -1121,3 +999,6 @@ proc decodeJpeg*(data: string): Image {.inline, raises: [PixieError].} =
 
 proc encodeJpeg*(image: Image): string =
   raise newException(PixieError, "Encoding JPG not supported yet")
+
+when defined(release):
+  {.pop.}
