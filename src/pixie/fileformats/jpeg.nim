@@ -929,7 +929,7 @@ proc buildImage(state: var DecoderState): Image =
   else:
     failInvalid()
 
-proc decodeJpeg*(data: string): Image {.inline, raises: [PixieError].} =
+proc decodeJpeg*(data: string): Image {.raises: [PixieError].} =
   ## Decodes the JPEG into an Image.
 
   var state = DecoderState()
