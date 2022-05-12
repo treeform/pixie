@@ -1,4 +1,4 @@
-import pixie, strutils, os, strformat, jpegsuite
+import jpegsuite, os, pixie, strformat, strutils
 
 createDir("tests/fileformats/jpeg/generated")
 createDir("tests/fileformats/jpeg/diffs")

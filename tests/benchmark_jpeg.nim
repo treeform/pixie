@@ -1,4 +1,4 @@
-import benchy, pixie/fileformats/jpg, jpegsuite
+import benchy, jpegsuite, pixie/fileformats/jpg
 
 for file in jpegSuiteFiles:
   let data = readFile(file)
