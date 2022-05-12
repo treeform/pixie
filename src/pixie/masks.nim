@@ -9,8 +9,7 @@ type
     width*, height*: int
     data*: seq[uint8]
 
-  UnsafeMask = object
-    mask*: Mask
+  UnsafeMask = distinct Mask
 
 when defined(release):
   {.push checks: off.}
@@ -42,21 +41,21 @@ proc dataIndex*(mask: Mask, x, y: int): int {.inline, raises: [].} =
   mask.width * y + x
 
 template unsafe*(src: Mask): UnsafeMask =
-  UnsafeMask(mask: src)
+  cast[UnsafeMask](src)
 
 template `[]`*(view: UnsafeMask, x, y: int): uint8 =
   ## Gets a value from (x, y) coordinates.
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will case unsafe memory reads.
-  view.mask.data[view.mask.dataIndex(x, y)]
+  cast[Mask](view).data[cast[Mask](view).dataIndex(x, y)]
 
 template `[]=`*(view: UnsafeMask, x, y: int, color: uint8) =
   ## Sets a value from (x, y) coordinates.
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will case unsafe memory writes.
-  view.mask.data[view.mask.dataIndex(x, y)] = color
+  cast[Mask](view).data[cast[Mask](view).dataIndex(x, y)] = color
 
 proc `[]`*(mask: Mask, x, y: int): uint8 {.inline, raises: [].} =
   ## Gets a value at (x, y) or returns transparent black if outside of bounds.
