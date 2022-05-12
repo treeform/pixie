@@ -11,8 +11,7 @@ type
     width*, height*: int
     data*: seq[ColorRGBX]
 
-  UnsafeImage = object
-    image: Image
+  UnsafeImage = distinct Image
 
 when defined(release):
   {.push checks: off.}
@@ -62,21 +61,21 @@ proc dataIndex*(image: Image, x, y: int): int {.inline, raises: [].} =
   image.width * y + x
 
 template unsafe*(src: Image): UnsafeImage =
-  UnsafeImage(image: src)
+  cast[UnsafeImage](src)
 
 template `[]`*(view: UnsafeImage, x, y: int): ColorRGBX =
   ## Gets a color from (x, y) coordinates.
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will cause unsafe memory reads.
-  view.image.data[view.image.dataIndex(x, y)]
+  cast[Image](view).data[cast[Image](view).dataIndex(x, y)]
 
 template `[]=`*(view: UnsafeImage, x, y: int, color: ColorRGBX) =
   ## Sets a color from (x, y) coordinates.
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
   ## Failure in the assumptions will cause unsafe memory writes.
-  view.image.data[view.image.dataIndex(x, y)] = color
+  cast[Image](view).data[cast[Image](view).dataIndex(x, y)] = color
 
 proc `[]`*(image: Image, x, y: int): ColorRGBX {.inline, raises: [].} =
   ## Gets a pixel at (x, y) or returns transparent black if outside of bounds.
