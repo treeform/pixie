@@ -63,7 +63,7 @@ type
     channel: Mask
 
   DecoderState = object
-    buffer: seq[uint8]
+    buffer: string
     pos, bitCount: int
     bits: uint32
     hitEnd: bool
@@ -97,7 +97,7 @@ proc readUint8(state: var DecoderState): uint8 =
   ## Reads a byte from the input stream.
   if state.pos >= state.buffer.len:
     failInvalid()
-  result = state.buffer[state.pos]
+  result = cast[uint8](state.buffer[state.pos])
   inc state.pos
 
 proc readUint16be(state: var DecoderState): uint16 =
@@ -773,8 +773,8 @@ template checkReset(state: var DecoderState) =
     if state.bitCount < 24:
       state.fillBits()
 
-    if state.buffer[state.pos] == 0xFF:
-      if state.buffer[state.pos+1] in {0xD0 .. 0xD7}:
+    if state.buffer[state.pos] == 0xFF.char:
+      if state.buffer[state.pos+1] in {0xD0.char .. 0xD7.char}:
         state.pos += 2
       else:
         failInvalid("did not get expected reset marker")
@@ -929,7 +929,7 @@ proc buildImage(state: var DecoderState): Image =
   else:
     failInvalid()
 
-proc decodeJpeg*(data: seq[uint8]): Image {.raises: [PixieError].} =
+proc decodeJpeg*(data: string): Image {.inline, raises: [PixieError].} =
   ## Decodes the JPEG into an Image.
 
   var state = DecoderState()
@@ -993,12 +993,6 @@ proc decodeJpeg*(data: seq[uint8]): Image {.raises: [PixieError].} =
   state.quantizationAndIDCTPass()
 
   state.buildImage()
-
-proc decodeJpeg*(data: string): Image {.inline, raises: [PixieError].} =
-  decodeJpeg(cast[seq[uint8]](data))
-
-proc encodeJpeg*(image: Image): string =
-  raise newException(PixieError, "Encoding JPG not supported yet")
 
 when defined(release):
   {.pop.}
