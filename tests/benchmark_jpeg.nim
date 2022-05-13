@@ -1,6 +1,6 @@
-import benchy, jpegsuite, pixie/fileformats/jpg
+import benchy, jpegsuite, pixie/fileformats/jpg, strformat
 
 for file in jpegSuiteFiles:
   let data = readFile(file)
-  timeIt "jpeg " & $(len(data) div 1024) & "k decode":
+  timeIt &"jpeg {(data.len div 1024)}k decode", 10000:
     discard decodeJpg(data)

@@ -63,7 +63,7 @@ type
     channel: Mask
 
   DecoderState = object
-    buffer: seq[uint8]
+    buffer: string
     pos, bitCount: int
     bits: uint32
     hitEnd: bool
@@ -97,7 +97,7 @@ proc readUint8(state: var DecoderState): uint8 =
   ## Reads a byte from the input stream.
   if state.pos >= state.buffer.len:
     failInvalid()
-  result = state.buffer[state.pos]
+  result = cast[uint8](state.buffer[state.pos])
   inc state.pos
 
 proc readUint16be(state: var DecoderState): uint16 =
@@ -472,8 +472,6 @@ proc getBitsAsUnsignedInt(state: var DecoderState, n: int): int =
   state.bitCount -= n
   return k.int
 
-{.push overflowChecks: off, rangeChecks: off.}
-
 proc decodeRegularBlock(
   state: var DecoderState, component: int, data: var array[64, int16]
 ) =
@@ -489,7 +487,7 @@ proc decodeRegularBlock(
       state.getBitsAsSignedInt(t)
     dc = state.components[component].dcPred + diff
   state.components[component].dcPred = dc
-  data[0] = dc.int16
+  data[0] = cast[int16](dc)
 
   var i = 1
   while true:
@@ -506,7 +504,7 @@ proc decodeRegularBlock(
       if i notin 0 ..< 64:
         failInvalid()
       let zig = deZigZag[i]
-      data[zig] = state.getBitsAsSignedInt(s.int).int16
+      data[zig] = cast[int16](state.getBitsAsSignedInt(s.int))
       inc i
 
     if not(i < 64):
@@ -531,11 +529,11 @@ proc decodeProgressiveBlock(
     let
       dc = state.components[component].dcPred + diff
     state.components[component].dcPred = dc
-    data[0] = (dc * (1 shl state.successiveApproxLow)).int16
+    data[0] = cast[int16](dc * (1 shl state.successiveApproxLow))
 
   else:
     if getBit(state) != 0:
-      data[0] += (1 shl state.successiveApproxLow).int16
+      data[0] = cast[int16](data[0] + (1 shl state.successiveApproxLow))
 
 proc decodeProgressiveContinuationBlock(
   state: var DecoderState, component: int, data: var array[64, int16]
@@ -576,7 +574,7 @@ proc decodeProgressiveContinuationBlock(
         inc k
         if s >= 15:
           failInvalid()
-        data[zig] = (state.getBitsAsSignedInt(s.int) * (1 shl shift)).int16
+        data[zig] = cast[int16](state.getBitsAsSignedInt(s.int) * (1 shl shift))
 
       if not(k <= state.spectralEnd):
         break
@@ -592,9 +590,9 @@ proc decodeProgressiveContinuationBlock(
           if state.getBit() != 0:
             if (data[zig] and bit) == 0:
               if data[zig] > 0:
-                data[zig] += bit.int16
+                data[zig] = cast[int16](data[zig] + bit)
               else:
-                data[zig] -= bit.int16
+                data[zig] = cast[int16](data[zig] - bit)
     else:
       var k = state.spectralStart
       while true:
@@ -628,12 +626,12 @@ proc decodeProgressiveContinuationBlock(
             if getBit(state) != 0:
               if (data[zig] and bit) == 0:
                 if data[zig] > 0:
-                  data[zig] += bit.int16
+                  data[zig] = cast[int16](data[zig] + bit)
                 else:
-                  data[zig] -= bit.int16
+                  data[zig] = cast[int16](data[zig] - bit)
           else:
             if r == 0:
-              data[zig] = s.int16
+              data[zig] = cast[int16](s)
               break
             dec r
 
@@ -678,6 +676,8 @@ template idct1D(s0, s1, s2, s3, s4, s5, s6, s7: int32) =
   t2 += p2 + p3
   t1 += p2 + p4
   t0 += p1 + p3
+
+{.push overflowChecks: off, rangeChecks: off.}
 
 proc idctBlock(component: var Component, offset: int, data: array[64, int16]) =
   ## Inverse discrete cosine transform whole block.
@@ -755,6 +755,8 @@ proc idctBlock(component: var Component, offset: int, data: array[64, int16]) =
     component.channel.data[outPos + 3] = clampByte((x3 + t0) shr 17)
     component.channel.data[outPos + 4] = clampByte((x3 - t0) shr 17)
 
+{.pop.}
+
 proc decodeBlock(state: var DecoderState, comp, row, column: int) =
   ## Decodes a block.
   var data {.byaddr.} = state.components[comp].blocks[row][column]
@@ -773,8 +775,8 @@ template checkReset(state: var DecoderState) =
     if state.bitCount < 24:
       state.fillBits()
 
-    if state.buffer[state.pos] == 0xFF:
-      if state.buffer[state.pos+1] in {0xD0 .. 0xD7}:
+    if state.buffer[state.pos] == 0xFF.char:
+      if state.buffer[state.pos+1] in {0xD0.char .. 0xD7.char}:
         state.pos += 2
       else:
         failInvalid("did not get expected reset marker")
@@ -821,7 +823,7 @@ proc quantizationAndIDCTPass(state: var DecoderState) =
           let qTableId = state.components[comp].quantizationTableId
           if qTableId.int notin 0 ..< state.quantizationTables.len:
             failInvalid()
-          data[i] = data[i] * state.quantizationTables[qTableId][i].int16
+          data[i] = cast[int16](data[i] * state.quantizationTables[qTableId][i].int32)
 
         state.components[comp].idctBlock(
           state.components[comp].widthStride * column * 8 + row * 8,
@@ -888,8 +890,6 @@ proc grayScaleToRgbx(gray: uint8): ColorRGBX =
   result.b = g
   result.a = 255
 
-{.pop.}
-
 proc buildImage(state: var DecoderState): Image =
   ## Takes a jpeg image object and builds a pixie Image from it.
 
@@ -929,7 +929,7 @@ proc buildImage(state: var DecoderState): Image =
   else:
     failInvalid()
 
-proc decodeJpeg*(data: seq[uint8]): Image {.raises: [PixieError].} =
+proc decodeJpeg*(data: string): Image {.raises: [PixieError].} =
   ## Decodes the JPEG into an Image.
 
   var state = DecoderState()
@@ -993,12 +993,6 @@ proc decodeJpeg*(data: seq[uint8]): Image {.raises: [PixieError].} =
   state.quantizationAndIDCTPass()
 
   state.buildImage()
-
-proc decodeJpeg*(data: string): Image {.inline, raises: [PixieError].} =
-  decodeJpeg(cast[seq[uint8]](data))
-
-proc encodeJpeg*(image: Image): string =
-  raise newException(PixieError, "Encoding JPG not supported yet")
 
 when defined(release):
   {.pop.}

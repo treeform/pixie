@@ -1,4 +1,4 @@
-import jpegsuite, pixie/common, pixie/fileformats/jpg, random, strformat
+import jpegsuite, pixie/common, pixie/fileformats/jpeg, random, strformat
 
 randomize()
 
@@ -12,13 +12,13 @@ for i in 0 ..< 10_000:
   echo &"{i} {file} {pos} {value}"
 
   try:
-    let img = decodeJpg(data)
+    let img = decodeJpeg(data)
     doAssert img.height > 0 and img.width > 0
   except PixieError:
     discard
   data = data[0 ..< pos]
   try:
-    let img = decodeJpg(data)
+    let img = decodeJpeg(data)
     doAssert img.height > 0 and img.width > 0
   except PixieError:
     discard

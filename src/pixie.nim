@@ -65,7 +65,7 @@ proc encodeImage*(image: Image, fileFormat: FileFormat): string {.raises: [Pixie
   of PngFormat:
     image.encodePng()
   of JpgFormat:
-    image.encodeJpg()
+    raise newException(PixieError, "Unsupported file format")
   of BmpFormat:
     image.encodeBmp()
   of QoiFormat:

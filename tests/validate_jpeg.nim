@@ -9,7 +9,7 @@ for file in jpegSuiteFiles:
   let genFile = file.replace("masters", "generated").replace(".jpg", ".png")
   img.writeFile(genFile)
 
-  if execShellCmd(&"convert {file} {genFile}") != 0:
+  if execShellCmd(&"magick {file} {genFile}") != 0:
     echo "fail"
 
   var img2 = readImage(genFile)
