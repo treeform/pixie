@@ -383,24 +383,22 @@ proc decodeSOS(state: var DecoderState) =
 
 proc fillBitBuffer(state: var DecoderState) =
   ## When we are low on bits, we need to call this to populate some more.
-  while true:
-    let b = if state.hitEnd:
+  while state.bitsBuffered < 24:
+    let b =
+      if state.hitEnd:
         0.uint32
       else:
         state.readUint8().uint32
     if b == 0xFF:
       var c = state.readUint8()
-      while c == 0xFF: c = state.readUint8()
+      while c == 0xFF:
+        c = state.readUint8()
       if c != 0:
-        dec state.pos
-        dec state.pos
+        state.pos -= 2
         state.hitEnd = true
         return
     state.bitBuffer = state.bitBuffer or (b shl (24 - state.bitsBuffered))
     state.bitsBuffered += 8
-
-    if not(state.bitsBuffered <= 24):
-      break
 
 proc huffmanDecode(state: var DecoderState, tableCurrent, table: int): uint8 =
   ## Decode a uint8 from the huffman table.
