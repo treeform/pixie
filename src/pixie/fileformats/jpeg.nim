@@ -89,7 +89,7 @@ template failInvalid(reason = "unable to load") =
   ## Throw exception with a reason.
   raise newException(PixieError, "Invalid JPEG, " & reason)
 
-template clampByte(x): uint8 =
+template clampByte(x: int32): uint8 =
   ## Clamp integer into byte range.
   clamp(x, 0, 0xFF).uint8
 
@@ -865,13 +865,13 @@ proc magnifyYBy2(mask: Mask): Mask =
 
 proc yCbCrToRgbx(py, pcb, pcr: uint8): ColorRGBX =
   ## Takes a 3 component yCbCr outputs and populates image.
-  template float2Fixed(x: float32): int =
-    (x * 4096 + 0.5).int shl 8
+  template float2Fixed(x: float32): int32 =
+    (x * 4096 + 0.5).int32 shl 8
 
   let
-    yFixed = (py.int shl 20) + (1 shl 19)
-    cb = pcb.int - 128
-    cr = pcr.int - 128
+    yFixed = (py.int32 shl 20) + (1 shl 19)
+    cb = pcb.int32 - 128
+    cr = pcr.int32 - 128
   var
     r = yFixed + cr * float2Fixed(1.40200)
     g = yFixed +
