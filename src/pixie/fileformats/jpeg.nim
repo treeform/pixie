@@ -821,7 +821,7 @@ proc quantizationAndIDCTPass(state: var DecoderState) =
 
         for i in 0 ..< 64:
           let qTableId = state.components[comp].quantizationTableId
-          if qTableId.int >= state.quantizationTables.len:
+          if qTableId.int notin 0 ..< state.quantizationTables.len:
             failInvalid()
           data[i] = cast[int16](data[i] * state.quantizationTables[qTableId][i].int32)
 
