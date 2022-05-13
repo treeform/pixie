@@ -64,8 +64,8 @@ type
 
   DecoderState = object
     buffer: string
-    pos, bitCount: int
-    bits: uint32
+    pos, bitsBuffered: int
+    bitBuffer: uint32
     hitEnd: bool
     imageHeight, imageWidth: int
     quantizationTables: array[4, array[64, uint8]]
@@ -306,8 +306,8 @@ proc decodeSOF2(state: var DecoderState) =
 
 proc reset(state: var DecoderState) =
   ## Rests the decoder state need for reset markers.
-  state.bits = 0
-  state.bitCount = 0
+  state.bitBuffer = 0
+  state.bitsBuffered = 0
   for component in 0 ..< state.components.len:
     state.components[component].dcPred = 0
   state.hitEnd = false
@@ -381,7 +381,7 @@ proc decodeSOS(state: var DecoderState) =
   if len != 0:
     failInvalid()
 
-proc fillBits(state: var DecoderState) =
+proc fillBitBuffer(state: var DecoderState) =
   ## When we are low on bits, we need to call this to populate some more.
   while true:
     let b = if state.hitEnd:
@@ -396,45 +396,45 @@ proc fillBits(state: var DecoderState) =
         dec state.pos
         state.hitEnd = true
         return
-    state.bits = state.bits or (b shl (24 - state.bitCount))
-    state.bitCount += 8
+    state.bitBuffer = state.bitBuffer or (b shl (24 - state.bitsBuffered))
+    state.bitsBuffered += 8
 
-    if not(state.bitCount <= 24):
+    if not(state.bitsBuffered <= 24):
       break
 
 proc huffmanDecode(state: var DecoderState, tableCurrent, table: int): uint8 =
   ## Decode a uint8 from the huffman table.
-  if state.bitCount < 16:
-    state.fillBits()
+  if state.bitsBuffered < 16:
+    state.fillBitBuffer()
 
   var huffman {.byaddr.} = state.huffmanTables[tableCurrent][table]
 
   let
-    fastId = (state.bits shr (32 - fastBits)) and ((1 shl fastBits) - 1)
+    fastId = (state.bitBuffer shr (32 - fastBits)) and ((1 shl fastBits) - 1)
     fast = huffman.fast[fastId]
 
   if fast < 255:
     let size = huffman.sizes[fast].int
-    if size > state.bitCount:
+    if size > state.bitsBuffered:
       failInvalid()
-    state.bits = state.bits shl size
-    state.bitCount -= size
+    state.bitBuffer = state.bitBuffer shl size
+    state.bitsBuffered -= size
     return huffman.symbols[fast]
 
   var
-    tmp = (state.bits shr 16).int
+    tmp = (state.bitBuffer shr 16).int
     i = fastBits + 1
   while i < huffman.maxCodes.len:
     if tmp < huffman.maxCodes[i]:
       break
     inc i
 
-  if i == 17 or i > state.bitCount:
+  if i == 17 or i > state.bitsBuffered:
     failInvalid()
 
-  let symbolId = (state.bits shr (32 - i)).int + huffman.deltas[i]
-  state.bits = state.bits shl i
-  state.bitCount -= i
+  let symbolId = (state.bitBuffer shr (32 - i)).int + huffman.deltas[i]
+  state.bitBuffer = state.bitBuffer shl i
+  state.bitsBuffered -= i
   huffman.symbols[symbolId]
 
 template lrot(value: uint32, shift: int): uint32 =
@@ -443,36 +443,36 @@ template lrot(value: uint32, shift: int): uint32 =
 
 proc getBit(state: var DecoderState): int =
   ## Get a single bit.
-  if state.bitCount < 1:
-    state.fillBits()
-  let k = state.bits
-  state.bits = state.bits shl 1
-  dec state.bitCount
+  if state.bitsBuffered < 1:
+    state.fillBitBuffer()
+  let k = state.bitBuffer
+  state.bitBuffer = state.bitBuffer shl 1
+  dec state.bitsBuffered
   return (k.int and 0x80000000.int)
 
 proc getBitsAsSignedInt(state: var DecoderState, n: int): int =
   ## Get n number of bits as a signed integer.
   if n notin 0 .. 16:
     failInvalid()
-  if state.bitCount < n:
-    state.fillBits()
-  let sign = cast[int32](state.bits) shr 31
-  var k = lrot(state.bits, n)
-  state.bits = k and (not bitMasks[n])
+  if state.bitsBuffered < n:
+    state.fillBitBuffer()
+  let sign = cast[int32](state.bitBuffer) shr 31
+  var k = lrot(state.bitBuffer, n)
+  state.bitBuffer = k and (not bitMasks[n])
   k = k and bitMasks[n]
-  state.bitCount -= n
+  state.bitsBuffered -= n
   result = k.int + (biases[n] and (not sign))
 
 proc getBitsAsUnsignedInt(state: var DecoderState, n: int): int =
   ## Get n number of bits as a unsigned integer.
   if n notin 0 .. 16:
     failInvalid()
-  if state.bitCount < n:
-    state.fillBits()
-  var k = lrot(state.bits, n)
-  state.bits = k and (not bitMasks[n])
+  if state.bitsBuffered < n:
+    state.fillBitBuffer()
+  var k = lrot(state.bitBuffer, n)
+  state.bitBuffer = k and (not bitMasks[n])
   k = k and bitMasks[n]
-  state.bitCount -= n
+  state.bitsBuffered -= n
   return k.int
 
 proc decodeRegularBlock(
@@ -775,8 +775,8 @@ proc checkReset(state: var DecoderState) =
   ## Check if we might have run into a reset marker, then deal with it.
   dec state.todo
   if state.todo <= 0:
-    if state.bitCount < 24:
-      state.fillBits()
+    if state.bitsBuffered < 24:
+      state.fillBitBuffer()
 
     if state.buffer[state.pos] == 0xFF.char:
       if state.buffer[state.pos+1] in {0xD0.char .. 0xD7.char}:
