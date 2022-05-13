@@ -64,8 +64,8 @@ type
 
   DecoderState = object
     buffer: string
-    pos, bitCount: int
-    bits: uint32
+    pos, bitsBuffered: int
+    bitBuffer: uint32
     hitEnd: bool
     imageHeight, imageWidth: int
     quantizationTables: array[4, array[64, uint8]]
@@ -89,7 +89,7 @@ template failInvalid(reason = "unable to load") =
   ## Throw exception with a reason.
   raise newException(PixieError, "Invalid JPEG, " & reason)
 
-template clampByte(x): uint8 =
+template clampByte(x: int32): uint8 =
   ## Clamp integer into byte range.
   clamp(x, 0, 0xFF).uint8
 
@@ -143,6 +143,7 @@ proc decodeDQT(state: var DecoderState) =
 proc buildHuffman(huffman: var Huffman, counts: array[16, uint8]) =
   ## Builds the huffman data structure.
   block:
+    # JPEG spec page 51
     var k: int
     for i in 0.uint8 ..< 16:
       for j in 0.uint8 ..< counts[i]:
@@ -152,14 +153,15 @@ proc buildHuffman(huffman: var Huffman, counts: array[16, uint8]) =
         inc k
     huffman.sizes[k] = 0
 
-  var code, j: int
+  # JPEG spec page 52
+  var code, k: int
   for i in 1.uint8 .. 16:
-    huffman.deltas[i] = j - code
-    if huffman.sizes[j] == i:
-      while huffman.sizes[j] == i:
-        huffman.codes[j] = code.uint16
+    huffman.deltas[i] = k - code
+    if huffman.sizes[k] == i:
+      while huffman.sizes[k] == i:
+        huffman.codes[k] = code.uint16
         inc code
-        inc j
+        inc k
       if code - 1 >= 1 shl i:
         failInvalid()
     huffman.maxCodes[i] = code shl (16 - i)
@@ -169,12 +171,12 @@ proc buildHuffman(huffman: var Huffman, counts: array[16, uint8]) =
   for i in 0 ..< huffman.fast.len:
     huffman.fast[i] = 255
 
-  for i in 0 ..< j:
+  for i in 0 ..< k:
     let size = huffman.sizes[i]
     if size <= fastBits:
       let fast = huffman.codes[i].int shl (fastBits - size)
-      for k in 0 ..< 1 shl (fastBits - size):
-        huffman.fast[fast + k] = i.uint8
+      for j in 0 ..< 1 shl (fastBits - size):
+        huffman.fast[fast + j] = i.uint8
 
 proc decodeDHT(state: var DecoderState) =
   ## Decode Define Huffman Table
@@ -281,10 +283,7 @@ proc decodeSOF0(state: var DecoderState) =
 
     component.widthStride = state.numMcuWide * component.yScale * 8
     component.heightStride = state.numMcuHigh * component.xScale * 8
-
-    component.channel = newMask(
-      component.widthStride, component.heightStride
-    )
+    component.channel = newMask(component.widthStride, component.heightStride)
 
     if state.progressive:
       component.widthCoeff = component.widthStride div 8
@@ -304,8 +303,8 @@ proc decodeSOF2(state: var DecoderState) =
 
 proc reset(state: var DecoderState) =
   ## Rests the decoder state need for reset markers.
-  state.bits = 0
-  state.bitCount = 0
+  state.bitBuffer = 0
+  state.bitsBuffered = 0
   for component in 0 ..< state.components.len:
     state.components[component].dcPred = 0
   state.hitEnd = false
@@ -379,60 +378,58 @@ proc decodeSOS(state: var DecoderState) =
   if len != 0:
     failInvalid()
 
-proc fillBits(state: var DecoderState) =
+proc fillBitBuffer(state: var DecoderState) =
   ## When we are low on bits, we need to call this to populate some more.
-  while true:
-    let b = if state.hitEnd:
+  while state.bitsBuffered < 24:
+    let b =
+      if state.hitEnd:
         0.uint32
       else:
         state.readUint8().uint32
     if b == 0xFF:
       var c = state.readUint8()
-      while c == 0xFF: c = state.readUint8()
+      while c == 0xFF:
+        c = state.readUint8()
       if c != 0:
-        dec state.pos
-        dec state.pos
+        state.pos -= 2
         state.hitEnd = true
         return
-    state.bits = state.bits or (b shl (24 - state.bitCount))
-    state.bitCount += 8
-
-    if not(state.bitCount <= 24):
-      break
+    state.bitBuffer = state.bitBuffer or (b shl (24 - state.bitsBuffered))
+    state.bitsBuffered += 8
 
 proc huffmanDecode(state: var DecoderState, tableCurrent, table: int): uint8 =
   ## Decode a uint8 from the huffman table.
-  if state.bitCount < 16:
-    state.fillBits()
+  var huffman {.byaddr.} = state.huffmanTables[tableCurrent][table]
+
+  state.fillBitBuffer()
 
   let
-    fastId = (state.bits shr (32 - fastBits)) and ((1 shl fastBits) - 1)
-    fast = state.huffmanTables[tableCurrent][table].fast[fastId]
+    fastId = (state.bitBuffer shr (32 - fastBits)) and ((1 shl fastBits) - 1)
+    fast = huffman.fast[fastId]
+
   if fast < 255:
-    let size = state.huffmanTables[tableCurrent][table].sizes[fast].int
-    if size > state.bitCount:
+    let size = huffman.sizes[fast].int
+    if size > state.bitsBuffered:
       failInvalid()
-    state.bits = state.bits shl size
-    state.bitCount -= size
-    return state.huffmanTables[tableCurrent][table].symbols[fast]
+    state.bitBuffer = state.bitBuffer shl size
+    state.bitsBuffered -= size
+    return huffman.symbols[fast]
 
   var
-    tmp = (state.bits shr 16).int
+    tmp = (state.bitBuffer shr 16).int
     i = fastBits + 1
-  while i < state.huffmanTables[tableCurrent][table].maxCodes.len:
-    if tmp < state.huffmanTables[tableCurrent][table].maxCodes[i]:
+  while i < huffman.maxCodes.len:
+    if tmp < huffman.maxCodes[i]:
       break
     inc i
 
-  if i == 17 or i > state.bitCount:
+  if i == 17 or i > state.bitsBuffered:
     failInvalid()
 
-  let symbolId = (state.bits shr (32 - i)).int +
-    state.huffmanTables[tableCurrent][table].deltas[i]
-
-  state.bits = state.bits shl i
-  state.bitCount -= i
-  return state.huffmanTables[tableCurrent][table].symbols[symbolId]
+  let symbolId = (state.bitBuffer shr (32 - i)).int + huffman.deltas[i]
+  state.bitBuffer = state.bitBuffer shl i
+  state.bitsBuffered -= i
+  return huffman.symbols[symbolId]
 
 template lrot(value: uint32, shift: int): uint32 =
   ## Left rotate - used for huffman decoding.
@@ -440,36 +437,36 @@ template lrot(value: uint32, shift: int): uint32 =
 
 proc getBit(state: var DecoderState): int =
   ## Get a single bit.
-  if state.bitCount < 1:
-    state.fillBits()
-  let k = state.bits
-  state.bits = state.bits shl 1
-  dec state.bitCount
+  if state.bitsBuffered < 1:
+    state.fillBitBuffer()
+  let k = state.bitBuffer
+  state.bitBuffer = state.bitBuffer shl 1
+  dec state.bitsBuffered
   return (k.int and 0x80000000.int)
 
 proc getBitsAsSignedInt(state: var DecoderState, n: int): int =
   ## Get n number of bits as a signed integer.
   if n notin 0 .. 16:
     failInvalid()
-  if state.bitCount < n:
-    state.fillBits()
-  let sign = cast[int32](state.bits) shr 31
-  var k = lrot(state.bits, n)
-  state.bits = k and (not bitMasks[n])
+  if state.bitsBuffered < n:
+    state.fillBitBuffer()
+  let sign = cast[int32](state.bitBuffer) shr 31
+  var k = lrot(state.bitBuffer, n)
+  state.bitBuffer = k and (not bitMasks[n])
   k = k and bitMasks[n]
-  state.bitCount -= n
+  state.bitsBuffered -= n
   result = k.int + (biases[n] and (not sign))
 
 proc getBitsAsUnsignedInt(state: var DecoderState, n: int): int =
   ## Get n number of bits as a unsigned integer.
   if n notin 0 .. 16:
     failInvalid()
-  if state.bitCount < n:
-    state.fillBits()
-  var k = lrot(state.bits, n)
-  state.bits = k and (not bitMasks[n])
+  if state.bitsBuffered < n:
+    state.fillBitBuffer()
+  var k = lrot(state.bitBuffer, n)
+  state.bitBuffer = k and (not bitMasks[n])
   k = k and bitMasks[n]
-  state.bitCount -= n
+  state.bitsBuffered -= n
   return k.int
 
 proc decodeRegularBlock(
@@ -481,10 +478,11 @@ proc decodeRegularBlock(
     failInvalid()
 
   let
-    diff = if t == 0:
-      0
-    else:
-      state.getBitsAsSignedInt(t)
+    diff =
+      if t == 0:
+        0
+      else:
+        state.getBitsAsSignedInt(t)
     dc = state.components[component].dcPred + diff
   state.components[component].dcPred = dc
   data[0] = cast[int16](dc)
@@ -768,12 +766,12 @@ proc decodeBlock(state: var DecoderState, comp, row, column: int) =
   else:
     state.decodeRegularBlock(comp, data)
 
-template checkReset(state: var DecoderState) =
+proc checkReset(state: var DecoderState) =
   ## Check if we might have run into a reset marker, then deal with it.
   dec state.todo
   if state.todo <= 0:
-    if state.bitCount < 24:
-      state.fillBits()
+    if state.bitsBuffered < 24:
+      state.fillBitBuffer()
 
     if state.buffer[state.pos] == 0xFF.char:
       if state.buffer[state.pos+1] in {0xD0.char .. 0xD7.char}:
@@ -786,7 +784,6 @@ proc decodeBlocks(state: var DecoderState) =
   ## Decodes scan data blocks that follow a SOS block.
   if state.scanComponents == 1:
     # Single component pass.
-
     let
       comp = state.componentOrder[0]
       w = (state.components[comp].width + 7) shr 3
@@ -814,7 +811,6 @@ proc quantizationAndIDCTPass(state: var DecoderState) =
     let
       w = (state.components[comp].width + 7) shr 3
       h = (state.components[comp].height + 7) shr 3
-
     for column in 0 ..< h:
       for row in 0 ..< w:
         var data = state.components[comp].blocks[row][column]
@@ -838,13 +834,13 @@ proc magnifyXBy2(mask: Mask): Mask =
       let n = 3 * mask.unsafe[x, y].uint16
       if x == 0:
         result.unsafe[x * 2 + 0, y] = mask.unsafe[x, y]
-        result.unsafe[x * 2 + 1, y] = ((n + mask.unsafe[x+1, y].uint16 + 2) div 4).uint8
+        result.unsafe[x * 2 + 1, y] = ((n + mask.unsafe[x + 1, y].uint16 + 2) div 4).uint8
       elif x == mask.width - 1:
-        result.unsafe[x * 2 + 0, y] = ((n + mask.unsafe[x-1, y].uint16 + 2) div 4).uint8
+        result.unsafe[x * 2 + 0, y] = ((n + mask.unsafe[x - 1, y].uint16 + 2) div 4).uint8
         result.unsafe[x * 2 + 1, y] = mask.unsafe[x, y]
       else:
-        result.unsafe[x * 2 + 0, y] = ((n + mask.unsafe[x-1, y].uint16) div 4).uint8
-        result.unsafe[x * 2 + 1, y] = ((n + mask.unsafe[x+1, y].uint16) div 4).uint8
+        result.unsafe[x * 2 + 0, y] = ((n + mask.unsafe[x - 1, y].uint16) div 4).uint8
+        result.unsafe[x * 2 + 1, y] = ((n + mask.unsafe[x + 1, y].uint16) div 4).uint8
 
 proc magnifyYBy2(mask: Mask): Mask =
   ## Smooth magnify by power of 2 only in the Y direction.
@@ -854,23 +850,23 @@ proc magnifyYBy2(mask: Mask): Mask =
       let n = 3 * mask.unsafe[x, y].uint16
       if y == 0:
         result.unsafe[x, y * 2 + 0] = mask.unsafe[x, y]
-        result.unsafe[x, y * 2 + 1] = ((n + mask.unsafe[x, y+1].uint16 + 2) div 4).uint8
+        result.unsafe[x, y * 2 + 1] = ((n + mask.unsafe[x, y + 1].uint16 + 2) div 4).uint8
       elif y == mask.height - 1:
-        result.unsafe[x, y * 2 + 0] = ((n + mask.unsafe[x, y-1].uint16 + 2) div 4).uint8
+        result.unsafe[x, y * 2 + 0] = ((n + mask.unsafe[x, y - 1].uint16 + 2) div 4).uint8
         result.unsafe[x, y * 2 + 1] = mask.unsafe[x, y]
       else:
-        result.unsafe[x, y * 2 + 0] = ((n + mask.unsafe[x, y-1].uint16) div 4).uint8
-        result.unsafe[x, y * 2 + 1] = ((n + mask.unsafe[x, y+1].uint16) div 4).uint8
+        result.unsafe[x, y * 2 + 0] = ((n + mask.unsafe[x, y - 1].uint16) div 4).uint8
+        result.unsafe[x, y * 2 + 1] = ((n + mask.unsafe[x, y + 1].uint16) div 4).uint8
 
 proc yCbCrToRgbx(py, pcb, pcr: uint8): ColorRGBX =
   ## Takes a 3 component yCbCr outputs and populates image.
-  template float2Fixed(x: float32): int =
-    (x * 4096 + 0.5).int shl 8
+  template float2Fixed(x: float32): int32 =
+    (x * 4096 + 0.5).int32 shl 8
 
   let
-    yFixed = (py.int shl 20) + (1 shl 19)
-    cb = pcb.int - 128
-    cr = pcr.int - 128
+    yFixed = (py.int32 shl 20) + (1 shl 19)
+    cb = pcb.int32 - 128
+    cr = pcr.int32 - 128
   var
     r = yFixed + cr * float2Fixed(1.40200)
     g = yFixed +
@@ -882,13 +878,9 @@ proc yCbCrToRgbx(py, pcb, pcr: uint8): ColorRGBX =
   result.b = clampByte(b shr 20)
   result.a = 255
 
-proc grayScaleToRgbx(gray: uint8): ColorRGBX =
+proc grayScaleToRgbx(gray: uint8): ColorRGBX {.inline.} =
   ## Takes a single gray scale component output and populates image.
-  let g = gray
-  result.r = g
-  result.g = g
-  result.b = g
-  result.a = 255
+  rgbx(gray, gray, gray, 255)
 
 proc buildImage(state: var DecoderState): Image =
   ## Takes a jpeg image object and builds a pixie Image from it.
