@@ -143,6 +143,7 @@ proc decodeDQT(state: var DecoderState) =
 proc buildHuffman(huffman: var Huffman, counts: array[16, uint8]) =
   ## Builds the huffman data structure.
   block:
+    # JPEG spec page 51
     var k: int
     for i in 0.uint8 ..< 16:
       for j in 0.uint8 ..< counts[i]:
@@ -152,14 +153,15 @@ proc buildHuffman(huffman: var Huffman, counts: array[16, uint8]) =
         inc k
     huffman.sizes[k] = 0
 
-  var code, j: int
+  # JPEG spec page 52
+  var code, k: int
   for i in 1.uint8 .. 16:
-    huffman.deltas[i] = j - code
-    if huffman.sizes[j] == i:
-      while huffman.sizes[j] == i:
-        huffman.codes[j] = code.uint16
+    huffman.deltas[i] = k - code
+    if huffman.sizes[k] == i:
+      while huffman.sizes[k] == i:
+        huffman.codes[k] = code.uint16
         inc code
-        inc j
+        inc k
       if code - 1 >= 1 shl i:
         failInvalid()
     huffman.maxCodes[i] = code shl (16 - i)
@@ -169,12 +171,12 @@ proc buildHuffman(huffman: var Huffman, counts: array[16, uint8]) =
   for i in 0 ..< huffman.fast.len:
     huffman.fast[i] = 255
 
-  for i in 0 ..< j:
+  for i in 0 ..< k:
     let size = huffman.sizes[i]
     if size <= fastBits:
       let fast = huffman.codes[i].int shl (fastBits - size)
-      for k in 0 ..< 1 shl (fastBits - size):
-        huffman.fast[fast + k] = i.uint8
+      for j in 0 ..< 1 shl (fastBits - size):
+        huffman.fast[fast + j] = i.uint8
 
 proc decodeDHT(state: var DecoderState) =
   ## Decode Define Huffman Table
@@ -405,34 +407,35 @@ proc huffmanDecode(state: var DecoderState, tableCurrent, table: int): uint8 =
   if state.bitCount < 16:
     state.fillBits()
 
+  var huffman {.byaddr.} = state.huffmanTables[tableCurrent][table]
+
   let
     fastId = (state.bits shr (32 - fastBits)) and ((1 shl fastBits) - 1)
-    fast = state.huffmanTables[tableCurrent][table].fast[fastId]
+    fast = huffman.fast[fastId]
+
   if fast < 255:
-    let size = state.huffmanTables[tableCurrent][table].sizes[fast].int
+    let size = huffman.sizes[fast].int
     if size > state.bitCount:
       failInvalid()
     state.bits = state.bits shl size
     state.bitCount -= size
-    return state.huffmanTables[tableCurrent][table].symbols[fast]
+    return huffman.symbols[fast]
 
   var
     tmp = (state.bits shr 16).int
     i = fastBits + 1
-  while i < state.huffmanTables[tableCurrent][table].maxCodes.len:
-    if tmp < state.huffmanTables[tableCurrent][table].maxCodes[i]:
+  while i < huffman.maxCodes.len:
+    if tmp < huffman.maxCodes[i]:
       break
     inc i
 
   if i == 17 or i > state.bitCount:
     failInvalid()
 
-  let symbolId = (state.bits shr (32 - i)).int +
-    state.huffmanTables[tableCurrent][table].deltas[i]
-
+  let symbolId = (state.bits shr (32 - i)).int + huffman.deltas[i]
   state.bits = state.bits shl i
   state.bitCount -= i
-  return state.huffmanTables[tableCurrent][table].symbols[symbolId]
+  huffman.symbols[symbolId]
 
 template lrot(value: uint32, shift: int): uint32 =
   ## Left rotate - used for huffman decoding.
