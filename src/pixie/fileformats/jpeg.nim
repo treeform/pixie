@@ -399,10 +399,9 @@ proc fillBitBuffer(state: var DecoderState) =
 
 proc huffmanDecode(state: var DecoderState, tableCurrent, table: int): uint8 =
   ## Decode a uint8 from the huffman table.
-  if state.bitsBuffered < 16:
-    state.fillBitBuffer()
-
   var huffman {.byaddr.} = state.huffmanTables[tableCurrent][table]
+
+  state.fillBitBuffer()
 
   let
     fastId = (state.bitBuffer shr (32 - fastBits)) and ((1 shl fastBits) - 1)
@@ -430,7 +429,7 @@ proc huffmanDecode(state: var DecoderState, tableCurrent, table: int): uint8 =
   let symbolId = (state.bitBuffer shr (32 - i)).int + huffman.deltas[i]
   state.bitBuffer = state.bitBuffer shl i
   state.bitsBuffered -= i
-  huffman.symbols[symbolId]
+  return huffman.symbols[symbolId]
 
 template lrot(value: uint32, shift: int): uint32 =
   ## Left rotate - used for huffman decoding.
