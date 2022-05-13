@@ -883,13 +883,9 @@ proc yCbCrToRgbx(py, pcb, pcr: uint8): ColorRGBX =
   result.b = clampByte(b shr 20)
   result.a = 255
 
-proc grayScaleToRgbx(gray: uint8): ColorRGBX =
+proc grayScaleToRgbx(gray: uint8): ColorRGBX {.inline.} =
   ## Takes a single gray scale component output and populates image.
-  let g = gray
-  result.r = g
-  result.g = g
-  result.b = g
-  result.a = 255
+  rgbx(gray, gray, gray, 255)
 
 proc buildImage(state: var DecoderState): Image =
   ## Takes a jpeg image object and builds a pixie Image from it.
