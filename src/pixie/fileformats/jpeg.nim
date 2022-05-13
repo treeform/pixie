@@ -768,7 +768,7 @@ proc decodeBlock(state: var DecoderState, comp, row, column: int) =
   else:
     state.decodeRegularBlock(comp, data)
 
-template checkReset(state: var DecoderState) =
+proc checkReset(state: var DecoderState) =
   ## Check if we might have run into a reset marker, then deal with it.
   dec state.todo
   if state.todo <= 0:
