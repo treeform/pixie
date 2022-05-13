@@ -283,10 +283,7 @@ proc decodeSOF0(state: var DecoderState) =
 
     component.widthStride = state.numMcuWide * component.yScale * 8
     component.heightStride = state.numMcuHigh * component.xScale * 8
-
-    component.channel = newMask(
-      component.widthStride, component.heightStride
-    )
+    component.channel = newMask(component.widthStride, component.heightStride)
 
     if state.progressive:
       component.widthCoeff = component.widthStride div 8
@@ -482,10 +479,11 @@ proc decodeRegularBlock(
     failInvalid()
 
   let
-    diff = if t == 0:
-      0
-    else:
-      state.getBitsAsSignedInt(t)
+    diff =
+      if t == 0:
+        0
+      else:
+        state.getBitsAsSignedInt(t)
     dc = state.components[component].dcPred + diff
   state.components[component].dcPred = dc
   data[0] = cast[int16](dc)
@@ -787,7 +785,6 @@ proc decodeBlocks(state: var DecoderState) =
   ## Decodes scan data blocks that follow a SOS block.
   if state.scanComponents == 1:
     # Single component pass.
-
     let
       comp = state.componentOrder[0]
       w = (state.components[comp].width + 7) shr 3
@@ -815,7 +812,6 @@ proc quantizationAndIDCTPass(state: var DecoderState) =
     let
       w = (state.components[comp].width + 7) shr 3
       h = (state.components[comp].height + 7) shr 3
-
     for column in 0 ..< h:
       for row in 0 ..< w:
         var data = state.components[comp].blocks[row][column]
