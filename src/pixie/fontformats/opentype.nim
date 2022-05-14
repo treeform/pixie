@@ -86,6 +86,7 @@ type
     nameID*: uint16
     length*: uint16
     offset*: uint16
+    text*: string
 
   NameTable* = ref object
     format*: uint16
@@ -429,6 +430,23 @@ proc readVersion16Dot16(buf: string, offset: int): float32 =
     failUnsupported("invalid version format")
   majorDigit.float32 + minorDigit.float32 / 10
 
+proc convertUTF16(input: string): string =
+  ## Converts UTF16 Big Endian to UTF8 string.
+  var i = 0
+  while i < input.len:
+    var u1 = input.readUInt16(i)
+    i += 2
+    if u1 - 0xd800 >= 0x800:
+      result.add Rune(u1.int)
+    else:
+      var u2 = input.readUInt16(i)
+      i += 2
+      if ((u1 and 0xfc00) == 0xd800) and ((u2 and 0xfc00) == 0xdc00):
+        result.add Rune((u1.uint32 shl 10) + u2.uint32 - 0x35fdc00)
+      else:
+        # Error, produce tofu character.
+        result.add "□"
+
 proc parseCmapTable(buf: string, offset: int): CmapTable =
   var i = offset
   buf.eofCheck(i + 4)
@@ -655,6 +673,14 @@ proc parseNameTable(buf: string, offset: int): NameTable =
     record.nameID = buf.readUint16(i + 6).swap()
     record.length = buf.readUint16(i + 8).swap()
     record.offset = buf.readUint16(i + 10).swap()
+    record.text = buf[
+      (offset + result.stringOffset.int + record.offset.int) ..<
+      (offset + result.stringOffset.int + record.offset.int + record.length.int)
+    ]
+    if record.encodingID in {1, 3}:
+      record.text = convertUTF16(record.text)
+    record.text = record.text
+    result.nameRecords.add(record)
     i += 12
 
 proc parseOS2Table(buf: string, offset: int): OS2Table =
@@ -2467,11 +2493,19 @@ proc isCCW*(opentype: OpenType): bool {.inline.} =
   ## CFF - true - counterclockwise
   opentype.cff == nil
 
-proc parseOpenType*(buf: string): OpenType {.raises: [PixieError].} =
+proc fullName*(opentype: OpenType): string =
+  ## Returns full name of the font if available.
+  if opentype.cff != nil:
+    return opentype.cff.topDict.fullName
+  for record in opentype.name.nameRecords:
+    if record.nameID == 1:
+      return record.text
+
+proc parseOpenType*(buf: string, startLoc = 0): OpenType {.raises: [PixieError].} =
   result = OpenType()
   result.buf = buf
 
-  var i: int
+  var i: int = startLoc
 
   buf.eofCheck(i + 12)
 
@@ -2526,6 +2560,33 @@ proc parseOpenType*(buf: string): OpenType {.raises: [PixieError].} =
     result.post = parsePostTable(buf, result.tableRecords["post"].offset.int)
   except KeyError as e:
     raise newException(PixieError, "Missing required font table: " & e.msg)
+
+proc parseOpenTypeCollection*(buf: string): seq[OpenType] {.raises: [PixieError].} =
+  ## Reads a true/open type collection and returns seq of OpenType files.
+  var i: int
+  buf.eofCheck(i + 12)
+
+  let tag = buf[0 ..< 4]
+  if tag != "ttcf":
+    failUnsupported("invalid ttc file")
+
+  let
+    majorVersion = buf.readUint16(i + 4).swap()
+    minorVersion = buf.readUint16(i + 6).swap()
+    numFonts = buf.readUint32(i + 8).swap()
+
+  if majorVersion notin {1, 2} and minorVersion != 0:
+    failUnsupported("ttc version")
+
+  var tableDirectoryOffsets: seq[uint32]
+  i += 12
+  for n in 0 ..< numFonts:
+    buf.eofCheck(i + 4)
+    tableDirectoryOffsets.add(buf.readUint32(i).swap())
+    i += 4
+
+  for dir in tableDirectoryOffsets:
+    result.add(parseOpenType(buf, dir.int))
 
 when defined(release):
   {.pop.}

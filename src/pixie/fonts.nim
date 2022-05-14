@@ -496,6 +496,10 @@ proc parseOtf*(buf: string): Typeface {.raises: [PixieError].} =
 proc parseTtf*(buf: string): Typeface {.raises: [PixieError].} =
   parseOtf(buf)
 
+proc parseTtc*(buf: string): Typeface {.raises: [PixieError].} =
+  result = Typeface()
+  result.opentype = parseOpenTypeCollection(buf)[0]
+
 proc parseSvgFont*(buf: string): Typeface {.raises: [PixieError].} =
   result = Typeface()
   result.svgFont = svgfont.parseSvgFont(buf)
@@ -697,6 +701,8 @@ proc readTypeface*(filePath: string): Typeface {.raises: [PixieError].} =
           parseTtf(readFile(filePath))
         of ".otf":
           parseOtf(readFile(filePath))
+        of ".ttc":
+          parseTtc(readFile(filePath))
         of ".svg":
           parseSvgFont(readFile(filePath))
         else:
