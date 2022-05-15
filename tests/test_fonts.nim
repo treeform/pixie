@@ -1,4 +1,4 @@
-import pixie, pixie/fileformats/png, strformat, unicode
+import pixie, pixie/fileformats/png, strformat, unicode, os
 
 proc wh(image: Image): Vec2 =
   ## Return with and height as a size vector.
@@ -1242,7 +1242,8 @@ when defined(windows):
       "/Windows/Fonts/YuGothR.ttc",
     ]
     for file in files:
-      echo file
-      var typefaces = readTypefaces(file)
-      for i, typeface in typefaces:
-        echo i, ": ", typeface.name
+      if fileExists(file):
+        echo file
+        var typefaces = readTypefaces(file)
+        for i, typeface in typefaces:
+          echo i, ": ", typeface.name
