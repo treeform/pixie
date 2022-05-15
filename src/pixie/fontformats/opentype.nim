@@ -430,22 +430,32 @@ proc readVersion16Dot16(buf: string, offset: int): float32 =
     failUnsupported("invalid version format")
   majorDigit.float32 + minorDigit.float32 / 10
 
-proc convertUTF16(input: string): string =
+func maybeSwap(u: uint16, swap: bool): uint16 =
+  if swap:
+    ((u and 0xFF) shl 8) or ((u and 0xFF00) shr 8)
+  else:
+    u
+
+proc fromUTF16Inner(input: string, i: var int, swap: bool): string =
   ## Converts UTF16 Big Endian to UTF8 string.
-  var i = 0
-  while i < input.len:
-    var u1 = input.readUInt16(i)
+  while i + 1 < input.len:
+    var u1 = input.readUInt16(i).maybeSwap(swap)
     i += 2
     if u1 - 0xd800 >= 0x800:
       result.add Rune(u1.int)
     else:
-      var u2 = input.readUInt16(i)
+      var u2 = input.readUInt16(i).maybeSwap(swap)
       i += 2
       if ((u1 and 0xfc00) == 0xd800) and ((u2 and 0xfc00) == 0xdc00):
         result.add Rune((u1.uint32 shl 10) + u2.uint32 - 0x35fdc00)
       else:
         # Error, produce tofu character.
         result.add "□"
+
+proc fromUTF16BE*(input: string): string =
+  ## Converts UTF16 Big Endian to UTF8 string.
+  var i = 0
+  input.fromUTF16Inner(i, true)
 
 proc parseCmapTable(buf: string, offset: int): CmapTable =
   var i = offset
@@ -677,8 +687,11 @@ proc parseNameTable(buf: string, offset: int): NameTable =
       (offset + result.stringOffset.int + record.offset.int) ..<
       (offset + result.stringOffset.int + record.offset.int + record.length.int)
     ]
-    if record.encodingID in {1, 3}:
-      record.text = convertUTF16(record.text)
+    if record.platformID == 3 and
+      record.encodingID == 1 and
+      record.languageID == 1033:
+        record.text = fromUTF16BE(record.text)
+
     record.text = record.text
     result.nameRecords.add(record)
     i += 12
@@ -2500,7 +2513,7 @@ proc fullName*(opentype: OpenType): string =
   if opentype.cff != nil:
     return opentype.cff.topDict.fullName
   for record in opentype.name.nameRecords:
-    if record.nameID == 1:
+    if record.nameID == 6 and record.languageID == 1033:
       return record.text
 
 proc parseOpenType*(buf: string, startLoc = 0): OpenType {.raises: [PixieError].} =

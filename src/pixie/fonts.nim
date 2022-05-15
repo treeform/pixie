@@ -496,10 +496,6 @@ proc parseOtf*(buf: string): Typeface {.raises: [PixieError].} =
 proc parseTtf*(buf: string): Typeface {.raises: [PixieError].} =
   parseOtf(buf)
 
-proc parseTtc*(buf: string): Typeface {.raises: [PixieError].} =
-  result = Typeface()
-  result.opentype = parseOpenTypeCollection(buf)[0]
-
 proc parseSvgFont*(buf: string): Typeface {.raises: [PixieError].} =
   result = Typeface()
   result.svgFont = svgfont.parseSvgFont(buf)
@@ -701,8 +697,6 @@ proc readTypeface*(filePath: string): Typeface {.raises: [PixieError].} =
           parseTtf(readFile(filePath))
         of ".otf":
           parseOtf(readFile(filePath))
-        of ".ttc":
-          parseTtc(readFile(filePath))
         of ".svg":
           parseSvgFont(readFile(filePath))
         else:
@@ -711,6 +705,21 @@ proc readTypeface*(filePath: string): Typeface {.raises: [PixieError].} =
     raise newException(PixieError, e.msg, e)
 
   result.filePath = filePath
+
+proc readTypefaces*(filePath: string): seq[Typeface] {.raises: [PixieError].} =
+  ## Loads a OpenType Collection (.ttc).
+  try:
+    for opentype in parseOpenTypeCollection(readFile(filePath)):
+      let typeface = Typeface()
+      typeface.opentype = opentype
+      result.add(typeface)
+  except IOError as e:
+    raise newException(PixieError, e.msg, e)
+
+proc name*(typeface: Typeface): string =
+  ## Returns the name of the font.
+  if typeface.opentype != nil:
+    return typeface.opentype.fullName
 
 proc readFont*(filePath: string): Font {.raises: [PixieError].} =
   ## Loads a font from a file.
