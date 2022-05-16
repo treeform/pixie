@@ -474,9 +474,8 @@ proc decodeRegularBlock(
 ) =
   ## Decodes a whole block.
   let t = state.huffmanDecode(0, state.components[component].huffmanDC).int
-  if t < 0:
-    failInvalid()
-
+  if t > 15:
+    failInvalid("bad huffman code")
   let
     diff =
       if t == 0:
@@ -488,7 +487,7 @@ proc decodeRegularBlock(
   data[0] = cast[int16](dc)
 
   var i = 1
-  while true:
+  while i < 64:
     let
       rs = state.huffmanDecode(1, state.components[component].huffmanAC)
       s = rs and 15
@@ -499,14 +498,11 @@ proc decodeRegularBlock(
       i += 16
     else:
       i += r.int
-      if i notin 0 ..< 64:
+      if i >= 64:
         failInvalid()
       let zig = deZigZag[i]
       data[zig] = cast[int16](state.getBitsAsSignedInt(s.int))
       inc i
-
-    if not(i < 64):
-      break
 
 proc decodeProgressiveBlock(
   state: var DecoderState, component: int, data: var array[64, int16]
@@ -517,18 +513,17 @@ proc decodeProgressiveBlock(
 
   if state.successiveApproxHigh == 0:
     let t = state.huffmanDecode(0, state.components[component].huffmanDC).int
-    if t < 0 or t > 15:
-      failInvalid()
+    if t > 15:
+      failInvalid("bad huffman code")
     let
-      diff = if t != 0:
-        state.getBitsAsSignedInt(t)
-      else:
-        0
-    let
+      diff =
+        if t > 0:
+          state.getBitsAsSignedInt(t)
+        else:
+          0
       dc = state.components[component].dcPred + diff
     state.components[component].dcPred = dc
     data[0] = cast[int16](dc * (1 shl state.successiveApproxLow))
-
   else:
     if getBit(state) != 0:
       data[0] = cast[int16](data[0] + (1 shl state.successiveApproxLow))
@@ -548,12 +543,9 @@ proc decodeProgressiveContinuationBlock(
       return
 
     var k = state.spectralStart
-    while true:
+    while k <= state.spectralEnd:
       let
         rs = state.huffmanDecode(1, state.components[component].huffmanAC)
-      if rs < 0:
-        failInvalid("bad huffman code")
-      let
         s = rs and 15
         r = rs.int shr 4
       if s == 0:
@@ -566,16 +558,13 @@ proc decodeProgressiveContinuationBlock(
         k += 16
       else:
         k += r.int
-        if k notin 0 ..< 64:
+        if k >= 64:
           failInvalid()
         let zig = deZigZag[k]
         inc k
         if s >= 15:
           failInvalid()
         data[zig] = cast[int16](state.getBitsAsSignedInt(s.int) * (1 shl shift))
-
-      if not(k <= state.spectralEnd):
-        break
 
   else:
     var bit = 1 shl state.successiveApproxLow
@@ -593,11 +582,8 @@ proc decodeProgressiveContinuationBlock(
                 data[zig] = cast[int16](data[zig] - bit)
     else:
       var k = state.spectralStart
-      while true:
-        let
-          rs = state.huffmanDecode(1, state.components[component].huffmanAC)
-        if rs < 0:
-          failInvalid("bad huffman code")
+      while k <= state.spectralEnd:
+        let rs = state.huffmanDecode(1, state.components[component].huffmanAC)
         var
           s = rs.int and 15
           r = rs.int shr 4
@@ -632,9 +618,6 @@ proc decodeProgressiveContinuationBlock(
               data[zig] = cast[int16](s)
               break
             dec r
-
-        if not (k <= state.spectralEnd):
-          break
 
 template idct1D(s0, s1, s2, s3, s4, s5, s6, s7: int32) =
   ## Inverse discrete cosine transform 1D
