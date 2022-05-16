@@ -801,16 +801,14 @@ proc quantizationAndIDCTPass(state: var DecoderState) =
     let
       w = (state.components[comp].width + 7) shr 3
       h = (state.components[comp].height + 7) shr 3
+      qTableId = state.components[comp].quantizationTableId
+    if qTableId.int notin 0 ..< state.quantizationTables.len:
+      failInvalid()
     for column in 0 ..< h:
       for row in 0 ..< w:
-        var data = state.components[comp].blocks[row][column]
-
+        var data {.byaddr.} = state.components[comp].blocks[row][column]
         for i in 0 ..< 64:
-          let qTableId = state.components[comp].quantizationTableId
-          if qTableId.int notin 0 ..< state.quantizationTables.len:
-            failInvalid()
           data[i] = cast[int16](data[i] * state.quantizationTables[qTableId][i].int32)
-
         state.components[comp].idctBlock(
           state.components[comp].widthStride * column * 8 + row * 8,
           data
@@ -900,8 +898,7 @@ proc buildImage(state: var DecoderState): Image =
           cr.unsafe[x, y],
         )
   elif state.components.len == 1:
-    let
-      cy = state.components[0].channel
+    let cy = state.components[0].channel
     for y in 0 ..< state.imageHeight:
       for x in 0 ..< state.imageWidth:
         result.unsafe[x, y] = grayScaleToRgbx(cy.unsafe[x, y])
