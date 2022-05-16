@@ -212,7 +212,7 @@ proc decodeDHT(state: var DecoderState) =
 
 proc decodeSOF0(state: var DecoderState) =
   ## Decode start of Frame
-  var len = state.readUint16be() - 2
+  var len = state.readUint16be().int - 2
 
   let precision = state.readUint8()
   if precision != 8:
@@ -229,6 +229,8 @@ proc decodeSOF0(state: var DecoderState) =
   let numComponents = state.readUint8().int
   if numComponents notin {1, 3}:
     failInvalid("unsupported component count, must be 1 or 3")
+
+  len -= 6
 
   for i in 0 ..< numComponents:
     var component = Component()
@@ -249,6 +251,8 @@ proc decodeSOF0(state: var DecoderState) =
     component.yScale = horizontal.int
     component.quantizationTableId = quantizationTableId
     state.components.add(component)
+
+  len -= 3 * numComponents
 
   for component in state.components.mitems:
     state.maxXScale = max(state.maxXScale, component.xScale)
@@ -291,6 +295,9 @@ proc decodeSOF0(state: var DecoderState) =
       component.coeff.setLen(
         component.widthStride * component.heightStride
       )
+
+  if len != 0:
+    failInvalid()
 
 proc decodeSOF1(state: var DecoderState) =
   failInvalid("unsupported extended sequential DCT format")
