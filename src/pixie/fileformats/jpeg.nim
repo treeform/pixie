@@ -311,7 +311,7 @@ proc reset(state: var DecoderState) =
   if state.restartInterval != 0:
     state.todo = state.restartInterval
   else:
-    state.todo = 0x7fffffff
+    state.todo = int.high
   state.eobRun = 0
 
 proc decodeSOS(state: var DecoderState) =
