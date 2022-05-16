@@ -79,7 +79,7 @@ type
     componentOrder: seq[int]
     progressive: bool
     restartInterval: int
-    todo: int
+    todoBeforeRestart: int
     eobRun: int
 
 when defined(release):
@@ -117,7 +117,7 @@ proc skipChunk(state: var DecoderState) =
 
 proc decodeDRI(state: var DecoderState) =
   ## Decode Define Restart Interval
-  var len = state.readUint16be() - 2
+  let len = state.readUint16be() - 2
   if len != 2:
     failInvalid("invalid DRI length")
   state.restartInterval = state.readUint16be().int
@@ -302,16 +302,16 @@ proc decodeSOF2(state: var DecoderState) =
   state.progressive = true
 
 proc reset(state: var DecoderState) =
-  ## Rests the decoder state need for reset markers.
+  ## Rests the decoder state need for restart markers.
   state.bitBuffer = 0
   state.bitsBuffered = 0
   for component in 0 ..< state.components.len:
     state.components[component].dcPred = 0
   state.hitEnd = false
   if state.restartInterval != 0:
-    state.todo = state.restartInterval
+    state.todoBeforeRestart = state.restartInterval
   else:
-    state.todo = int.high
+    state.todoBeforeRestart = int.high
   state.eobRun = 0
 
 proc decodeSOS(state: var DecoderState) =
@@ -749,10 +749,10 @@ proc decodeBlock(state: var DecoderState, comp, row, column: int) =
   else:
     state.decodeRegularBlock(comp, data)
 
-proc checkReset(state: var DecoderState) =
-  ## Check if we might have run into a reset marker, then deal with it.
-  dec state.todo
-  if state.todo <= 0:
+proc checkRestart(state: var DecoderState) =
+  ## Check if we might have run into a restart marker, then deal with it.
+  dec state.todoBeforeRestart
+  if state.todoBeforeRestart <= 0:
     if state.bitsBuffered < 24:
       state.fillBitBuffer()
 
@@ -760,7 +760,7 @@ proc checkReset(state: var DecoderState) =
       if state.buffer[state.pos + 1] in {0xD0.char .. 0xD7.char}:
         state.pos += 2
       else:
-        failInvalid("did not get expected reset marker")
+        failInvalid("did not get expected restart marker")
     state.reset()
 
 proc decodeBlocks(state: var DecoderState) =
@@ -774,7 +774,7 @@ proc decodeBlocks(state: var DecoderState) =
     for column in 0 ..< h:
       for row in 0 ..< w:
         state.decodeBlock(comp, row, column)
-        state.checkReset()
+        state.checkRestart()
   else:
     # Interleaved regular component pass.
     for mcuY in 0 ..< state.numMcuHigh:
@@ -786,7 +786,7 @@ proc decodeBlocks(state: var DecoderState) =
                 row = (mcuX * state.components[comp].yScale + compX)
                 col = (mcuY * state.components[comp].xScale + compY)
               state.decodeBlock(comp, row, col)
-        state.checkReset()
+        state.checkRestart()
 
 proc quantizationAndIDCTPass(state: var DecoderState) =
   ## Does quantization and IDCT.
@@ -932,8 +932,8 @@ proc decodeJpeg*(data: string): Image {.raises: [PixieError].} =
         # EOI - End of Image
         break
       of 0xD0 .. 0xD7:
-        # Reset markers
-        failInvalid("invalid reset marker")
+        # Restart markers
+        failInvalid("invalid restart marker")
       of 0xDB:
         # Define Quantization Table(s)
         state.decodeDQT()
