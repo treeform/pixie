@@ -757,7 +757,7 @@ proc checkReset(state: var DecoderState) =
       state.fillBitBuffer()
 
     if state.buffer[state.pos] == 0xFF.char:
-      if state.buffer[state.pos+1] in {0xD0.char .. 0xD7.char}:
+      if state.buffer[state.pos + 1] in {0xD0.char .. 0xD7.char}:
         state.pos += 2
       else:
         failInvalid("did not get expected reset marker")
@@ -892,15 +892,12 @@ proc buildImage(state: var DecoderState): Image =
           cb.unsafe[x, y],
           cr.unsafe[x, y],
         )
-
   elif state.components.len == 1:
     let
       cy = state.components[0].channel
     for y in 0 ..< state.imageHeight:
       for x in 0 ..< state.imageWidth:
-        result.unsafe[x, y] = grayScaleToRgbx(
-          cy.unsafe[x, y],
-        )
+        result.unsafe[x, y] = grayScaleToRgbx(cy.unsafe[x, y])
   else:
     failInvalid()
 
