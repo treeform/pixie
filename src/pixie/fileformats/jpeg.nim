@@ -21,7 +21,7 @@ import pixie/common, pixie/images, pixie/masks, sequtils, strutils, chroma, std/
 
 const
   fastBits = 9
-  jpgStartOfImage* = [0xFF.uint8, 0xD8]
+  jpegStartOfImage* = [0xFF.uint8, 0xD8]
   deZigZag = [
     uint8 00, 01, 08, 16, 09, 02, 03, 10,
     uint8 17, 24, 32, 25, 18, 11, 04, 05,
@@ -895,17 +895,21 @@ proc buildImage(state: var DecoderState): Image =
       cb = state.components[1].channel
       cr = state.components[2].channel
     for y in 0 ..< state.imageHeight:
+      var channelIndex = cy.dataIndex(0, y)
       for x in 0 ..< state.imageWidth:
         result.unsafe[x, y] = yCbCrToRgbx(
-          cy.unsafe[x, y],
-          cb.unsafe[x, y],
-          cr.unsafe[x, y],
+          cy.data[channelIndex],
+          cb.data[channelIndex],
+          cr.data[channelIndex],
         )
+        inc channelIndex
   elif state.components.len == 1:
     let cy = state.components[0].channel
     for y in 0 ..< state.imageHeight:
+      var channelIndex = cy.dataIndex(0, y)
       for x in 0 ..< state.imageWidth:
-        result.unsafe[x, y] = grayScaleToRgbx(cy.unsafe[x, y])
+        result.unsafe[x, y] = grayScaleToRgbx(cy.data[channelIndex])
+        inc channelIndex
   else:
     failInvalid()
 

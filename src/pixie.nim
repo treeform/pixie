@@ -1,5 +1,5 @@
 import bumpy, chroma, flatty/binny, os, pixie/common, pixie/contexts,
-    pixie/fileformats/bmp, pixie/fileformats/gif, pixie/fileformats/jpg,
+    pixie/fileformats/bmp, pixie/fileformats/gif, pixie/fileformats/jpeg,
     pixie/fileformats/png, pixie/fileformats/ppm, pixie/fileformats/qoi,
     pixie/fileformats/svg, pixie/fonts, pixie/images, pixie/masks, pixie/paints,
     pixie/paths, strutils, vmath
@@ -8,7 +8,7 @@ export bumpy, chroma, common, contexts, fonts, images, masks, paints, paths, vma
 
 type
   FileFormat* = enum
-    PngFormat, BmpFormat, JpgFormat, GifFormat, QoiFormat, PpmFormat
+    PngFormat, BmpFormat, JpegFormat, GifFormat, QoiFormat, PpmFormat
 
 converter autoStraightAlpha*(c: ColorRGBX): ColorRGBA {.inline, raises: [].} =
   ## Convert a premultiplied alpha RGBA to a straight alpha RGBA.
@@ -22,8 +22,8 @@ proc decodeImage*(data: string): Image {.raises: [PixieError].} =
   ## Loads an image from memory.
   if data.len > 8 and data.readUint64(0) == cast[uint64](pngSignature):
     decodePng(data)
-  elif data.len > 2 and data.readUint16(0) == cast[uint16](jpgStartOfImage):
-    decodeJpg(data)
+  elif data.len > 2 and data.readUint16(0) == cast[uint16](jpegStartOfImage):
+    decodeJpeg(data)
   elif data.len > 2 and data.readStr(0, 2) == bmpSignature:
     decodeBmp(data)
   elif data.len > 5 and
@@ -64,7 +64,7 @@ proc encodeImage*(image: Image, fileFormat: FileFormat): string {.raises: [Pixie
   case fileFormat:
   of PngFormat:
     image.encodePng()
-  of JpgFormat:
+  of JpegFormat:
     raise newException(PixieError, "Unsupported file format")
   of BmpFormat:
     image.encodeBmp()
@@ -88,7 +88,7 @@ proc writeFile*(image: Image, filePath: string) {.raises: [PixieError].} =
   let fileFormat = case splitFile(filePath).ext.toLowerAscii():
     of ".png": PngFormat
     of ".bmp": BmpFormat
-    of ".jpg", ".jpeg": JpgFormat
+    of ".jpg", ".jpeg": JpegFormat
     of ".qoi": QoiFormat
     of ".ppm": PpmFormat
     else:
@@ -104,7 +104,7 @@ proc writeFile*(mask: Mask, filePath: string) {.raises: [PixieError].} =
   let fileFormat = case splitFile(filePath).ext.toLowerAscii():
     of ".png": PngFormat
     of ".bmp": BmpFormat
-    of ".jpg", ".jpeg": JpgFormat
+    of ".jpg", ".jpeg": JpegFormat
     of ".qoi": QoiFormat
     of ".ppm": PpmFormat
     else:
