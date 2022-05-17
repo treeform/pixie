@@ -1,5 +1,5 @@
-import flatty/binny, math, pixie/common, pixie/paths, sets, strutils, tables,
-    unicode, vmath
+import flatty/binny, flatty/encode, math, pixie/common, pixie/paths, sets,
+  strutils, tables, unicode, vmath
 
 ## See https://docs.microsoft.com/en-us/typography/opentype/spec/
 
@@ -86,6 +86,7 @@ type
     nameID*: uint16
     length*: uint16
     offset*: uint16
+    text*: string
 
   NameTable* = ref object
     format*: uint16
@@ -655,6 +656,17 @@ proc parseNameTable(buf: string, offset: int): NameTable =
     record.nameID = buf.readUint16(i + 6).swap()
     record.length = buf.readUint16(i + 8).swap()
     record.offset = buf.readUint16(i + 10).swap()
+    record.text = buf[
+      (offset + result.stringOffset.int + record.offset.int) ..<
+      (offset + result.stringOffset.int + record.offset.int + record.length.int)
+    ]
+    if record.platformID == 3 and
+      record.encodingID == 1 and
+      record.languageID == 1033:
+        record.text = fromUTF16BE(record.text)
+
+    record.text = record.text
+    result.nameRecords.add(record)
     i += 12
 
 proc parseOS2Table(buf: string, offset: int): OS2Table =
@@ -923,10 +935,19 @@ const cffStandardStrings = [
 const TOP_DICT_META = {
   0: "version",
   1: "notice",
-  1200: "copyright",
   2: "fullName",
   3: "familyName",
   4: "weight",
+  5: "fontBBox",
+
+  13: "uniqueId",
+  14: "xuid",
+  15: "charset",
+  16: "encoding",
+  17: "charStrings",
+  18: "private",
+
+  1200: "copyright",
   1201: "isFixedPitch",
   1202: "italicAngle",
   1203: "underlinePosition",
@@ -934,14 +955,7 @@ const TOP_DICT_META = {
   1205: "paintType",
   1206: "charstringType",
   1207: "fontMatrix",
-  13: "uniqueId",
-  5: "fontBBox",
   1208: "strokeWidth",
-  14: "xuid",
-  15: "charset",
-  16: "encoding",
-  17: "charStrings",
-  18: "private",
   1230: "ros",
   1231: "cidFontVersion",
   1232: "cidFontRevision",
@@ -2467,11 +2481,19 @@ proc isCCW*(opentype: OpenType): bool {.inline.} =
   ## CFF - true - counterclockwise
   opentype.cff == nil
 
-proc parseOpenType*(buf: string): OpenType {.raises: [PixieError].} =
+proc fullName*(opentype: OpenType): string =
+  ## Returns full name of the font if available.
+  if opentype.cff != nil:
+    return opentype.cff.topDict.fullName
+  for record in opentype.name.nameRecords:
+    if record.nameID == 6 and record.languageID == 1033:
+      return record.text
+
+proc parseOpenType*(buf: string, startLoc = 0): OpenType {.raises: [PixieError].} =
   result = OpenType()
   result.buf = buf
 
-  var i: int
+  var i: int = startLoc
 
   buf.eofCheck(i + 12)
 
@@ -2526,6 +2548,33 @@ proc parseOpenType*(buf: string): OpenType {.raises: [PixieError].} =
     result.post = parsePostTable(buf, result.tableRecords["post"].offset.int)
   except KeyError as e:
     raise newException(PixieError, "Missing required font table: " & e.msg)
+
+proc parseOpenTypeCollection*(buf: string): seq[OpenType] {.raises: [PixieError].} =
+  ## Reads a true/open type collection and returns seq of OpenType files.
+  var i: int
+  buf.eofCheck(i + 12)
+
+  let tag = buf[0 ..< 4]
+  if tag != "ttcf":
+    failUnsupported("invalid ttc file")
+
+  let
+    majorVersion = buf.readUint16(i + 4).swap()
+    minorVersion = buf.readUint16(i + 6).swap()
+    numFonts = buf.readUint32(i + 8).swap()
+
+  if majorVersion notin {1, 2} and minorVersion != 0:
+    failUnsupported("ttc version")
+
+  var tableDirectoryOffsets: seq[uint32]
+  i += 12
+  for n in 0 ..< numFonts:
+    buf.eofCheck(i + 4)
+    tableDirectoryOffsets.add(buf.readUint32(i).swap())
+    i += 4
+
+  for dir in tableDirectoryOffsets:
+    result.add(parseOpenType(buf, dir.int))
 
 when defined(release):
   {.pop.}

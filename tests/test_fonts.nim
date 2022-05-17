@@ -1,4 +1,4 @@
-import pixie, pixie/fileformats/png, strformat, unicode
+import pixie, pixie/fileformats/png, strformat, unicode, os
 
 proc wh(image: Image): Vec2 =
   ## Return with and height as a size vector.
@@ -1196,3 +1196,54 @@ block:
   )
 
   doDiff(image, "customlineheight")
+
+block:
+  var font = readTypefaces("tests/fonts/PTSans.ttc")[0].newFont
+  font.size = 72
+  let image = newImage(200, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image.fillText(font, "AbCd")
+
+block:
+  var typefaces = readTypefaces("tests/fonts/PTSans.ttc")
+  for i, typeface in typefaces:
+    echo i, ": ", typeface.name
+
+when defined(windows):
+  block:
+    let files = @[
+      "/Windows/Fonts/batang.ttc",
+      "/Windows/Fonts/BIZ-UDGothicB.ttc",
+      "/Windows/Fonts/BIZ-UDGothicR.ttc",
+      "/Windows/Fonts/BIZ-UDMinchoM.ttc",
+      "/Windows/Fonts/cambria.ttc",
+      "/Windows/Fonts/gulim.ttc",
+      "/Windows/Fonts/meiryo.ttc",
+      "/Windows/Fonts/meiryob.ttc",
+      "/Windows/Fonts/mingliub.ttc",
+      "/Windows/Fonts/msgothic.ttc",
+      "/Windows/Fonts/msjh.ttc",
+      "/Windows/Fonts/msjhbd.ttc",
+      "/Windows/Fonts/msjhl.ttc",
+      "/Windows/Fonts/msmincho.ttc",
+      "/Windows/Fonts/msyh.ttc",
+      "/Windows/Fonts/msyhbd.ttc",
+      "/Windows/Fonts/msyhl.ttc",
+      "/Windows/Fonts/simsun.ttc",
+      "/Windows/Fonts/Sitka.ttc",
+      "/Windows/Fonts/SitkaB.ttc",
+      "/Windows/Fonts/SitkaI.ttc",
+      "/Windows/Fonts/SitkaZ.ttc",
+      "/Windows/Fonts/UDDigiKyokashoN-B.ttc",
+      "/Windows/Fonts/UDDigiKyokashoN-R.ttc",
+      "/Windows/Fonts/YuGothB.ttc",
+      "/Windows/Fonts/YuGothL.ttc",
+      "/Windows/Fonts/YuGothM.ttc",
+      "/Windows/Fonts/YuGothR.ttc",
+    ]
+    for file in files:
+      if fileExists(file):
+        echo file
+        var typefaces = readTypefaces(file)
+        for i, typeface in typefaces:
+          echo i, ": ", typeface.name

@@ -706,6 +706,21 @@ proc readTypeface*(filePath: string): Typeface {.raises: [PixieError].} =
 
   result.filePath = filePath
 
+proc readTypefaces*(filePath: string): seq[Typeface] {.raises: [PixieError].} =
+  ## Loads a OpenType Collection (.ttc).
+  try:
+    for opentype in parseOpenTypeCollection(readFile(filePath)):
+      let typeface = Typeface()
+      typeface.opentype = opentype
+      result.add(typeface)
+  except IOError as e:
+    raise newException(PixieError, e.msg, e)
+
+proc name*(typeface: Typeface): string =
+  ## Returns the name of the font.
+  if typeface.opentype != nil:
+    return typeface.opentype.fullName
+
 proc readFont*(filePath: string): Font {.raises: [PixieError].} =
   ## Loads a font from a file.
   newFont(readTypeface(filePath))
