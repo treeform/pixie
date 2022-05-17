@@ -895,17 +895,21 @@ proc buildImage(state: var DecoderState): Image =
       cb = state.components[1].channel
       cr = state.components[2].channel
     for y in 0 ..< state.imageHeight:
+      var channelIndex = cy.dataIndex(0, y)
       for x in 0 ..< state.imageWidth:
         result.unsafe[x, y] = yCbCrToRgbx(
-          cy.unsafe[x, y],
-          cb.unsafe[x, y],
-          cr.unsafe[x, y],
+          cy.data[channelIndex],
+          cb.data[channelIndex],
+          cr.data[channelIndex],
         )
+        inc channelIndex
   elif state.components.len == 1:
     let cy = state.components[0].channel
     for y in 0 ..< state.imageHeight:
+      var channelIndex = cy.dataIndex(0, y)
       for x in 0 ..< state.imageWidth:
-        result.unsafe[x, y] = grayScaleToRgbx(cy.unsafe[x, y])
+        result.unsafe[x, y] = grayScaleToRgbx(cy.data[channelIndex])
+        inc channelIndex
   else:
     failInvalid()
 
