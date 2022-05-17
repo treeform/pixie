@@ -21,7 +21,7 @@ import pixie/common, pixie/images, pixie/masks, sequtils, strutils, chroma, std/
 
 const
   fastBits = 9
-  jpgStartOfImage* = [0xFF.uint8, 0xD8]
+  jpegStartOfImage* = [0xFF.uint8, 0xD8]
   deZigZag = [
     uint8 00, 01, 08, 16, 09, 02, 03, 10,
     uint8 17, 24, 32, 25, 18, 11, 04, 05,
