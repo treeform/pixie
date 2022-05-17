@@ -91,7 +91,11 @@ template failInvalid(reason = "unable to load") =
 
 template clampByte(x: int32): uint8 =
   ## Clamp integer into byte range.
-  clamp(x, 0, 0xFF).uint8
+  # clamp(x, 0, 0xFF).uint8
+  let
+    signBit = (cast[uint32](x) shr 31)
+    value = cast[uint32](x) and (signBit - 1)
+  min(value, 255).uint8
 
 proc readUint8(state: var DecoderState): uint8 =
   ## Reads a byte from the input stream.
