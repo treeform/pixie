@@ -1,5 +1,5 @@
-import flatty/binny, math, pixie/common, pixie/paths, sets, strutils, tables,
-    unicode, vmath
+import flatty/binny, flatty/encode, math, pixie/common, pixie/paths, sets,
+  strutils, tables, unicode, vmath
 
 ## See https://docs.microsoft.com/en-us/typography/opentype/spec/
 
@@ -429,33 +429,6 @@ proc readVersion16Dot16(buf: string, offset: int): float32 =
   if majorDigit > 9 or minorDigit > 9:
     failUnsupported("invalid version format")
   majorDigit.float32 + minorDigit.float32 / 10
-
-func maybeSwap(u: uint16, swap: bool): uint16 =
-  if swap:
-    ((u and 0xFF) shl 8) or ((u and 0xFF00) shr 8)
-  else:
-    u
-
-proc fromUTF16Inner(input: string, i: var int, swap: bool): string =
-  ## Converts UTF16 Big Endian to UTF8 string.
-  while i + 1 < input.len:
-    var u1 = input.readUInt16(i).maybeSwap(swap)
-    i += 2
-    if u1 - 0xd800 >= 0x800:
-      result.add Rune(u1.int)
-    else:
-      var u2 = input.readUInt16(i).maybeSwap(swap)
-      i += 2
-      if ((u1 and 0xfc00) == 0xd800) and ((u2 and 0xfc00) == 0xdc00):
-        result.add Rune((u1.uint32 shl 10) + u2.uint32 - 0x35fdc00)
-      else:
-        # Error, produce tofu character.
-        result.add "□"
-
-proc fromUTF16BE*(input: string): string =
-  ## Converts UTF16 Big Endian to UTF8 string.
-  var i = 0
-  input.fromUTF16Inner(i, true)
 
 proc parseCmapTable(buf: string, offset: int): CmapTable =
   var i = offset
