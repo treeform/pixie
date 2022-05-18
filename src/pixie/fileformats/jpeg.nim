@@ -9,6 +9,7 @@ import pixie/common, pixie/images, pixie/masks, sequtils, strutils, chroma,
 # * 4:4:4, 4:2:2, 4:1:1, 4:2:0 resampling modes
 # * progressive
 # * restart markers
+# * Exif orientation
 
 # * https://github.com/daviddrysdale/libjpeg
 # * https://www.youtube.com/watch?v=Kv1Hiv3ox8I
