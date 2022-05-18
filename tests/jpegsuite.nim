@@ -36,4 +36,13 @@ const jpegSuiteFiles* = [
   "tests/fileformats/jpeg/masters/testimgp.jpg",
   "tests/fileformats/jpeg/masters/testorig.jpg",
   "tests/fileformats/jpeg/masters/testprog.jpg",
+
+  "tests/fileformats/jpeg/masters/f1-exif.jpg",
+  "tests/fileformats/jpeg/masters/f2-exif.jpg",
+  "tests/fileformats/jpeg/masters/f3-exif.jpg",
+  "tests/fileformats/jpeg/masters/f4-exif.jpg",
+  "tests/fileformats/jpeg/masters/f5-exif.jpg",
+  "tests/fileformats/jpeg/masters/f6-exif.jpg",
+  "tests/fileformats/jpeg/masters/f7-exif.jpg",
+  "tests/fileformats/jpeg/masters/f8-exif.jpg",
 ]

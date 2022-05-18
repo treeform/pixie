@@ -1,4 +1,5 @@
-import pixie/common, pixie/images, pixie/masks, sequtils, strutils, chroma, std/decls
+import pixie/common, pixie/images, pixie/masks, sequtils, strutils, chroma,
+    std/decls, flatty/binny
 
 # This JPEG decoder is loosely based on stb_image which is public domain.
 
@@ -81,6 +82,7 @@ type
     restartInterval: int
     todoBeforeRestart: int
     eobRun: int
+    orientation: int
 
 when defined(release):
   {.push checks: off.}
@@ -107,6 +109,14 @@ proc readUint8(state: var DecoderState): uint8 =
 proc readUint16be(state: var DecoderState): uint16 =
   ## Reads uint16 big-endian from the input stream.
   (state.readUint8().uint16 shl 8) or state.readUint8()
+
+proc readUint32be(state: var DecoderState): uint32 =
+  ## Reads uint32 big-endian from the input stream.
+  return
+    (state.readUint8().uint32 shl 24) or
+    (state.readUint8().uint32 shl 16) or
+    (state.readUint8().uint32 shl 8) or
+    state.readUint8().uint32
 
 proc skipBytes(state: var DecoderState, n: int) =
   ## Skips a number of bytes.
@@ -311,6 +321,57 @@ proc decodeSOF2(state: var DecoderState) =
   # Same as SOF0
   state.decodeSOF0()
   state.progressive = true
+
+proc decodeExif(state: var DecoderState) =
+  ## Decode Exif header
+  let
+    len = state.readUint16be().int - 2
+    endOffset = state.pos + len
+
+  let exifHeader = state.buffer[state.pos ..< state.pos + 6]
+  state.skipBytes(6)
+  if exifHeader != "Exif\0\0":
+    # Happens with progressive images, just ignore instead of error.
+    # Skip to the end.
+    state.pos = endOffset
+    return
+
+  # Read the endianess of the exif header
+  let
+    tiffHeader = state.readUint16be().int
+    littleEndian =
+      if tiffHeader == 0x4D4D:
+        false
+      elif tiffHeader == 0x4949:
+        true
+      else:
+        failInvalid("invalid Tiff header")
+
+  # Verify we got the endianess right.
+  if state.readUint16be().maybeSwap(littleEndian) != 0x002A.uint16:
+    failInvalid("invalid Tiff header endianess")
+
+  # Skip any other tiff header data.
+  let offsetToFirstIFD = state.readUint32be().maybeSwap(littleEndian).int
+  state.skipBytes(offsetToFirstIFD - 8)
+
+  # Read the IFD0 (main image) tags.
+  let numTags = state.readUint16be().maybeSwap(littleEndian).int
+  for i in 0 ..< numTags:
+    let
+      tagNumber = state.readUint16be().maybeSwap(littleEndian)
+      dataFormat = state.readUint16be().maybeSwap(littleEndian)
+      numberComponents = state.readUint32be().maybeSwap(littleEndian)
+      dataOffset = state.readUint32be().maybeSwap(littleEndian).int
+    # For now we only care about orientation tag.
+    case tagNumber:
+      of 0x0112: # Orientation
+        state.orientation = dataOffset shr 16
+      else:
+        discard
+
+  # Skip all of the data we do not want to read, IFD1, thumbnail, etc.
+  state.pos = endOffset
 
 proc reset(state: var DecoderState) =
   ## Rests the decoder state need for restart markers.
@@ -913,6 +974,32 @@ proc buildImage(state: var DecoderState): Image =
   else:
     failInvalid()
 
+  # Do any of the orientation flips from the Exif header.
+  case state.orientation:
+    of 0, 1:
+      discard
+    of 2:
+      result.flipHorizontal()
+    of 3:
+      result.flipVertical()
+      result.flipHorizontal()
+    of 4:
+      result.flipVertical()
+    of 5:
+      result.rotate90()
+    of 6:
+      result.rotate90()
+      result.flipHorizontal()
+    of 7:
+      result.rotate90()
+      result.flipVertical()
+      result.flipHorizontal()
+    of 8:
+      result.rotate90()
+      result.flipVertical()
+    else:
+      failInvalid("invalid orientation")
+
 proc decodeJpeg*(data: string): Image {.raises: [PixieError].} =
   ## Decodes the JPEG into an Image.
 
@@ -962,9 +1049,8 @@ proc decodeJpeg*(data: string): Image {.raises: [PixieError].} =
         # state.decodeAPP0(data, at)
         state.skipChunk()
       of 0xE1:
-        # Exif
-        # state.decodeExif(data, at)
-        state.skipChunk()
+        # Exif/APP1
+        state.decodeExif()
       of 0xE2..0xEF:
         # Application-specific
         state.skipChunk()
