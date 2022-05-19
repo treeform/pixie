@@ -988,16 +988,16 @@ proc buildImage(state: var DecoderState): Image =
       result.flipVertical()
     of 5:
       result.rotate90()
+      result.flipHorizontal()
     of 6:
       result.rotate90()
-      result.flipHorizontal()
     of 7:
       result.rotate90()
       result.flipVertical()
-      result.flipHorizontal()
     of 8:
       result.rotate90()
       result.flipVertical()
+      result.flipHorizontal()
     else:
       failInvalid("invalid orientation")
 
