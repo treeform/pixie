@@ -11,10 +11,6 @@ const
   svgSignature* = "<svg"
 
 type
-  LinearGradient = object
-    x1, y1, x2, y2: float32
-    stops: seq[ColorStop]
-
   SvgProperties = object
     display: bool
     fillRule: WindingRule
@@ -29,6 +25,13 @@ type
     shouldStroke: bool
     opacity, strokeOpacity: float32
     linearGradients: TableRef[string, LinearGradient]
+
+  RenderMode = enum
+    Fill, Stroke
+
+  LinearGradient = object
+    x1, y1, x2, y2: float32
+    stops: seq[ColorStop]
 
 template failInvalid() =
   raise newException(PixieError, "Invalid SVG data")
@@ -316,13 +319,13 @@ proc parseSvgProperties(node: XmlNode, inherited: SvgProperties): SvgProperties 
       else:
         failInvalidTransform(transform)
 
-proc fill(img: Image, props: SvgProperties, path: Path) {.inline.} =
+proc fill(img: Image, path: Path, props: SvgProperties) =
   if props.display and props.opacity > 0:
     let paint = newPaint(props.fill)
     paint.opacity = paint.opacity * props.opacity
     img.fillPath(path, paint, props.transform, props.fillRule)
 
-proc stroke(img: Image, props: SvgProperties, path: Path) {.inline.} =
+proc stroke(img: Image, path: Path, props: SvgProperties) =
   if props.display and props.opacity > 0:
     let paint = newPaint(props.stroke)
     paint.color.a *= (props.opacity * props.strokeOpacity)
@@ -337,7 +340,9 @@ proc stroke(img: Image, props: SvgProperties, path: Path) {.inline.} =
       dashes = props.strokeDashArray
     )
 
-proc draw(img: Image, node: XmlNode, propertiesStack: var seq[SvgProperties]) =
+proc parseSvgElement(
+  node: XmlNode, propertiesStack: var seq[SvgProperties]
+): seq[(Path, RenderMode, SvgProperties)] =
   if node.kind != xnElement:
     # Skip <!-- comments -->
     return
@@ -354,7 +359,7 @@ proc draw(img: Image, node: XmlNode, propertiesStack: var seq[SvgProperties]) =
     let props = node.parseSvgProperties(propertiesStack[^1])
     propertiesStack.add(props)
     for child in node:
-      img.draw(child, propertiesStack)
+      result.add child.parseSvgElement(propertiesStack)
     discard propertiesStack.pop()
 
   of "path":
@@ -363,9 +368,9 @@ proc draw(img: Image, node: XmlNode, propertiesStack: var seq[SvgProperties]) =
       props = node.parseSvgProperties(propertiesStack[^1])
       path = parsePath(d)
 
-    img.fill(props, path)
+    result.add (path, Fill, props)
     if props.shouldStroke:
-      img.stroke(props, path)
+      result.add (path, Stroke, props)
 
   of "line":
     let
@@ -380,7 +385,7 @@ proc draw(img: Image, node: XmlNode, propertiesStack: var seq[SvgProperties]) =
     path.lineTo(x2, y2)
 
     if props.shouldStroke:
-      img.stroke(props, path)
+      result.add (path, Stroke, props)
 
   of "polyline", "polygon":
     let
@@ -413,10 +418,10 @@ proc draw(img: Image, node: XmlNode, propertiesStack: var seq[SvgProperties]) =
     # and fill or not
     if node.tag == "polygon":
       path.closePath()
-      img.fill(props, path)
+      result.add (path, Fill, props)
 
     if props.shouldStroke:
-      img.stroke(props, path)
+      result.add (path, Stroke, props)
 
   of "rect":
     let
@@ -454,9 +459,9 @@ proc draw(img: Image, node: XmlNode, propertiesStack: var seq[SvgProperties]) =
     else:
       path.rect(x, y, width, height)
 
-    img.fill(props, path)
+    result.add (path, Fill, props)
     if props.shouldStroke:
-      img.stroke(props, path)
+      result.add (path, Stroke, props)
 
   of "circle", "ellipse":
     let
@@ -475,9 +480,9 @@ proc draw(img: Image, node: XmlNode, propertiesStack: var seq[SvgProperties]) =
     let path = newPath()
     path.ellipse(cx, cy, rx, ry)
 
-    img.fill(props, path)
+    result.add (path, Fill, props)
     if props.shouldStroke:
-      img.stroke(props, path)
+      result.add (path, Stroke, props)
 
   of "radialGradient":
     discard
@@ -578,9 +583,17 @@ proc decodeSvg*(
         scaleY = height.float32 / viewBoxHeight.float32
       rootprops.transform = rootprops.transform * scale(vec2(scaleX, scaleY))
 
-    var propertiesStack = @[rootProps]
+    var
+      propertiesStack = @[rootProps]
+      renderInfos: seq[(Path, RenderMode, SvgProperties)]
     for node in root.items:
-      result.draw(node, propertiesStack)
+      renderInfos.add node.parseSvgElement(propertiesStack)
+    for (path, mode, props) in renderInfos:
+      case mode:
+      of Fill:
+        result.fill(path, props)
+      of Stroke:
+        result.stroke(path, props)
   except PixieError as e:
     raise e
   except:
