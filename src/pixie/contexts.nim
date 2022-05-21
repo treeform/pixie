@@ -7,7 +7,6 @@ import bumpy, chroma, pixie/common, pixie/fonts, pixie/images, pixie/masks,
 ## https://developer.mozilla.org/en-US/docs/Web/API/ContextRenderingContext2D
 
 type
-
   BaselineAlignment* = enum
     TopBaseline
     HangingBaseline
