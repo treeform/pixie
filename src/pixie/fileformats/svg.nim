@@ -52,7 +52,7 @@ proc initSvgProperties(): SvgProperties =
   result.strokeOpacity = 1
   result.linearGradients = newTable[string, LinearGradient]()
 
-proc decodeSvgProperties(inherited: SvgProperties, node: XmlNode): SvgProperties =
+proc parseSvgProperties(node: XmlNode, inherited: SvgProperties): SvgProperties =
   result = inherited
 
   proc splitArgs(s: string): seq[string] =
@@ -351,7 +351,7 @@ proc draw(img: Image, node: XmlNode, propertiesStack: var seq[SvgProperties]) =
       echo node
 
   of "g":
-    let props = decodeSvgProperties(propertiesStack[^1], node)
+    let props = node.parseSvgProperties(propertiesStack[^1])
     propertiesStack.add(props)
     for child in node:
       img.draw(child, propertiesStack)
@@ -360,7 +360,7 @@ proc draw(img: Image, node: XmlNode, propertiesStack: var seq[SvgProperties]) =
   of "path":
     let
       d = node.attr("d")
-      props = decodeSvgProperties(propertiesStack[^1], node)
+      props = node.parseSvgProperties(propertiesStack[^1])
       path = parsePath(d)
 
     img.fill(props, path)
@@ -369,7 +369,7 @@ proc draw(img: Image, node: XmlNode, propertiesStack: var seq[SvgProperties]) =
 
   of "line":
     let
-      props = decodeSvgProperties(propertiesStack[^1], node)
+      props = node.parseSvgProperties(propertiesStack[^1])
       x1 = parseFloat(node.attrOrDefault("x1", "0"))
       y1 = parseFloat(node.attrOrDefault("y1", "0"))
       x2 = parseFloat(node.attrOrDefault("x2", "0"))
@@ -384,7 +384,7 @@ proc draw(img: Image, node: XmlNode, propertiesStack: var seq[SvgProperties]) =
 
   of "polyline", "polygon":
     let
-      props = decodeSvgProperties(propertiesStack[^1], node)
+      props = node.parseSvgProperties(propertiesStack[^1])
       points = node.attr("points")
 
     var vecs: seq[Vec2]
@@ -420,7 +420,7 @@ proc draw(img: Image, node: XmlNode, propertiesStack: var seq[SvgProperties]) =
 
   of "rect":
     let
-      props = decodeSvgProperties(propertiesStack[^1], node)
+      props = node.parseSvgProperties(propertiesStack[^1])
       x = parseFloat(node.attrOrDefault("x", "0"))
       y = parseFloat(node.attrOrDefault("y", "0"))
       width = parseFloat(node.attrOrDefault("width", "0"))
@@ -460,7 +460,7 @@ proc draw(img: Image, node: XmlNode, propertiesStack: var seq[SvgProperties]) =
 
   of "circle", "ellipse":
     let
-      props = decodeSvgProperties(propertiesStack[^1], node)
+      props = node.parseSvgProperties(propertiesStack[^1])
       cx = parseFloat(node.attrOrDefault("cx", "0"))
       cy = parseFloat(node.attrOrDefault("cy", "0"))
 
@@ -484,7 +484,7 @@ proc draw(img: Image, node: XmlNode, propertiesStack: var seq[SvgProperties]) =
 
   of "linearGradient":
     let
-      props = decodeSvgProperties(propertiesStack[^1], node)
+      props = node.parseSvgProperties(propertiesStack[^1])
       id = node.attr("id")
       gradientUnits = node.attr("gradientUnits")
       gradientTransform = node.attr("gradientTransform")
@@ -562,7 +562,7 @@ proc decodeSvg*(
       viewBoxHeight = parseInt(box[3])
 
     var rootProps = initSvgProperties()
-    rootProps = decodeSvgProperties(rootProps, root)
+    rootProps = root.parseSvgProperties(rootProps)
 
     if viewBoxMinX != 0 or viewBoxMinY != 0:
       let viewBoxMin = vec2(-viewBoxMinX.float32, -viewBoxMinY.float32)
