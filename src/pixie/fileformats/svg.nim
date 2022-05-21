@@ -345,7 +345,7 @@ proc stroke(img: Image, ctx: Ctx, path: Path) {.inline.} =
       dashes = ctx.strokeDashArray
     )
 
-proc drawInternal(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
+proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
   if node.kind != xnElement:
     # Skip <!-- comments -->
     return
@@ -362,7 +362,7 @@ proc drawInternal(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     let ctx = decodeCtx(ctxStack[^1], node)
     ctxStack.add(ctx)
     for child in node:
-      img.drawInternal(child, ctxStack)
+      img.draw(child, ctxStack)
     discard ctxStack.pop()
 
   of "path":
@@ -551,14 +551,6 @@ proc drawInternal(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
 
   else:
     raise newException(PixieError, "Unsupported SVG tag: " & node.tag)
-
-proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
-  try:
-    drawInternal(img, node, ctxStack)
-  except PixieError as e:
-    raise e
-  except:
-    raise currentExceptionAsPixieError()
 
 proc decodeSvg*(
   data: string | XmlNode, width = 0, height = 0
