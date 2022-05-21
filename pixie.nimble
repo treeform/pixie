@@ -9,7 +9,7 @@ requires "nim >= 1.4.8"
 requires "vmath >= 1.1.4"
 requires "chroma >= 0.2.5"
 requires "zippy >= 0.9.7"
-requires "flatty >= 0.3.2"
+requires "flatty >= 0.3.3"
 requires "nimsimd >= 1.0.0"
 requires "bumpy >= 1.1.1"
 

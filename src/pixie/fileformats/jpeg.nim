@@ -119,6 +119,13 @@ proc readUint32be(state: var DecoderState): uint32 =
     (state.readUint8().uint32 shl 8) or
     state.readUint8().uint32
 
+proc readStr(state: var DecoderState, n: int): string =
+  ## Reads n number of bytes as a string.
+  if state.pos + n > state.buffer.len:
+    failInvalid()
+  result = state.buffer[state.pos ..< state.pos + n]
+  state.pos += n
+
 proc skipBytes(state: var DecoderState, n: int) =
   ## Skips a number of bytes.
   if state.pos + n > state.buffer.len:
@@ -329,8 +336,7 @@ proc decodeExif(state: var DecoderState) =
     len = state.readUint16be().int - 2
     endOffset = state.pos + len
 
-  let exifHeader = state.buffer[state.pos ..< state.pos + 6]
-  state.skipBytes(6)
+  let exifHeader = state.readStr(6)
   if exifHeader != "Exif\0\0":
     # Happens with progressive images, just ignore instead of error.
     # Skip to the end.
@@ -519,7 +525,7 @@ proc getBit(state: var DecoderState): int =
 
 proc getBitsAsSignedInt(state: var DecoderState, n: int): int =
   ## Get n number of bits as a signed integer.
-  if n notin 0 .. 16:
+  if n notin 0 .. 15:
     failInvalid()
   if state.bitsBuffered < n:
     state.fillBitBuffer()

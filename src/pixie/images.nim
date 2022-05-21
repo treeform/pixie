@@ -172,7 +172,7 @@ proc flipVertical*(image: Image) {.raises: [].} =
 
 proc rotate90*(image: Image) {.raises: [PixieError].} =
   ## Rotates the image 90 degrees clockwise.
-  var copy = newImage(image.height, image.width)
+  let copy = newImage(image.height, image.width)
   for y in 0 ..< copy.height:
     for x in 0 ..< copy.width:
       copy.data[copy.dataIndex(x, y)] =
