@@ -1,4 +1,4 @@
-import chroma, pixie, pixie/fileformats/png, vmath
+import chroma, pixie, vmath
 
 const heartShape = """
     M 10,30
@@ -18,7 +18,7 @@ block:
 
 block:
   let paint = newPaint(ImagePaint)
-  paint.image = decodePng(readFile("tests/fileformats/png/mandrill.png"))
+  paint.image = readImage("tests/fileformats/png/mandrill.png")
   paint.imageMat = scale(vec2(0.2, 0.2))
 
   let image = newImage(100, 100)
@@ -27,7 +27,7 @@ block:
 
 block:
   let paint = newPaint(ImagePaint)
-  paint.image = decodePng(readFile("tests/fileformats/png/mandrill.png"))
+  paint.image = readImage("tests/fileformats/png/mandrill.png")
   paint.imageMat = scale(vec2(0.2, 0.2))
   paint.opacity = 0.5
 
@@ -37,7 +37,7 @@ block:
 
 block:
   let paint = newPaint(TiledImagePaint)
-  paint.image = decodePng(readFile("tests/fileformats/png/mandrill.png"))
+  paint.image = readImage("tests/fileformats/png/mandrill.png")
   paint.imageMat = scale(vec2(0.02, 0.02))
 
   let image = newImage(100, 100)
@@ -46,7 +46,7 @@ block:
 
 block:
   let paint = newPaint(TiledImagePaint)
-  paint.image = decodePng(readFile("tests/fileformats/png/mandrill.png"))
+  paint.image = readImage("tests/fileformats/png/mandrill.png")
   paint.imageMat = scale(vec2(0.02, 0.02))
   paint.opacity = 0.5
 
