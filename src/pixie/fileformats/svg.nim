@@ -15,7 +15,7 @@ type
     x1, y1, x2, y2: float32
     stops: seq[ColorStop]
 
-  Ctx = object
+  SvgCtx = object
     display: bool
     fillRule: WindingRule
     fill: Paint
@@ -38,7 +38,7 @@ proc attrOrDefault(node: XmlNode, name, default: string): string =
   if result.len == 0:
     result = default
 
-proc initCtx(): Ctx =
+proc initSvgCtx(): SvgCtx =
   result.display = true
   try:
     result.fill = parseHtmlColor("black").rgbx
@@ -52,7 +52,7 @@ proc initCtx(): Ctx =
   result.strokeOpacity = 1
   result.linearGradients = newTable[string, LinearGradient]()
 
-proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
+proc decodeSvgCtxInternal(inherited: SvgCtx, node: XmlNode): SvgCtx =
   result = inherited
 
   proc splitArgs(s: string): seq[string] =
@@ -316,21 +316,21 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
       else:
         failInvalidTransform(transform)
 
-proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
+proc decodeSvgCtx(inherited: SvgCtx, node: XmlNode): SvgCtx =
   try:
-    decodeCtxInternal(inherited, node)
+    decodeSvgCtxInternal(inherited, node)
   except PixieError as e:
     raise e
   except:
     raise currentExceptionAsPixieError()
 
-proc fill(img: Image, ctx: Ctx, path: Path) {.inline.} =
+proc fill(img: Image, ctx: SvgCtx, path: Path) {.inline.} =
   if ctx.display and ctx.opacity > 0:
     let paint = newPaint(ctx.fill)
     paint.opacity = paint.opacity * ctx.opacity
     img.fillPath(path, paint, ctx.transform, ctx.fillRule)
 
-proc stroke(img: Image, ctx: Ctx, path: Path) {.inline.} =
+proc stroke(img: Image, ctx: SvgCtx, path: Path) {.inline.} =
   if ctx.display and ctx.opacity > 0:
     let paint = newPaint(ctx.stroke)
     paint.color.a *= (ctx.opacity * ctx.strokeOpacity)
@@ -345,7 +345,7 @@ proc stroke(img: Image, ctx: Ctx, path: Path) {.inline.} =
       dashes = ctx.strokeDashArray
     )
 
-proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
+proc draw(img: Image, node: XmlNode, ctxStack: var seq[SvgCtx]) =
   if node.kind != xnElement:
     # Skip <!-- comments -->
     return
@@ -359,7 +359,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
       echo node
 
   of "g":
-    let ctx = decodeCtx(ctxStack[^1], node)
+    let ctx = decodeSvgCtx(ctxStack[^1], node)
     ctxStack.add(ctx)
     for child in node:
       img.draw(child, ctxStack)
@@ -368,7 +368,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
   of "path":
     let
       d = node.attr("d")
-      ctx = decodeCtx(ctxStack[^1], node)
+      ctx = decodeSvgCtx(ctxStack[^1], node)
       path = parsePath(d)
 
     img.fill(ctx, path)
@@ -377,7 +377,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
 
   of "line":
     let
-      ctx = decodeCtx(ctxStack[^1], node)
+      ctx = decodeSvgCtx(ctxStack[^1], node)
       x1 = parseFloat(node.attrOrDefault("x1", "0"))
       y1 = parseFloat(node.attrOrDefault("y1", "0"))
       x2 = parseFloat(node.attrOrDefault("x2", "0"))
@@ -392,7 +392,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
 
   of "polyline", "polygon":
     let
-      ctx = decodeCtx(ctxStack[^1], node)
+      ctx = decodeSvgCtx(ctxStack[^1], node)
       points = node.attr("points")
 
     var vecs: seq[Vec2]
@@ -428,7 +428,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
 
   of "rect":
     let
-      ctx = decodeCtx(ctxStack[^1], node)
+      ctx = decodeSvgCtx(ctxStack[^1], node)
       x = parseFloat(node.attrOrDefault("x", "0"))
       y = parseFloat(node.attrOrDefault("y", "0"))
       width = parseFloat(node.attrOrDefault("width", "0"))
@@ -468,7 +468,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
 
   of "circle", "ellipse":
     let
-      ctx = decodeCtx(ctxStack[^1], node)
+      ctx = decodeSvgCtx(ctxStack[^1], node)
       cx = parseFloat(node.attrOrDefault("cx", "0"))
       cy = parseFloat(node.attrOrDefault("cy", "0"))
 
@@ -492,7 +492,7 @@ proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
 
   of "linearGradient":
     let
-      ctx = decodeCtx(ctxStack[^1], node)
+      ctx = decodeSvgCtx(ctxStack[^1], node)
       id = node.attr("id")
       gradientUnits = node.attr("gradientUnits")
       gradientTransform = node.attr("gradientTransform")
@@ -569,8 +569,8 @@ proc decodeSvg*(
       viewBoxWidth = parseInt(box[2])
       viewBoxHeight = parseInt(box[3])
 
-    var rootCtx = initCtx()
-    rootCtx = decodeCtx(rootCtx, root)
+    var rootCtx = initSvgCtx()
+    rootCtx = decodeSvgCtx(rootCtx, root)
 
     if viewBoxMinX != 0 or viewBoxMinY != 0:
       let viewBoxMin = vec2(-viewBoxMinX.float32, -viewBoxMinY.float32)
