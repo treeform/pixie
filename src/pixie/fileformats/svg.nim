@@ -52,7 +52,7 @@ proc initSvgCtx(): SvgCtx =
   result.strokeOpacity = 1
   result.linearGradients = newTable[string, LinearGradient]()
 
-proc decodeSvgCtxInternal(inherited: SvgCtx, node: XmlNode): SvgCtx =
+proc decodeSvgCtx(inherited: SvgCtx, node: XmlNode): SvgCtx =
   result = inherited
 
   proc splitArgs(s: string): seq[string] =
@@ -315,14 +315,6 @@ proc decodeSvgCtxInternal(inherited: SvgCtx, node: XmlNode): SvgCtx =
         result.transform = result.transform * scale(vec2(sx, sy))
       else:
         failInvalidTransform(transform)
-
-proc decodeSvgCtx(inherited: SvgCtx, node: XmlNode): SvgCtx =
-  try:
-    decodeSvgCtxInternal(inherited, node)
-  except PixieError as e:
-    raise e
-  except:
-    raise currentExceptionAsPixieError()
 
 proc fill(img: Image, ctx: SvgCtx, path: Path) {.inline.} =
   if ctx.display and ctx.opacity > 0:
