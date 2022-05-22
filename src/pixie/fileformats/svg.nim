@@ -14,7 +14,7 @@ type
   SvgProperties = object
     display: bool
     fillRule: WindingRule
-    fill: Paint
+    fill: string
     stroke: ColorRGBX
     strokeWidth: float32
     strokeLineCap: LineCap
@@ -23,7 +23,7 @@ type
     strokeDashArray: seq[float32]
     transform: Mat3
     shouldStroke: bool
-    opacity, strokeOpacity: float32
+    opacity, fillOpacity, strokeOpacity: float32
     linearGradients: TableRef[string, LinearGradient]
 
   RenderMode = enum
@@ -43,15 +43,13 @@ proc attrOrDefault(node: XmlNode, name, default: string): string =
 
 proc initSvgProperties(): SvgProperties =
   result.display = true
-  try:
-    result.fill = parseHtmlColor("black").rgbx
-    result.stroke = parseHtmlColor("black").rgbx
-  except:
-    raise currentExceptionAsPixieError()
+  result.fill = "black"
+  result.stroke = rgbx(0, 0, 0, 255)
   result.strokeWidth = 1
   result.transform = mat3()
   result.strokeMiterLimit = defaultMiterLimit
   result.opacity = 1
+  result.fillOpacity = 1
   result.strokeOpacity = 1
   result.linearGradients = newTable[string, LinearGradient]()
 
@@ -165,23 +163,9 @@ proc parseSvgProperties(node: XmlNode, inherited: SvgProperties): SvgProperties 
     )
 
   if fill == "" or fill == "currentColor":
-    discard # Inherit
-  elif fill == "none":
-    result.fill = ColorRGBX()
-  elif fill.startsWith("url("):
-    let id = fill[5 .. ^2]
-    if id in result.linearGradients:
-      let linearGradient = result.linearGradients[id]
-      result.fill = newPaint(LinearGradientPaint)
-      result.fill.gradientHandlePositions = @[
-        result.transform * vec2(linearGradient.x1, linearGradient.y1),
-        result.transform * vec2(linearGradient.x2, linearGradient.y2)
-      ]
-      result.fill.gradientStops = linearGradient.stops
-    else:
-      raise newException(PixieError, "Missing SVG resource " & id)
+    result.fill = inherited.fill
   else:
-    result.fill = parseHtmlColor(fill).rgbx
+    result.fill = fill
 
   if stroke == "":
     discard # Inherit
@@ -194,7 +178,7 @@ proc parseSvgProperties(node: XmlNode, inherited: SvgProperties): SvgProperties 
     result.shouldStroke = true
 
   if fillOpacity.len > 0:
-    result.fill.opacity = parseFloat(fillOpacity).clamp(0, 1)
+    result.fillOpacity = parseFloat(fillOpacity).clamp(0, 1)
 
   if strokeOpacity.len > 0:
     result.strokeOpacity = parseFloat(strokeOpacity).clamp(0, 1)
@@ -321,8 +305,27 @@ proc parseSvgProperties(node: XmlNode, inherited: SvgProperties): SvgProperties 
 
 proc fill(img: Image, path: Path, props: SvgProperties) =
   if props.display and props.opacity > 0:
-    let paint = newPaint(props.fill)
-    paint.opacity = paint.opacity * props.opacity
+    if props.fill == "none":
+      return
+
+    var paint: Paint
+    if props.fill.startsWith("url("):
+      let id = props.fill[5 .. ^2]
+      if id in props.linearGradients:
+        let linearGradient = props.linearGradients[id]
+        paint = newPaint(LinearGradientPaint)
+        paint.gradientHandlePositions = @[
+          props.transform * vec2(linearGradient.x1, linearGradient.y1),
+          props.transform * vec2(linearGradient.x2, linearGradient.y2)
+        ]
+        paint.gradientStops = linearGradient.stops
+      else:
+        raise newException(PixieError, "Missing SVG resource " & id)
+    else:
+      paint = parseHtmlColor(props.fill).rgbx
+
+    paint.opacity = props.fillOpacity * props.opacity
+
     img.fillPath(path, paint, props.transform, props.fillRule)
 
 proc stroke(img: Image, path: Path, props: SvgProperties) =
