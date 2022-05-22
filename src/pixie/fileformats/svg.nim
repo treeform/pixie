@@ -22,7 +22,6 @@ type
     strokeMiterLimit: float32
     strokeDashArray: seq[float32]
     transform: Mat3
-    shouldStroke: bool
     opacity, fillOpacity, strokeOpacity: float32
     linearGradients: TableRef[string, LinearGradient]
 
@@ -41,7 +40,6 @@ proc attrOrDefault(node: XmlNode, name, default: string): string =
 proc initSvgProperties(): SvgProperties =
   result.display = true
   result.fill = "black"
-  result.stroke = rgbx(0, 0, 0, 255)
   result.strokeWidth = 1
   result.transform = mat3()
   result.strokeMiterLimit = defaultMiterLimit
@@ -167,12 +165,12 @@ proc parseSvgProperties(node: XmlNode, inherited: SvgProperties): SvgProperties 
   if stroke == "":
     discard # Inherit
   elif stroke == "currentColor":
-    result.shouldStroke = true
+    if result.stroke == rgbx(0, 0, 0, 0):
+      result.stroke = rgbx(0, 0, 0, 255)
   elif stroke == "none":
     result.stroke = ColorRGBX()
   else:
     result.stroke = parseHtmlColor(stroke).rgbx
-    result.shouldStroke = true
 
   if fillOpacity.len > 0:
     result.fillOpacity = parseFloat(fillOpacity).clamp(0, 1)
@@ -186,10 +184,8 @@ proc parseSvgProperties(node: XmlNode, inherited: SvgProperties): SvgProperties 
     if strokeWidth.endsWith("px"):
       strokeWidth = strokeWidth[0 .. ^3]
     result.strokeWidth = parseFloat(strokeWidth)
-    result.shouldStroke = true
-
-  if result.stroke == ColorRGBX() or result.strokeWidth <= 0:
-    result.shouldStroke = false
+    if result.stroke == rgbx(0, 0, 0, 0):
+      result.stroke = rgbx(0, 0, 0, 255)
 
   if strokeLineCap == "":
     discard # Inherit
@@ -581,7 +577,7 @@ proc decodeSvg*(
       renderInfos.add node.parseSvgElement(propertiesStack)
     for (path, props) in renderInfos:
       result.fill(path, props)
-      if props.shouldStroke:
+      if props.stroke != rgbx(0, 0, 0, 0) and props.strokeWidth > 0:
         result.stroke(path, props)
   except PixieError as e:
     raise e
