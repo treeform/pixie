@@ -637,11 +637,12 @@ proc polygon*(
   if sides <= 2:
     raise newException(PixieError, "Invalid polygon sides value")
   path.moveTo(x + size * sin(0.0), y - size * cos(0.0))
-  for side in 1 .. sides:
+  for side in 1 .. sides - 1:
     path.lineTo(
       x + size * sin(side.float32 * 2.0 * PI / sides.float32),
       y - size * cos(side.float32 * 2.0 * PI / sides.float32)
     )
+  path.closePath()
 
 proc polygon*(
   path: Path, pos: Vec2, size: float32, sides: int

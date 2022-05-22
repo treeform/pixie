@@ -35,7 +35,7 @@ func newImage*(qoi: Qoi): Image =
   copyMem(result.data[0].addr, qoi.data[0].addr, qoi.data.len * 4)
   result.data.toPremultipliedAlpha()
 
-proc decodeQoiRaw*(data: string): Qoi {.raises: [PixieError].} =
+proc decodeQoi*(data: string): Qoi {.raises: [PixieError].} =
   ## Decompress QOI file format data.
   if data.len <= 14 or data[0 .. 3] != qoiSignature:
     raise newException(PixieError, "Invalid QOI header")
@@ -120,10 +120,6 @@ proc decodeQoiRaw*(data: string): Qoi {.raises: [PixieError].} =
     else:
       raise newException(PixieError, "Invalid QOI padding")
     inc(p)
-
-proc decodeQoi*(data: string): Image {.raises: [PixieError].} =
-  ## Decodes data in the QOI file format to an `Image`.
-  newImage(decodeQoiRaw(data))
 
 proc encodeQoi*(qoi: Qoi): string {.raises: [PixieError].} =
   ## Encodes raw QOI pixels to the QOI file format.

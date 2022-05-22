@@ -21,18 +21,18 @@ converter autoPremultipliedAlpha*(c: ColorRGBA): ColorRGBX {.inline, raises: [].
 proc decodeImage*(data: string): Image {.raises: [PixieError].} =
   ## Loads an image from memory.
   if data.len > 8 and data.readUint64(0) == cast[uint64](pngSignature):
-    decodePng(data)
+    newImage(decodePng(data))
   elif data.len > 2 and data.readUint16(0) == cast[uint16](jpegStartOfImage):
     decodeJpeg(data)
   elif data.len > 2 and data.readStr(0, 2) == bmpSignature:
     decodeBmp(data)
   elif data.len > 5 and
     (data.readStr(0, 5) == xmlSignature or data.readStr(0, 4) == svgSignature):
-    decodeSvg(data)
+    newImage(parseSvg(data))
   elif data.len > 6 and data.readStr(0, 6) in gifSignatures:
     decodeGif(data)
   elif data.len > (14+8) and data.readStr(0, 4) == qoiSignature:
-    decodeQoi(data)
+    newImage(decodeQoi(data))
   elif data.len > 9 and data.readStr(0, 2) in ppmSignatures:
     decodePpm(data)
   else:
@@ -41,7 +41,7 @@ proc decodeImage*(data: string): Image {.raises: [PixieError].} =
 proc decodeMask*(data: string): Mask {.raises: [PixieError].} =
   ## Loads a mask from memory.
   if data.len > 8 and data.readUint64(0) == cast[uint64](pngSignature):
-    newMask(decodePng(data))
+    newMask(newImage(decodePng(data)))
   else:
     raise newException(PixieError, "Unsupported mask file format")
 

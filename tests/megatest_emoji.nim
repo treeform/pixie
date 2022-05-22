@@ -35,7 +35,7 @@ proc renderEmojiSet(index: int) =
     let (_, name, _) = splitFile(filePath)
     var image: Image
     try:
-      image = decodeSvg(readFile(filePath), width, height)
+      image = newImage(parseSvg(readFile(filePath), width, height))
     except PixieError:
       echo &"Failed decoding {name}"
       image = newImage(width, height)

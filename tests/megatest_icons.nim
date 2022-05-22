@@ -38,7 +38,7 @@ proc renderIconSet(index: int) =
   for filePath in walkFiles(iconSet.path):
     let
       (_, name, _) = splitFile(filePath)
-      image = decodeSvg(readFile(filePath), width, height)
+      image = newImage(parseSvg(readFile(filePath), width, height))
 
     images.add((name, image))
 

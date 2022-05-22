@@ -11,14 +11,15 @@ const
   svgSignature* = "<svg"
 
 type
-  LinearGradient = object
-    x1, y1, x2, y2: float32
-    stops: seq[ColorStop]
+  Svg* = ref object
+    width*, height*: int
+    elements: seq[(Path, SvgProperties)]
+    linearGradients: Table[string, LinearGradient]
 
-  Ctx = object
+  SvgProperties = object
     display: bool
     fillRule: WindingRule
-    fill: Paint
+    fill: string
     stroke: ColorRGBX
     strokeWidth: float32
     strokeLineCap: LineCap
@@ -26,9 +27,11 @@ type
     strokeMiterLimit: float32
     strokeDashArray: seq[float32]
     transform: Mat3
-    shouldStroke: bool
-    opacity, strokeOpacity: float32
-    linearGradients: TableRef[string, LinearGradient]
+    opacity, fillOpacity, strokeOpacity: float32
+
+  LinearGradient = object
+    x1, y1, x2, y2: float32
+    stops: seq[ColorStop]
 
 template failInvalid() =
   raise newException(PixieError, "Invalid SVG data")
@@ -38,21 +41,17 @@ proc attrOrDefault(node: XmlNode, name, default: string): string =
   if result.len == 0:
     result = default
 
-proc initCtx(): Ctx =
+proc initSvgProperties(): SvgProperties =
   result.display = true
-  try:
-    result.fill = parseHtmlColor("black").rgbx
-    result.stroke = parseHtmlColor("black").rgbx
-  except:
-    raise currentExceptionAsPixieError()
+  result.fill = "black"
   result.strokeWidth = 1
   result.transform = mat3()
   result.strokeMiterLimit = defaultMiterLimit
   result.opacity = 1
+  result.fillOpacity = 1
   result.strokeOpacity = 1
-  result.linearGradients = newTable[string, LinearGradient]()
 
-proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
+proc parseSvgProperties(node: XmlNode, inherited: SvgProperties): SvgProperties =
   result = inherited
 
   proc splitArgs(s: string): seq[string] =
@@ -162,36 +161,22 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
     )
 
   if fill == "" or fill == "currentColor":
-    discard # Inherit
-  elif fill == "none":
-    result.fill = ColorRGBX()
-  elif fill.startsWith("url("):
-    let id = fill[5 .. ^2]
-    if id in result.linearGradients:
-      let linearGradient = result.linearGradients[id]
-      result.fill = newPaint(LinearGradientPaint)
-      result.fill.gradientHandlePositions = @[
-        result.transform * vec2(linearGradient.x1, linearGradient.y1),
-        result.transform * vec2(linearGradient.x2, linearGradient.y2)
-      ]
-      result.fill.gradientStops = linearGradient.stops
-    else:
-      raise newException(PixieError, "Missing SVG resource " & id)
+    result.fill = inherited.fill
   else:
-    result.fill = parseHtmlColor(fill).rgbx
+    result.fill = fill
 
   if stroke == "":
     discard # Inherit
   elif stroke == "currentColor":
-    result.shouldStroke = true
+    if result.stroke == rgbx(0, 0, 0, 0):
+      result.stroke = rgbx(0, 0, 0, 255)
   elif stroke == "none":
     result.stroke = ColorRGBX()
   else:
     result.stroke = parseHtmlColor(stroke).rgbx
-    result.shouldStroke = true
 
   if fillOpacity.len > 0:
-    result.fill.opacity = parseFloat(fillOpacity).clamp(0, 1)
+    result.fillOpacity = parseFloat(fillOpacity).clamp(0, 1)
 
   if strokeOpacity.len > 0:
     result.strokeOpacity = parseFloat(strokeOpacity).clamp(0, 1)
@@ -202,10 +187,8 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
     if strokeWidth.endsWith("px"):
       strokeWidth = strokeWidth[0 .. ^3]
     result.strokeWidth = parseFloat(strokeWidth)
-    result.shouldStroke = true
-
-  if result.stroke == ColorRGBX() or result.strokeWidth <= 0:
-    result.shouldStroke = false
+    if result.stroke == rgbx(0, 0, 0, 0):
+      result.stroke = rgbx(0, 0, 0, 255)
 
   if strokeLineCap == "":
     discard # Inherit
@@ -316,36 +299,9 @@ proc decodeCtxInternal(inherited: Ctx, node: XmlNode): Ctx =
       else:
         failInvalidTransform(transform)
 
-proc decodeCtx(inherited: Ctx, node: XmlNode): Ctx =
-  try:
-    decodeCtxInternal(inherited, node)
-  except PixieError as e:
-    raise e
-  except:
-    raise currentExceptionAsPixieError()
-
-proc fill(img: Image, ctx: Ctx, path: Path) {.inline.} =
-  if ctx.display and ctx.opacity > 0:
-    let paint = newPaint(ctx.fill)
-    paint.opacity = paint.opacity * ctx.opacity
-    img.fillPath(path, paint, ctx.transform, ctx.fillRule)
-
-proc stroke(img: Image, ctx: Ctx, path: Path) {.inline.} =
-  if ctx.display and ctx.opacity > 0:
-    let paint = newPaint(ctx.stroke)
-    paint.color.a *= (ctx.opacity * ctx.strokeOpacity)
-    img.strokePath(
-      path,
-      paint,
-      ctx.transform,
-      ctx.strokeWidth,
-      ctx.strokeLineCap,
-      ctx.strokeLineJoin,
-      miterLimit = ctx.strokeMiterLimit,
-      dashes = ctx.strokeDashArray
-    )
-
-proc drawInternal(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
+proc parseSvgElement(
+  node: XmlNode, svg: Svg, propertiesStack: var seq[SvgProperties]
+): seq[(Path, SvgProperties)] =
   if node.kind != xnElement:
     # Skip <!-- comments -->
     return
@@ -359,25 +315,23 @@ proc drawInternal(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
       echo node
 
   of "g":
-    let ctx = decodeCtx(ctxStack[^1], node)
-    ctxStack.add(ctx)
+    let props = node.parseSvgProperties(propertiesStack[^1])
+    propertiesStack.add(props)
     for child in node:
-      img.drawInternal(child, ctxStack)
-    discard ctxStack.pop()
+      result.add child.parseSvgElement(svg, propertiesStack)
+    discard propertiesStack.pop()
 
   of "path":
     let
       d = node.attr("d")
-      ctx = decodeCtx(ctxStack[^1], node)
+      props = node.parseSvgProperties(propertiesStack[^1])
       path = parsePath(d)
 
-    img.fill(ctx, path)
-    if ctx.shouldStroke:
-      img.stroke(ctx, path)
+    result.add (path, props)
 
   of "line":
     let
-      ctx = decodeCtx(ctxStack[^1], node)
+      props = node.parseSvgProperties(propertiesStack[^1])
       x1 = parseFloat(node.attrOrDefault("x1", "0"))
       y1 = parseFloat(node.attrOrDefault("y1", "0"))
       x2 = parseFloat(node.attrOrDefault("x2", "0"))
@@ -387,12 +341,11 @@ proc drawInternal(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     path.moveTo(x1, y1)
     path.lineTo(x2, y2)
 
-    if ctx.shouldStroke:
-      img.stroke(ctx, path)
+    result.add (path, props)
 
   of "polyline", "polygon":
     let
-      ctx = decodeCtx(ctxStack[^1], node)
+      props = node.parseSvgProperties(propertiesStack[^1])
       points = node.attr("points")
 
     var vecs: seq[Vec2]
@@ -421,14 +374,12 @@ proc drawInternal(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     # and fill or not
     if node.tag == "polygon":
       path.closePath()
-      img.fill(ctx, path)
 
-    if ctx.shouldStroke:
-      img.stroke(ctx, path)
+    result.add (path, props)
 
   of "rect":
     let
-      ctx = decodeCtx(ctxStack[^1], node)
+      props = node.parseSvgProperties(propertiesStack[^1])
       x = parseFloat(node.attrOrDefault("x", "0"))
       y = parseFloat(node.attrOrDefault("y", "0"))
       width = parseFloat(node.attrOrDefault("width", "0"))
@@ -462,13 +413,11 @@ proc drawInternal(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     else:
       path.rect(x, y, width, height)
 
-    img.fill(ctx, path)
-    if ctx.shouldStroke:
-      img.stroke(ctx, path)
+    result.add (path, props)
 
   of "circle", "ellipse":
     let
-      ctx = decodeCtx(ctxStack[^1], node)
+      props = node.parseSvgProperties(propertiesStack[^1])
       cx = parseFloat(node.attrOrDefault("cx", "0"))
       cy = parseFloat(node.attrOrDefault("cy", "0"))
 
@@ -483,16 +432,14 @@ proc drawInternal(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
     let path = newPath()
     path.ellipse(cx, cy, rx, ry)
 
-    img.fill(ctx, path)
-    if ctx.shouldStroke:
-      img.stroke(ctx, path)
+    result.add (path, props)
 
   of "radialGradient":
     discard
 
   of "linearGradient":
     let
-      ctx = decodeCtx(ctxStack[^1], node)
+      props = node.parseSvgProperties(propertiesStack[^1])
       id = node.attr("id")
       gradientUnits = node.attr("gradientUnits")
       gradientTransform = node.attr("gradientTransform")
@@ -547,23 +494,15 @@ proc drawInternal(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
       else:
         raise newException(PixieError, "Unexpected SVG tag: " & child.tag)
 
-    ctx.linearGradients[id] = linearGradient
+    svg.linearGradients[id] = linearGradient
 
   else:
     raise newException(PixieError, "Unsupported SVG tag: " & node.tag)
 
-proc draw(img: Image, node: XmlNode, ctxStack: var seq[Ctx]) =
-  try:
-    drawInternal(img, node, ctxStack)
-  except PixieError as e:
-    raise e
-  except:
-    raise currentExceptionAsPixieError()
-
-proc decodeSvg*(
+proc parseSvg*(
   data: string | XmlNode, width = 0, height = 0
-): Image {.raises: [PixieError].} =
-  ## Render SVG XML and return the image. Defaults to the SVG's view box size.
+): Svg {.raises: [PixieError].} =
+  ## Parse SVG XML. Defaults to the SVG's view box size.
   try:
     let root = parseXml(data)
     if root.tag != "svg":
@@ -577,27 +516,81 @@ proc decodeSvg*(
       viewBoxWidth = parseInt(box[2])
       viewBoxHeight = parseInt(box[3])
 
-    var rootCtx = initCtx()
-    rootCtx = decodeCtx(rootCtx, root)
+    var rootProps = initSvgProperties()
+    rootProps = root.parseSvgProperties(rootProps)
+
 
     if viewBoxMinX != 0 or viewBoxMinY != 0:
       let viewBoxMin = vec2(-viewBoxMinX.float32, -viewBoxMinY.float32)
-      rootCtx.transform = rootCtx.transform * translate(viewBoxMin)
+      rootprops.transform = rootprops.transform * translate(viewBoxMin)
+
+    result = Svg()
 
     if width == 0 and height == 0: # Default to the view box size
-      result = newImage(viewBoxWidth, viewBoxHeight)
+      result.width = viewBoxWidth
+      result.height = viewBoxHeight
     else:
-      result = newImage(width, height)
+      result.width = width
+      result.height = height
 
       let
         scaleX = width.float32 / viewBoxWidth.float32
         scaleY = height.float32 / viewBoxHeight.float32
-      rootCtx.transform = rootCtx.transform * scale(vec2(scaleX, scaleY))
+      rootprops.transform = rootprops.transform * scale(vec2(scaleX, scaleY))
 
-    var ctxStack = @[rootCtx]
+    var propertiesStack = @[rootProps]
     for node in root.items:
-      result.draw(node, ctxStack)
+      result.elements.add node.parseSvgElement(result, propertiesStack)
   except PixieError as e:
     raise e
   except:
-    raise newException(PixieError, "Unable to load SVG")
+    raise currentExceptionAsPixieError()
+
+proc newImage*(svg: Svg): Image {.raises: [PixieError].} =
+  ## Render SVG and return the image.
+  result = newImage(svg.width, svg.height)
+
+  try:
+    for (path, props) in svg.elements:
+      if props.display and props.opacity > 0:
+        if props.fill != "none":
+          var paint: Paint
+          if props.fill.startsWith("url("):
+            let closingParen = props.fill.find(")", 5)
+            if closingParen == -1:
+              raise newException(PixieError, "Malformed fill: " & props.fill)
+            let id = props.fill[5 .. closingParen - 1]
+            if id in svg.linearGradients:
+              let linearGradient = svg.linearGradients[id]
+              paint = newPaint(LinearGradientPaint)
+              paint.gradientHandlePositions = @[
+                props.transform * vec2(linearGradient.x1, linearGradient.y1),
+                props.transform * vec2(linearGradient.x2, linearGradient.y2)
+              ]
+              paint.gradientStops = linearGradient.stops
+            else:
+              raise newException(PixieError, "Missing SVG resource " & id)
+          else:
+            paint = parseHtmlColor(props.fill).rgbx
+
+          paint.opacity = props.fillOpacity * props.opacity
+
+          result.fillPath(path, paint, props.transform, props.fillRule)
+
+        if props.stroke != rgbx(0, 0, 0, 0) and props.strokeWidth > 0:
+          let paint = newPaint(props.stroke)
+          paint.color.a *= (props.opacity * props.strokeOpacity)
+          result.strokePath(
+            path,
+            paint,
+            props.transform,
+            props.strokeWidth,
+            props.strokeLineCap,
+            props.strokeLineJoin,
+            miterLimit = props.strokeMiterLimit,
+            dashes = props.strokeDashArray
+          )
+  except PixieError as e:
+    raise e
+  except:
+    raise currentExceptionAsPixieError()
