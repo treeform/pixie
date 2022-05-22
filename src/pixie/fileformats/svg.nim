@@ -26,9 +26,6 @@ type
     opacity, fillOpacity, strokeOpacity: float32
     linearGradients: TableRef[string, LinearGradient]
 
-  RenderMode = enum
-    Fill, Stroke
-
   LinearGradient = object
     x1, y1, x2, y2: float32
     stops: seq[ColorStop]
@@ -345,7 +342,7 @@ proc stroke(img: Image, path: Path, props: SvgProperties) =
 
 proc parseSvgElement(
   node: XmlNode, propertiesStack: var seq[SvgProperties]
-): seq[(Path, RenderMode, SvgProperties)] =
+): seq[(Path, SvgProperties)] =
   if node.kind != xnElement:
     # Skip <!-- comments -->
     return
@@ -371,9 +368,7 @@ proc parseSvgElement(
       props = node.parseSvgProperties(propertiesStack[^1])
       path = parsePath(d)
 
-    result.add (path, Fill, props)
-    if props.shouldStroke:
-      result.add (path, Stroke, props)
+    result.add (path, props)
 
   of "line":
     let
@@ -387,8 +382,7 @@ proc parseSvgElement(
     path.moveTo(x1, y1)
     path.lineTo(x2, y2)
 
-    if props.shouldStroke:
-      result.add (path, Stroke, props)
+    result.add (path, props)
 
   of "polyline", "polygon":
     let
@@ -421,10 +415,8 @@ proc parseSvgElement(
     # and fill or not
     if node.tag == "polygon":
       path.closePath()
-      result.add (path, Fill, props)
 
-    if props.shouldStroke:
-      result.add (path, Stroke, props)
+    result.add (path, props)
 
   of "rect":
     let
@@ -462,9 +454,7 @@ proc parseSvgElement(
     else:
       path.rect(x, y, width, height)
 
-    result.add (path, Fill, props)
-    if props.shouldStroke:
-      result.add (path, Stroke, props)
+    result.add (path, props)
 
   of "circle", "ellipse":
     let
@@ -483,9 +473,7 @@ proc parseSvgElement(
     let path = newPath()
     path.ellipse(cx, cy, rx, ry)
 
-    result.add (path, Fill, props)
-    if props.shouldStroke:
-      result.add (path, Stroke, props)
+    result.add (path, props)
 
   of "radialGradient":
     discard
@@ -588,14 +576,12 @@ proc decodeSvg*(
 
     var
       propertiesStack = @[rootProps]
-      renderInfos: seq[(Path, RenderMode, SvgProperties)]
+      renderInfos: seq[(Path, SvgProperties)]
     for node in root.items:
       renderInfos.add node.parseSvgElement(propertiesStack)
-    for (path, mode, props) in renderInfos:
-      case mode:
-      of Fill:
-        result.fill(path, props)
-      of Stroke:
+    for (path, props) in renderInfos:
+      result.fill(path, props)
+      if props.shouldStroke:
         result.stroke(path, props)
   except PixieError as e:
     raise e
