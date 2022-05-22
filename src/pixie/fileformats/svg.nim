@@ -11,6 +11,10 @@ const
   svgSignature* = "<svg"
 
 type
+  Svg* = ref object
+    elements: seq[(Path, SvgProperties)]
+    linearGradients: Table[string, LinearGradient]
+
   SvgProperties = object
     display: bool
     fillRule: WindingRule
@@ -23,7 +27,6 @@ type
     strokeDashArray: seq[float32]
     transform: Mat3
     opacity, fillOpacity, strokeOpacity: float32
-    linearGradients: TableRef[string, LinearGradient]
 
   LinearGradient = object
     x1, y1, x2, y2: float32
@@ -46,7 +49,6 @@ proc initSvgProperties(): SvgProperties =
   result.opacity = 1
   result.fillOpacity = 1
   result.strokeOpacity = 1
-  result.linearGradients = newTable[string, LinearGradient]()
 
 proc parseSvgProperties(node: XmlNode, inherited: SvgProperties): SvgProperties =
   result = inherited
@@ -296,46 +298,8 @@ proc parseSvgProperties(node: XmlNode, inherited: SvgProperties): SvgProperties 
       else:
         failInvalidTransform(transform)
 
-proc fill(img: Image, path: Path, props: SvgProperties) =
-  if props.fill == "none":
-    return
-
-  var paint: Paint
-  if props.fill.startsWith("url("):
-    let id = props.fill[5 .. ^2]
-    if id in props.linearGradients:
-      let linearGradient = props.linearGradients[id]
-      paint = newPaint(LinearGradientPaint)
-      paint.gradientHandlePositions = @[
-        props.transform * vec2(linearGradient.x1, linearGradient.y1),
-        props.transform * vec2(linearGradient.x2, linearGradient.y2)
-      ]
-      paint.gradientStops = linearGradient.stops
-    else:
-      raise newException(PixieError, "Missing SVG resource " & id)
-  else:
-    paint = parseHtmlColor(props.fill).rgbx
-
-  paint.opacity = props.fillOpacity * props.opacity
-
-  img.fillPath(path, paint, props.transform, props.fillRule)
-
-proc stroke(img: Image, path: Path, props: SvgProperties) =
-  let paint = newPaint(props.stroke)
-  paint.color.a *= (props.opacity * props.strokeOpacity)
-  img.strokePath(
-    path,
-    paint,
-    props.transform,
-    props.strokeWidth,
-    props.strokeLineCap,
-    props.strokeLineJoin,
-    miterLimit = props.strokeMiterLimit,
-    dashes = props.strokeDashArray
-  )
-
 proc parseSvgElement(
-  node: XmlNode, propertiesStack: var seq[SvgProperties]
+  node: XmlNode, svg: Svg, propertiesStack: var seq[SvgProperties]
 ): seq[(Path, SvgProperties)] =
   if node.kind != xnElement:
     # Skip <!-- comments -->
@@ -353,7 +317,7 @@ proc parseSvgElement(
     let props = node.parseSvgProperties(propertiesStack[^1])
     propertiesStack.add(props)
     for child in node:
-      result.add child.parseSvgElement(propertiesStack)
+      result.add child.parseSvgElement(svg, propertiesStack)
     discard propertiesStack.pop()
 
   of "path":
@@ -529,7 +493,7 @@ proc parseSvgElement(
       else:
         raise newException(PixieError, "Unexpected SVG tag: " & child.tag)
 
-    props.linearGradients[id] = linearGradient
+    svg.linearGradients[id] = linearGradient
 
   else:
     raise newException(PixieError, "Unsupported SVG tag: " & node.tag)
@@ -568,16 +532,51 @@ proc decodeSvg*(
         scaleY = height.float32 / viewBoxHeight.float32
       rootprops.transform = rootprops.transform * scale(vec2(scaleX, scaleY))
 
-    var
-      propertiesStack = @[rootProps]
-      renderInfos: seq[(Path, SvgProperties)]
+    let svg = Svg()
+
+    var propertiesStack = @[rootProps]
     for node in root.items:
-      renderInfos.add node.parseSvgElement(propertiesStack)
-    for (path, props) in renderInfos:
+      svg.elements.add node.parseSvgElement(svg, propertiesStack)
+
+    for (path, props) in svg.elements:
       if props.display and props.opacity > 0:
-        result.fill(path, props)
+        if props.fill != "none":
+          var paint: Paint
+          if props.fill.startsWith("url("):
+            let closingParen = props.fill.find(")", 5)
+            if closingParen == -1:
+              raise newException(PixieError, "Malformed fill: " & props.fill)
+            let id = props.fill[5 .. closingParen - 1]
+            if id in svg.linearGradients:
+              let linearGradient = svg.linearGradients[id]
+              paint = newPaint(LinearGradientPaint)
+              paint.gradientHandlePositions = @[
+                props.transform * vec2(linearGradient.x1, linearGradient.y1),
+                props.transform * vec2(linearGradient.x2, linearGradient.y2)
+              ]
+              paint.gradientStops = linearGradient.stops
+            else:
+              raise newException(PixieError, "Missing SVG resource " & id)
+          else:
+            paint = parseHtmlColor(props.fill).rgbx
+
+          paint.opacity = props.fillOpacity * props.opacity
+
+          result.fillPath(path, paint, props.transform, props.fillRule)
+
         if props.stroke != rgbx(0, 0, 0, 0) and props.strokeWidth > 0:
-          result.stroke(path, props)
+          let paint = newPaint(props.stroke)
+          paint.color.a *= (props.opacity * props.strokeOpacity)
+          result.strokePath(
+            path,
+            paint,
+            props.transform,
+            props.strokeWidth,
+            props.strokeLineCap,
+            props.strokeLineJoin,
+            miterLimit = props.strokeMiterLimit,
+            dashes = props.strokeDashArray
+          )
   except PixieError as e:
     raise e
   except:
