@@ -26,9 +26,8 @@ proc doDiff(rendered: Image, name: string) =
   diffImage.writeFile(&"tests/fileformats/svg/diffs/{name}.png")
 
 for file in files:
-  doDiff(decodeSvg(readFile(&"tests/fileformats/svg/{file}.svg")), file)
+  doDiff(readImage(&"tests/fileformats/svg/{file}.svg"), file)
 
-doDiff(
-  decodeSvg(readFile("tests/fileformats/svg/accessibility-outline.svg"), 512, 512),
-  "accessibility-outline"
-)
+block:
+  let svg = parseSvg(readFile("tests/fileformats/svg/accessibility-outline.svg"), 512, 512)
+  doDiff(newImage(svg), "accessibility-outline")

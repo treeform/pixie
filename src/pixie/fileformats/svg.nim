@@ -12,6 +12,7 @@ const
 
 type
   Svg* = ref object
+    width*, height*: int
     elements: seq[(Path, SvgProperties)]
     linearGradients: Table[string, LinearGradient]
 
@@ -498,10 +499,10 @@ proc parseSvgElement(
   else:
     raise newException(PixieError, "Unsupported SVG tag: " & node.tag)
 
-proc decodeSvg*(
+proc parseSvg*(
   data: string | XmlNode, width = 0, height = 0
-): Image {.raises: [PixieError].} =
-  ## Render SVG XML and return the image. Defaults to the SVG's view box size.
+): Svg {.raises: [PixieError].} =
+  ## Parse SVG XML. Defaults to the SVG's view box size.
   try:
     let root = parseXml(data)
     if root.tag != "svg":
@@ -518,26 +519,38 @@ proc decodeSvg*(
     var rootProps = initSvgProperties()
     rootProps = root.parseSvgProperties(rootProps)
 
+
     if viewBoxMinX != 0 or viewBoxMinY != 0:
       let viewBoxMin = vec2(-viewBoxMinX.float32, -viewBoxMinY.float32)
       rootprops.transform = rootprops.transform * translate(viewBoxMin)
 
+    result = Svg()
+
     if width == 0 and height == 0: # Default to the view box size
-      result = newImage(viewBoxWidth, viewBoxHeight)
+      result.width = viewBoxWidth
+      result.height = viewBoxHeight
     else:
-      result = newImage(width, height)
+      result.width = width
+      result.height = height
 
       let
         scaleX = width.float32 / viewBoxWidth.float32
         scaleY = height.float32 / viewBoxHeight.float32
       rootprops.transform = rootprops.transform * scale(vec2(scaleX, scaleY))
 
-    let svg = Svg()
-
     var propertiesStack = @[rootProps]
     for node in root.items:
-      svg.elements.add node.parseSvgElement(svg, propertiesStack)
+      result.elements.add node.parseSvgElement(result, propertiesStack)
+  except PixieError as e:
+    raise e
+  except:
+    raise currentExceptionAsPixieError()
 
+proc newImage*(svg: Svg): Image {.raises: [PixieError].} =
+  ## Render SVG and return the image.
+  result = newImage(svg.width, svg.height)
+
+  try:
     for (path, props) in svg.elements:
       if props.display and props.opacity > 0:
         if props.fill != "none":
@@ -580,4 +593,4 @@ proc decodeSvg*(
   except PixieError as e:
     raise e
   except:
-    raise newException(PixieError, "Unable to load SVG")
+    raise currentExceptionAsPixieError()
