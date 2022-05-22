@@ -297,44 +297,42 @@ proc parseSvgProperties(node: XmlNode, inherited: SvgProperties): SvgProperties 
         failInvalidTransform(transform)
 
 proc fill(img: Image, path: Path, props: SvgProperties) =
-  if props.display and props.opacity > 0:
-    if props.fill == "none":
-      return
+  if props.fill == "none":
+    return
 
-    var paint: Paint
-    if props.fill.startsWith("url("):
-      let id = props.fill[5 .. ^2]
-      if id in props.linearGradients:
-        let linearGradient = props.linearGradients[id]
-        paint = newPaint(LinearGradientPaint)
-        paint.gradientHandlePositions = @[
-          props.transform * vec2(linearGradient.x1, linearGradient.y1),
-          props.transform * vec2(linearGradient.x2, linearGradient.y2)
-        ]
-        paint.gradientStops = linearGradient.stops
-      else:
-        raise newException(PixieError, "Missing SVG resource " & id)
+  var paint: Paint
+  if props.fill.startsWith("url("):
+    let id = props.fill[5 .. ^2]
+    if id in props.linearGradients:
+      let linearGradient = props.linearGradients[id]
+      paint = newPaint(LinearGradientPaint)
+      paint.gradientHandlePositions = @[
+        props.transform * vec2(linearGradient.x1, linearGradient.y1),
+        props.transform * vec2(linearGradient.x2, linearGradient.y2)
+      ]
+      paint.gradientStops = linearGradient.stops
     else:
-      paint = parseHtmlColor(props.fill).rgbx
+      raise newException(PixieError, "Missing SVG resource " & id)
+  else:
+    paint = parseHtmlColor(props.fill).rgbx
 
-    paint.opacity = props.fillOpacity * props.opacity
+  paint.opacity = props.fillOpacity * props.opacity
 
-    img.fillPath(path, paint, props.transform, props.fillRule)
+  img.fillPath(path, paint, props.transform, props.fillRule)
 
 proc stroke(img: Image, path: Path, props: SvgProperties) =
-  if props.display and props.opacity > 0:
-    let paint = newPaint(props.stroke)
-    paint.color.a *= (props.opacity * props.strokeOpacity)
-    img.strokePath(
-      path,
-      paint,
-      props.transform,
-      props.strokeWidth,
-      props.strokeLineCap,
-      props.strokeLineJoin,
-      miterLimit = props.strokeMiterLimit,
-      dashes = props.strokeDashArray
-    )
+  let paint = newPaint(props.stroke)
+  paint.color.a *= (props.opacity * props.strokeOpacity)
+  img.strokePath(
+    path,
+    paint,
+    props.transform,
+    props.strokeWidth,
+    props.strokeLineCap,
+    props.strokeLineJoin,
+    miterLimit = props.strokeMiterLimit,
+    dashes = props.strokeDashArray
+  )
 
 proc parseSvgElement(
   node: XmlNode, propertiesStack: var seq[SvgProperties]
@@ -576,9 +574,10 @@ proc decodeSvg*(
     for node in root.items:
       renderInfos.add node.parseSvgElement(propertiesStack)
     for (path, props) in renderInfos:
-      result.fill(path, props)
-      if props.stroke != rgbx(0, 0, 0, 0) and props.strokeWidth > 0:
-        result.stroke(path, props)
+      if props.display and props.opacity > 0:
+        result.fill(path, props)
+        if props.stroke != rgbx(0, 0, 0, 0) and props.strokeWidth > 0:
+          result.stroke(path, props)
   except PixieError as e:
     raise e
   except:
