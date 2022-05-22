@@ -525,6 +525,7 @@ proc getBit(state: var DecoderState): int =
 
 proc getBitsAsSignedInt(state: var DecoderState, n: int): int =
   ## Get n number of bits as a signed integer.
+  # TODO: Investigate why 15 not 16?
   if n notin 0 .. 15:
     failInvalid()
   if state.bitsBuffered < n:
