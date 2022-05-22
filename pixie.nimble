@@ -11,7 +11,7 @@ requires "chroma >= 0.2.5"
 requires "zippy >= 0.9.7"
 requires "flatty >= 0.3.0"
 requires "nimsimd >= 1.0.0"
-requires "bumpy >= 1.1.0"
+requires "bumpy >= 1.1.1"
 
 
 task bindings, "Generate bindings":
