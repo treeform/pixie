@@ -1143,7 +1143,7 @@ proc partitionSegments(
     partition.requiresAntiAliasing =
       requiresAntiAliasing(partition.entries)
 
-proc getIndexForY(partitioning: Partitioning, y: int): uint32 {.inline.} =
+proc getIndexForY(partitioning: var Partitioning, y: int): uint32 {.inline.} =
   if partitioning.partitions.len == 1:
     0.uint32
   else:
@@ -1152,7 +1152,7 @@ proc getIndexForY(partitioning: Partitioning, y: int): uint32 {.inline.} =
       partitioning.partitions.high.uint32
     )
 
-proc maxEntryCount(partitioning: Partitioning): int =
+proc maxEntryCount(partitioning: var Partitioning): int =
   for i in 0 ..< partitioning.partitions.len:
     result = max(result, partitioning.partitions[i].entries.len)
 
@@ -1240,12 +1240,10 @@ proc computeCoverage(
   aa: var bool,
   width: float32,
   y, startX: int,
-  partitioning: Partitioning,
+  partitioning: var Partitioning,
   windingRule: WindingRule
 ) {.inline.} =
-  let
-    partitionIndex = partitioning.getIndexForY(y)
-    partitionEntryCount = partitioning.partitions[partitionIndex].entries.len
+  let partitionIndex = partitioning.getIndexForY(y)
 
   aa = partitioning.partitions[partitionIndex].requiresAntiAliasing
 
@@ -1259,8 +1257,7 @@ proc computeCoverage(
   for m in 0 ..< quality:
     yLine += offset
     numHits = 0
-    for i in 0 ..< partitionEntryCount: # Perf
-      let entry = partitioning.partitions[partitionIndex].entries[i].unsafeAddr # Perf
+    for entry in partitioning.partitions[partitionIndex].entries.mitems:
       if entry.segment.at.y <= yLine and entry.segment.to.y >= yLine:
         let x =
           if entry.m == 0:
@@ -1620,7 +1617,6 @@ proc fillShapes(
       else:
         0
     pathHeight = min(image.height, (bounds.y + bounds.h).int)
-    partitioning = partitionSegments(segments, startY, pathHeight - startY)
 
   if pathWidth == 0:
     return
@@ -1629,6 +1625,7 @@ proc fillShapes(
     raise newException(PixieError, "Path int overflow detected")
 
   var
+    partitioning = partitionSegments(segments, startY, pathHeight - startY)
     coverages = newSeq[uint8](pathWidth)
     hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
     numHits: int
@@ -1689,7 +1686,6 @@ proc fillShapes(
       else:
         0
     pathHeight = min(mask.height, (bounds.y + bounds.h).int)
-    partitioning = partitionSegments(segments, startY, pathHeight)
 
   if pathWidth == 0:
     return
@@ -1698,6 +1694,7 @@ proc fillShapes(
     raise newException(PixieError, "Path int overflow detected")
 
   var
+    partitioning = partitionSegments(segments, startY, pathHeight)
     coverages = newSeq[uint8](pathWidth)
     hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
     numHits: int
