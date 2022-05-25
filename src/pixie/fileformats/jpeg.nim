@@ -65,8 +65,9 @@ type
     channel: Mask
 
   DecoderState = object
-    buffer: string
-    pos, bitsBuffered: int
+    buffer: ptr UncheckedArray[uint8]
+    len, pos: int
+    bitsBuffered: int
     bitBuffer: uint32
     hitEnd: bool
     imageHeight, imageWidth: int
@@ -102,9 +103,9 @@ template clampByte(x: int32): uint8 =
 
 proc readUint8(state: var DecoderState): uint8 =
   ## Reads a byte from the input stream.
-  if state.pos >= state.buffer.len:
+  if state.pos >= state.len:
     failInvalid()
-  result = cast[uint8](state.buffer[state.pos])
+  result = state.buffer[state.pos]
   inc state.pos
 
 proc readUint16be(state: var DecoderState): uint16 =
@@ -121,14 +122,15 @@ proc readUint32be(state: var DecoderState): uint32 =
 
 proc readStr(state: var DecoderState, n: int): string =
   ## Reads n number of bytes as a string.
-  if state.pos + n > state.buffer.len:
+  if state.pos + n > state.len:
     failInvalid()
-  result = state.buffer[state.pos ..< state.pos + n]
+  result.setLen(n)
+  copyMem(result[0].addr, state.buffer[state.pos].addr, n)
   state.pos += n
 
 proc skipBytes(state: var DecoderState, n: int) =
   ## Skips a number of bytes.
-  if state.pos + n > state.buffer.len:
+  if state.pos + n > state.len:
     failInvalid()
   state.pos += n
 
@@ -836,8 +838,8 @@ proc checkRestart(state: var DecoderState) =
     if state.bitsBuffered < 24:
       state.fillBitBuffer()
 
-    if state.buffer[state.pos] == 0xFF.char:
-      if state.buffer[state.pos + 1] in {0xD0.char .. 0xD7.char}:
+    if state.buffer[state.pos] == 0xFF:
+      if state.buffer[state.pos + 1] in {0xD0 .. 0xD7}:
         state.pos += 2
       else:
         failInvalid("did not get expected restart marker")
@@ -1012,7 +1014,8 @@ proc decodeJpeg*(data: string): Image {.raises: [PixieError].} =
   ## Decodes the JPEG into an Image.
 
   var state = DecoderState()
-  state.buffer = data
+  state.buffer = cast[ptr UncheckedArray[uint8]](data[0].unsafeAddr)
+  state.len = data.len
 
   while true:
     if state.readUint8() != 0xFF:
