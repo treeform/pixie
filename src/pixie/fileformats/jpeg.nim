@@ -93,7 +93,7 @@ template failInvalid(reason = "unable to load") =
   ## Throw exception with a reason.
   raise newException(PixieError, "Invalid JPEG, " & reason)
 
-template clampByte(x: int32): uint8 =
+proc clampByte(x: int32): uint8 {.inline.} =
   ## Clamp integer into byte range.
   # clamp(x, 0, 0xFF).uint8
   let
