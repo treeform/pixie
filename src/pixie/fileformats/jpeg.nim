@@ -110,15 +110,23 @@ proc readUint8(state: var DecoderState): uint8 =
 
 proc readUint16be(state: var DecoderState): uint16 =
   ## Reads uint16 big-endian from the input stream.
-  (state.readUint8().uint16 shl 8) or state.readUint8()
+  if state.pos + 2 > state.len:
+    failInvalid()
+  result =
+    (state.buffer[state.pos].uint16 shl 8) or
+    state.buffer[state.pos + 1]
+  state.pos += 2
 
 proc readUint32be(state: var DecoderState): uint32 =
   ## Reads uint32 big-endian from the input stream.
-  return
-    (state.readUint8().uint32 shl 24) or
-    (state.readUint8().uint32 shl 16) or
-    (state.readUint8().uint32 shl 8) or
-    state.readUint8().uint32
+  if state.pos + 4 > state.len:
+    failInvalid()
+  result =
+    (state.buffer[state.pos + 0].uint32 shl 24) or
+    (state.buffer[state.pos + 1].uint32 shl 16) or
+    (state.buffer[state.pos + 2].uint32 shl 8) or
+    state.buffer[state.pos + 3]
+  state.pos += 4
 
 proc readStr(state: var DecoderState, n: int): string =
   ## Reads n number of bytes as a string.
