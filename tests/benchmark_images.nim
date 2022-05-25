@@ -63,6 +63,11 @@ timeIt "flipVertical":
 
 reset()
 
+timeIt "rotate90":
+  image.rotate90()
+
+reset()
+
 timeIt "invert":
   image.invert()
 
