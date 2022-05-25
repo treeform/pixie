@@ -69,7 +69,6 @@ type
     len, pos: int
     bitsBuffered: int
     bitBuffer: uint32
-    hitEnd: bool
     imageHeight, imageWidth: int
     quantizationTables: array[4, array[64, uint8]]
     huffmanTables: array[2, array[4, Huffman]] # 0 = DC, 1 = AC
@@ -84,6 +83,7 @@ type
     restartInterval: int
     todoBeforeRestart: int
     eobRun: int
+    hitEnd: bool
     orientation: int
 
 when defined(release):
