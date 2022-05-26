@@ -544,19 +544,16 @@ proc readBits(state: var DecoderState, n: int): int =
   state.bitBuffer = k and (not bitMasks[n])
   state.bitsBuffered -= n
 
-proc getBitsAsSignedInt(state: var DecoderState, n: int): int =
-  ## Get n number of bits as a signed integer.
-  # TODO: Investigate why 15 not 16?
-  if n notin 0 .. 15:
-    failInvalid()
-  if state.bitsBuffered < n:
-    state.fillBitBuffer()
-  let
-    sign = cast[int32](state.bitBuffer) shr 31 # Sign is always in MSB
-    k = lrot(state.bitBuffer, n)
-  result = (k and bitMasks[n]).int + (biases[n] and (not sign))
-  state.bitBuffer = k and (not bitMasks[n])
-  state.bitsBuffered -= n
+proc receiveExtend(state: var DecoderState, n: int): int =
+  ## Get n number of bits as a signed integer. See Jpeg spec pages 109 and 114
+  ## for EXTEND and RECEIVE.
+  var
+    v = state.readBits(n)
+    vt = (1 shl (n - 1))
+  if v < vt:
+    vt = (-1 shl n) + 1
+    v = v + vt
+  return v
 
 proc decodeRegularBlock(
   state: var DecoderState, component: int, data: var array[64, int16]
@@ -570,7 +567,7 @@ proc decodeRegularBlock(
       if t == 0:
         0
       else:
-        state.getBitsAsSignedInt(t)
+        state.receiveExtend(t)
     dc = state.components[component].dcPred + diff
   state.components[component].dcPred = dc
   data[0] = cast[int16](dc)
@@ -590,7 +587,7 @@ proc decodeRegularBlock(
       if i >= 64:
         failInvalid()
       let zig = deZigZag[i]
-      data[zig] = cast[int16](state.getBitsAsSignedInt(s.int))
+      data[zig] = cast[int16](state.receiveExtend(s.int))
       inc i
 
 proc decodeProgressiveBlock(
@@ -607,7 +604,7 @@ proc decodeProgressiveBlock(
     let
       diff =
         if t > 0:
-          state.getBitsAsSignedInt(t)
+          state.receiveExtend(t)
         else:
           0
       dc = state.components[component].dcPred + diff
@@ -653,7 +650,7 @@ proc decodeProgressiveContinuationBlock(
         inc k
         if s >= 15:
           failInvalid()
-        data[zig] = cast[int16](state.getBitsAsSignedInt(s.int) * (1 shl shift))
+        data[zig] = cast[int16](state.receiveExtend(s.int) * (1 shl shift))
 
   else:
     var bit = 1 shl state.successiveApproxLow
