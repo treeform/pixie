@@ -80,7 +80,6 @@ type
     maxYScale, maxXScale: int
     mcuWidth, mcuHeight, numMcuWide, numMcuHigh: int
     orientation: int
-
     scanComponents: int
     spectralStart, spectralEnd: int
     successiveApproxLow, successiveApproxHigh: int
