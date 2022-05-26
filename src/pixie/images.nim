@@ -172,14 +172,14 @@ proc flipVertical*(image: Image) {.raises: [].} =
 
 proc rotate90*(image: Image) {.raises: [PixieError].} =
   ## Rotates the image 90 degrees clockwise.
-  let copy = newImage(image.height, image.width)
-  for y in 0 ..< copy.height:
-    for x in 0 ..< copy.width:
-      copy.data[copy.dataIndex(x, y)] =
+  let rotated = newImage(image.height, image.width)
+  for y in 0 ..< rotated.height:
+    for x in 0 ..< rotated.width:
+      rotated.data[rotated.dataIndex(x, y)] =
         image.data[image.dataIndex(y, image.height - x - 1)]
-  image.width = copy.width
-  image.height = copy.height
-  image.data = copy.data
+  image.width = rotated.width
+  image.height = rotated.height
+  image.data = move rotated.data
 
 proc subImage*(image: Image, x, y, w, h: int): Image {.raises: [PixieError].} =
   ## Gets a sub image from this image.

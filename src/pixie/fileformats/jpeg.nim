@@ -1,6 +1,9 @@
 import pixie/common, pixie/images, pixie/masks, sequtils, strutils, chroma,
     std/decls, flatty/binny
 
+when defined(amd64) and not defined(pixieNoSimd):
+  import nimsimd/sse2
+
 # This JPEG decoder is loosely based on stb_image which is public domain.
 
 # JPEG is a complex format, this decoder only supports the most common features:
@@ -38,10 +41,6 @@ const
     0.uint32, 1, 3, 7, 15, 31, 63, 127, 255, 511,
     1023, 2047, 4095, 8191, 16383, 32767, 65535
   ]
-  biases = [ # (-1 shl n) + 1
-    0.int32, -1, -3, -7, -15, -31, -63, -127, -255,
-    -511, -1023, -2047, -4095, -8191, -16383, -32767
-  ]
 
 type
   Huffman = object
@@ -65,25 +64,26 @@ type
     channel: Mask
 
   DecoderState = object
-    buffer: string
-    pos, bitsBuffered: int
+    buffer: ptr UncheckedArray[uint8]
+    len, pos: int
+    bitsBuffered: int
     bitBuffer: uint32
-    hitEnd: bool
     imageHeight, imageWidth: int
+    progressive: bool
     quantizationTables: array[4, array[64, uint8]]
     huffmanTables: array[2, array[4, Huffman]] # 0 = DC, 1 = AC
     components: seq[Component]
+    maxYScale, maxXScale: int
+    mcuWidth, mcuHeight, numMcuWide, numMcuHigh: int
+    orientation: int
     scanComponents: int
     spectralStart, spectralEnd: int
     successiveApproxLow, successiveApproxHigh: int
-    maxYScale, maxXScale: int
-    mcuWidth, mcuHeight, numMcuWide, numMcuHigh: int
     componentOrder: seq[int]
-    progressive: bool
     restartInterval: int
     todoBeforeRestart: int
     eobRun: int
-    orientation: int
+    hitEnd: bool
 
 when defined(release):
   {.push checks: off.}
@@ -92,7 +92,7 @@ template failInvalid(reason = "unable to load") =
   ## Throw exception with a reason.
   raise newException(PixieError, "Invalid JPEG, " & reason)
 
-template clampByte(x: int32): uint8 =
+proc clampByte(x: int32): uint8 {.inline.} =
   ## Clamp integer into byte range.
   # clamp(x, 0, 0xFF).uint8
   let
@@ -102,33 +102,42 @@ template clampByte(x: int32): uint8 =
 
 proc readUint8(state: var DecoderState): uint8 =
   ## Reads a byte from the input stream.
-  if state.pos >= state.buffer.len:
+  if state.pos >= state.len:
     failInvalid()
-  result = cast[uint8](state.buffer[state.pos])
+  result = state.buffer[state.pos]
   inc state.pos
 
 proc readUint16be(state: var DecoderState): uint16 =
   ## Reads uint16 big-endian from the input stream.
-  (state.readUint8().uint16 shl 8) or state.readUint8()
+  if state.pos + 2 > state.len:
+    failInvalid()
+  result =
+    (state.buffer[state.pos].uint16 shl 8) or
+    state.buffer[state.pos + 1]
+  state.pos += 2
 
 proc readUint32be(state: var DecoderState): uint32 =
   ## Reads uint32 big-endian from the input stream.
-  return
-    (state.readUint8().uint32 shl 24) or
-    (state.readUint8().uint32 shl 16) or
-    (state.readUint8().uint32 shl 8) or
-    state.readUint8().uint32
+  if state.pos + 4 > state.len:
+    failInvalid()
+  result =
+    (state.buffer[state.pos + 0].uint32 shl 24) or
+    (state.buffer[state.pos + 1].uint32 shl 16) or
+    (state.buffer[state.pos + 2].uint32 shl 8) or
+    state.buffer[state.pos + 3]
+  state.pos += 4
 
 proc readStr(state: var DecoderState, n: int): string =
   ## Reads n number of bytes as a string.
-  if state.pos + n > state.buffer.len:
+  if state.pos + n > state.len:
     failInvalid()
-  result = state.buffer[state.pos ..< state.pos + n]
+  result.setLen(n)
+  copyMem(result[0].addr, state.buffer[state.pos].addr, n)
   state.pos += n
 
 proc skipBytes(state: var DecoderState, n: int) =
   ## Skips a number of bytes.
-  if state.pos + n > state.buffer.len:
+  if state.pos + n > state.len:
     failInvalid()
   state.pos += n
 
@@ -266,7 +275,7 @@ proc decodeSOF0(state: var DecoderState) =
     if quantizationTableId > 3:
       failInvalid("invalid quantization table id")
 
-    if vertical == 0 or vertical > 4 or horizontal == 0 or horizontal > 4:
+    if vertical notin {1, 2, 4} or horizontal notin {1, 2, 4}:
       failInvalid("invalid component scaling factor")
 
     component.xScale = vertical.int
@@ -301,9 +310,9 @@ proc decodeSOF0(state: var DecoderState) =
 
     # Allocate block data structures.
     component.blocks = newSeqWith(
-      component.width,
+      state.numMcuWide * component.yScale,
       newSeq[array[64, int16]](
-        component.height
+        state.numMcuHigh * component.xScale
       )
     )
 
@@ -314,9 +323,7 @@ proc decodeSOF0(state: var DecoderState) =
     if state.progressive:
       component.widthCoeff = component.widthStride div 8
       component.heightCoeff = component.heightStride div 8
-      component.coeff.setLen(
-        component.widthStride * component.heightStride
-      )
+      component.coeff.setLen(component.widthStride * component.heightStride)
 
   if len != 0:
     failInvalid()
@@ -384,9 +391,9 @@ proc reset(state: var DecoderState) =
   ## Rests the decoder state need for restart markers.
   state.bitBuffer = 0
   state.bitsBuffered = 0
+  state.hitEnd = false
   for component in 0 ..< state.components.len:
     state.components[component].dcPred = 0
-  state.hitEnd = false
   if state.restartInterval != 0:
     state.todoBeforeRestart = state.restartInterval
   else:
@@ -402,7 +409,7 @@ proc decodeSOS(state: var DecoderState) =
   if state.scanComponents > state.components.len:
     failInvalid("extra components")
 
-  if state.scanComponents notin [1, 3]:
+  if state.scanComponents notin {1, 3}:
     failInvalid("unsupported scan component count")
 
   state.componentOrder.setLen(0)
@@ -418,11 +425,11 @@ proc decodeSOS(state: var DecoderState) =
       failInvalid()
 
     var component: int
-    while component < 3:
+    while component < state.components.len:
       if state.components[component].id == id:
         break
       inc component
-    if component == 3:
+    if component == state.components.len:
       failInvalid() # Not found
 
     state.components[component].huffmanAC = huffmanAC.int
@@ -435,8 +442,6 @@ proc decodeSOS(state: var DecoderState) =
   let aa = state.readUint8().int
   state.successiveApproxLow = aa and 15
   state.successiveApproxHigh = aa shr 4
-
-  state.reset()
 
   if state.progressive:
     if state.spectralStart > 63 or state.spectralEnd > 63:
@@ -457,9 +462,11 @@ proc decodeSOS(state: var DecoderState) =
   if len != 0:
     failInvalid()
 
+  state.reset()
+
 proc fillBitBuffer(state: var DecoderState) =
   ## When we are low on bits, we need to call this to populate some more.
-  while state.bitsBuffered < 24:
+  while state.bitsBuffered <= 24:
     let b =
       if state.hitEnd:
         0.uint32
@@ -511,43 +518,38 @@ proc huffmanDecode(state: var DecoderState, tableCurrent, table: int): uint8 =
   return huffman.symbols[symbolId]
 
 template lrot(value: uint32, shift: int): uint32 =
-  ## Left rotate - used for huffman decoding.
+  ## Left rotate
   (value shl shift) or (value shr (32 - shift))
 
-proc getBit(state: var DecoderState): int =
+proc readBit(state: var DecoderState): int =
   ## Get a single bit.
   if state.bitsBuffered < 1:
     state.fillBitBuffer()
-  let k = state.bitBuffer
+  result = ((state.bitBuffer and cast[uint32](0x80000000)) shr 31).int
   state.bitBuffer = state.bitBuffer shl 1
   dec state.bitsBuffered
-  return (k.int and 0x80000000.int)
 
-proc getBitsAsSignedInt(state: var DecoderState, n: int): int =
-  ## Get n number of bits as a signed integer.
-  # TODO: Investigate why 15 not 16?
-  if n notin 0 .. 15:
-    failInvalid()
-  if state.bitsBuffered < n:
-    state.fillBitBuffer()
-  let sign = cast[int32](state.bitBuffer) shr 31
-  var k = lrot(state.bitBuffer, n)
-  state.bitBuffer = k and (not bitMasks[n])
-  k = k and bitMasks[n]
-  state.bitsBuffered -= n
-  result = k.int + (biases[n] and (not sign))
-
-proc getBitsAsUnsignedInt(state: var DecoderState, n: int): int =
+proc readBits(state: var DecoderState, n: int): int =
   ## Get n number of bits as a unsigned integer.
   if n notin 0 .. 16:
     failInvalid()
   if state.bitsBuffered < n:
     state.fillBitBuffer()
-  var k = lrot(state.bitBuffer, n)
+  let k = lrot(state.bitBuffer, n)
+  result = (k and bitMasks[n]).int
   state.bitBuffer = k and (not bitMasks[n])
-  k = k and bitMasks[n]
   state.bitsBuffered -= n
-  return k.int
+
+proc receiveExtend(state: var DecoderState, n: int): int =
+  ## Get n number of bits as a signed integer. See Jpeg spec pages 109 and 114
+  ## for EXTEND and RECEIVE.
+  var
+    v = state.readBits(n)
+    vt = (1 shl (n - 1))
+  if v < vt:
+    vt = (-1 shl n) + 1
+    v = v + vt
+  return v
 
 proc decodeRegularBlock(
   state: var DecoderState, component: int, data: var array[64, int16]
@@ -561,7 +563,7 @@ proc decodeRegularBlock(
       if t == 0:
         0
       else:
-        state.getBitsAsSignedInt(t)
+        state.receiveExtend(t)
     dc = state.components[component].dcPred + diff
   state.components[component].dcPred = dc
   data[0] = cast[int16](dc)
@@ -581,7 +583,7 @@ proc decodeRegularBlock(
       if i >= 64:
         failInvalid()
       let zig = deZigZag[i]
-      data[zig] = cast[int16](state.getBitsAsSignedInt(s.int))
+      data[zig] = cast[int16](state.receiveExtend(s.int))
       inc i
 
 proc decodeProgressiveBlock(
@@ -598,14 +600,14 @@ proc decodeProgressiveBlock(
     let
       diff =
         if t > 0:
-          state.getBitsAsSignedInt(t)
+          state.receiveExtend(t)
         else:
           0
       dc = state.components[component].dcPred + diff
     state.components[component].dcPred = dc
     data[0] = cast[int16](dc * (1 shl state.successiveApproxLow))
   else:
-    if getBit(state) != 0:
+    if state.readBit() != 0:
       data[0] = cast[int16](data[0] + (1 shl state.successiveApproxLow))
 
 proc decodeProgressiveContinuationBlock(
@@ -632,7 +634,7 @@ proc decodeProgressiveContinuationBlock(
         if r < 15:
           state.eobRun = 1 shl r
           if r != 0:
-            state.eobRun += state.getBitsAsUnsignedInt(r)
+            state.eobRun += state.readBits(r)
           dec state.eobRun
           break
         k += 16
@@ -644,7 +646,7 @@ proc decodeProgressiveContinuationBlock(
         inc k
         if s >= 15:
           failInvalid()
-        data[zig] = cast[int16](state.getBitsAsSignedInt(s.int) * (1 shl shift))
+        data[zig] = cast[int16](state.receiveExtend(s.int) * (1 shl shift))
 
   else:
     var bit = 1 shl state.successiveApproxLow
@@ -654,7 +656,7 @@ proc decodeProgressiveContinuationBlock(
       for k in state.spectralStart ..< state.spectralEnd:
         let zig = deZigZag[k]
         if data[zig] != 0:
-          if state.getBit() != 0:
+          if state.readBit() != 0:
             if (data[zig] and bit) == 0:
               if data[zig] > 0:
                 data[zig] = cast[int16](data[zig] + bit)
@@ -671,14 +673,14 @@ proc decodeProgressiveContinuationBlock(
           if r < 15:
             state.eobRun = (1 shl r) - 1
             if r != 0:
-              state.eobRun += state.getBitsAsUnsignedInt(r)
+              state.eobRun += state.readBits(r)
             r = 64 # force end of block
           else:
             discard
         else:
           if s != 1:
             failInvalid("bad huffman code")
-          if getBit(state) != 0:
+          if state.readBit() != 0:
             s = bit.int
           else:
             s = -bit.int
@@ -687,7 +689,7 @@ proc decodeProgressiveContinuationBlock(
           let zig = deZigZag[k]
           inc k
           if data[zig] != 0:
-            if getBit(state) != 0:
+            if state.readBit() != 0:
               if (data[zig] and bit) == 0:
                 if data[zig] > 0:
                   data[zig] = cast[int16](data[zig] + bit)
@@ -833,14 +835,12 @@ proc checkRestart(state: var DecoderState) =
   ## Check if we might have run into a restart marker, then deal with it.
   dec state.todoBeforeRestart
   if state.todoBeforeRestart <= 0:
-    if state.bitsBuffered < 24:
-      state.fillBitBuffer()
-
-    if state.buffer[state.pos] == 0xFF.char:
-      if state.buffer[state.pos + 1] in {0xD0.char .. 0xD7.char}:
-        state.pos += 2
-      else:
-        failInvalid("did not get expected restart marker")
+    if state.pos + 1 > state.len:
+      failInvalid()
+    if state.buffer[state.pos] != 0xFF or
+      state.buffer[state.pos + 1] notin {0xD0 .. 0xD7}:
+      failInvalid("did not get expected restart marker")
+    state.pos += 2
     state.reset()
 
 proc decodeBlocks(state: var DecoderState) =
@@ -849,8 +849,8 @@ proc decodeBlocks(state: var DecoderState) =
     # Single component pass.
     let
       comp = state.componentOrder[0]
-      w = (state.components[comp].width + 7) shr 3
-      h = (state.components[comp].height + 7) shr 3
+      w = (state.components[comp].width + 7) div 8
+      h = (state.components[comp].height + 7) div 8
     for column in 0 ..< h:
       for row in 0 ..< w:
         state.decodeBlock(comp, row, column)
@@ -872,16 +872,27 @@ proc quantizationAndIDCTPass(state: var DecoderState) =
   ## Does quantization and IDCT.
   for comp in 0 ..< state.components.len:
     let
-      w = (state.components[comp].width + 7) shr 3
-      h = (state.components[comp].height + 7) shr 3
+      w = (state.components[comp].width + 7) div 8
+      h = (state.components[comp].height + 7) div 8
       qTableId = state.components[comp].quantizationTableId
     if qTableId.int notin 0 ..< state.quantizationTables.len:
       failInvalid()
     for column in 0 ..< h:
       for row in 0 ..< w:
         var data {.byaddr.} = state.components[comp].blocks[row][column]
-        for i in 0 ..< 64:
-          data[i] = cast[int16](data[i] * state.quantizationTables[qTableId][i].int32)
+
+        when defined(amd64) and not defined(pixieNoSimd):
+          for i in 0 ..< 8: # 8 per pass
+            var q = mm_loadu_si128(state.quantizationTables[qTableId][i * 8].addr)
+            q = mm_unpacklo_epi8(q, mm_setzero_si128())
+            var v = mm_loadu_si128(data[i * 8].addr)
+            mm_storeu_si128(data[i * 8].addr, mm_mullo_epi16(v, q))
+        else:
+          for i in 0 ..< 64:
+            data[i] = cast[int16](
+              data[i] * state.quantizationTables[qTableId][i].int32
+            )
+
         state.components[comp].idctBlock(
           state.components[comp].widthStride * column * 8 + row * 8,
           data
@@ -946,7 +957,10 @@ proc grayScaleToRgbx(gray: uint8): ColorRGBX {.inline.} =
 proc buildImage(state: var DecoderState): Image =
   ## Takes a jpeg image object and builds a pixie Image from it.
 
-  if state.components.len == 3:
+  result = newImage(state.imageWidth, state.imageHeight)
+
+  case state.components.len:
+  of 3:
     for component in state.components.mitems:
       while component.yScale < state.maxYScale:
         component.channel = component.channel.magnifyXBy2()
@@ -956,9 +970,6 @@ proc buildImage(state: var DecoderState): Image =
         component.channel = component.channel.magnifyYBy2()
         component.xScale *= 2
 
-  result = newImage(state.imageWidth, state.imageHeight)
-
-  if state.components.len == 3:
     let
       cy = state.components[0].channel
       cb = state.components[1].channel
@@ -972,13 +983,15 @@ proc buildImage(state: var DecoderState): Image =
           cr.data[channelIndex],
         )
         inc channelIndex
-  elif state.components.len == 1:
+
+  of 1:
     let cy = state.components[0].channel
     for y in 0 ..< state.imageHeight:
       var channelIndex = cy.dataIndex(0, y)
       for x in 0 ..< state.imageWidth:
         result.unsafe[x, y] = grayScaleToRgbx(cy.data[channelIndex])
         inc channelIndex
+
   else:
     failInvalid()
 
@@ -1012,7 +1025,8 @@ proc decodeJpeg*(data: string): Image {.raises: [PixieError].} =
   ## Decodes the JPEG into an Image.
 
   var state = DecoderState()
-  state.buffer = data
+  state.buffer = cast[ptr UncheckedArray[uint8]](data.cstring)
+  state.len = data.len
 
   while true:
     if state.readUint8() != 0xFF:
