@@ -533,6 +533,17 @@ proc getBit(state: var DecoderState): int =
   state.bitBuffer = state.bitBuffer shl 1
   dec state.bitsBuffered
 
+proc getBits(state: var DecoderState, n: int): int =
+  ## Get n number of bits as a unsigned integer.
+  if n notin 0 .. 16:
+    failInvalid()
+  if state.bitsBuffered < n:
+    state.fillBitBuffer()
+  let k = lrot(state.bitBuffer, n)
+  state.bitBuffer = k and (not bitMasks[n])
+  result = (k and bitMasks[n]).int
+  state.bitsBuffered -= n
+
 proc getBitsAsSignedInt(state: var DecoderState, n: int): int =
   ## Get n number of bits as a signed integer.
   # TODO: Investigate why 15 not 16?
@@ -546,17 +557,6 @@ proc getBitsAsSignedInt(state: var DecoderState, n: int): int =
   k = k and bitMasks[n]
   state.bitsBuffered -= n
   result = k.int + (biases[n] and (not sign))
-
-proc getBits(state: var DecoderState, n: int): int =
-  ## Get n number of bits as a unsigned integer.
-  if n notin 0 .. 16:
-    failInvalid()
-  if state.bitsBuffered < n:
-    state.fillBitBuffer()
-  let k = lrot(state.bitBuffer, n)
-  state.bitBuffer = k and (not bitMasks[n])
-  result = (k and bitMasks[n]).int
-  state.bitsBuffered -= n
 
 proc decodeRegularBlock(
   state: var DecoderState, component: int, data: var array[64, int16]
