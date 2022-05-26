@@ -842,14 +842,12 @@ proc checkRestart(state: var DecoderState) =
   ## Check if we might have run into a restart marker, then deal with it.
   dec state.todoBeforeRestart
   if state.todoBeforeRestart <= 0:
-    if state.bitsBuffered < 24:
-      state.fillBitBuffer()
-
-    if state.buffer[state.pos] == 0xFF:
-      if state.buffer[state.pos + 1] in {0xD0 .. 0xD7}:
-        state.pos += 2
-      else:
-        failInvalid("did not get expected restart marker")
+    if state.pos + 1 > state.len:
+      failInvalid()
+    if state.buffer[state.pos] != 0xFF or
+      state.buffer[state.pos + 1] notin {0xD0 .. 0xD7}:
+      failInvalid("did not get expected restart marker")
+    state.pos += 2
     state.reset()
 
 proc decodeBlocks(state: var DecoderState) =
