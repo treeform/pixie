@@ -315,9 +315,9 @@ proc decodeSOF0(state: var DecoderState) =
 
     # Allocate block data structures.
     component.blocks = newSeqWith(
-      component.width,
+      state.numMcuWide * component.yScale,
       newSeq[array[64, int16]](
-        component.height
+        state.numMcuHigh * component.xScale
       )
     )
 
