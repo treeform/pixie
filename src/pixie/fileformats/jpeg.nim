@@ -525,7 +525,7 @@ template lrot(value: uint32, shift: int): uint32 =
   ## Left rotate
   (value shl shift) or (value shr (32 - shift))
 
-proc getBit(state: var DecoderState): int =
+proc readBit(state: var DecoderState): int =
   ## Get a single bit.
   if state.bitsBuffered < 1:
     state.fillBitBuffer()
@@ -533,7 +533,7 @@ proc getBit(state: var DecoderState): int =
   state.bitBuffer = state.bitBuffer shl 1
   dec state.bitsBuffered
 
-proc getBits(state: var DecoderState, n: int): int =
+proc readBits(state: var DecoderState, n: int): int =
   ## Get n number of bits as a unsigned integer.
   if n notin 0 .. 16:
     failInvalid()
@@ -614,7 +614,7 @@ proc decodeProgressiveBlock(
     state.components[component].dcPred = dc
     data[0] = cast[int16](dc * (1 shl state.successiveApproxLow))
   else:
-    if state.getBit() != 0:
+    if state.readBit() != 0:
       data[0] = cast[int16](data[0] + (1 shl state.successiveApproxLow))
 
 proc decodeProgressiveContinuationBlock(
@@ -641,7 +641,7 @@ proc decodeProgressiveContinuationBlock(
         if r < 15:
           state.eobRun = 1 shl r
           if r != 0:
-            state.eobRun += state.getBits(r)
+            state.eobRun += state.readBits(r)
           dec state.eobRun
           break
         k += 16
@@ -663,7 +663,7 @@ proc decodeProgressiveContinuationBlock(
       for k in state.spectralStart ..< state.spectralEnd:
         let zig = deZigZag[k]
         if data[zig] != 0:
-          if state.getBit() != 0:
+          if state.readBit() != 0:
             if (data[zig] and bit) == 0:
               if data[zig] > 0:
                 data[zig] = cast[int16](data[zig] + bit)
@@ -680,14 +680,14 @@ proc decodeProgressiveContinuationBlock(
           if r < 15:
             state.eobRun = (1 shl r) - 1
             if r != 0:
-              state.eobRun += state.getBits(r)
+              state.eobRun += state.readBits(r)
             r = 64 # force end of block
           else:
             discard
         else:
           if s != 1:
             failInvalid("bad huffman code")
-          if state.getBit() != 0:
+          if state.readBit() != 0:
             s = bit.int
           else:
             s = -bit.int
@@ -696,7 +696,7 @@ proc decodeProgressiveContinuationBlock(
           let zig = deZigZag[k]
           inc k
           if data[zig] != 0:
-            if state.getBit() != 0:
+            if state.readBit() != 0:
               if (data[zig] and bit) == 0:
                 if data[zig] > 0:
                   data[zig] = cast[int16](data[zig] + bit)
