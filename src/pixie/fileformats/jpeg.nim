@@ -955,7 +955,10 @@ proc grayScaleToRgbx(gray: uint8): ColorRGBX {.inline.} =
 proc buildImage(state: var DecoderState): Image =
   ## Takes a jpeg image object and builds a pixie Image from it.
 
-  if state.components.len == 3:
+  result = newImage(state.imageWidth, state.imageHeight)
+
+  case state.components.len:
+  of 3:
     for component in state.components.mitems:
       while component.yScale < state.maxYScale:
         component.channel = component.channel.magnifyXBy2()
@@ -965,9 +968,6 @@ proc buildImage(state: var DecoderState): Image =
         component.channel = component.channel.magnifyYBy2()
         component.xScale *= 2
 
-  result = newImage(state.imageWidth, state.imageHeight)
-
-  if state.components.len == 3:
     let
       cy = state.components[0].channel
       cb = state.components[1].channel
@@ -981,13 +981,15 @@ proc buildImage(state: var DecoderState): Image =
           cr.data[channelIndex],
         )
         inc channelIndex
-  elif state.components.len == 1:
+
+  of 1:
     let cy = state.components[0].channel
     for y in 0 ..< state.imageHeight:
       var channelIndex = cy.dataIndex(0, y)
       for x in 0 ..< state.imageWidth:
         result.unsafe[x, y] = grayScaleToRgbx(cy.data[channelIndex])
         inc channelIndex
+
   else:
     failInvalid()
 
