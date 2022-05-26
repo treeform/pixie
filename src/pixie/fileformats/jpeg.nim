@@ -446,8 +446,6 @@ proc decodeSOS(state: var DecoderState) =
   state.successiveApproxLow = aa and 15
   state.successiveApproxHigh = aa shr 4
 
-  state.reset()
-
   if state.progressive:
     if state.spectralStart > 63 or state.spectralEnd > 63:
       failInvalid()
@@ -466,6 +464,8 @@ proc decodeSOS(state: var DecoderState) =
 
   if len != 0:
     failInvalid()
+
+  state.reset()
 
 proc fillBitBuffer(state: var DecoderState) =
   ## When we are low on bits, we need to call this to populate some more.
