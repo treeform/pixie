@@ -1020,7 +1020,7 @@ proc decodeJpeg*(data: string): Image {.raises: [PixieError].} =
   ## Decodes the JPEG into an Image.
 
   var state = DecoderState()
-  state.buffer = cast[ptr UncheckedArray[uint8]](data[0].unsafeAddr)
+  state.buffer = cast[ptr UncheckedArray[uint8]](data.cstring)
   state.len = data.len
 
   while true:
