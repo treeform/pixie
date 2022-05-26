@@ -73,11 +73,11 @@ type
     quantizationTables: array[4, array[64, uint8]]
     huffmanTables: array[2, array[4, Huffman]] # 0 = DC, 1 = AC
     components: seq[Component]
+    maxYScale, maxXScale: int
+    mcuWidth, mcuHeight, numMcuWide, numMcuHigh: int
     scanComponents: int
     spectralStart, spectralEnd: int
     successiveApproxLow, successiveApproxHigh: int
-    maxYScale, maxXScale: int
-    mcuWidth, mcuHeight, numMcuWide, numMcuHigh: int
     componentOrder: seq[int]
     progressive: bool
     restartInterval: int
@@ -324,9 +324,7 @@ proc decodeSOF0(state: var DecoderState) =
     if state.progressive:
       component.widthCoeff = component.widthStride div 8
       component.heightCoeff = component.heightStride div 8
-      component.coeff.setLen(
-        component.widthStride * component.heightStride
-      )
+      component.coeff.setLen(component.widthStride * component.heightStride)
 
   if len != 0:
     failInvalid()
@@ -428,11 +426,11 @@ proc decodeSOS(state: var DecoderState) =
       failInvalid()
 
     var component: int
-    while component < 3:
+    while component < state.components.len:
       if state.components[component].id == id:
         break
       inc component
-    if component == 3:
+    if component == state.components.len:
       failInvalid() # Not found
 
     state.components[component].huffmanAC = huffmanAC.int
