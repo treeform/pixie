@@ -547,17 +547,16 @@ proc getBitsAsSignedInt(state: var DecoderState, n: int): int =
   state.bitsBuffered -= n
   result = k.int + (biases[n] and (not sign))
 
-proc getBitsAsUnsignedInt(state: var DecoderState, n: int): int =
+proc getBits(state: var DecoderState, n: int): int =
   ## Get n number of bits as a unsigned integer.
   if n notin 0 .. 16:
     failInvalid()
   if state.bitsBuffered < n:
     state.fillBitBuffer()
-  var k = lrot(state.bitBuffer, n)
+  let k = lrot(state.bitBuffer, n)
   state.bitBuffer = k and (not bitMasks[n])
-  k = k and bitMasks[n]
+  result = (k and bitMasks[n]).int
   state.bitsBuffered -= n
-  return k.int
 
 proc decodeRegularBlock(
   state: var DecoderState, component: int, data: var array[64, int16]
@@ -642,7 +641,7 @@ proc decodeProgressiveContinuationBlock(
         if r < 15:
           state.eobRun = 1 shl r
           if r != 0:
-            state.eobRun += state.getBitsAsUnsignedInt(r)
+            state.eobRun += state.getBits(r)
           dec state.eobRun
           break
         k += 16
@@ -681,7 +680,7 @@ proc decodeProgressiveContinuationBlock(
           if r < 15:
             state.eobRun = (1 shl r) - 1
             if r != 0:
-              state.eobRun += state.getBitsAsUnsignedInt(r)
+              state.eobRun += state.getBits(r)
             r = 64 # force end of block
           else:
             discard
