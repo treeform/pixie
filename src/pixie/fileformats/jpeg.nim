@@ -393,9 +393,9 @@ proc reset(state: var DecoderState) =
   ## Rests the decoder state need for restart markers.
   state.bitBuffer = 0
   state.bitsBuffered = 0
+  state.hitEnd = false
   for component in 0 ..< state.components.len:
     state.components[component].dcPred = 0
-  state.hitEnd = false
   if state.restartInterval != 0:
     state.todoBeforeRestart = state.restartInterval
   else:
@@ -468,7 +468,7 @@ proc decodeSOS(state: var DecoderState) =
 
 proc fillBitBuffer(state: var DecoderState) =
   ## When we are low on bits, we need to call this to populate some more.
-  while state.bitsBuffered < 24:
+  while state.bitsBuffered <= 24:
     let b =
       if state.hitEnd:
         0.uint32
