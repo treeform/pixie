@@ -649,7 +649,7 @@ proc decodeProgressiveContinuationBlock(
         data[zig] = cast[int16](state.receiveExtend(s.int) * (1 shl shift))
 
   else:
-    var bit = 1 shl state.successiveApproxLow
+    let bit = 1 shl state.successiveApproxLow
 
     if state.eobRun != 0:
       dec state.eobRun
@@ -681,9 +681,9 @@ proc decodeProgressiveContinuationBlock(
           if s != 1:
             failInvalid("bad huffman code")
           if state.readBit() != 0:
-            s = bit.int
+            s = bit
           else:
-            s = -bit.int
+            s = -bit
 
         while k <= state.spectralEnd:
           let zig = deZigZag[k]
