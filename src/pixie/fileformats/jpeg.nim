@@ -280,7 +280,7 @@ proc decodeSOF0(state: var DecoderState) =
     if quantizationTableId > 3:
       failInvalid("invalid quantization table id")
 
-    if vertical notin {0, 1, 2, 4} or horizontal notin {0, 1, 2, 4}:
+    if vertical notin {1, 2, 4} or horizontal notin {1, 2, 4}:
       failInvalid("invalid component scaling factor")
 
     component.xScale = vertical.int
