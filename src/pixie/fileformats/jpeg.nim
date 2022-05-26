@@ -410,7 +410,7 @@ proc decodeSOS(state: var DecoderState) =
   if state.scanComponents > state.components.len:
     failInvalid("extra components")
 
-  if state.scanComponents notin [1, 3]:
+  if state.scanComponents notin {1, 3}:
     failInvalid("unsupported scan component count")
 
   state.componentOrder.setLen(0)
