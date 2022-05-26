@@ -69,24 +69,23 @@ type
     len, pos: int
     bitsBuffered: int
     bitBuffer: uint32
-
     imageHeight, imageWidth: int
+    progressive: bool
     quantizationTables: array[4, array[64, uint8]]
     huffmanTables: array[2, array[4, Huffman]] # 0 = DC, 1 = AC
     components: seq[Component]
     maxYScale, maxXScale: int
     mcuWidth, mcuHeight, numMcuWide, numMcuHigh: int
+    orientation: int
 
     scanComponents: int
     spectralStart, spectralEnd: int
     successiveApproxLow, successiveApproxHigh: int
     componentOrder: seq[int]
-    progressive: bool
     restartInterval: int
     todoBeforeRestart: int
     eobRun: int
     hitEnd: bool
-    orientation: int
 
 when defined(release):
   {.push checks: off.}
