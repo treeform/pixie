@@ -540,8 +540,8 @@ proc getBits(state: var DecoderState, n: int): int =
   if state.bitsBuffered < n:
     state.fillBitBuffer()
   let k = lrot(state.bitBuffer, n)
-  state.bitBuffer = k and (not bitMasks[n])
   result = (k and bitMasks[n]).int
+  state.bitBuffer = k and (not bitMasks[n])
   state.bitsBuffered -= n
 
 proc getBitsAsSignedInt(state: var DecoderState, n: int): int =
@@ -551,12 +551,12 @@ proc getBitsAsSignedInt(state: var DecoderState, n: int): int =
     failInvalid()
   if state.bitsBuffered < n:
     state.fillBitBuffer()
-  let sign = cast[int32](state.bitBuffer) shr 31
-  var k = lrot(state.bitBuffer, n)
+  let
+    sign = cast[int32](state.bitBuffer) shr 31 # Sign is always in MSB
+    k = lrot(state.bitBuffer, n)
+  result = (k and bitMasks[n]).int + (biases[n] and (not sign))
   state.bitBuffer = k and (not bitMasks[n])
-  k = k and bitMasks[n]
   state.bitsBuffered -= n
-  result = k.int + (biases[n] and (not sign))
 
 proc decodeRegularBlock(
   state: var DecoderState, component: int, data: var array[64, int16]
