@@ -69,12 +69,14 @@ type
     len, pos: int
     bitsBuffered: int
     bitBuffer: uint32
+
     imageHeight, imageWidth: int
     quantizationTables: array[4, array[64, uint8]]
     huffmanTables: array[2, array[4, Huffman]] # 0 = DC, 1 = AC
     components: seq[Component]
     maxYScale, maxXScale: int
     mcuWidth, mcuHeight, numMcuWide, numMcuHigh: int
+
     scanComponents: int
     spectralStart, spectralEnd: int
     successiveApproxLow, successiveApproxHigh: int
@@ -857,8 +859,8 @@ proc decodeBlocks(state: var DecoderState) =
     # Single component pass.
     let
       comp = state.componentOrder[0]
-      w = (state.components[comp].width + 7) shr 3
-      h = (state.components[comp].height + 7) shr 3
+      w = (state.components[comp].width + 7) div 8
+      h = (state.components[comp].height + 7) div 8
     for column in 0 ..< h:
       for row in 0 ..< w:
         state.decodeBlock(comp, row, column)
@@ -880,8 +882,8 @@ proc quantizationAndIDCTPass(state: var DecoderState) =
   ## Does quantization and IDCT.
   for comp in 0 ..< state.components.len:
     let
-      w = (state.components[comp].width + 7) shr 3
-      h = (state.components[comp].height + 7) shr 3
+      w = (state.components[comp].width + 7) div 8
+      h = (state.components[comp].height + 7) div 8
       qTableId = state.components[comp].quantizationTableId
     if qTableId.int notin 0 ..< state.quantizationTables.len:
       failInvalid()
