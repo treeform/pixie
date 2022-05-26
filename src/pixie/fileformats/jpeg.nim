@@ -521,7 +521,7 @@ proc huffmanDecode(state: var DecoderState, tableCurrent, table: int): uint8 =
   return huffman.symbols[symbolId]
 
 template lrot(value: uint32, shift: int): uint32 =
-  ## Left rotate - used for huffman decoding.
+  ## Left rotate
   (value shl shift) or (value shr (32 - shift))
 
 proc getBit(state: var DecoderState): int =
