@@ -529,10 +529,9 @@ proc getBit(state: var DecoderState): int =
   ## Get a single bit.
   if state.bitsBuffered < 1:
     state.fillBitBuffer()
-  let k = state.bitBuffer
+  result = ((state.bitBuffer and cast[uint32](0x80000000)) shr 31).int
   state.bitBuffer = state.bitBuffer shl 1
   dec state.bitsBuffered
-  return (k.int and 0x80000000.int)
 
 proc getBitsAsSignedInt(state: var DecoderState, n: int): int =
   ## Get n number of bits as a signed integer.
@@ -616,7 +615,7 @@ proc decodeProgressiveBlock(
     state.components[component].dcPred = dc
     data[0] = cast[int16](dc * (1 shl state.successiveApproxLow))
   else:
-    if getBit(state) != 0:
+    if state.getBit() != 0:
       data[0] = cast[int16](data[0] + (1 shl state.successiveApproxLow))
 
 proc decodeProgressiveContinuationBlock(
@@ -689,7 +688,7 @@ proc decodeProgressiveContinuationBlock(
         else:
           if s != 1:
             failInvalid("bad huffman code")
-          if getBit(state) != 0:
+          if state.getBit() != 0:
             s = bit.int
           else:
             s = -bit.int
@@ -698,7 +697,7 @@ proc decodeProgressiveContinuationBlock(
           let zig = deZigZag[k]
           inc k
           if data[zig] != 0:
-            if getBit(state) != 0:
+            if state.getBit() != 0:
               if (data[zig] and bit) == 0:
                 if data[zig] > 0:
                   data[zig] = cast[int16](data[zig] + bit)
