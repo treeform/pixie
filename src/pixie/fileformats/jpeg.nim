@@ -1,6 +1,9 @@
 import pixie/common, pixie/images, pixie/masks, sequtils, strutils, chroma,
     std/decls, flatty/binny
 
+when defined(amd64) and not defined(pixieNoSimd):
+  import nimsimd/sse2
+
 # This JPEG decoder is loosely based on stb_image which is public domain.
 
 # JPEG is a complex format, this decoder only supports the most common features:
@@ -887,8 +890,19 @@ proc quantizationAndIDCTPass(state: var DecoderState) =
     for column in 0 ..< h:
       for row in 0 ..< w:
         var data {.byaddr.} = state.components[comp].blocks[row][column]
-        for i in 0 ..< 64:
-          data[i] = cast[int16](data[i] * state.quantizationTables[qTableId][i].int32)
+
+        when defined(amd64) and not defined(pixieNoSimd):
+          for i in 0 ..< 8: # 8 per pass
+            var q = mm_loadu_si128(state.quantizationTables[qTableId][i * 8].addr)
+            q = mm_unpacklo_epi8(q, mm_setzero_si128())
+            var v = mm_loadu_si128(data[i * 8].addr)
+            mm_storeu_si128(data[i * 8].addr, mm_mullo_epi16(v, q))
+        else:
+          for i in 0 ..< 64:
+            data[i] = cast[int16](
+              data[i] * state.quantizationTables[qTableId][i].int32
+            )
+
         state.components[comp].idctBlock(
           state.components[comp].widthStride * column * 8 + row * 8,
           data
