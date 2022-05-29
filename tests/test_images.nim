@@ -26,7 +26,7 @@ block:
   let image = newImage(10, 10)
   image.fill(rgba(128, 0, 0, 128))
   image.data.toStraightAlpha()
-  doAssert image[9, 9] == rgba(254, 0, 0, 128)
+  doAssert image[9, 9] == rgba(255, 0, 0, 128)
 
 block:
   let image = newImage(100, 100)
