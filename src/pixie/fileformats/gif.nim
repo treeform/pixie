@@ -1,4 +1,5 @@
-import chroma, flatty/binny, std/math, std/strutils, pixie/common, pixie/images, zippy/bitstreams
+import chroma, flatty/binny, pixie/common, pixie/images, std/math, std/strutils,
+    zippy/bitstreams
 
 # See: https://en.wikipedia.org/wiki/GIF
 
