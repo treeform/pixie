@@ -1,13 +1,20 @@
 import chroma, flatty/binny, pixie/common, pixie/images, std/math, std/strutils,
-    zippy/bitstreams
+    vmath, zippy/bitstreams
 
-# See: https://en.wikipedia.org/wiki/GIF
+# See: https://www.w3.org/Graphics/GIF/spec-gif89a.txt
 
 const gifSignatures* = @["GIF87a", "GIF89a"]
 
 type
   Gif* = ref object
     frames*: seq[Image]
+    intervals*: seq[float32] # Floating point seconds
+    duration*: float32
+
+  ControlExtension = object
+    fields: uint8
+    delayTime: uint16
+    transparentColorIndex: uint8
 
 template failInvalid() =
   raise newException(PixieError, "Invalid GIF buffer, unable to load")
@@ -34,9 +41,6 @@ proc decodeGif*(data: string): Gif {.raises: [PixieError].} =
     bgColorIndex = data.readUint8(11).int
     pixelAspectRatio = data.readUint8(12)
 
-  if not hasGlobalColorTable:
-    raise newException(PixieError, "Unsupported GIF, no global color table")
-
   if bgColorIndex > globalColorTableSize:
     failInvalid()
 
@@ -48,16 +52,35 @@ proc decodeGif*(data: string): Gif {.raises: [PixieError].} =
   if pos + globalColorTableSize * 3 > data.len:
     failInvalid()
 
-  var globalColorTable = newSeq[ColorRGBX](globalColorTableSize)
-  for i in 0 ..< globalColorTable.len:
-    globalColorTable[i] = rgbx(
-      data.readUint8(pos + 0),
-      data.readUint8(pos + 1),
-      data.readUint8(pos + 2),
-      255
-    )
-    pos += 3
+  var
+    globalColorTable: seq[ColorRGBX]
+    bgColor: ColorRGBX
+  if hasGlobalColorTable:
+    globalColorTable.setLen(globalColorTableSize)
+    for i in 0 ..< globalColorTable.len:
+      globalColorTable[i] = rgbx(
+        data.readUint8(pos + 0),
+        data.readUint8(pos + 1),
+        data.readUint8(pos + 2),
+        255
+      )
+      pos += 3
+    bgColor = globalColorTable[bgColorIndex]
 
+  proc skipSubBlocks() =
+    while true: # Skip data sub-blocks
+      if pos + 1 > data.len:
+        failInvalid()
+
+      let subBlockSize = data.readUint8(pos).int
+      inc pos
+
+      if subBlockSize == 0:
+        break
+
+      pos += subBlockSize
+
+  var controlExtension: ControlExtension
   while true:
     if pos + 1 > data.len:
       failInvalid()
@@ -93,9 +116,6 @@ proc decodeGif*(data: string): Gif {.raises: [PixieError].} =
             255
           )
           pos += 3
-
-      if interlaced:
-        raise newException(PixieError, "Interlaced GIF not supported yet")
 
       if pos + 1 > data.len:
         failInvalid()
@@ -194,18 +214,89 @@ proc decodeGif*(data: string): Gif {.raises: [PixieError].} =
 
       let image = newImage(imageWidth, imageHeight)
 
-      if hasLocalColorTable:
-        for i, colorIndex in colorIndexes:
-          if colorIndex >= localColorTable.len:
-            failInvalid()
-          image.data[i] = localColorTable[colorIndex]
-      else:
-        for i, colorIndex in colorIndexes:
-          if colorIndex >= globalColorTable.len:
-            failInvalid()
-          image.data[i] = globalColorTable[colorIndex]
+      var transparentColorIndex = -1
+      if (controlExtension.fields and 1) != 0: # Transparent index flag
+        transparentColorIndex = controlExtension.transparentColorIndex.int
 
-      result.frames.add(image)
+      let disposalMethod = (controlExtension.fields and 0b00011100) shr 2
+      if disposalMethod == 2:
+        let frame = newImage(screenWidth, screenHeight)
+        frame.fill(bgColor)
+        result.frames.add(frame)
+      else:
+        if hasLocalColorTable:
+          for i, colorIndex in colorIndexes:
+            if colorIndex >= localColorTable.len:
+              # failInvalid()
+              continue
+            if colorIndex != transparentColorIndex:
+              image.data[i] = localColorTable[colorIndex]
+        else:
+          for i, colorIndex in colorIndexes:
+            if colorIndex >= globalColorTable.len:
+              # failInvalid()
+              continue
+            if colorIndex != transparentColorIndex:
+              image.data[i] = globalColorTable[colorIndex]
+
+        if interlaced:
+          let deinterlaced = newImage(image.width, image.height)
+          var
+            y: int
+            i: int
+          while i < image.height:
+            copyMem(
+              deinterlaced.data[deinterlaced.dataIndex(0, i)].addr,
+              image.data[image.dataIndex(0, y)].addr,
+              image.width * 4
+            )
+            i += 8
+            inc y
+          i = 4
+          while i < image.height:
+            copyMem(
+              deinterlaced.data[deinterlaced.dataIndex(0, i)].addr,
+              image.data[image.dataIndex(0, y)].addr,
+              image.width * 4
+            )
+            i += 8
+            inc y
+          i = 2
+          while i < image.height:
+            copyMem(
+              deinterlaced.data[deinterlaced.dataIndex(0, i)].addr,
+              image.data[image.dataIndex(0, y)].addr,
+              image.width * 4
+            )
+            i += 4
+            inc y
+          i = 1
+          while i < image.height:
+            copyMem(
+              deinterlaced.data[deinterlaced.dataIndex(0, i)].addr,
+              image.data[image.dataIndex(0, y)].addr,
+              image.width * 4
+            )
+            i += 2
+            inc y
+
+          image.data = move deinterlaced.data
+
+        if imageWidth != screenWidth or imageHeight != screenHeight or
+          imageTopPos != 0 or imageLeftPos != 0:
+          let frame = newImage(screenWidth, screenHeight)
+          frame.draw(
+            image,
+            translate(vec2(imageLeftPos.float32, imageTopPos.float32))
+          )
+          result.frames.add(frame)
+        else:
+          result.frames.add(image)
+
+      result.intervals.add(controlExtension.delayTime.float32 / 100)
+
+      # Reset the control extension since it only applies to one image
+      controlExtension = ControlExtension()
 
     of 0x21: # Extension
       if pos + 1 > data.len:
@@ -229,11 +320,16 @@ proc decodeGif*(data: string): Gif {.raises: [PixieError].} =
         if pos + blockSize > data.len:
           failInvalid()
 
+        controlExtension.fields = data.readUint8(pos + 0)
+        controlExtension.delayTime = data.readUint16(pos + 1)
+        controlExtension.transparentColorIndex = data.readUint8(pos + 3)
+
         pos += blockSize
         inc pos # Block terminator
 
-      # of 0xfe:
-      #   # Comment
+      of 0xfe:
+        # Comment
+        skipSubBlocks()
 
       # of 0x01:
       #   # Plain Text
@@ -254,17 +350,7 @@ proc decodeGif*(data: string): Gif {.raises: [PixieError].} =
 
         pos += blockSize
 
-        while true: # Skip data sub-blocks
-          if pos + 1 > data.len:
-            failInvalid()
-
-          let subBlockSize = data.readUint8(pos).int
-          inc pos
-
-          if subBlockSize == 0:
-            break
-
-          pos += subBlockSize
+        skipSubBlocks()
 
       else:
         raise newException(
@@ -280,6 +366,9 @@ proc decodeGif*(data: string): Gif {.raises: [PixieError].} =
         PixieError,
         "Unexpected GIF block type " & toHex(blockType)
       )
+
+  for interval in result.intervals:
+    result.duration += interval
 
 proc newImage*(gif: Gif): Image {.raises: [].} =
   gif.frames[0]
