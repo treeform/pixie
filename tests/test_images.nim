@@ -23,10 +23,10 @@ block:
   doAssert image[9, 9] == rgba(128, 0, 0, 128)
 
 block:
-  let image = newImage(10, 10)
-  image.fill(rgba(128, 0, 0, 128))
-  image.data.toStraightAlpha()
-  doAssert image[9, 9] == rgba(255, 0, 0, 128)
+  var data = newSeq[ColorRGBX](100)
+  fillUnsafe(data, rgbx(100, 0, 0, 128), 0, data.len)
+  data.toStraightAlpha()
+  doAssert data[10] == rgbx(199, 0, 0, 128)
 
 block:
   let image = newImage(100, 100)
