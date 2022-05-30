@@ -1,5 +1,5 @@
-import pixie/common, pixie/images, pixie/masks, sequtils, strutils, chroma,
-    std/decls, flatty/binny
+import chroma, flatty/binny, pixie/common, pixie/images, pixie/masks, sequtils,
+    std/decls, strutils
 
 when defined(amd64) and not defined(pixieNoSimd):
   import nimsimd/sse2
@@ -906,13 +906,17 @@ proc magnifyXBy2(mask: Mask): Mask =
       let n = 3 * mask.unsafe[x, y].uint16
       if x == 0:
         result.unsafe[x * 2 + 0, y] = mask.unsafe[x, y]
-        result.unsafe[x * 2 + 1, y] = ((n + mask.unsafe[x + 1, y].uint16 + 2) div 4).uint8
+        result.unsafe[x * 2 + 1, y] =
+          ((n + mask.unsafe[x + 1, y].uint16 + 2) div 4).uint8
       elif x == mask.width - 1:
-        result.unsafe[x * 2 + 0, y] = ((n + mask.unsafe[x - 1, y].uint16 + 2) div 4).uint8
+        result.unsafe[x * 2 + 0, y] =
+          ((n + mask.unsafe[x - 1, y].uint16 + 2) div 4).uint8
         result.unsafe[x * 2 + 1, y] = mask.unsafe[x, y]
       else:
-        result.unsafe[x * 2 + 0, y] = ((n + mask.unsafe[x - 1, y].uint16) div 4).uint8
-        result.unsafe[x * 2 + 1, y] = ((n + mask.unsafe[x + 1, y].uint16) div 4).uint8
+        result.unsafe[x * 2 + 0, y] =
+          ((n + mask.unsafe[x - 1, y].uint16) div 4).uint8
+        result.unsafe[x * 2 + 1, y] =
+          ((n + mask.unsafe[x + 1, y].uint16) div 4).uint8
 
 proc magnifyYBy2(mask: Mask): Mask =
   ## Smooth magnify by power of 2 only in the Y direction.
@@ -922,13 +926,17 @@ proc magnifyYBy2(mask: Mask): Mask =
       let n = 3 * mask.unsafe[x, y].uint16
       if y == 0:
         result.unsafe[x, y * 2 + 0] = mask.unsafe[x, y]
-        result.unsafe[x, y * 2 + 1] = ((n + mask.unsafe[x, y + 1].uint16 + 2) div 4).uint8
+        result.unsafe[x, y * 2 + 1] =
+          ((n + mask.unsafe[x, y + 1].uint16 + 2) div 4).uint8
       elif y == mask.height - 1:
-        result.unsafe[x, y * 2 + 0] = ((n + mask.unsafe[x, y - 1].uint16 + 2) div 4).uint8
+        result.unsafe[x, y * 2 + 0] =
+          ((n + mask.unsafe[x, y - 1].uint16 + 2) div 4).uint8
         result.unsafe[x, y * 2 + 1] = mask.unsafe[x, y]
       else:
-        result.unsafe[x, y * 2 + 0] = ((n + mask.unsafe[x, y - 1].uint16) div 4).uint8
-        result.unsafe[x, y * 2 + 1] = ((n + mask.unsafe[x, y + 1].uint16) div 4).uint8
+        result.unsafe[x, y * 2 + 0] =
+          ((n + mask.unsafe[x, y - 1].uint16) div 4).uint8
+        result.unsafe[x, y * 2 + 1] =
+          ((n + mask.unsafe[x, y + 1].uint16) div 4).uint8
 
 proc yCbCrToRgbx(py, pcb, pcr: uint8): ColorRGBX =
   ## Takes a 3 component yCbCr outputs and populates image.

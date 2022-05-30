@@ -1,4 +1,4 @@
-import pixie, pixie/fileformats/png, strformat, unicode, os
+import os, pixie, pixie/fileformats/png, strformat, unicode
 
 proc wh(image: Image): Vec2 =
   ## Return with and height as a size vector.
