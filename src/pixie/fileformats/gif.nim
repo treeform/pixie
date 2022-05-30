@@ -1,8 +1,12 @@
-import chroma, flatty/binny, math, pixie/common, pixie/images, zippy/bitstreams
+import chroma, flatty/binny, std/math, std/strutils, pixie/common, pixie/images, zippy/bitstreams
+
+# See: https://en.wikipedia.org/wiki/GIF
 
 const gifSignatures* = @["GIF87a", "GIF89a"]
 
-# See: https://en.wikipedia.org/wiki/GIF
+type
+  Gif* = ref object
+    frames*: seq[Image]
 
 template failInvalid() =
   raise newException(PixieError, "Invalid GIF buffer, unable to load")
@@ -10,173 +14,274 @@ template failInvalid() =
 when defined(release):
   {.push checks: off.}
 
-proc decodeGif*(data: string): Image {.raises: [PixieError].} =
-  ## Decodes GIF data into an Image.
+proc decodeGif*(data: string): Gif {.raises: [PixieError].} =
+  ## Decodes GIF data.
+  if data.len < 13:
+    failInvalid()
 
-  if data.len <= 13: failInvalid()
-  let version = data[0 .. 5]
-  if version notin gifSignatures:
+  if data[0 .. 5] notin gifSignatures:
     raise newException(PixieError, "Invalid GIF file signature")
 
+  result = Gif()
+
   let
-    # Read information about the image.
-    width = data.readInt16(6).int
-    height = data.readInt16(8).int
-    flags = data.readUint8(10).int
-    hasColorTable = (flags and 0x80) != 0
-    originalDepth = ((flags and 0x70) shr 4) + 1
-    colorTableSorted = (flags and 0x8) != 0
-    colorTableSize = 2 ^ ((flags and 0x7) + 1)
-    bgColorIndex = data.readUint8(11)
-    pixelAspectRatio = data.readUint8(11)
+    screenWidth = data.readInt16(6).int
+    screenHeight = data.readInt16(8).int
+    globalFlags = data.readUint8(10).int
+    hasGlobalColorTable = (globalFlags and 0b10000000) != 0
+    globalColorTableSize = 2 ^ ((globalFlags and 0b00000111) + 1)
+    bgColorIndex = data.readUint8(11).int
+    pixelAspectRatio = data.readUint8(12)
 
-  result = newImage(width, height)
+  if not hasGlobalColorTable:
+    raise newException(PixieError, "Unsupported GIF, no global color table")
 
-  # Read the main color table.
-  var
-    colors: seq[ColorRGBA]
-    i = 13
-  if hasColorTable:
-    if i + colorTableSize * 3 >= data.len: failInvalid()
-    for c in 0 ..< colorTableSize:
-      let
-        r = data.readUint8(i + 0)
-        g = data.readUint8(i + 1)
-        b = data.readUint8(i + 2)
-      colors.add(rgba(r, g, b, 255))
-      i += 3
+  if bgColorIndex > globalColorTableSize:
+    failInvalid()
 
-  # Read the image blocks.
+  if pixelAspectRatio != 0:
+    raise newException(PixieError, "Unsupported GIF, pixel aspect ratio")
+
+  var pos = 13
+
+  if pos + globalColorTableSize * 3 > data.len:
+    failInvalid()
+
+  var globalColorTable = newSeq[ColorRGBX](globalColorTableSize)
+  for i in 0 ..< globalColorTable.len:
+    globalColorTable[i] = rgbx(
+      data.readUint8(pos + 0),
+      data.readUint8(pos + 1),
+      data.readUint8(pos + 2),
+      255
+    )
+    pos += 3
+
   while true:
-    let blockType = data.readUint8(i)
-    i += 1
+    if pos + 1 > data.len:
+      failInvalid()
+
+    let blockType = data.readUint8(pos)
+    inc pos
+
     case blockType:
-    of 0x2c: # Read IMAGE block.
-      if i + 9 >= data.len: failInvalid()
+    of 0x2c: # Image
+      if pos + 9 > data.len:
+        failInvalid()
+
       let
-        left = data.readUint16(i + 0)
-        top = data.readUint16(i + 2)
-        w = data.readUint16(i + 4).int
-        h = data.readUint16(i + 6).int
-        flags = data.readUint8(i + 8)
+        imageLeftPos = data.readUint16(pos + 0).int
+        imageTopPos = data.readUint16(pos + 2).int
+        imageWidth = data.readUint16(pos + 4).int
+        imageHeight = data.readUint16(pos + 6).int
+        imageFlags = data.readUint16(pos + 8)
+        hasLocalColorTable = (imageFlags and 0b10000000) != 0
+        interlaced = (imageFlags and 0b01000000) != 0
+        localColorTableSize = 2 ^ ((imageFlags and 0b00000111) + 1)
 
-        hasColorTable = (flags and 0x80) != 0
-        interlace = (flags and 0x40) != 0
-        colorTableSorted = (flags and 0x8) != 0
-        colorTableSize = 2 ^ ((flags and 0x7) + 1)
+      pos += 9
 
-      i += 9
+      var localColorTable: seq[ColorRGBX]
+      if hasLocalColorTable:
+        localColorTable.setLen(localColorTableSize)
+        for i in 0 ..< localColorTable.len:
+          localColorTable[i] = rgbx(
+            data.readUint8(pos + 0),
+            data.readUint8(pos + 1),
+            data.readUint8(pos + 2),
+            255
+          )
+          pos += 3
 
-      # Make sure we support the GIF features.
-      if left != 0 or top != 0 or w != result.width or h != result.height:
-        raise newException(PixieError, "GIF block offsets not supported")
+      if interlaced:
+        raise newException(PixieError, "Interlaced GIF not supported yet")
 
-      if hasColorTable:
-        raise newException(
-          PixieError, "GIF color table per block not yet supported"
-        )
+      if pos + 1 > data.len:
+        failInvalid()
 
-      if interlace:
-        raise newException(PixieError, "Interlaced GIF not yet supported")
+      let minCodeSize = data.readUint8(pos).int
+      inc pos
 
-      # Read the lzw data chunks.
-      if i >= data.len: failInvalid()
-      let lzwMinBitSize = data.readUint8(i)
-      i += 1
-      var lzwData = ""
+      if minCodeSize > 11:
+        failInvalid()
+
+      # The image data is contained in a sequence of sub-blocks
+      var lzwDataBlocks: seq[(int, int)] # (offset, len)
       while true:
-        if i >= data.len: failInvalid()
-        let lzwEncodedLen = data.readUint8(i)
-        i += 1
-        if lzwEncodedLen == 0:
-          # Stop reading when chunk len is 0.
+        if pos + 1 > data.len:
+          failInvalid()
+
+        let subBlockSize = data.readUint8(pos).int
+        inc pos
+
+        if subBlockSize == 0:
           break
-        if i + lzwEncodedLen.int > data.len: failInvalid()
-        lzwData.add data[i ..< i + lzwEncodedLen.int]
-        i += lzwEncodedLen.int
+
+        if pos + subBlockSize > data.len:
+          failInvalid()
+
+        lzwDataBlocks.add((pos, subBlockSize))
+
+        pos += subBlockSize
+
+      var lzwDataLen: int
+      for (_, len) in lzwDataBlocks:
+        lzwDataLen += len
+
+      var
+        lzwData = newString(lzwDataLen)
+        i: int
+      for (offset, len) in lzwDataBlocks:
+        copyMem(lzwData[i].addr, data[offset].unsafeAddr, len)
+        i += len
 
       let
-        clearCode = 1 shl lzwMinBitSize
+        clearCode = 1 shl minCodeSize
         endCode = clearCode + 1
 
-      # Turn full lzw data into bit stream.
       var
-        bs = BitStreamReader(
-          src: cast[ptr UncheckedArray[uint8]](lzwData[0].addr),
+        b = BitStreamReader(
+          src: cast[ptr UncheckedArray[uint8]](lzwData.cstring),
           len: lzwData.len
         )
-        bitSize = lzwMinBitSize + 1
-        currentCodeTableMax = (1 shl (bitSize)) - 1
-        codeLast: int = -1
-        codeTable: seq[seq[int]]
         colorIndexes: seq[int]
+        codeSize = minCodeSize + 1
+        table = newSeq[(int, int)](endCode + 1)
+        prev: (int, int)
 
-      # Main decode loop.
-      while codeLast != endCode:
-        if bs.pos + bitSize.int > bs.len * 8: failInvalid()
-        var
-          # Read variable bits out of the table.
-          codeId = bs.readBits(bitSize.int).int
-          # Some time we need to carry over table information.
-          carryOver: seq[int]
-
-        if codeId == clearCode:
-          # Clear and re-init the tables.
-          bitSize = lzwMinBitSize + 1
-          currentCodeTableMax = (1 shl (bitSize)) - 1
-          codeLast = -1
-          codeTable.setLen(0)
-          for x in 0 ..< endCode + 1:
-            codeTable.add(@[x])
-
-        elif codeId == endCode:
-          # Exit we are done.
+      while true:
+        let code = b.readBits(codeSize).int
+        if b.bitsBuffered < 0:
+          failInvalid()
+        if code == endCode:
           break
 
-        elif codeId < codeTable.len and codeTable[codeId].len > 0:
-          # Its in the current table, use it.
-          let current = codeTable[codeId]
-          colorIndexes.add(current)
-          carryOver = @[current[0]]
+        if code == clearCode:
+          codeSize = minCodeSize + 1
+          table.setLen(endCode + 1)
+          prev = (0, 0)
+          continue
 
-        elif codeLast notin [-1, clearCode, endCode]:
-          # Its in the current table use it.
-          if codeLast >= codeTable.len: failInvalid()
-          var previous = codeTable[codeLast]
-          carryOver = @[previous[0]]
-          colorIndexes.add(previous & carryOver)
+        # Increase the code size if needed
+        if table.len == (1 shl codeSize) - 1 and codeSize < 12:
+          inc codeSize
 
-        if codeTable.len == currentCodeTableMax and bitSize < 12:
-          # We need to expand the codeTable max and the bit size.
-          inc bitSize
-          currentCodeTableMax = (1 shl (bitSize)) - 1
+        let start = colorIndexes.len
+        if code < table.len: # If we have seen the code before
+          if code < clearCode:
+            colorIndexes.add(code)
+            if prev[1] > 0:
+              table.add((prev[0], prev[1] + 1))
+            prev = (start, 1)
+          else:
+            let (offset, len) = table[code]
+            for i in 0 ..< len:
+              colorIndexes.add(colorIndexes[offset + i])
+            table.add((prev[0], prev[1] + 1))
+            prev = (start, len)
+        else:
+          if prev[1] == 0:
+            failInvalid()
+          for i in 0 ..< prev[1]:
+            colorIndexes.add(colorIndexes[prev[0] + i])
+          colorIndexes.add(colorIndexes[prev[0]])
+          table.add((start, prev[1] + 1))
+          prev = (start, prev[1] + 1)
 
-        if codeLast notin [-1, clearCode, endCode]:
-          # We had some left over and need to expand table.
-          if codeLast >= codeTable.len: failInvalid()
-          codeTable.add(codeTable[codeLast] & carryOver)
+      if colorIndexes.len != imageWidth * imageHeight:
+        failInvalid()
 
-        codeLast = codeId
+      let image = newImage(imageWidth, imageHeight)
 
-      # Convert color indexes into real colors.
-      for j, idx in colorIndexes:
-        if idx >= colors.len or j >= result.data.len: failInvalid()
-        result.data[j] = colors[idx].rgbx()
+      if hasLocalColorTable:
+        for i, colorIndex in colorIndexes:
+          if colorIndex >= localColorTable.len:
+            failInvalid()
+          image.data[i] = localColorTable[colorIndex]
+      else:
+        for i, colorIndex in colorIndexes:
+          if colorIndex >= globalColorTable.len:
+            failInvalid()
+          image.data[i] = globalColorTable[colorIndex]
 
-    of 0x21: # Read EXTENSION block.
-      # Skip over all extensions (mostly animation information).
-      let extentionType = data.readUint8(i)
-      inc i
-      let byteLen = data.readUint8(i)
-      inc i
-      i += byteLen.int
-      doAssert data.readUint8(i) == 0
-      inc i
-    of 0x3b: # Read TERMINAL block.
-      # Exit block byte - we are done.
-      return
+      result.frames.add(image)
+
+    of 0x21: # Extension
+      if pos + 1 > data.len:
+        failInvalid()
+
+      let extensionType = data.readUint8(pos + 0)
+      inc pos
+
+      case extensionType:
+      of 0xf9:
+        # Graphic Control Extension
+        if pos + 1 > data.len:
+          failInvalid()
+
+        let blockSize = data.readUint8(pos).int
+        inc pos
+
+        if blockSize != 4:
+          failInvalid()
+
+        if pos + blockSize > data.len:
+          failInvalid()
+
+        pos += blockSize
+        inc pos # Block terminator
+
+      # of 0xfe:
+      #   # Comment
+
+      # of 0x01:
+      #   # Plain Text
+
+      of 0xff:
+        # Application Specific
+        if pos + 1 > data.len:
+          failInvalid()
+
+        let blockSize = data.readUint8(pos).int
+        inc pos
+
+        if blockSize != 11:
+          failInvalid()
+
+        if pos + blockSize > data.len:
+          failInvalid()
+
+        pos += blockSize
+
+        while true: # Skip data sub-blocks
+          if pos + 1 > data.len:
+            failInvalid()
+
+          let subBlockSize = data.readUint8(pos).int
+          inc pos
+
+          if subBlockSize == 0:
+            break
+
+          pos += subBlockSize
+
+      else:
+        raise newException(
+          PixieError,
+          "Unexpected GIF extension type " & toHex(extensionType)
+        )
+
+    of 0x3b: # Trailer
+      break
+
     else:
-      raise newException(PixieError, "Invalid GIF block type")
+      raise newException(
+        PixieError,
+        "Unexpected GIF block type " & toHex(blockType)
+      )
+
+proc newImage*(gif: Gif): Image {.raises: [].} =
+  gif.frames[0]
 
 when defined(release):
   {.pop.}

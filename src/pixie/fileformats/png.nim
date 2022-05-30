@@ -75,13 +75,11 @@ proc decodeHeader(data: string): PngHeader =
   if result.interlaceMethod notin [0.uint8, 1]:
     raise newException(PixieError, "Invalid PNG interlace method")
 
-  # Not yet supported:
-
   if result.bitDepth == 16:
-    raise newException(PixieError, "PNG 16 bit depth not yet supported")
+    raise newException(PixieError, "PNG 16 bit depth not supported yet")
 
   if result.interlaceMethod != 0:
-    raise newException(PixieError, "Interlaced PNG not yet supported")
+    raise newException(PixieError, "Interlaced PNG not supported yet")
 
 proc decodePalette(data: string): seq[ColorRGB] =
   if data.len == 0 or data.len mod 3 != 0:
