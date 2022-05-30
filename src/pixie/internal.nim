@@ -90,10 +90,73 @@ const straightAlphaTable = block:
 proc toStraightAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} =
   ## Converts an image from premultiplied alpha to straight alpha.
   ## This is expensive for large images.
-  for c in data.mitems:
+
+  # This SIMD works but is currently slower
+  # var i: int
+  # when defined(amd64) and not defined(pixieNoSimd):
+  #   let
+  #     v255 = mm_set1_epi32(255)
+  #     v255f = mm_cvtepi32_ps(v255)
+  #     alphaMask = mm_set1_epi32(cast[int32](0xff000000))
+
+  #   proc unpackColor(v: M128i): M128i {.inline.} =
+  #     result = mm_unpacklo_epi8(v, mm_setzero_si128())
+  #     result = mm_unpacklo_epi8(result, mm_setzero_si128())
+
+  #   proc packColor(v: M128i): M128i {.inline.} =
+  #     result = mm_packs_epi32(v, mm_setzero_si128())
+  #     result = mm_packus_epi16(result, mm_setzero_si128())
+
+  #   for _ in 0 ..< data.len div 4:
+  #     let
+  #       v = mm_loadu_si128(data[i].addr)
+  #       alphas = mm_cvtepi32_ps(mm_srli_si128(mm_and_si128(v, alphaMask), 3))
+  #       multipliers = mm_div_ps(v255f, alphas)
+  #       m0 = mm_shuffle_ps(multipliers, multipliers, MM_SHUFFLE(0, 0, 0, 0))
+  #       m1 = mm_shuffle_ps(multipliers, multipliers, MM_SHUFFLE(1, 1, 1, 1))
+  #       m2 = mm_shuffle_ps(multipliers, multipliers, MM_SHUFFLE(2, 2, 2, 2))
+  #       m3 = mm_shuffle_ps(multipliers, multipliers, MM_SHUFFLE(3, 3, 3, 3))
+  #       c0 = unpackColor(v)
+  #       c1 = unpackColor(mm_srli_si128(v, 4))
+  #       c2 = unpackColor(mm_srli_si128(v, 8))
+  #       c3 = unpackColor(mm_srli_si128(v, 12))
+  #       f0 = mm_cvtepi32_ps(c0)
+  #       f1 = mm_cvtepi32_ps(c1)
+  #       f2 = mm_cvtepi32_ps(c2)
+  #       f3 = mm_cvtepi32_ps(c3)
+  #       fs0 = mm_mul_ps(f0, m0)
+  #       fs1 = mm_mul_ps(f1, m1)
+  #       fs2 = mm_mul_ps(f2, m2)
+  #       fs3 = mm_mul_ps(f3, m3)
+  #       s0 = mm_cvtps_epi32(fs0)
+  #       s1 = mm_cvtps_epi32(fs1)
+  #       s2 = mm_cvtps_epi32(fs2)
+  #       s3 = mm_cvtps_epi32(fs3)
+  #       gt0 = mm_cmpgt_epi32(s0, v255)
+  #       gt1 = mm_cmpgt_epi32(s1, v255)
+  #       gt2 = mm_cmpgt_epi32(s2, v255)
+  #       gt3 = mm_cmpgt_epi32(s3, v255)
+  #       s0c = mm_or_si128(mm_andnot_si128(gt0, s0), mm_and_si128(gt0, v255))
+  #       s1c = mm_or_si128(mm_andnot_si128(gt1, s1), mm_and_si128(gt1, v255))
+  #       s2c = mm_or_si128(mm_andnot_si128(gt2, s2), mm_and_si128(gt2, v255))
+  #       s3c = mm_or_si128(mm_andnot_si128(gt3, s3), mm_and_si128(gt3, v255))
+  #       p0 = packColor(s0c)
+  #       p1 = packColor(s1c)
+  #       p2 = packColor(s2c)
+  #       p3 = packColor(s3c)
+  #       p01 = mm_or_si128(p0, mm_slli_si128(p1, 4))
+  #       p23 = mm_or_si128(mm_slli_si128(p2, 8), mm_slli_si128(p3, 12))
+  #       p = mm_or_si128(p01, p23)
+  #       pp = mm_or_si128(mm_andnot_si128(alphaMask, p), mm_and_si128(v, alphaMask))
+  #     mm_storeu_si128(data[i].addr, pp)
+  #     i += 4
+
+  for i in 0 ..< data.len:
+    var c = data[i]
     c.r = straightAlphaTable[c.a][c.r]
     c.g = straightAlphaTable[c.a][c.g]
     c.b = straightAlphaTable[c.a][c.b]
+    data[i] = c
 
 proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} =
   ## Converts an image to premultiplied alpha from straight alpha.
