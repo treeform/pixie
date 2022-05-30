@@ -519,7 +519,6 @@ proc parseSvg*(
     var rootProps = initSvgProperties()
     rootProps = root.parseSvgProperties(rootProps)
 
-
     if viewBoxMinX != 0 or viewBoxMinY != 0:
       let viewBoxMin = vec2(-viewBoxMinX.float32, -viewBoxMinY.float32)
       rootprops.transform = rootprops.transform * translate(viewBoxMin)
