@@ -1,6 +1,6 @@
 import blends, bumpy, chroma, common, masks, pixie/internal, vmath
 
-when defined(amd64) and not defined(pixieNoSimd):
+when defined(amd64) and allowSimd:
   import nimsimd/sse2
 
 const h = 0.5.float32
@@ -29,7 +29,7 @@ proc newImage*(width, height: int): Image {.raises: [PixieError].} =
 proc newImage*(mask: Mask): Image {.raises: [PixieError].} =
   result = newImage(mask.width, mask.height)
   var i: int
-  when defined(amd64) and not defined(pixieNoSimd):
+  when defined(amd64) and allowSimd:
     for _ in 0 ..< mask.data.len div 16:
       var alphas = mm_loadu_si128(mask.data[i].addr)
       for j in 0 ..< 4:
@@ -106,7 +106,7 @@ proc isOneColor*(image: Image): bool {.raises: [].} =
   let color = image.data[0]
 
   var i: int
-  when defined(amd64) and not defined(pixieNoSimd):
+  when defined(amd64) and allowSimd:
     let colorVec = mm_set1_epi32(cast[int32](color))
     for _ in 0 ..< image.data.len div 8:
       let
@@ -127,7 +127,7 @@ proc isTransparent*(image: Image): bool {.raises: [].} =
   result = true
 
   var i: int
-  when defined(amd64) and not defined(pixieNoSimd):
+  when defined(amd64) and allowSimd:
     let vecZero = mm_setzero_si128()
     for _ in 0 ..< image.data.len div 16:
       let
@@ -254,7 +254,7 @@ proc minifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
     )
     for y in 0 ..< resultEvenHeight:
       var x: int
-      when defined(amd64) and not defined(pixieNoSimd):
+      when defined(amd64) and allowSimd:
         let
           oddMask = mm_set1_epi16(cast[int16](0xff00))
           first32 = cast[M128i]([uint32.high, 0, 0, 0])
@@ -348,7 +348,7 @@ proc magnifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
   for y in 0 ..< image.height:
     # Write one row of pixels duplicated by scale
     var x: int
-    when defined(amd64) and not defined(pixieNoSimd):
+    when defined(amd64) and allowSimd:
       if scale == 2:
         while x <= image.width - 4:
           let
@@ -391,7 +391,7 @@ proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
     return
 
   var i: int
-  when defined(amd64) and not defined(pixieNoSimd):
+  when defined(amd64) and allowSimd:
     when type(target) is Image:
       let byteLen = target.data.len * 4
     else:
@@ -447,7 +447,7 @@ proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
 proc invert*(target: Image) {.raises: [].} =
   ## Inverts all of the colors and alpha.
   var i: int
-  when defined(amd64) and not defined(pixieNoSimd):
+  when defined(amd64) and allowSimd:
     let vec255 = mm_set1_epi8(cast[int8](255))
     let byteLen = target.data.len * 4
     for _ in 0 ..< byteLen div 16:
@@ -536,7 +536,7 @@ proc newMask*(image: Image): Mask {.raises: [PixieError].} =
   result = newMask(image.width, image.height)
 
   var i: int
-  when defined(amd64) and not defined(pixieNoSimd):
+  when defined(amd64) and allowSimd:
     for _ in 0 ..< image.data.len div 16:
       let
         a = mm_loadu_si128(image.data[i + 0].addr)
@@ -798,7 +798,7 @@ proc drawUber(
             )
             continue
 
-        when defined(amd64) and not defined(pixieNoSimd):
+        when defined(amd64) and allowSimd:
           case blendMode:
           of OverwriteBlend:
             for _ in 0 ..< (xStop - xStart) div 16:

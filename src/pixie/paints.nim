@@ -1,6 +1,6 @@
-import chroma, common, images, vmath
+import chroma, common, images, internal, vmath
 
-when defined(amd64) and not defined(pixieNoSimd):
+when defined(amd64) and allowSimd:
   import nimsimd/sse2
 
 type
@@ -122,7 +122,7 @@ proc fillGradientLinear(image: Image, paint: Paint) =
   if at.y == to.y: # Horizontal gradient
     var x: int
     while x < image.width:
-      when defined(amd64) and not defined(pixieNoSimd):
+      when defined(amd64) and allowSimd:
         if x + 4 <= image.width:
           var colors: array[4, ColorRGBX]
           for i in 0 ..< 4:
@@ -153,7 +153,7 @@ proc fillGradientLinear(image: Image, paint: Paint) =
         t = toLineSpace(at, to, xy)
         rgbx = paint.gradientColor(t)
       var x: int
-      when defined(amd64) and not defined(pixieNoSimd):
+      when defined(amd64) and allowSimd:
         let colorVec = mm_set1_epi32(cast[int32](rgbx))
         for _ in 0 ..< image.width div 4:
           mm_storeu_si128(image.data[image.dataIndex(x, y)].addr, colorVec)
