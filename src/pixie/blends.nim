@@ -1,8 +1,8 @@
 ## Blending modes.
 
-import chroma, common, math
+import chroma, common, internal, std/math
 
-when defined(amd64) and not defined(pixieNoSimd):
+when defined(amd64) and allowSimd:
   import nimsimd/sse2
 
 # See https://www.w3.org/TR/compositing-1/
@@ -274,7 +274,7 @@ proc blendSoftLight(backdrop, source: ColorRGBX): ColorRGBX =
     source = source.rgba()
 
   var rgba: ColorRGBA
-  when defined(amd64) and not defined(pixieNoSimd):
+  when defined(amd64) and allowSimd:
     let
       vb = mm_setr_ps(
         backdrop.r.float32,
@@ -479,7 +479,7 @@ proc masker*(blendMode: BlendMode): Masker {.raises: [PixieError].} =
   else:
     raise newException(PixieError, "No masker for " & $blendMode)
 
-when defined(amd64) and not defined(pixieNoSimd):
+when defined(amd64) and allowSimd:
   type
     BlenderSimd* = proc(blackdrop, source: M128i): M128i {.gcsafe, raises: [].}
       ## Function signature returned by blenderSimd.

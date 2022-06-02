@@ -1,7 +1,7 @@
 import blends, bumpy, chroma, common, fenv, images, internal, masks, paints,
     strutils, vmath
 
-when defined(amd64) and not defined(pixieNoSimd):
+when defined(amd64) and allowSimd:
   import nimsimd/sse2
 
 type
@@ -1296,7 +1296,7 @@ proc computeCoverage(
         let fillLen = at.int - fillStart
         if fillLen > 0:
           var i = fillStart
-          when defined(amd64) and not defined(pixieNoSimd):
+          when defined(amd64) and allowSimd:
             let sampleCoverageVec = mm_set1_epi8(cast[int8](sampleCoverage))
             for _ in 0 ..< fillLen div 16:
               var coverageVec = mm_loadu_si128(coverages[i - startX].addr)
@@ -1326,7 +1326,7 @@ proc fillCoverage(
   blendMode: BlendMode
 ) =
   var x = startX
-  when defined(amd64) and not defined(pixieNoSimd):
+  when defined(amd64) and allowSimd:
     if blendMode.hasSimdBlender():
       # When supported, SIMD blend as much as possible
       let
@@ -1445,7 +1445,7 @@ proc fillCoverage(
   blendMode: BlendMode
 ) =
   var x = startX
-  when defined(amd64) and not defined(pixieNoSimd):
+  when defined(amd64) and allowSimd:
     if blendMode.hasSimdMasker():
       let
         maskerSimd = blendMode.maskerSimd()
@@ -1511,7 +1511,7 @@ proc fillHits(
       continue
 
     var x = fillStart
-    when defined(amd64) and not defined(pixieNoSimd):
+    when defined(amd64) and allowSimd:
       if blendMode.hasSimdBlender():
         # When supported, SIMD blend as much as possible
         let colorVec = mm_set1_epi32(cast[int32](rgbx))
@@ -1573,7 +1573,7 @@ proc fillHits(
       continue
 
     var x = fillStart
-    when defined(amd64) and not defined(pixieNoSimd):
+    when defined(amd64) and allowSimd:
       if blendMode.hasSimdMasker():
         let
           maskerSimd = blendMode.maskerSimd()

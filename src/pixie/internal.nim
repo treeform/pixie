@@ -1,6 +1,8 @@
 import chroma, system/memory, vmath
 
-when defined(amd64) and not defined(pixieNoSimd):
+const allowSimd* = not defined(pixieNoSimd) and not defined(tcc)
+
+when defined(amd64) and allowSimd:
   import nimsimd/sse2
 
 template currentExceptionAsPixieError*(): untyped =
@@ -59,7 +61,7 @@ proc fillUnsafe*(
     nimSetMem(data[start].addr, rgbx.r.cint, len * 4)
   else:
     var i = start
-    when defined(amd64) and not defined(pixieNoSimd):
+    when defined(amd64) and allowSimd:
       # When supported, SIMD fill until we run out of room
       let colorVec = mm_set1_epi32(cast[int32](rgbx))
       for _ in 0 ..< len div 8:
@@ -93,7 +95,7 @@ proc toStraightAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} =
 
   # This SIMD works but is currently slower
   # var i: int
-  # when defined(amd64) and not defined(pixieNoSimd):
+  # when defined(amd64) and allowSimd:
   #   let
   #     v255 = mm_set1_epi32(255)
   #     v255f = mm_cvtepi32_ps(v255)
@@ -161,7 +163,7 @@ proc toStraightAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} =
 proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} =
   ## Converts an image to premultiplied alpha from straight alpha.
   var i: int
-  when defined(amd64) and not defined(pixieNoSimd):
+  when defined(amd64) and allowSimd:
     # When supported, SIMD convert as much as possible
     let
       alphaMask = mm_set1_epi32(cast[int32](0xff000000))
@@ -208,7 +210,7 @@ proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
   result = true
 
   var i = start
-  when defined(amd64) and not defined(pixieNoSimd):
+  when defined(amd64) and allowSimd:
     let
       vec255 = mm_set1_epi32(cast[int32](uint32.high))
       colorMask = mm_set1_epi32(cast[int32]([255.uint8, 255, 255, 0]))
@@ -229,7 +231,7 @@ proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
     if data[j].a != 255:
       return false
 
-when defined(amd64) and not defined(pixieNoSimd):
+when defined(amd64) and allowSimd:
   proc packAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
     ## Shuffle the alpha values for these 4 colors to the first 4 bytes
     let mask = mm_set1_epi32(cast[int32](0xff000000))
