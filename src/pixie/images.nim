@@ -1,7 +1,10 @@
 import blends, bumpy, chroma, common, masks, pixie/internal, vmath
 
-when defined(amd64) and allowSimd:
-  import nimsimd/sse2
+when not defined(pixieNoSimd):
+  when defined(amd64):
+    import nimsimd/sse2
+  elif defined(arm64):
+    import nimsimd/neon
 
 const h = 0.5.float32
 
@@ -106,17 +109,35 @@ proc isOneColor*(image: Image): bool {.raises: [].} =
   let color = image.data[0]
 
   var i: int
-  when defined(amd64) and allowSimd:
-    let colorVec = mm_set1_epi32(cast[int32](color))
-    for _ in 0 ..< image.data.len div 8:
-      let
-        values0 = mm_loadu_si128(image.data[i + 0].addr)
-        values1 = mm_loadu_si128(image.data[i + 4].addr)
-        mask0 = mm_movemask_epi8(mm_cmpeq_epi8(values0, colorVec))
-        mask1 = mm_movemask_epi8(mm_cmpeq_epi8(values1, colorVec))
-      if mask0 != 0xffff or mask1 != 0xffff:
-        return false
-      i += 8
+  when allowSimd:
+    when defined(amd64):
+      let colorVec = mm_set1_epi32(cast[int32](color))
+      for _ in 0 ..< image.data.len div 8:
+        let
+          values0 = mm_loadu_si128(image.data[i + 0].addr)
+          values1 = mm_loadu_si128(image.data[i + 4].addr)
+          mask0 = mm_movemask_epi8(mm_cmpeq_epi8(values0, colorVec))
+          mask1 = mm_movemask_epi8(mm_cmpeq_epi8(values1, colorVec))
+        if mask0 != 0xffff or mask1 != 0xffff:
+          return false
+        i += 8
+    elif defined(arm64):
+      let colorVec = cast[uint8x16](vmovq_n_u32(cast[uint32](color)))
+      for _ in 0 ..< image.data.len div 8:
+        let
+          values0 = vld1q_u8(image.data[i + 0].addr)
+          values1 = vld1q_u8(image.data[i + 4].addr)
+          eq0 = vceqq_u8(values0, colorVec)
+          eq1 = vceqq_u8(values1, colorVec)
+          mask0 = vpaddlq_u32(vpaddlq_u16(vpaddlq_u8(eq0)))
+          mask1 = vpaddlq_u32(vpaddlq_u16(vpaddlq_u8(eq1)))
+          mask = vaddq_u64(mask0, mask1)
+        var accumulated: array[2, uint16]
+        vst1q_lane_u16(accumulated[0].addr, cast[uint16x8](mask), 0)
+        vst1q_lane_u16(accumulated[1].addr, cast[uint16x8](mask), 4)
+        if cast[uint32](accumulated) != 267390960:
+          return false
+        i += 8
 
   for j in i ..< image.data.len:
     if image.data[j] != color:
