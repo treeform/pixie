@@ -148,20 +148,30 @@ proc isTransparent*(image: Image): bool {.raises: [].} =
   result = true
 
   var i: int
-  when defined(amd64) and allowSimd:
-    let vecZero = mm_setzero_si128()
-    for _ in 0 ..< image.data.len div 16:
-      let
-        values0 = mm_loadu_si128(image.data[i + 0].addr)
-        values1 = mm_loadu_si128(image.data[i + 4].addr)
-        values2 = mm_loadu_si128(image.data[i + 8].addr)
-        values3 = mm_loadu_si128(image.data[i + 12].addr)
-        values01 = mm_or_si128(values0, values1)
-        values23 = mm_or_si128(values2, values3)
-        values = mm_or_si128(values01, values23)
-      if mm_movemask_epi8(mm_cmpeq_epi8(values, vecZero)) != 0xffff:
-        return false
-      i += 16
+  when allowSimd:
+    when defined(amd64):
+      let vecZero = mm_setzero_si128()
+      for _ in 0 ..< image.data.len div 16:
+        let
+          values0 = mm_loadu_si128(image.data[i + 0].addr)
+          values1 = mm_loadu_si128(image.data[i + 4].addr)
+          values2 = mm_loadu_si128(image.data[i + 8].addr)
+          values3 = mm_loadu_si128(image.data[i + 12].addr)
+          values01 = mm_or_si128(values0, values1)
+          values23 = mm_or_si128(values2, values3)
+          values = mm_or_si128(values01, values23)
+        if mm_movemask_epi8(mm_cmpeq_epi8(values, vecZero)) != 0xffff:
+          return false
+        i += 16
+    elif defined(arm64):
+      for _ in 0 ..< image.data.len div 16:
+        let
+          alphas = vld4q_u8(image.data[i].addr).val[3]
+          eq = vceqq_u64(cast[uint64x2](alphas), vmovq_n_u64(0))
+          mask = vget_low_u64(eq) and vget_high_u64(eq)
+        if mask != uint64.high:
+          return false
+        i += 16
 
   for j in i ..< image.data.len:
     if image.data[j].a != 0:
