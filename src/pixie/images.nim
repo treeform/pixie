@@ -567,18 +567,24 @@ proc newMask*(image: Image): Mask {.raises: [PixieError].} =
   result = newMask(image.width, image.height)
 
   var i: int
-  when defined(amd64) and allowSimd:
-    for _ in 0 ..< image.data.len div 16:
-      let
-        a = mm_loadu_si128(image.data[i + 0].addr)
-        b = mm_loadu_si128(image.data[i + 4].addr)
-        c = mm_loadu_si128(image.data[i + 8].addr)
-        d = mm_loadu_si128(image.data[i + 12].addr)
-      mm_storeu_si128(
-        result.data[i].addr,
-        pack4xAlphaValues(a, b, c, d)
-      )
-      i += 16
+  when allowSimd:
+    when defined(amd64):
+      for _ in 0 ..< image.data.len div 16:
+        let
+          a = mm_loadu_si128(image.data[i + 0].addr)
+          b = mm_loadu_si128(image.data[i + 4].addr)
+          c = mm_loadu_si128(image.data[i + 8].addr)
+          d = mm_loadu_si128(image.data[i + 12].addr)
+        mm_storeu_si128(
+          result.data[i].addr,
+          pack4xAlphaValues(a, b, c, d)
+        )
+        i += 16
+    elif defined(arm64):
+      for _ in 0 ..< image.data.len div 16:
+        let alphas = vld4q_u8(image.data[i].addr).val[3]
+        vst1q_u8(result.data[i].addr, alphas)
+        i += 16
 
   for j in i ..< image.data.len:
     result.data[j] = image.data[j].a
