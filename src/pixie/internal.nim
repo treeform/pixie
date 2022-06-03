@@ -2,8 +2,11 @@ import chroma, system/memory, vmath
 
 const allowSimd* = not defined(pixieNoSimd) and not defined(tcc)
 
-when defined(amd64) and allowSimd:
-  import nimsimd/sse2
+when allowSimd:
+  when defined(amd64):
+    import nimsimd/sse2
+  elif defined(arm64):
+    import nimsimd/neon
 
 template currentExceptionAsPixieError*(): untyped =
   ## Gets the current exception and returns it as a PixieError with stack trace.
@@ -61,12 +64,18 @@ proc fillUnsafe*(
     nimSetMem(data[start].addr, rgbx.r.cint, len * 4)
   else:
     var i = start
-    when defined(amd64) and allowSimd:
+    when allowSimd and defined(amd64):
       # When supported, SIMD fill until we run out of room
       let colorVec = mm_set1_epi32(cast[int32](rgbx))
       for _ in 0 ..< len div 8:
         mm_storeu_si128(data[i + 0].addr, colorVec)
         mm_storeu_si128(data[i + 4].addr, colorVec)
+        i += 8
+    elif allowSimd and defined(arm64):
+      let colorVec = vmovq_n_u32(cast[uint32](rgbx))
+      for _ in 0 ..< len div 8:
+        vst1q_u32(data[i + 0].addr, colorVec)
+        vst1q_u32(data[i + 4].addr, colorVec)
         i += 8
     else:
       when sizeof(int) == 8:
