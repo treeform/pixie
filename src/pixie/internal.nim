@@ -72,11 +72,12 @@ proc fillUnsafe*(
         mm_storeu_si128(data[i + 4].addr, colorVec)
         i += 8
     elif allowSimd and defined(arm64):
-      let colorVec = vmovq_n_u32(cast[uint32](rgbx))
-      for _ in 0 ..< len div 8:
-        vst1q_u32(data[i + 0].addr, colorVec)
-        vst1q_u32(data[i + 4].addr, colorVec)
-        i += 8
+      let
+        colors = vmovq_n_u32(cast[uint32](rgbx))
+        x4 = vld4q_dup_u32(colors.unsafeAddr)
+      for _ in 0 ..< len div 16:
+        vst1q_u32_x4(data[i + 0].addr, x4)
+        i += 16
     else:
       when sizeof(int) == 8:
         # Fill 8 bytes at a time when possible
@@ -219,22 +220,32 @@ proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
   result = true
 
   var i = start
-  when defined(amd64) and allowSimd:
-    let
-      vec255 = mm_set1_epi32(cast[int32](uint32.high))
-      colorMask = mm_set1_epi32(cast[int32]([255.uint8, 255, 255, 0]))
-    for _ in start ..< (start + len) div 16:
+  when allowSimd:
+    when defined(amd64):
       let
-        values0 = mm_loadu_si128(data[i + 0].addr)
-        values1 = mm_loadu_si128(data[i + 4].addr)
-        values2 = mm_loadu_si128(data[i + 8].addr)
-        values3 = mm_loadu_si128(data[i + 12].addr)
-        values01 = mm_and_si128(values0, values1)
-        values23 = mm_and_si128(values2, values3)
-        values = mm_or_si128(mm_and_si128(values01, values23), colorMask)
-      if mm_movemask_epi8(mm_cmpeq_epi8(values, vec255)) != 0xffff:
-        return false
-      i += 16
+        vec255 = mm_set1_epi32(cast[int32](uint32.high))
+        colorMask = mm_set1_epi32(cast[int32]([255.uint8, 255, 255, 0]))
+      for _ in start ..< (start + len) div 16:
+        let
+          values0 = mm_loadu_si128(data[i + 0].addr)
+          values1 = mm_loadu_si128(data[i + 4].addr)
+          values2 = mm_loadu_si128(data[i + 8].addr)
+          values3 = mm_loadu_si128(data[i + 12].addr)
+          values01 = mm_and_si128(values0, values1)
+          values23 = mm_and_si128(values2, values3)
+          values = mm_or_si128(mm_and_si128(values01, values23), colorMask)
+        if mm_movemask_epi8(mm_cmpeq_epi8(values, vec255)) != 0xffff:
+          return false
+        i += 16
+    elif defined(arm64):
+      for _ in start ..< (start + len) div 16:
+        let
+          alphas = vld4q_u8(data[i].addr).val[3]
+          eq = vceqq_u64(cast[uint64x2](alphas), vmovq_n_u64(uint64.high))
+          mask = vget_low_u64(eq) and vget_high_u64(eq)
+        if mask != uint64.high:
+          return false
+        i += 16
 
   for j in i ..< start + len:
     if data[j].a != 255:

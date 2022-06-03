@@ -122,22 +122,22 @@ proc isOneColor*(image: Image): bool {.raises: [].} =
           return false
         i += 8
     elif defined(arm64):
-      let colorVec = cast[uint8x16](vmovq_n_u32(cast[uint32](color)))
-      for _ in 0 ..< image.data.len div 8:
+      let colorVecs = vld4q_dup_u8(color.unsafeAddr)
+      for _ in 0 ..< image.data.len div 16:
         let
-          values0 = vld1q_u8(image.data[i + 0].addr)
-          values1 = vld1q_u8(image.data[i + 4].addr)
-          eq0 = vceqq_u8(values0, colorVec)
-          eq1 = vceqq_u8(values1, colorVec)
-          mask0 = vpaddlq_u32(vpaddlq_u16(vpaddlq_u8(eq0)))
-          mask1 = vpaddlq_u32(vpaddlq_u16(vpaddlq_u8(eq1)))
-          mask = vaddq_u64(mask0, mask1)
-        var accumulated: array[2, uint16]
-        vst1q_lane_u16(accumulated[0].addr, cast[uint16x8](mask), 0)
-        vst1q_lane_u16(accumulated[1].addr, cast[uint16x8](mask), 4)
-        if cast[uint32](accumulated) != 267390960:
+          deinterleved = vld4q_u8(image.data[i].addr)
+          rEq = vceqq_u8(deinterleved.val[0], colorVecs.val[0])
+          gEq = vceqq_u8(deinterleved.val[1], colorVecs.val[1])
+          bEq = vceqq_u8(deinterleved.val[2], colorVecs.val[2])
+          aEq = vceqq_u8(deinterleved.val[3], colorVecs.val[3])
+          rgEq = vandq_u8(rEq, gEq)
+          baEq = vandq_u8(bEq, aEq)
+          rgbaEq = vandq_u8(rgEq, baEq)
+          eq = vceqq_u64(cast[uint64x2](rgbaEq), vmovq_n_u64(uint64.high))
+          mask = vget_low_u64(eq) and vget_high_u64(eq)
+        if mask != uint64.high:
           return false
-        i += 8
+        i += 16
 
   for j in i ..< image.data.len:
     if image.data[j] != color:
