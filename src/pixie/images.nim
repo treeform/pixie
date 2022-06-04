@@ -2,7 +2,7 @@ import blends, bumpy, chroma, common, masks, pixie/internal, vmath
 
 when not defined(pixieNoSimd):
   when defined(amd64):
-    import nimsimd/sse2
+    import nimsimd/ssse3
   elif defined(arm64):
     import nimsimd/neon
 
@@ -33,14 +33,18 @@ proc newImage*(mask: Mask): Image {.raises: [PixieError].} =
   result = newImage(mask.width, mask.height)
   var i: int
   when defined(amd64) and allowSimd:
+    let control = mm_set_epi8(3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0)
     for _ in 0 ..< mask.data.len div 16:
-      var alphas = mm_loadu_si128(mask.data[i].addr)
-      for j in 0 ..< 4:
-        var unpacked = unpackAlphaValues(alphas)
-        unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 8))
-        unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
-        mm_storeu_si128(result.data[i + j * 4].addr, unpacked)
-        alphas = mm_srli_si128(alphas, 4)
+      let
+        alphas = mm_loadu_si128(mask.data[i].addr)
+        alphas0 = mm_shuffle_epi8(alphas, control)
+        alphas1 = mm_shuffle_epi8(mm_srli_si128(alphas, 4), control)
+        alphas2 = mm_shuffle_epi8(mm_srli_si128(alphas, 8), control)
+        alphas3 = mm_shuffle_epi8(mm_srli_si128(alphas, 12), control)
+      mm_storeu_si128(result.data[i + 0].addr, alphas0)
+      mm_storeu_si128(result.data[i + 4].addr, alphas1)
+      mm_storeu_si128(result.data[i + 8].addr, alphas2)
+      mm_storeu_si128(result.data[i + 12].addr, alphas3)
       i += 16
 
   for j in i ..< mask.data.len:
