@@ -116,15 +116,20 @@ proc isOneColor*(image: Image): bool {.raises: [].} =
   when allowSimd:
     when defined(amd64):
       let colorVec = mm_set1_epi32(cast[int32](color))
-      for _ in 0 ..< image.data.len div 8:
+      for _ in 0 ..< image.data.len div 16:
         let
           values0 = mm_loadu_si128(image.data[i + 0].addr)
           values1 = mm_loadu_si128(image.data[i + 4].addr)
-          mask0 = mm_movemask_epi8(mm_cmpeq_epi8(values0, colorVec))
-          mask1 = mm_movemask_epi8(mm_cmpeq_epi8(values1, colorVec))
-        if mask0 != 0xffff or mask1 != 0xffff:
+          values2 = mm_loadu_si128(image.data[i + 8].addr)
+          values3 = mm_loadu_si128(image.data[i + 12].addr)
+          eq0 = mm_cmpeq_epi8(values0, colorVec)
+          eq1 = mm_cmpeq_epi8(values1, colorVec)
+          eq2 = mm_cmpeq_epi8(values2, colorVec)
+          eq3 = mm_cmpeq_epi8(values3, colorVec)
+          eq = mm_and_si128(mm_and_si128(eq0, eq1), mm_and_si128(eq2, eq3))
+        if mm_movemask_epi8(eq) != 0xffff:
           return false
-        i += 8
+        i += 16
     elif defined(arm64):
       let colorVecs = vld4q_dup_u8(color.unsafeAddr)
       for _ in 0 ..< image.data.len div 16:
