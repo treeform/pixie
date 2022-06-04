@@ -10,7 +10,7 @@ requires "vmath >= 1.1.4"
 requires "chroma >= 0.2.5"
 requires "zippy >= 0.9.9"
 requires "flatty >= 0.3.3"
-requires "nimsimd >= 1.0.3"
+requires "nimsimd >= 1.0.5"
 requires "bumpy >= 1.1.1"
 
 task bindings, "Generate bindings":
