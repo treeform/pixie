@@ -251,7 +251,7 @@ proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
     if data[j].a != 255:
       return false
 
-when defined(amd64) and allowSimd:
+when allowSimd and defined(amd64):
   proc packAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
     ## Shuffle the alpha values for these 4 colors to the first 4 bytes
     let
