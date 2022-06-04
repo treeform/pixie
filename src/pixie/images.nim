@@ -484,31 +484,35 @@ proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
     for j in i ..< target.data.len:
       target.data[j] = ((target.data[j] * opacity) div 255).uint8
 
-proc invert*(target: Image) {.raises: [].} =
+proc invert*(image: Image) {.raises: [].} =
   ## Inverts all of the colors and alpha.
   var i: int
   when defined(amd64) and allowSimd:
     let vec255 = mm_set1_epi8(cast[int8](255))
-    let byteLen = target.data.len * 4
-    for _ in 0 ..< byteLen div 16:
-      let index = i div 4
-      var values = mm_loadu_si128(target.data[index].addr)
-      values = mm_sub_epi8(vec255, values)
-      mm_storeu_si128(target.data[index].addr, values)
+    for _ in 0 ..< image.data.len div 16:
+      let
+        a = mm_loadu_si128(image.data[i + 0].addr)
+        b = mm_loadu_si128(image.data[i + 4].addr)
+        c = mm_loadu_si128(image.data[i + 8].addr)
+        d = mm_loadu_si128(image.data[i + 12].addr)
+      mm_storeu_si128(image.data[i + 0].addr, mm_sub_epi8(vec255, a))
+      mm_storeu_si128(image.data[i + 4].addr, mm_sub_epi8(vec255, b))
+      mm_storeu_si128(image.data[i + 8].addr, mm_sub_epi8(vec255, c))
+      mm_storeu_si128(image.data[i + 12].addr, mm_sub_epi8(vec255, d))
       i += 16
 
-  for j in i div 4 ..< target.data.len:
-    var rgba = target.data[j]
-    rgba.r = 255 - rgba.r
-    rgba.g = 255 - rgba.g
-    rgba.b = 255 - rgba.b
-    rgba.a = 255 - rgba.a
-    target.data[j] = rgba
+  for j in i ..< image.data.len:
+    var rgbx = image.data[j]
+    rgbx.r = 255 - rgbx.r
+    rgbx.g = 255 - rgbx.g
+    rgbx.b = 255 - rgbx.b
+    rgbx.a = 255 - rgbx.a
+    image.data[j] = rgbx
 
   # Inverting rgbx(50, 100, 150, 200) becomes rgbx(205, 155, 105, 55). This
   # is not a valid premultiplied alpha color.
   # We need to convert back to premultiplied alpha after inverting.
-  target.data.toPremultipliedAlpha()
+  image.data.toPremultipliedAlpha()
 
 proc blur*(
   image: Image, radius: float32, outOfBounds: SomeColor = color(0, 0, 0, 0)
