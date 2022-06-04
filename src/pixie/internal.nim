@@ -4,7 +4,7 @@ const allowSimd* = not defined(pixieNoSimd) and not defined(tcc)
 
 when allowSimd:
   when defined(amd64):
-    import nimsimd/sse2
+    import nimsimd/ssse3
   elif defined(arm64):
     import nimsimd/neon
 
@@ -254,24 +254,22 @@ proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
 when defined(amd64) and allowSimd:
   proc packAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
     ## Shuffle the alpha values for these 4 colors to the first 4 bytes
-    let mask = mm_set1_epi32(cast[int32](0xff000000))
-    result = mm_and_si128(v, mask)
-    result = mm_srli_epi32(result, 24)
-    result = mm_packus_epi16(result, result)
-    result = mm_packus_epi16(result, result)
+    let control = mm_set_epi8(15, 11, 7, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    result = mm_shuffle_epi8(v, control)
     result = mm_srli_si128(result, 12)
 
-  proc pack4xAlphaValues*(i, j, k, l: M128i): M128i {.inline, raises: [].} =
+  proc pack4xAlphaValues*(a, b, c, d: M128i): M128i {.inline, raises: [].} =
     let
-      i = packAlphaValues(i)
-      j = mm_slli_si128(packAlphaValues(j), 4)
-      k = mm_slli_si128(packAlphaValues(k), 8)
-      l = mm_slli_si128(packAlphaValues(l), 12)
-    mm_or_si128(mm_or_si128(i, j), mm_or_si128(k, l))
+      a = packAlphaValues(a)
+      b = mm_slli_si128(packAlphaValues(b), 4)
+      c = mm_slli_si128(packAlphaValues(c), 8)
+      d = mm_slli_si128(packAlphaValues(d), 12)
+    mm_or_si128(mm_or_si128(a, b), mm_or_si128(c, d))
 
   proc unpackAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
     ## Unpack the first 32 bits into 4 rgba(0, 0, 0, value)
-    let
-      a = mm_unpacklo_epi8(v, mm_setzero_si128())
-      b = mm_unpacklo_epi8(a, mm_setzero_si128())
-    result = mm_slli_epi32(b, 24) # Shift the values to uint32 `a`
+    let mask = mm_set_epi32(0, 0, 0, cast[int32](uint32.high))
+    result = mm_shuffle_epi8(
+      mm_and_si128(v, mask),
+      mm_set_epi8(3, 15, 15, 15, 2, 15, 15, 15, 1, 15, 15, 15, 0, 15, 15, 15)
+    )
