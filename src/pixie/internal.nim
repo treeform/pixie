@@ -273,4 +273,4 @@ when defined(amd64) and allowSimd:
     let
       mask = mm_set_epi32(0, 0, 0, cast[int32](uint32.high))
       control = mm_set_epi8(3, 4, 4, 4, 2, 4, 4, 4, 1, 4, 4, 4, 0, 4, 4, 4)
-    result = mm_shuffle_epi8(mm_and_si128(v, mask), control)
+    mm_shuffle_epi8(mm_and_si128(v, mask), control)
