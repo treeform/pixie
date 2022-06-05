@@ -21,11 +21,12 @@ proc fillMask(
     bounds = computeBounds(segments).snapToPixels()
     startY = max(0, bounds.y.int)
     pathHeight = min(height, (bounds.y + bounds.h).int)
+  var
     partitioning = partitionSegments(segments, startY, pathHeight)
     width = width.float32
 
   var
-    hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
+    hits = newSeq[(int32, int16)](partitioning.maxEntryCount)
     numHits: int
     aa: bool
   for y in startY ..< pathHeight:
@@ -43,8 +44,8 @@ proc fillMask(
     if not aa:
       for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
         let
-          startIndex = result.dataIndex(prevAt.int, y)
-          len = at.int - prevAt.int
+          startIndex = result.dataIndex((prevAt shr 8), y)
+          len = (at shr 8) - (prevAt shr 8)
         fillUnsafe(result.data, 255, startIndex, len)
 
 proc fillMask*(
