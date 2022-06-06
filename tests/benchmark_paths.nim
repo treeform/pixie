@@ -16,23 +16,47 @@ block:
   timeIt "fillOverlaps":
     doAssert path.fillOverlaps(vec2(1, 1)) == false
 
-timeIt "roundedRect image":
-  const radius = 20
+const
+  width = 500
+  height = 300
+  radius = 20
 
-  let path = newPath()
-  path.roundedRect(0.5, 0.5, 499, 299, radius, radius, radius, radius)
-  # path.roundedRect(0, 0, 500, 300, radius, radius, radius, radius)
+let path = newPath()
+path.roundedRect(0.5, 0.5, 499, 299, radius, radius, radius, radius)
+# path.roundedRect(0, 0, 500, 300, radius, radius, radius, radius)
 
-  let image = newImage(500, 300)
-  image.fillPath(path, rgba(0, 0, 0, 255))
+timeIt "roundedRect Image OverwriteBlend":
+  let paint = newPaint(SolidPaint)
+  paint.color = color(0, 0, 0, 1)
+  paint.blendMode = OverwriteBlend
 
+  let image = newImage(width, height)
+  image.fillPath(path, paint)
 
-timeIt "roundedRect mask":
-  const radius = 20
+timeIt "roundedRect Image NormalBlend":
+  let paint = newPaint(SolidPaint)
+  paint.color = color(0, 0, 0, 1)
+  paint.blendMode = NormalBlend
 
-  let path = newPath()
-  path.roundedRect(0.5, 0.5, 499, 299, radius, radius, radius, radius)
-  # path.roundedRect(0, 0, 500, 300, radius, radius, radius, radius)
+  let image = newImage(width, height)
+  image.fillPath(path, paint)
 
-  let mask = newMask(500, 300)
-  mask.fillPath(path)
+timeIt "roundedRect Image MaskBlend":
+  let paint = newPaint(SolidPaint)
+  paint.color = color(0, 0, 0, 1)
+  paint.blendMode = MaskBlend
+
+  let image = newImage(width, height)
+  image.fillPath(path, paint)
+
+timeIt "roundedRect Mask OverwriteBlend":
+  let mask = newMask(width, height)
+  mask.fillPath(path, blendMode = OverwriteBlend)
+
+timeIt "roundedRect Mask NormalBlend":
+  let mask = newMask(width, height)
+  mask.fillPath(path, blendMode = NormalBlend)
+
+timeIt "roundedRect Mask MaskBlend":
+  let mask = newMask(width, height)
+  mask.fillPath(path, blendMode = MaskBlend)
