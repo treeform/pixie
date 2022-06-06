@@ -16,7 +16,7 @@ block:
   timeIt "fillOverlaps":
     doAssert path.fillOverlaps(vec2(1, 1)) == false
 
-timeIt "roundedRect":
+timeIt "roundedRect image":
   const radius = 20
 
   let path = newPath()
@@ -25,3 +25,14 @@ timeIt "roundedRect":
 
   let image = newImage(500, 300)
   image.fillPath(path, rgba(0, 0, 0, 255))
+
+
+timeIt "roundedRect mask":
+  const radius = 20
+
+  let path = newPath()
+  path.roundedRect(0.5, 0.5, 499, 299, radius, radius, radius, radius)
+  # path.roundedRect(0, 0, 500, 300, radius, radius, radius, radius)
+
+  let mask = newMask(500, 300)
+  mask.fillPath(path)
