@@ -264,20 +264,18 @@ proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
       return false
 
 when allowSimd and defined(amd64):
-  proc packAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
-    ## Shuffle the alpha values for these 4 colors to the first 4 bytes
-    let
-      mask = mm_set1_epi32(cast[int32]([0.uint8, 0, 0, uint8.high]))
-      control = mm_set_epi8(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 11, 7, 3)
-    result = mm_and_si128(v, mask)
-    result = mm_shuffle_epi8(result, control)
-
   proc pack4xAlphaValues*(a, b, c, d: M128i): M128i {.inline, raises: [].} =
+    let control = mm_set_epi8(
+      128, 128, 128, 128,
+      128, 128, 128, 128,
+      128, 128, 128, 128,
+      15, 11, 7, 3
+    )
     let
-      a = packAlphaValues(a)
-      b = mm_slli_si128(packAlphaValues(b), 4)
-      c = mm_slli_si128(packAlphaValues(c), 8)
-      d = mm_slli_si128(packAlphaValues(d), 12)
+      a = mm_shuffle_epi8(a, control)
+      b = mm_slli_si128(mm_shuffle_epi8(b, control), 4)
+      c = mm_slli_si128(mm_shuffle_epi8(c, control), 8)
+      d = mm_slli_si128(mm_shuffle_epi8(d, control), 12)
     mm_or_si128(mm_or_si128(a, b), mm_or_si128(c, d))
 
   proc unpackAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
