@@ -598,7 +598,7 @@ when defined(amd64) and allowSimd:
   proc maskNormalSimd(backdrop, source: M128i): M128i =
     maskNormalInlineSimd(backdrop, source)
 
-  proc maskMaskInlineSimd*(backdrop, source: M128i): M128i =
+  proc maskMaskInlineSimd*(backdrop, source: M128i): M128i {.inline.} =
     let
       oddMask = mm_set1_epi16(cast[int16](0xff00))
       div255 = mm_set1_epi16(cast[int16](0x8081))
@@ -608,12 +608,8 @@ when defined(amd64) and allowSimd:
     var
       backdropEven = mm_slli_epi16(backdrop, 8)
       backdropOdd = mm_and_si128(backdrop, oddMask)
-
-    # backdrop * source
     backdropEven = mm_mulhi_epu16(backdropEven, sourceEven)
     backdropOdd = mm_mulhi_epu16(backdropOdd, sourceOdd)
-
-    # div 255
     backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
     backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
 
