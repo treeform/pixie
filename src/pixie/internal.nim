@@ -280,10 +280,13 @@ when allowSimd and defined(amd64):
 
   proc unpackAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
     ## Unpack the first 32 bits into 4 rgba(0, 0, 0, value)
-    let
-      mask = mm_set_epi32(0, 0, 0, cast[int32](uint32.high))
-      control = mm_set_epi8(3, 4, 4, 4, 2, 4, 4, 4, 1, 4, 4, 4, 0, 4, 4, 4)
-    mm_shuffle_epi8(mm_and_si128(v, mask), control)
+    let control = mm_set_epi8(
+      3, 128, 128, 128,
+      2, 128, 128, 128,
+      1, 128, 128, 128,
+      0, 128, 128, 128
+    )
+    mm_shuffle_epi8(v, control)
 
 when defined(release):
   {.pop.}
