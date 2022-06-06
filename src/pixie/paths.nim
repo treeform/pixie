@@ -1443,44 +1443,80 @@ proc fillCoverage(
   blendMode: BlendMode
 ) =
   var x = startX
-  when defined(amd64) and allowSimd:
-    if blendMode.hasSimdMasker():
+
+  template simdBlob(inner: untyped) =
+    when allowSimd:
+      when defined(amd64):
+        for _ in 0 ..< coverages.len div 16:
+          let
+            index {.inject.} = mask.dataIndex(x, y)
+            coverageVec {.inject.} =
+              mm_loadu_si128(coverages[x - startX].unsafeAddr)
+            eqZero = mm_cmpeq_epi8(coverageVec, mm_setzero_si128())
+            allZeroes {.inject.} = mm_movemask_epi8(eqZero) == 0xffff
+          inner
+          x += 16
+
+  template blendBlob(inner: untyped) =
+    for x in x ..< startX + coverages.len:
       let
-        maskerSimd = blendMode.maskerSimd()
-        vecZero = mm_setzero_si128()
-      for _ in 0 ..< coverages.len div 16:
-        let
-          index = mask.dataIndex(x, y)
-          coverageVec = mm_loadu_si128(coverages[x - startX].unsafeAddr)
-        if mm_movemask_epi8(mm_cmpeq_epi16(coverageVec, vecZero)) != 0xffff:
-          # If the coverages are not all zero
-          if blendMode == OverwriteBlend:
-            mm_storeu_si128(mask.data[index].addr, coverageVec)
-          else:
-            let backdrop = mm_loadu_si128(mask.data[index].addr)
-            mm_storeu_si128(
-              mask.data[index].addr,
-              maskerSimd(backdrop, coverageVec)
-            )
-        elif blendMode == MaskBlend:
-          mm_storeu_si128(mask.data[index].addr, vecZero)
-        x += 16
+        index {.inject.} = mask.dataIndex(x, y)
+        coverage {.inject.} = coverages[x - startX]
+      inner
 
-  let masker = blendMode.masker()
-  for x in x ..< startX + coverages.len:
-    let coverage = coverages[x - startX]
-    if coverage != 0 or blendMode == ExcludeMaskBlend:
-      if blendMode == OverwriteBlend:
-        mask.unsafe[x, y] = coverage
+  case blendMode:
+  of OverwriteBlend:
+    copyMem(
+      mask.data[mask.dataIndex(startX, y)].addr,
+      coverages[0].unsafeAddr,
+      coverages.len
+    )
+
+  of NormalBlend:
+    simdBlob:
+      if not allZeroes:
+        let backdrop = mm_loadu_si128(mask.data[index].addr)
+        mm_storeu_si128(
+          mask.data[index].addr,
+          maskNormalInlineSimd(backdrop, coverageVec)
+        )
+
+    blendBlob:
+      if coverage != 0:
+        mask.data[index] = blendAlpha(mask.data[index], coverage)
+
+  of MaskBlend:
+    simdBlob:
+      if not allZeroes:
+        let backdrop = mm_loadu_si128(mask.data[index].addr)
+        mm_storeu_si128(
+          mask.data[index].addr,
+          maskMaskInlineSimd(backdrop, coverageVec)
+        )
       else:
-        let backdrop = mask.unsafe[x, y]
-        mask.unsafe[x, y] = masker(backdrop, coverage)
-    elif blendMode == MaskBlend:
-      mask.unsafe[x, y] = 0
+        mm_storeu_si128(mask.data[index].addr, mm_setzero_si128())
 
-  if blendMode == MaskBlend:
+    blendBlob:
+      if coverage != 0:
+        mask.data[index] = maskMaskInline(mask.data[index], coverage)
+      else:
+        mask.data[index] = 0
+
     mask.clearUnsafe(0, y, startX, y)
     mask.clearUnsafe(startX + coverages.len, y, mask.width, y)
+
+  of SubtractMaskBlend:
+    blendBlob:
+      if coverage != 0:
+        mask.data[index] = maskSubtractInline(mask.data[index], coverage)
+
+  of ExcludeMaskBlend:
+    blendBlob:
+      if coverage != 0:
+        mask.data[index] = maskExcludeInline(mask.data[index], coverage)
+
+  else:
+    failUnsupportedBlendMode(blendMode)
 
 template walkHits(
   hits: seq[(int32, int16)],
