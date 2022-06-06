@@ -393,16 +393,11 @@ proc magnifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
         while x <= image.width - 4:
           let
             values = mm_loadu_si128(image.data[image.dataIndex(x, y)].addr)
-            lo = mm_unpacklo_epi32(values, mm_setzero_si128())
-            hi = mm_unpackhi_epi32(values, mm_setzero_si128())
-          mm_storeu_si128(
-            result.data[result.dataIndex(x * scale + 0, y * scale)].addr,
-            mm_or_si128(lo, mm_slli_si128(lo, 4))
-          )
-          mm_storeu_si128(
-            result.data[result.dataIndex(x * scale + 4, y * scale)].addr,
-            mm_or_si128(hi, mm_slli_si128(hi, 4))
-          )
+            lo = mm_shuffle_epi32(values, MM_SHUFFLE(1, 1, 0, 0))
+            hi = mm_shuffle_epi32(values, MM_SHUFFLE(3, 3, 2, 2))
+            index = result.dataIndex(x * scale + 0, y * scale)
+          mm_storeu_si128(result.data[index + 0].addr, lo)
+          mm_storeu_si128(result.data[index + 4].addr, hi)
           x += 4
     for x in x ..< image.width:
       let
