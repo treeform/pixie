@@ -1567,6 +1567,9 @@ proc fillHits(
       fillUnsafe(mask.data, 255, mask.dataIndex(fillStart, y), fillLen)
       continue
 
+    if blendMode == MaskBlend:
+      continue
+
     var x = fillStart
     when defined(amd64) and allowSimd:
       if blendMode.hasSimdMasker():
