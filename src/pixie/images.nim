@@ -70,7 +70,7 @@ proc dataIndex*(image: Image, x, y: int): int {.inline, raises: [].} =
 template unsafe*(src: Image): UnsafeImage =
   cast[UnsafeImage](src)
 
-template `[]`*(view: UnsafeImage, x, y: int): ColorRGBX =
+template `[]`*(view: UnsafeImage, x, y: int): var ColorRGBX =
   ## Gets a color from (x, y) coordinates.
   ## * No bounds checking *
   ## Make sure that x, y are in bounds.
