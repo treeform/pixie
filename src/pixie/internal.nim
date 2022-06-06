@@ -265,13 +265,13 @@ proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
 
 when allowSimd and defined(amd64):
   proc pack4xAlphaValues*(a, b, c, d: M128i): M128i {.inline, raises: [].} =
-    let control = mm_set_epi8(
-      128, 128, 128, 128,
-      128, 128, 128, 128,
-      128, 128, 128, 128,
-      15, 11, 7, 3
-    )
     let
+      control = mm_set_epi8(
+        128, 128, 128, 128,
+        128, 128, 128, 128,
+        128, 128, 128, 128,
+        15, 11, 7, 3
+      )
       a = mm_shuffle_epi8(a, control)
       b = mm_slli_si128(mm_shuffle_epi8(b, control), 4)
       c = mm_slli_si128(mm_shuffle_epi8(c, control), 8)
