@@ -26,10 +26,10 @@ type
 
   Index = array[indexLen, ColorRGBA]
 
-func hash(p: ColorRGBA): int =
+proc hash(p: ColorRGBA): int =
   (p.r.int * 3 + p.g.int * 5 + p.b.int * 7 + p.a.int * 11) mod indexLen
 
-func newImage*(qoi: Qoi): Image =
+proc newImage*(qoi: Qoi): Image =
   ## Converts raw QOI data to `Image`.
   result = newImage(qoi.width, qoi.height)
   copyMem(result.data[0].addr, qoi.data[0].addr, qoi.data.len * 4)
