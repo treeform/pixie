@@ -400,12 +400,23 @@ proc blendSaturation(backdrop, source: ColorRGBX): ColorRGBX =
     blended = SetLum(SetSat(backdrop, Sat(source)), Lum(backdrop))
   result = alphaFix(backdrop, source, blended).rgba.rgbx()
 
-proc blendMask*(backdrop, source: ColorRGBX): ColorRGBX =
+template blendMaskImpl(backdrop, source: ColorRGBX, blended: var ColorRGBX) =
+  if backdrop.a == 0 or source.a == 255:
+    return
+  if source.a == 0:
+    return rgbx(0, 0, 0, 0)
+
   let k = source.a.uint32
   result.r = ((backdrop.r * k) div 255).uint8
   result.g = ((backdrop.g * k) div 255).uint8
   result.b = ((backdrop.b * k) div 255).uint8
   result.a = ((backdrop.a * k) div 255).uint8
+
+proc blendMaskInline*(backdrop, source: ColorRGBX): ColorRGBX {.inline.} =
+  blendMaskImpl(backdrop, source, result)
+
+proc blendMask*(backdrop, source: ColorRGBX): ColorRGBX =
+  blendMaskImpl(backdrop, source, result)
 
 proc blendSubtractMask(backdrop, source: ColorRGBX): ColorRGBX =
   let a = (backdrop.a.uint32 * (255 - source.a)) div 255

@@ -1510,6 +1510,17 @@ proc fillHits(
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
+  template simdBlob(image: Image, x: var int, blender: untyped) =
+    when allowSimd:
+      when defined(amd64):
+        let colorVec = mm_set1_epi32(cast[int32](rgbx))
+        for _ in 0 ..< fillLen div 4:
+          let
+            index = image.dataIndex(x, y)
+            backdrop = mm_loadu_si128(image.data[index].addr)
+          mm_storeu_si128(image.data[index].addr, blender(backdrop, colorVec))
+          x += 4
+
   case blendMode:
   of OverwriteBlend:
     walkHits hits, numHits, windingRule, y, image.width:
@@ -1521,50 +1532,28 @@ proc fillHits(
         fillUnsafe(image.data, rgbx, image.dataIndex(fillStart, y), fillLen)
       else:
         var x = fillStart
-        when allowSimd:
-          when defined(amd64):
-            let colorVec = mm_set1_epi32(cast[int32](rgbx))
-            for _ in 0 ..< fillLen div 4:
-              let
-                index = image.dataIndex(x, y)
-                backdrop = mm_loadu_si128(image.data[index].addr)
-              mm_storeu_si128(
-                image.data[index].addr,
-                blendNormalInlineSimd(backdrop, colorVec)
-              )
-              x += 4
-
+        simdBlob(image, x, blendNormalInlineSimd)
         for x in x ..< fillStart + fillLen:
           let backdrop = image.unsafe[x, y]
           image.unsafe[x, y] = blendNormalInline(backdrop, rgbx)
 
+  of MaskBlend:
+    walkHits hits, numHits, windingRule, y, image.width:
+      var x = fillStart
+      simdBlob(image, x, blendMaskInlineSimd)
+      for x in x ..< fillStart + fillLen:
+        let backdrop = image.unsafe[x, y]
+        image.unsafe[x, y] = blendMaskInline(backdrop, rgbx)
+
+    image.clearUnsafe(0, y, startX, y)
+    image.clearUnsafe(filledTo, y, image.width, y)
+
   else:
     let blender = blendMode.blender()
     walkHits hits, numHits, windingRule, y, image.width:
-      var x = fillStart
-      when allowSimd:
-        when defined(amd64):
-          if blendMode.hasSimdBlender():
-            let
-              blenderSimd = blendMode.blenderSimd()
-              colorVec = mm_set1_epi32(cast[int32](rgbx))
-            for _ in 0 ..< fillLen div 4:
-              let
-                index = image.dataIndex(x, y)
-                backdrop = mm_loadu_si128(image.data[index].addr)
-              mm_storeu_si128(
-                image.data[index].addr,
-                blenderSimd(backdrop, colorVec)
-              )
-              x += 4
-
-      for x in x ..< fillStart + fillLen:
+      for x in fillStart ..< fillStart + fillLen:
         let backdrop = image.unsafe[x, y]
         image.unsafe[x, y] = blender(backdrop, rgbx)
-
-    if blendMode == MaskBlend:
-      image.clearUnsafe(0, y, startX, y)
-      image.clearUnsafe(filledTo, y, image.width, y)
 
 proc fillHits(
   mask: Mask,
