@@ -235,9 +235,7 @@ proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
   var i = start
   when allowSimd:
     when defined(amd64):
-      let
-        vec255 = mm_set1_epi32(cast[int32](uint32.high))
-        colorMask = mm_set1_epi32(cast[int32]([255.uint8, 255, 255, 0]))
+      let vec255 = mm_set1_epi32(cast[int32](uint32.high))
       for _ in start ..< (start + len) div 16:
         let
           values0 = mm_loadu_si128(data[i + 0].addr)
@@ -246,8 +244,9 @@ proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
           values3 = mm_loadu_si128(data[i + 12].addr)
           values01 = mm_and_si128(values0, values1)
           values23 = mm_and_si128(values2, values3)
-          values = mm_or_si128(mm_and_si128(values01, values23), colorMask)
-        if mm_movemask_epi8(mm_cmpeq_epi8(values, vec255)) != 0xffff:
+          values = mm_and_si128(values01, values23)
+          eq = mm_cmpeq_epi8(values, vec255)
+        if (mm_movemask_epi8(eq) and 0x00008888) != 0x00008888:
           return false
         i += 16
     elif defined(arm64):
