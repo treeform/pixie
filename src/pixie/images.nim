@@ -295,46 +295,33 @@ proc minifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
     for y in 0 ..< resultEvenHeight:
       var x: int
       when defined(amd64) and allowSimd:
-        let
-          oddMask = mm_set1_epi16(cast[int16](0xff00))
-          first32 = cast[M128i]([uint32.high, 0, 0, 0])
+        let oddMask = mm_set1_epi16(cast[int16](0xff00))
         for _ in countup(0, resultEvenWidth - 4, 2):
           let
             top = mm_loadu_si128(src.data[src.dataIndex(x * 2, y * 2 + 0)].addr)
             btm = mm_loadu_si128(src.data[src.dataIndex(x * 2, y * 2 + 1)].addr)
+            topEven = mm_andnot_si128(oddMask, top)
+            topOdd = mm_srli_epi16(top, 8)
+            btmEven = mm_andnot_si128(oddMask, btm)
+            btmOdd = mm_srli_epi16(btm, 8)
             topShifted = mm_srli_si128(top, 4)
             btmShifted = mm_srli_si128(btm, 4)
-
-            topEven = mm_andnot_si128(oddMask, top)
-            topOdd = mm_srli_epi16(mm_and_si128(top, oddMask), 8)
-            btmEven = mm_andnot_si128(oddMask, btm)
-            btmOdd = mm_srli_epi16(mm_and_si128(btm, oddMask), 8)
-
             topShiftedEven = mm_andnot_si128(oddMask, topShifted)
-            topShiftedOdd = mm_srli_epi16(mm_and_si128(topShifted, oddMask), 8)
+            topShiftedOdd = mm_srli_epi16(topShifted, 8)
             btmShiftedEven = mm_andnot_si128(oddMask, btmShifted)
-            btmShiftedOdd = mm_srli_epi16(mm_and_si128(btmShifted, oddMask), 8)
-
+            btmShiftedOdd = mm_srli_epi16(btmShifted, 8)
             topAddedEven = mm_add_epi16(topEven, topShiftedEven)
             btmAddedEven = mm_add_epi16(btmEven, btmShiftedEven)
             topAddedOdd = mm_add_epi16(topOdd, topShiftedOdd)
-            bottomAddedOdd = mm_add_epi16(btmOdd, btmShiftedOdd)
-
+            btmAddedOdd = mm_add_epi16(btmOdd, btmShiftedOdd)
             addedEven = mm_add_epi16(topAddedEven, btmAddedEven)
-            addedOdd = mm_add_epi16(topAddedOdd, bottomAddedOdd)
-
+            addedOdd = mm_add_epi16(topAddedOdd, btmAddedOdd)
             addedEvenDiv4 = mm_srli_epi16(addedEven, 2)
             addedOddDiv4 = mm_srli_epi16(addedOdd, 2)
-
             merged = mm_or_si128(addedEvenDiv4, mm_slli_epi16(addedOddDiv4, 8))
-
             # merged [0, 1, 2, 3] has the correct values for the next two pixels
             # at index 0 and 2 so shift those into position and store
-
-            zero = mm_and_si128(merged, first32)
-            two = mm_and_si128(mm_srli_si128(merged, 8), first32)
-            zeroTwo = mm_or_si128(zero, mm_slli_si128(two, 4))
-
+            zeroTwo = mm_shuffle_epi32(merged, MM_SHUFFLE(0, 0, 2, 0))
           mm_storeu_si128(result.data[result.dataIndex(x, y)].addr, zeroTwo)
           x += 2
 
@@ -344,14 +331,13 @@ proc minifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
           b = src.unsafe[x * 2 + 1, y * 2 + 0]
           c = src.unsafe[x * 2 + 1, y * 2 + 1]
           d = src.unsafe[x * 2 + 0, y * 2 + 1]
-          rgba = rgbx(
+          mixed = rgbx(
             ((a.r.uint32 + b.r + c.r + d.r) div 4).uint8,
             ((a.g.uint32 + b.g + c.g + d.g) div 4).uint8,
             ((a.b.uint32 + b.b + c.b + d.b) div 4).uint8,
             ((a.a.uint32 + b.a + c.a + d.a) div 4).uint8
           )
-
-        result.unsafe[x, y] = rgba
+        result.unsafe[x, y] = mixed
 
       if srcWidthIsOdd:
         let rgbx = mix(
@@ -416,7 +402,9 @@ proc magnifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
 
 proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
   ## Multiplies alpha of the image by opacity.
-  let opacity = round(255 * opacity).uint16
+  let opacity = clamp(round(255 * opacity).uint16, 0, 255)
+  if opacity == 255:
+    return
 
   if opacity == 0:
     when type(target) is Image:
@@ -444,25 +432,17 @@ proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
         let index = i
 
       let values = mm_loadu_si128(target.data[index].addr)
-
       if mm_movemask_epi8(mm_cmpeq_epi16(values, zeroVec)) != 0xffff:
         var
-          valuesEven = mm_slli_epi16(mm_andnot_si128(oddMask, values), 8)
+          valuesEven = mm_slli_epi16(values, 8)
           valuesOdd = mm_and_si128(values, oddMask)
-
-        # values * opacity
         valuesEven = mm_mulhi_epu16(valuesEven, opacityVec)
         valuesOdd = mm_mulhi_epu16(valuesOdd, opacityVec)
-
-        # div 255
         valuesEven = mm_srli_epi16(mm_mulhi_epu16(valuesEven, div255), 7)
         valuesOdd = mm_srli_epi16(mm_mulhi_epu16(valuesOdd, div255), 7)
-
-        valuesOdd = mm_slli_epi16(valuesOdd, 8)
-
         mm_storeu_si128(
           target.data[index].addr,
-          mm_or_si128(valuesEven, valuesOdd)
+          mm_or_si128(valuesEven, mm_slli_epi16(valuesOdd, 8))
         )
 
       i += 16
