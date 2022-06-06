@@ -1536,7 +1536,7 @@ proc fillHits(
 
         for x in x ..< fillStart + fillLen:
           let backdrop = image.unsafe[x, y]
-          image.unsafe[x, y] = blendNormal(backdrop, rgbx)
+          image.unsafe[x, y] = blendNormalInline(backdrop, rgbx)
 
   else:
     let blender = blendMode.blender()

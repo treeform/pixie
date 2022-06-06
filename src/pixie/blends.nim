@@ -140,17 +140,23 @@ proc SetSat(C: Color, s: float32): Color {.inline.} =
   if satC > 0:
     result = (C - min([C.r, C.g, C.b])) * s / satC
 
-proc blendNormal*(backdrop, source: ColorRGBX): ColorRGBX =
+template blendNormalImpl(blackdrop, source: ColorRGBX, blended: var ColorRGBX) =
   if backdrop.a == 0 or source.a == 255:
     return source
   if source.a == 0:
     return backdrop
 
   let k = (255 - source.a.uint32)
-  result.r = source.r + ((backdrop.r.uint32 * k) div 255).uint8
-  result.g = source.g + ((backdrop.g.uint32 * k) div 255).uint8
-  result.b = source.b + ((backdrop.b.uint32 * k) div 255).uint8
-  result.a = blendAlpha(backdrop.a, source.a)
+  blended.r = source.r + ((backdrop.r.uint32 * k) div 255).uint8
+  blended.g = source.g + ((backdrop.g.uint32 * k) div 255).uint8
+  blended.b = source.b + ((backdrop.b.uint32 * k) div 255).uint8
+  blended.a = blendAlpha(backdrop.a, source.a)
+
+proc blendNormalInline*(backdrop, source: ColorRGBX): ColorRGBX {.inline.}  =
+  blendNormalImpl(backdrop, source, result)
+
+proc blendNormal*(backdrop, source: ColorRGBX): ColorRGBX =
+  blendNormalImpl(backdrop, source, result)
 
 proc blendDarken(backdrop, source: ColorRGBX): ColorRGBX =
   proc blend(
