@@ -1191,7 +1191,7 @@ iterator walk(
   numHits: int,
   windingRule: WindingRule,
   y: int,
-  width: float32
+  width: int
 ): (int32, int32, int) =
   var
     i, count: int
@@ -1221,7 +1221,7 @@ iterator walk(
     inc i
 
   when defined(pixieLeakCheck):
-    if prevAt != width.int32 and count != 0:
+    if prevAt != width and count != 0:
       echo "Leak detected: ", count, " @ (", prevAt, ", ", y, ")"
 
 proc computeCoverage(
@@ -1229,7 +1229,7 @@ proc computeCoverage(
   hits: var seq[(int32, int16)],
   numHits: var int,
   aa: var bool,
-  width: float32,
+  width: int,
   y, startX: int,
   partitioning: var Partitioning,
   windingRule: WindingRule
@@ -1250,6 +1250,7 @@ proc computeCoverage(
     sampleCoverage = (255 div quality).uint8
     offset = 1 / quality.float64
     initialOffset = offset / 2 + epsilon
+    widthFloat = width.float32
 
   var yLine = y.float64 + initialOffset - offset
   for m in 0 ..< quality:
@@ -1263,7 +1264,7 @@ proc computeCoverage(
           else:
             (yLine.float32 - entry.b) / entry.m
 
-        hits[numHits] = ((min(x, width) * 256).int32, entry.winding)
+        hits[numHits] = ((min(x, widthFloat) * 256).int32, entry.winding)
         inc numHits
 
     if numHits > 0:
@@ -1491,11 +1492,9 @@ proc fillHits(
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
-  let
-    blender = blendMode.blender()
-    width = image.width.float32
+  let blender = blendMode.blender()
   var filledTo: int
-  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
+  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, image.width):
     let
       fillStart = prevAt shr 8
       fillLen = (at shr 8) - fillStart
@@ -1553,11 +1552,9 @@ proc fillHits(
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
-  let
-    masker = blendMode.masker()
-    width = mask.width.float32
+  let masker = blendMode.masker()
   var filledTo: int
-  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
+  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, mask.width):
     let
       fillStart = prevAt shr 8
       fillLen = (at shr 8) - fillStart
@@ -1635,7 +1632,7 @@ proc fillShapes(
       hits,
       numHits,
       aa,
-      image.width.float32,
+      image.width,
       y,
       startX,
       partitioning,
@@ -1704,7 +1701,7 @@ proc fillShapes(
       hits,
       numHits,
       aa,
-      mask.width.float32,
+      mask.width,
       y,
       startX,
       partitioning,
