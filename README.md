@@ -12,6 +12,8 @@ This library is being actively developed and we'd be happy for you to use it.
 
 ![Github Actions](https://github.com/treeform/pixie/workflows/Github%20Actions/badge.svg)
 
+[API reference](https://nimdocs.com/treeform/pixie)
+
 Features:
 * Typesetting and rasterizing text, including styled rich text via spans.
 * Drawing paths, shapes and curves with even-odd and non-zero windings.
@@ -22,10 +24,6 @@ Features:
 * Complex masking: Subtract, Intersect, Exclude.
 * Complex blends: Darken, Multiply, Color Dodge, Hue, Luminosity... etc.
 * Many operations are SIMD accelerated.
-
-### Documentation
-
-API reference: https://nimdocs.com/treeform/pixie/pixie.html
 
 ### Image file formats
 
