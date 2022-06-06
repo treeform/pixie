@@ -22,28 +22,26 @@ const
   radius = 20
 
 let path = newPath()
-path.roundedRect(0.5, 0.5, 499, 299, radius, radius, radius, radius)
+path.rect(0, 0, 500, 300)
+# path.roundedRect(0.5, 0.5, 499, 299, radius, radius, radius, radius)
 # path.roundedRect(0, 0, 500, 300, radius, radius, radius, radius)
 
+let paint = newPaint(SolidPaint)
+paint.color = color(0, 0, 0, 0.5)
+
 timeIt "roundedRect Image OverwriteBlend":
-  let paint = newPaint(SolidPaint)
-  paint.color = color(0, 0, 0, 1)
   paint.blendMode = OverwriteBlend
 
   let image = newImage(width, height)
   image.fillPath(path, paint)
 
 timeIt "roundedRect Image NormalBlend":
-  let paint = newPaint(SolidPaint)
-  paint.color = color(0, 0, 0, 1)
   paint.blendMode = NormalBlend
 
   let image = newImage(width, height)
   image.fillPath(path, paint)
 
 timeIt "roundedRect Image MaskBlend":
-  let paint = newPaint(SolidPaint)
-  paint.color = color(0, 0, 0, 1)
   paint.blendMode = MaskBlend
 
   let image = newImage(width, height)
