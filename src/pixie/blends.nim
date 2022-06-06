@@ -476,11 +476,17 @@ proc maskMaskInline*(backdrop, source: uint8): uint8 {.inline.} =
 proc maskMask(backdrop, source: uint8): uint8 =
   maskMaskInline(backdrop, source)
 
-proc maskSubtract(backdrop, source: uint8): uint8 =
+proc maskSubtractInline*(backdrop, source: uint8): uint8 {.inline.} =
   ((backdrop.uint32 * (255 - source)) div 255).uint8
 
-proc maskExclude(backdrop, source: uint8): uint8 =
+proc maskSubtract(backdrop, source: uint8): uint8 =
+  maskSubtractInline(backdrop, source)
+
+proc maskExcludeInline*(backdrop, source: uint8): uint8 {.inline.} =
   max(backdrop, source) - min(backdrop, source)
+
+proc maskExclude(backdrop, source: uint8): uint8 =
+  maskExcludeInline(backdrop, source)
 
 proc maskOverwrite(backdrop, source: uint8): uint8 =
   source

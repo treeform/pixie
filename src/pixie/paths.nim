@@ -1521,6 +1521,11 @@ proc fillHits(
           mm_storeu_si128(image.data[index].addr, blender(backdrop, colorVec))
           x += 4
 
+  template blendBlob(image: Image, startX: int, blender: untyped) =
+    for x in startX ..< fillStart + fillLen:
+      let backdrop = image.unsafe[x, y]
+      image.unsafe[x, y] = blender(backdrop, rgbx)
+
   case blendMode:
   of OverwriteBlend:
     walkHits hits, numHits, windingRule, y, image.width:
@@ -1533,17 +1538,13 @@ proc fillHits(
       else:
         var x = fillStart
         simdBlob(image, x, blendNormalInlineSimd)
-        for x in x ..< fillStart + fillLen:
-          let backdrop = image.unsafe[x, y]
-          image.unsafe[x, y] = blendNormalInline(backdrop, rgbx)
+        blendBlob(image, x, blendNormalInline)
 
   of MaskBlend:
     walkHits hits, numHits, windingRule, y, image.width:
       var x = fillStart
       simdBlob(image, x, blendMaskInlineSimd)
-      for x in x ..< fillStart + fillLen:
-        let backdrop = image.unsafe[x, y]
-        image.unsafe[x, y] = blendMaskInline(backdrop, rgbx)
+      blendBlob(image, x, blendMaskInline)
 
     image.clearUnsafe(0, y, startX, y)
     image.clearUnsafe(filledTo, y, image.width, y)
@@ -1563,6 +1564,12 @@ proc fillHits(
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
+  template blendBlob(mask: Mask, blender: untyped) =
+    walkHits hits, numHits, windingRule, y, mask.width:
+      for x in 0 ..< fillStart + fillLen:
+        let backdrop = mask.unsafe[x, y]
+        mask.unsafe[x, y] = blender(backdrop, 255)
+
   case blendMode:
   of NormalBlend, OverwriteBlend:
     walkHits hits, numHits, windingRule, y, mask.width:
@@ -1575,12 +1582,14 @@ proc fillHits(
     mask.clearUnsafe(0, y, startX, y)
     mask.clearUnsafe(filledTo, y, mask.width, y)
 
+  of SubtractMaskBlend:
+    blendBlob(mask, maskSubtractInline)
+
+  of ExcludeMaskBlend:
+    blendBlob(mask, maskExcludeInline)
+
   else:
-    let masker = blendMode.masker()
-    walkHits hits, numHits, windingRule, y, mask.width:
-      for x in 0 ..< fillStart + fillLen:
-        let backdrop = mask.unsafe[x, y]
-        mask.unsafe[x, y] = masker(backdrop, 255)
+    failUnsupportedBlendMode(blendMode)
 
 proc fillShapes(
   image: Image,

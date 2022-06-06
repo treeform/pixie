@@ -1,4 +1,4 @@
-import chroma, system/memory, vmath
+import chroma, common, system/memory, vmath
 
 const allowSimd* = not defined(pixieNoSimd) and not defined(tcc)
 
@@ -12,6 +12,12 @@ template currentExceptionAsPixieError*(): untyped =
   ## Gets the current exception and returns it as a PixieError with stack trace.
   let e = getCurrentException()
   newException(PixieError, e.getStackTrace & e.msg, e)
+
+template failUnsupportedBlendMode*(blendMode: BlendMode) =
+  raise newException(
+    PixieError,
+    "Blend mode " & $blendMode & " not supported here"
+  )
 
 when defined(release):
   {.push checks: off.}

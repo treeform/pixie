@@ -60,3 +60,13 @@ timeIt "roundedRect Mask MaskBlend":
   let mask = newMask(width, height)
   mask.fill(255)
   mask.fillPath(path, blendMode = MaskBlend)
+
+timeIt "roundedRect Mask SubtractMaskBlend":
+  let mask = newMask(width, height)
+  mask.fill(255)
+  mask.fillPath(path, blendMode = SubtractMaskBlend)
+
+timeIt "roundedRect Mask ExcludeMaskBlend":
+  let mask = newMask(width, height)
+  mask.fill(255)
+  mask.fillPath(path, blendMode = ExcludeMaskBlend)
