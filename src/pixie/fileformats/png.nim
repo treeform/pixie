@@ -27,7 +27,9 @@ template failInvalid() =
 when defined(release):
   {.push checks: off.}
 
-proc decodeHeader(data: string): PngHeader =
+proc decodeHeader(data: pointer): PngHeader =
+  let data = cast[ptr UncheckedArray[uint8]](data)
+
   result.width = data.readUint32(0).swap().int
   result.height = data.readUint32(4).swap().int
   result.bitDepth = data.readUint8(8)
@@ -81,13 +83,14 @@ proc decodeHeader(data: string): PngHeader =
   if result.interlaceMethod != 0:
     raise newException(PixieError, "Interlaced PNG not supported yet")
 
-proc decodePalette(data: string): seq[ColorRGB] =
-  if data.len == 0 or data.len mod 3 != 0:
+proc decodePalette(data: pointer, len: int): seq[ColorRGB] =
+  if len == 0 or len mod 3 != 0:
     failInvalid()
 
-  result.setLen(data.len div 3)
+  let data = cast[ptr UncheckedArray[uint8]](data)
 
-  for i in 0 ..< data.len div 3:
+  result.setLen(len div 3)
+  for i in 0 ..< len div 3:
     result[i] = cast[ptr ColorRGB](data[i * 3].unsafeAddr)[]
 
 proc unfilter(
@@ -163,7 +166,8 @@ proc unfilter(
       discard # Not possible, parseHeader validates
 
 proc decodeImageData(
-  data: string,
+  data: pointer,
+  len: int,
   header: PngHeader,
   palette: seq[ColorRGB],
   transparency: string,
@@ -171,6 +175,8 @@ proc decodeImageData(
 ): seq[ColorRGBA] =
   if idats.len == 0:
     failInvalid()
+
+  let data = cast[ptr UncheckedArray[uint8]](data)
 
   result.setLen(header.width * header.height)
 
@@ -181,7 +187,7 @@ proc decodeImageData(
         for (start, len) in idats:
           let op = imageData.len
           imageData.setLen(imageData.len + len)
-          copyMem(imageData[op].addr, data[start].unsafeAddr, len)
+          copyMem(imageData[op].addr, data[start].addr, len)
         try: uncompress(imageData) except ZippyError: failInvalid()
       else:
         let
@@ -340,10 +346,11 @@ proc newImage*(png: Png): Image {.raises: [PixieError].} =
   copyMem(result.data[0].addr, png.data[0].addr, png.data.len * 4)
   result.data.toPremultipliedAlpha()
 
-proc decodePng*(data: string): Png {.raises: [PixieError].} =
-  ## Decodes the PNG data.
-  if data.len < (8 + (8 + 13 + 4) + 4): # Magic bytes + IHDR + IEND
+proc decodePng*(data: pointer, len: int): Png {.raises: [PixieError].} =
+  if len < (8 + (8 + 13 + 4) + 4): # Magic bytes + IHDR + IEND
     failInvalid()
+
+  let data = cast[ptr UncheckedArray[uint8]](data)
 
   # PNG file signature
   let signature = cast[array[8, uint8]](data.readUint64(0))
@@ -364,7 +371,7 @@ proc decodePng*(data: string): Png {.raises: [PixieError].} =
     data.readStr(pos + 4, 4) != "IHDR":
     failInvalid()
   inc(pos, 8)
-  header = decodeHeader(data[pos ..< pos + 13])
+  header = decodeHeader(data[pos].addr)
   prevChunkType = "IHDR"
   inc(pos, 13)
 
@@ -373,7 +380,7 @@ proc decodePng*(data: string): Png {.raises: [PixieError].} =
   inc(pos, 4) # CRC
 
   while true:
-    if pos + 8 > data.len:
+    if pos + 8 > len:
       failInvalid()
 
     let
@@ -384,7 +391,7 @@ proc decodePng*(data: string): Png {.raises: [PixieError].} =
     if chunkLen > high(int32).int:
       failInvalid()
 
-    if pos + chunkLen + 4 > data.len:
+    if pos + chunkLen + 4 > len:
       failInvalid()
 
     case chunkType:
@@ -394,12 +401,12 @@ proc decodePng*(data: string): Png {.raises: [PixieError].} =
       inc counts.PLTE
       if counts.PLTE > 1 or counts.IDAT > 0 or counts.tRNS > 0:
         failInvalid()
-      palette = decodePalette(data[pos ..< pos + chunkLen])
+      palette = decodePalette(data[pos].addr, chunkLen)
     of "tRNS":
       inc counts.tRNS
       if counts.tRNS > 1 or counts.IDAT > 0:
         failInvalid()
-      transparency = data[pos ..< pos + chunkLen]
+      transparency = data.readStr(pos, chunkLen)
       case header.colorType:
       of 0:
         if transparency.len != 2:
@@ -436,7 +443,7 @@ proc decodePng*(data: string): Png {.raises: [PixieError].} =
 
     prevChunkType = chunkType
 
-    if pos == data.len or prevChunkType == "IEND":
+    if pos == len or prevChunkType == "IEND":
       break
 
   if prevChunkType != "IEND":
@@ -446,7 +453,11 @@ proc decodePng*(data: string): Png {.raises: [PixieError].} =
   result.width = header.width
   result.height = header.height
   result.channels = 4
-  result.data = decodeImageData(data, header, palette, transparency, idats)
+  result.data = decodeImageData(data, len, header, palette, transparency, idats)
+
+proc decodePng*(data: string): Png {.raises: [PixieError].} =
+  ## Decodes the PNG data.
+  decodePng(data.cstring, data.len)
 
 proc encodePng*(
   width, height, channels: int, data: pointer, len: int
