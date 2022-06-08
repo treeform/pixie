@@ -382,6 +382,8 @@ proc magnifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
 proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
   ## Multiplies alpha of the image by opacity.
   let opacity = round(255 * opacity).uint16
+  if opacity == 255:
+    return
 
   if opacity == 0:
     when type(target) is Image:
