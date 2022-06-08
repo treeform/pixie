@@ -90,7 +90,7 @@ proc decodePalette(data: string): seq[ColorRGB] =
   result.setLen(data.len div 3)
 
   for i in 0 ..< data.len div 3:
-    result[i] = cast[ptr ColorRGB](data[i * 3].unsafeAddr)[]
+    copyMem(result[i].addr, data[i * 3].unsafeAddr, 3)
 
 proc unfilter(
   uncompressed: string, height, rowBytes, bpp: int
@@ -262,21 +262,20 @@ proc decodeImageData(
 
       # While we can read an extra byte safely, do so. Much faster.
       for i in 0 ..< header.height * header.width - 1:
-        var rgba = cast[ptr ColorRGBA](unfiltered[i * 3].unsafeAddr)[]
-        rgba.a = 255
-        if rgba == special:
-          rgba.a = 0
-        result[i] = rgba
+        copyMem(result[i].addr, unfiltered[i * 3].unsafeAddr, 4)
+        result[i].a = 255
+        if result[i] == special:
+          result[i].a = 0
     else:
       # While we can read an extra byte safely, do so. Much faster.
+      # var rgba: ColorRGBA
       for i in 0 ..< header.height * header.width - 1:
-        var rgba = cast[ptr ColorRGBA](unfiltered[i * 3].unsafeAddr)[]
-        rgba.a = 255
-        result[i] = rgba
+        copyMem(result[i].addr, unfiltered[i * 3].unsafeAddr, 4)
+        result[i].a = 255
 
-    let
-      lastOffset = header.height * header.width - 1
-      rgb = cast[ptr array[3, uint8]](unfiltered[lastOffset * 3].unsafeAddr)[]
+    let lastOffset = header.height * header.width - 1
+    var rgb: array[3, uint8]
+    copyMem(rgb.addr, unfiltered[lastOffset * 3].unsafeAddr, 3)
     var rgba = ColorRGBA(r: rgb[0], g: rgb[1], b: rgb[2], a: 255)
     if rgba == special:
       rgba.a = 0
