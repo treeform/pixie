@@ -304,14 +304,13 @@ proc minifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
           b = src.unsafe[x * 2 + 1, y * 2 + 0]
           c = src.unsafe[x * 2 + 1, y * 2 + 1]
           d = src.unsafe[x * 2 + 0, y * 2 + 1]
-          rgba = rgbx(
+          mixed = rgbx(
             ((a.r.uint32 + b.r + c.r + d.r) div 4).uint8,
             ((a.g.uint32 + b.g + c.g + d.g) div 4).uint8,
             ((a.b.uint32 + b.b + c.b + d.b) div 4).uint8,
             ((a.a.uint32 + b.a + c.a + d.a) div 4).uint8
           )
-
-        result.unsafe[x, y] = rgba
+        result.unsafe[x, y] = mixed
 
       if srcWidthIsOdd:
         let rgbx = mix(
