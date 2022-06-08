@@ -435,12 +435,12 @@ proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
 
   when type(target) is Image:
     for j in i div 4 ..< target.data.len:
-      var rgba = target.data[j]
-      rgba.r = ((rgba.r * opacity) div 255).uint8
-      rgba.g = ((rgba.g * opacity) div 255).uint8
-      rgba.b = ((rgba.b * opacity) div 255).uint8
-      rgba.a = ((rgba.a * opacity) div 255).uint8
-      target.data[j] = rgba
+      var rgbx = target.data[j]
+      rgbx.r = ((rgbx.r * opacity) div 255).uint8
+      rgbx.g = ((rgbx.g * opacity) div 255).uint8
+      rgbx.b = ((rgbx.b * opacity) div 255).uint8
+      rgbx.a = ((rgbx.a * opacity) div 255).uint8
+      target.data[j] = rgbx
   else:
     for j in i ..< target.data.len:
       target.data[j] = ((target.data[j] * opacity) div 255).uint8
