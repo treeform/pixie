@@ -1180,6 +1180,21 @@ proc resize*(srcImage: Image, width, height: int): Image {.raises: [PixieError].
       OverwriteBlend
     )
 
+proc resize*(srcMask: Mask, width, height: int): Mask {.raises: [PixieError].} =
+  ## Resize a mask to a given height and width.
+  if width == srcMask.width and height == srcMask.height:
+    result = srcMask.copy()
+  else:
+    result = newMask(width, height)
+    result.draw(
+      srcMask,
+      scale(vec2(
+        width.float32 / srcMask.width.float32,
+        height.float32 / srcMask.height.float32
+      )),
+      OverwriteBlend
+    )
+
 proc shadow*(
   image: Image, offset: Vec2, spread, blur: float32, color: SomeColor
 ): Image {.raises: [PixieError].} =
