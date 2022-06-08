@@ -1,6 +1,6 @@
 import common, internal, vmath
 
-when defined(amd64) and not defined(pixieNoSimd):
+when defined(amd64) and allowSimd:
   import nimsimd/sse2
 
 type
@@ -87,7 +87,7 @@ proc minifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
     result = newMask(src.width div 2, src.height div 2)
     for y in 0 ..< result.height:
       var x: int
-      when defined(amd64) and not defined(pixieNoSimd):
+      when defined(amd64) and allowSimd:
         let
           oddMask = mm_set1_epi16(cast[int16](0xff00))
           firstByte = cast[M128i](
@@ -169,7 +169,7 @@ proc magnifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
   for y in 0 ..< mask.height:
     # Write one row of values duplicated by scale
     var x: int
-    when defined(amd64) and not defined(pixieNoSimd):
+    when defined(amd64) and allowSimd:
       if scale == 2:
         while x <= mask.width - 16:
           let
@@ -236,7 +236,7 @@ proc getValueSmooth*(mask: Mask, x, y: float32): uint8 {.raises: [].} =
 proc invert*(mask: Mask) {.raises: [].} =
   ## Inverts all of the values - creates a negative of the mask.
   var i: int
-  when defined(amd64) and not defined(pixieNoSimd):
+  when defined(amd64) and allowSimd:
     let vec255 = mm_set1_epi8(cast[int8](255))
     let byteLen = mask.data.len
     for _ in 0 ..< byteLen div 16:
@@ -312,7 +312,7 @@ proc spread*(mask: Mask, spread: float32) {.raises: [PixieError].} =
 proc ceil*(mask: Mask) {.raises: [].} =
   ## A value of 0 stays 0. Anything else turns into 255.
   var i: int
-  when defined(amd64) and not defined(pixieNoSimd):
+  when defined(amd64) and allowSimd:
     let
       zeroVec = mm_setzero_si128()
       vec255 = mm_set1_epi32(cast[int32](uint32.high))

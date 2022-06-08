@@ -29,5 +29,8 @@ for file in files:
   doDiff(readImage(&"tests/fileformats/svg/{file}.svg"), file)
 
 block:
-  let svg = parseSvg(readFile("tests/fileformats/svg/accessibility-outline.svg"), 512, 512)
+  let svg = parseSvg(
+    readFile("tests/fileformats/svg/accessibility-outline.svg"),
+    512, 512
+  )
   doDiff(newImage(svg), "accessibility-outline")

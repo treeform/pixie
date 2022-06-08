@@ -156,6 +156,7 @@ exportRefObject Mask:
     applyOpacity(Mask, float32)
     invert(Mask)
     blur(Mask, float32, uint8)
+    resize(Mask, int, int)
     draw(Mask, Mask, Mat3, BlendMode)
     draw(Mask, Image, Mat3, BlendMode)
     fillText(Mask, Font, string, Mat3, Vec2, HorizontalAlignment, VerticalAlignment)

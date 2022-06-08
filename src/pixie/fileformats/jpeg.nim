@@ -1,7 +1,7 @@
-import pixie/common, pixie/images, pixie/masks, sequtils, strutils, chroma,
-    std/decls, flatty/binny
+import chroma, flatty/binny, pixie/common, pixie/images, pixie/internal,
+    pixie/masks, sequtils, std/decls, strutils
 
-when defined(amd64) and not defined(pixieNoSimd):
+when defined(amd64) and allowSimd:
   import nimsimd/sse2
 
 # This JPEG decoder is loosely based on stb_image which is public domain.
@@ -649,7 +649,7 @@ proc decodeProgressiveContinuationBlock(
         data[zig] = cast[int16](state.receiveExtend(s.int) * (1 shl shift))
 
   else:
-    var bit = 1 shl state.successiveApproxLow
+    let bit = 1 shl state.successiveApproxLow
 
     if state.eobRun != 0:
       dec state.eobRun
@@ -681,9 +681,9 @@ proc decodeProgressiveContinuationBlock(
           if s != 1:
             failInvalid("bad huffman code")
           if state.readBit() != 0:
-            s = bit.int
+            s = bit
           else:
-            s = -bit.int
+            s = -bit
 
         while k <= state.spectralEnd:
           let zig = deZigZag[k]
@@ -881,7 +881,7 @@ proc quantizationAndIDCTPass(state: var DecoderState) =
       for row in 0 ..< w:
         var data {.byaddr.} = state.components[comp].blocks[row][column]
 
-        when defined(amd64) and not defined(pixieNoSimd):
+        when defined(amd64) and allowSimd:
           for i in 0 ..< 8: # 8 per pass
             var q = mm_loadu_si128(state.quantizationTables[qTableId][i * 8].addr)
             q = mm_unpacklo_epi8(q, mm_setzero_si128())
@@ -906,13 +906,17 @@ proc magnifyXBy2(mask: Mask): Mask =
       let n = 3 * mask.unsafe[x, y].uint16
       if x == 0:
         result.unsafe[x * 2 + 0, y] = mask.unsafe[x, y]
-        result.unsafe[x * 2 + 1, y] = ((n + mask.unsafe[x + 1, y].uint16 + 2) div 4).uint8
+        result.unsafe[x * 2 + 1, y] =
+          ((n + mask.unsafe[x + 1, y].uint16 + 2) div 4).uint8
       elif x == mask.width - 1:
-        result.unsafe[x * 2 + 0, y] = ((n + mask.unsafe[x - 1, y].uint16 + 2) div 4).uint8
+        result.unsafe[x * 2 + 0, y] =
+          ((n + mask.unsafe[x - 1, y].uint16 + 2) div 4).uint8
         result.unsafe[x * 2 + 1, y] = mask.unsafe[x, y]
       else:
-        result.unsafe[x * 2 + 0, y] = ((n + mask.unsafe[x - 1, y].uint16) div 4).uint8
-        result.unsafe[x * 2 + 1, y] = ((n + mask.unsafe[x + 1, y].uint16) div 4).uint8
+        result.unsafe[x * 2 + 0, y] =
+          ((n + mask.unsafe[x - 1, y].uint16) div 4).uint8
+        result.unsafe[x * 2 + 1, y] =
+          ((n + mask.unsafe[x + 1, y].uint16) div 4).uint8
 
 proc magnifyYBy2(mask: Mask): Mask =
   ## Smooth magnify by power of 2 only in the Y direction.
@@ -922,13 +926,17 @@ proc magnifyYBy2(mask: Mask): Mask =
       let n = 3 * mask.unsafe[x, y].uint16
       if y == 0:
         result.unsafe[x, y * 2 + 0] = mask.unsafe[x, y]
-        result.unsafe[x, y * 2 + 1] = ((n + mask.unsafe[x, y + 1].uint16 + 2) div 4).uint8
+        result.unsafe[x, y * 2 + 1] =
+          ((n + mask.unsafe[x, y + 1].uint16 + 2) div 4).uint8
       elif y == mask.height - 1:
-        result.unsafe[x, y * 2 + 0] = ((n + mask.unsafe[x, y - 1].uint16 + 2) div 4).uint8
+        result.unsafe[x, y * 2 + 0] =
+          ((n + mask.unsafe[x, y - 1].uint16 + 2) div 4).uint8
         result.unsafe[x, y * 2 + 1] = mask.unsafe[x, y]
       else:
-        result.unsafe[x, y * 2 + 0] = ((n + mask.unsafe[x, y - 1].uint16) div 4).uint8
-        result.unsafe[x, y * 2 + 1] = ((n + mask.unsafe[x, y + 1].uint16) div 4).uint8
+        result.unsafe[x, y * 2 + 0] =
+          ((n + mask.unsafe[x, y - 1].uint16) div 4).uint8
+        result.unsafe[x, y * 2 + 1] =
+          ((n + mask.unsafe[x, y + 1].uint16) div 4).uint8
 
 proc yCbCrToRgbx(py, pcb, pcr: uint8): ColorRGBX =
   ## Takes a 3 component yCbCr outputs and populates image.

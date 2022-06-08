@@ -5,38 +5,42 @@ let
   filePath = "tests/fileformats/png/lenna.png"
   data = readFile(filePath)
 
-timeIt "pixie decode":
-  keep decodePngRaw(data)
+block:
+  let
+    decodedPng = decodePng(data)
+    decodedImage = newImage(decodedPng)
 
-timeIt "pixie encode":
-  let decoded = decodePngRaw(data)
-  keep encodePng(decoded).len
+  timeIt "pixie decode":
+    discard decodePng(data)
 
-timeIt "pixie decode + alpha":
-  keep decodePng(data)
+  timeIt "pixie encode":
+    discard encodePng(decodedPng)
 
-timeIt "pixie encode + alpha":
-  let decoded = decodePng(data)
-  keep encodePng(decoded).len
+  timeIt "pixie decode + alpha":
+    discard newImage(decodePng(data))
 
-timeIt "nimPNG decode":
-  keep decodePNG32(data)
+  timeIt "pixie encode + alpha":
+    discard encodePng(decodedImage)
 
-timeIt "nimPNG encode":
+block:
+  timeIt "nimPNG decode":
+    discard decodePNG32(data)
+
   let decoded = decodePNG32(data)
-  keep encodePNG32(decoded.data, decoded.width, decoded.height).pixels.len
+  timeIt "nimPNG encode":
+    discard encodePNG32(decoded.data, decoded.width, decoded.height)
 
-timeIt "stb_image decode":
-  var width, height, channels: int
-  keep loadFromMemory(
-    cast[seq[byte]](data),
-    width,
-    height,
-    channels,
-    stbi.RGBA
-  )
+block:
+  timeIt "stb_image decode":
+    var width, height, channels: int
+    discard loadFromMemory(
+      cast[seq[byte]](data),
+      width,
+      height,
+      channels,
+      stbi.RGBA
+    )
 
-timeIt "stb_image encode":
   var width, height, channels: int
   let decoded = loadFromMemory(
     cast[seq[byte]](data),
@@ -45,16 +49,17 @@ timeIt "stb_image encode":
     channels,
     stbi.RGBA
   )
-  keep writePNG(width, height, channels, decoded).len
 
-timeIt "cairo decode":
-  keep imageSurfaceCreateFromPng(filePath)
+  timeIt "stb_image encode":
+    discard writePNG(width, height, channels, decoded).len
 
-timeIt "cairo encode":
+block:
+  timeIt "cairo decode":
+    discard imageSurfaceCreateFromPng(filePath)
+
   let decoded = imageSurfaceCreateFromPng(filePath)
-
-  var write: WriteFunc =
-    proc(closure: pointer, data: cstring, len: int32): Status {.cdecl.} =
-      StatusSuccess
-
-  discard decoded.writeToPng(write, nil)
+  timeIt "cairo encode":
+    var write: WriteFunc =
+      proc(closure: pointer, data: cstring, len: int32): Status {.cdecl.} =
+        StatusSuccess
+    discard decoded.writeToPng(write, nil)

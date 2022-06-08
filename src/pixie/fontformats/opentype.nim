@@ -1,5 +1,5 @@
 import flatty/binny, flatty/encode, math, pixie/common, pixie/paths, sets,
-  strutils, tables, unicode, vmath
+    strutils, tables, unicode, vmath
 
 ## See https://docs.microsoft.com/en-us/typography/opentype/spec/
 
@@ -663,7 +663,7 @@ proc parseNameTable(buf: string, offset: int): NameTable =
     if record.platformID == 3 and
       record.encodingID == 1 and
       record.languageID == 1033:
-        record.text = fromUTF16BE(record.text)
+      record.text = fromUTF16BE(record.text)
 
     record.text = record.text
     result.nameRecords.add(record)
