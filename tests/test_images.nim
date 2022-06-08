@@ -204,6 +204,17 @@ block:
   doAssert not image.isTransparent()
 
 block:
+  let image = newImage(100, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  doAssert image.isOpaque()
+
+block:
+  let image = newImage(100, 100)
+  image.fill(rgba(255, 255, 255, 255))
+  image[9, 13] = rgbx(250, 250, 250, 250)
+  doAssert not image.isOpaque()
+
+block:
   let a = newImage(400, 400)
   let b = newImage(156, 434)
   b.fill(rgba(255, 0, 0, 255))
