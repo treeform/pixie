@@ -45,6 +45,7 @@ timeIt "roundedRect Image MaskBlend":
   paint.blendMode = MaskBlend
 
   let image = newImage(width, height)
+  image.fill(rgbx(255, 255, 255, 255))
   image.fillPath(path, paint)
 
 timeIt "roundedRect Mask OverwriteBlend":
@@ -57,4 +58,15 @@ timeIt "roundedRect Mask NormalBlend":
 
 timeIt "roundedRect Mask MaskBlend":
   let mask = newMask(width, height)
+  mask.fill(255)
   mask.fillPath(path, blendMode = MaskBlend)
+
+timeIt "roundedRect Mask SubtractMaskBlend":
+  let mask = newMask(width, height)
+  mask.fill(255)
+  mask.fillPath(path, blendMode = SubtractMaskBlend)
+
+timeIt "roundedRect Mask ExcludeMaskBlend":
+  let mask = newMask(width, height)
+  mask.fill(255)
+  mask.fillPath(path, blendMode = ExcludeMaskBlend)
