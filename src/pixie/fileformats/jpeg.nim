@@ -68,6 +68,7 @@ type
     len, pos: int
     bitsBuffered: int
     bitBuffer: uint32
+    foundSOF: bool
     imageHeight, imageWidth: int
     progressive: bool
     quantizationTables: array[4, array[64, uint8]]
@@ -243,6 +244,10 @@ proc decodeDHT(state: var DecoderState) =
 
 proc decodeSOF0(state: var DecoderState) =
   ## Decode start of Frame
+  if state.foundSOF:
+    failInvalid()
+  state.foundSOF = true
+
   var len = state.readUint16be().int - 2
 
   let precision = state.readUint8()
