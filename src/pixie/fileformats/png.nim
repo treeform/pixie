@@ -341,6 +341,26 @@ proc newImage*(png: Png): Image {.raises: [PixieError].} =
   copyMem(result.data[0].addr, png.data[0].addr, png.data.len * 4)
   result.data.toPremultipliedAlpha()
 
+proc decodePngDimensions*(
+  data: string
+): ImageDimensions {.raises: [PixieError].} =
+  ## Decodes the PNG dimensions.
+  if data.len < (8 + (8 + 13 + 4) + 4): # Magic bytes + IHDR + IEND
+    failInvalid()
+
+  # PNG file signature
+  let signature = cast[array[8, uint8]](data.readUint64(0))
+  if signature != pngSignature:
+    failInvalid()
+
+  # First chunk must be IHDR
+  if data.readUint32(8).swap() != 13 or data.readStr(12, 4) != "IHDR":
+    failInvalid()
+
+  let header = decodeHeader(data[16 ..< 16 + 13])
+  result.width = header.width
+  result.height = header.height
+
 proc decodePng*(data: string): Png {.raises: [PixieError].} =
   ## Decodes the PNG data.
   if data.len < (8 + (8 + 13 + 4) + 4): # Magic bytes + IHDR + IEND

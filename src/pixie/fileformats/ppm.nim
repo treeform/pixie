@@ -135,6 +135,14 @@ proc decodePpm*(data: string): Image {.raises: [PixieError].} =
     else:
       decodeP6Data(data[header.dataOffset .. ^1], header.maxVal)
 
+proc decodePpmDimensions*(
+  data: string
+): ImageDimensions {.raises: [PixieError].} =
+  ## Decodes the PPM dimensions.
+  let header = decodeHeader(data)
+  result.width = header.width
+  result.height = header.height
+
 proc encodePpm*(image: Image): string {.raises: [].} =
   ## Encodes an image into the PPM file format (version P6).
 

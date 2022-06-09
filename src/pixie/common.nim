@@ -28,6 +28,9 @@ type
     SubtractMaskBlend ## Inverse mask
     ExcludeMaskBlend
 
+  ImageDimensions* = object
+    width*, height*: int
+
 proc mix*(a, b: uint8, t: float32): uint8 {.inline, raises: [].} =
   ## Linearly interpolate between a and b using t.
   let t = round(t * 255).uint32

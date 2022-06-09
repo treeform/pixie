@@ -227,6 +227,21 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
 
   decodeDib(data[14].unsafeAddr, data.len - 14)
 
+proc decodeBmpDimensions*(
+  data: string
+): ImageDimensions {.raises: [PixieError].} =
+  ## Decodes the BMP dimensions.
+
+  if data.len < 26:
+    failInvalid()
+
+  # BMP Header
+  if data[0 .. 1] != "BM":
+    failInvalid()
+
+  result.width = data.readInt32(18).int
+  result.height = abs(data.readInt32(22)).int
+
 proc encodeBmp*(image: Image): string {.raises: [].} =
   ## Encodes an image into the BMP file format.
 

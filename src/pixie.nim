@@ -18,6 +18,25 @@ converter autoPremultipliedAlpha*(c: ColorRGBA): ColorRGBX {.inline, raises: [].
   ## Convert a straight alpha RGBA to a premultiplied alpha RGBA.
   c.rgbx()
 
+proc decodeImageDimensions*(
+  data: string
+): ImageDimensions {.raises: [PixieError].} =
+  ## Decodes an image's dimensions from memory.
+  if data.len > 8 and data.readUint64(0) == cast[uint64](pngSignature):
+    decodePngDimensions(data)
+  elif data.len > 2 and data.readUint16(0) == cast[uint16](jpegStartOfImage):
+    decodeJpegDimensions(data)
+  elif data.len > 2 and data.readStr(0, 2) == bmpSignature:
+    decodeBmpDimensions(data)
+  elif data.len > 6 and data.readStr(0, 6) in gifSignatures:
+    decodeGifDimensions(data)
+  elif data.len > (14+8) and data.readStr(0, 4) == qoiSignature:
+    decodeQoiDimensions(data)
+  elif data.len > 9 and data.readStr(0, 2) in ppmSignatures:
+    decodePpmDimensions(data)
+  else:
+    raise newException(PixieError, "Unsupported image file format")
+
 proc decodeImage*(data: string): Image {.raises: [PixieError].} =
   ## Loads an image from memory.
   if data.len > 8 and data.readUint64(0) == cast[uint64](pngSignature):
@@ -44,6 +63,15 @@ proc decodeMask*(data: string): Mask {.raises: [PixieError].} =
     newMask(newImage(decodePng(data)))
   else:
     raise newException(PixieError, "Unsupported mask file format")
+
+proc readImageDimensions*(
+  filePath: string
+): ImageDimensions {.inline, raises: [PixieError].} =
+  ## Loads an image from a file.
+  try:
+    decodeImageDimensions(readFile(filePath))
+  except IOError as e:
+    raise newException(PixieError, e.msg, e)
 
 proc readImage*(filePath: string): Image {.inline, raises: [PixieError].} =
   ## Loads an image from a file.
