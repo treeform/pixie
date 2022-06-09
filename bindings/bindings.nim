@@ -93,6 +93,9 @@ exportObject ColorStop:
 exportObject TextMetrics:
   discard
 
+exportObject ImageDimensions:
+  discard
+
 exportSeq seq[float32]:
   discard
 
@@ -310,7 +313,10 @@ exportRefObject Context:
     isPointInStroke(Context, Path, float32, float32)
 
 exportProcs:
+  decodeImage
+  decodeImageDimensions
   readImage
+  readImageDimensions
   readmask
   readTypeface
   readFont

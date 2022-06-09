@@ -68,6 +68,7 @@ type
     len, pos: int
     bitsBuffered: int
     bitBuffer: uint32
+    foundSOF: bool
     imageHeight, imageWidth: int
     progressive: bool
     quantizationTables: array[4, array[64, uint8]]
@@ -243,6 +244,10 @@ proc decodeDHT(state: var DecoderState) =
 
 proc decodeSOF0(state: var DecoderState) =
   ## Decode start of Frame
+  if state.foundSOF:
+    failInvalid()
+  state.foundSOF = true
+
   var len = state.readUint16be().int - 2
 
   let precision = state.readUint8()
@@ -1056,7 +1061,7 @@ proc decodeJpeg*(data: string): Image {.raises: [PixieError].} =
         state.decodeDHT()
       of 0xD8:
         # SOI - Start of Image
-        continue
+        discard
       of 0xD9:
         # EOI - End of Image
         break
@@ -1093,6 +1098,64 @@ proc decodeJpeg*(data: string): Image {.raises: [PixieError].} =
   state.quantizationAndIDCTPass()
 
   state.buildImage()
+
+proc decodeJpegDimensions*(
+  data: string
+): ImageDimensions {.raises: [PixieError].} =
+  ## Decodes the JPEG dimensions.
+
+  var state = DecoderState()
+  state.buffer = cast[ptr UncheckedArray[uint8]](data.cstring)
+  state.len = data.len
+
+  while true:
+    if state.readUint8() != 0xFF:
+      failInvalid("invalid chunk marker")
+
+    let chunkId = state.readUint8()
+    case chunkId:
+      of 0xD8:
+        # SOI - Start of Image
+        discard
+      of 0xC0:
+        # Start Of Frame (Baseline DCT)
+        state.decodeSOF0()
+        break
+      of 0xC1:
+        # Start Of Frame (Extended sequential DCT)
+        state.decodeSOF1()
+        break
+      of 0xC2:
+        # Start Of Frame (Progressive DCT)
+        state.decodeSOF2()
+        break
+      of 0xDB:
+        # Define Quantization Table(s)
+        state.skipChunk()
+      of 0XE0:
+        # Application-specific
+        state.skipChunk()
+      of 0xE1:
+        # Exif/APP1
+        state.decodeExif()
+      of 0xE2..0xEF:
+        # Application-specific
+        state.skipChunk()
+      of 0xFE:
+        # Comment
+        state.skipChunk()
+      else:
+        failInvalid("invalid chunk " & chunkId.toHex())
+
+  case state.orientation:
+    of 0, 1, 2, 3, 4:
+      result.width = state.imageWidth
+      result.height = state.imageHeight
+    of 5, 6, 7, 8:
+      result.width = state.imageHeight
+      result.height = state.imageWidth
+    else:
+      failInvalid("invalid orientation")
 
 when defined(release):
   {.pop.}

@@ -2,13 +2,22 @@ import pixie/fileformats/ppm
 
 block:
   for format in @["p3", "p6"]:
-    let image = decodePpm(readFile(
-      "tests/fileformats/ppm/feep." & $format & ".master.ppm"
-    ))
+    let
+      path = "tests/fileformats/ppm/feep." & $format & ".master.ppm"
+      image = decodePpm(readFile(path))
+      dimensions = decodePpmDimensions(readFile(path))
     writeFile("tests/fileformats/ppm/feep." & $format & ".ppm", encodePpm(image))
+    doAssert image.width == dimensions.width
+    doAssert image.height == dimensions.height
 
-  let image = decodePpm(readFile("tests/fileformats/ppm/feep.p3.hidepth.master.ppm"))
+block:
+  let
+    path = "tests/fileformats/ppm/feep.p3.hidepth.master.ppm"
+    image = decodePpm(readFile(path))
+    dimensions = decodePpmDimensions(readFile(path))
   writeFile("tests/fileformats/ppm/feep.p3.hidepth.ppm", encodePpm(image))
+  doAssert image.width == dimensions.width
+  doAssert image.height == dimensions.height
 
   # produced output should be identical to P6 master
   let p6Master = readFile("tests/fileformats/ppm/feep.p6.master.ppm")

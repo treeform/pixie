@@ -178,5 +178,18 @@ proc decodeGif*(data: string): Image {.raises: [PixieError].} =
     else:
       raise newException(PixieError, "Invalid GIF block type")
 
+proc decodeGifDimensions*(
+  data: string
+): ImageDimensions {.raises: [PixieError].} =
+  ## Decodes the GIF dimensions.
+  if data.len < 10:
+    failInvalid()
+
+  if data[0 .. 5] notin gifSignatures:
+    raise newException(PixieError, "Invalid GIF file signature")
+
+  result.width = data.readInt16(6).int
+  result.height = data.readInt16(8).int
+
 when defined(release):
   {.pop.}

@@ -304,14 +304,13 @@ proc minifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
           b = src.unsafe[x * 2 + 1, y * 2 + 0]
           c = src.unsafe[x * 2 + 1, y * 2 + 1]
           d = src.unsafe[x * 2 + 0, y * 2 + 1]
-          rgba = rgbx(
+          mixed = rgbx(
             ((a.r.uint32 + b.r + c.r + d.r) div 4).uint8,
             ((a.g.uint32 + b.g + c.g + d.g) div 4).uint8,
             ((a.b.uint32 + b.b + c.b + d.b) div 4).uint8,
             ((a.a.uint32 + b.a + c.a + d.a) div 4).uint8
           )
-
-        result.unsafe[x, y] = rgba
+        result.unsafe[x, y] = mixed
 
       if srcWidthIsOdd:
         let rgbx = mix(
@@ -382,6 +381,8 @@ proc magnifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
 proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
   ## Multiplies alpha of the image by opacity.
   let opacity = round(255 * opacity).uint16
+  if opacity == 255:
+    return
 
   if opacity == 0:
     when type(target) is Image:
@@ -434,12 +435,12 @@ proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
 
   when type(target) is Image:
     for j in i div 4 ..< target.data.len:
-      var rgba = target.data[j]
-      rgba.r = ((rgba.r * opacity) div 255).uint8
-      rgba.g = ((rgba.g * opacity) div 255).uint8
-      rgba.b = ((rgba.b * opacity) div 255).uint8
-      rgba.a = ((rgba.a * opacity) div 255).uint8
-      target.data[j] = rgba
+      var rgbx = target.data[j]
+      rgbx.r = ((rgbx.r * opacity) div 255).uint8
+      rgbx.g = ((rgbx.g * opacity) div 255).uint8
+      rgbx.b = ((rgbx.b * opacity) div 255).uint8
+      rgbx.a = ((rgbx.a * opacity) div 255).uint8
+      target.data[j] = rgbx
   else:
     for j in i ..< target.data.len:
       target.data[j] = ((target.data[j] * opacity) div 255).uint8

@@ -71,11 +71,11 @@ proc fillUnsafe*(
     else:
       when sizeof(int) == 8:
         # Fill 8 bytes at a time when possible
-        let
+        var
           u32 = cast[uint32](rgbx)
           u64 = cast[uint64]([u32, u32])
         for _ in 0 ..< len div 2:
-          cast[ptr uint64](data[i].addr)[] = u64
+          copyMem(data[i].addr, u64.addr, 8)
           i += 2
     # Fill whatever is left the slow way
     for j in i ..< start + len:

@@ -1,4 +1,4 @@
-import chroma, os, pixie, pixie/fileformats/bmp, strutils
+import os, pixie/fileformats/bmp
 
 # block:
 #   var image = newImage(4, 2)
@@ -32,9 +32,9 @@ import chroma, os, pixie, pixie/fileformats/bmp, strutils
 
 block:
   for bits in [32, 24]:
-    let image = decodeBmp(readFile(
-      "tests/fileformats/bmp/knight." & $bits & ".master.bmp"
-    ))
+    let
+      path = "tests/fileformats/bmp/knight." & $bits & ".master.bmp"
+      image = decodeBmp(readFile(path))
     writeFile("tests/fileformats/bmp/knight." & $bits & ".bmp", encodeBmp(image))
 
 block:
@@ -46,5 +46,9 @@ block:
 block:
   for file in walkFiles("tests/fileformats/bmp/bmpsuite/*"):
     # echo file
-    let image = decodeBmp(readFile(file))
+    let
+      image = decodeBmp(readFile(file))
+      dimensions = decodeBmpDimensions(readFile(file))
     #image.writeFile(file.replace("bmpsuite", "output") & ".png")
+    doAssert image.width == dimensions.width
+    doAssert image.height == dimensions.height

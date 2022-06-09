@@ -121,6 +121,16 @@ proc decodeQoi*(data: string): Qoi {.raises: [PixieError].} =
       raise newException(PixieError, "Invalid QOI padding")
     inc(p)
 
+proc decodeQoiDimensions*(
+  data: string
+): ImageDimensions {.raises: [PixieError].} =
+  ## Decodes the QOI dimensions.
+  if data.len <= 12 or data[0 .. 3] != qoiSignature:
+    raise newException(PixieError, "Invalid QOI header")
+
+  result.width = data.readUint32(4).swap().int
+  result.height = data.readUint32(8).swap().int
+
 proc encodeQoi*(qoi: Qoi): string {.raises: [PixieError].} =
   ## Encodes raw QOI pixels to the QOI file format.
 

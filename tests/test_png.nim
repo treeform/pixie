@@ -33,3 +33,9 @@ block:
 
 block:
   discard readImage("tests/fileformats/png/trailing_data.png")
+
+block:
+  let dimensions =
+    decodeImageDimensions(readFile("tests/fileformats/png/mandrill.png"))
+  doAssert dimensions.width == 512
+  doAssert dimensions.height == 512
