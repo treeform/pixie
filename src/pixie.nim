@@ -67,7 +67,7 @@ proc decodeMask*(data: string): Mask {.raises: [PixieError].} =
 proc readImageDimensions*(
   filePath: string
 ): ImageDimensions {.inline, raises: [PixieError].} =
-  ## Loads an image from a file.
+  ## Decodes an image's dimensions from a file.
   try:
     decodeImageDimensions(readFile(filePath))
   except IOError as e:
