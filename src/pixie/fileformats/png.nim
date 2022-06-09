@@ -268,7 +268,6 @@ proc decodeImageData(
           result[i].a = 0
     else:
       # While we can read an extra byte safely, do so. Much faster.
-      # var rgba: ColorRGBA
       for i in 0 ..< header.height * header.width - 1:
         copyMem(result[i].addr, unfiltered[i * 3].unsafeAddr, 4)
         result[i].a = 255
