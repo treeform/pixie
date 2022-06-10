@@ -50,7 +50,7 @@ type
     startY, partitionHeight: uint32
 
 const
-  epsilon: float64 = 0.0001 * PI ## Tiny value used for some computations. Must be float64 to prevent leaks.
+  epsilon: float32 = 0.0001 * PI ## Tiny value used for some computations.
   pixelErrorMargin: float32 = 0.2
   defaultMiterLimit*: float32 = 4
 
@@ -1051,6 +1051,12 @@ proc shapesToSegments(shapes: seq[Polygon]): seq[(Segment, int16)] =
         swap(segment.at, segment.to)
         winding = -1
 
+      # Quantize the segment to prevent leaks
+      segment = segment(
+        vec2(segment.at.x.quantize(1 / 256), segment.at.y.quantize(1 / 256)),
+        vec2(segment.to.x.quantize(1 / 256), segment.to.y.quantize(1 / 256))
+      )
+
       result.add((segment, winding))
 
 proc transform(shapes: var seq[Polygon], transform: Mat3) =
@@ -1250,10 +1256,10 @@ proc computeCoverage(
   let
     quality = if aa: 5 else: 1 # Must divide 255 cleanly (1, 3, 5, 15, 17, 51, 85)
     sampleCoverage = (255 div quality).uint8
-    offset = 1 / quality.float64
+    offset = 1 / quality.float32
     initialOffset = offset / 2 + epsilon
 
-  var yLine = y.float64 + initialOffset - offset
+  var yLine = y.float32 + initialOffset - offset
   for m in 0 ..< quality:
     yLine += offset
     numHits = 0
@@ -1263,7 +1269,7 @@ proc computeCoverage(
           if entry.m == 0:
             entry.b
           else:
-            (yLine.float32 - entry.b) / entry.m
+            (yLine - entry.b) / entry.m
 
         hits[numHits] = (min(x, width), entry.winding)
         inc numHits
