@@ -13,11 +13,11 @@ block:
   timeIt "pixie decode":
     discard decodePng(data)
 
+  timeIt "pixie decode + alpha":
+    discard decodePng(data).convertToImage()
+
   timeIt "pixie encode":
     discard encodePng(decodedPng)
-
-  timeIt "pixie decode + alpha":
-    discard newImage(decodePng(data))
 
   timeIt "pixie encode + alpha":
     discard encodePng(decodedImage)
@@ -55,9 +55,9 @@ block:
 
 block:
   timeIt "cairo decode":
-    discard imageSurfaceCreateFromPng(filePath)
+    discard imageSurfaceCreateFromPng(filePath.cstring)
 
-  let decoded = imageSurfaceCreateFromPng(filePath)
+  let decoded = imageSurfaceCreateFromPng(filePath.cstring)
   timeIt "cairo encode":
     var write: WriteFunc =
       proc(closure: pointer, data: cstring, len: int32): Status {.cdecl.} =

@@ -338,8 +338,22 @@ proc decodeImageData(
     discard # Not possible, parseHeader validates
 
 proc newImage*(png: Png): Image {.raises: [PixieError].} =
+  ## Creates a new Image from the PNG.
   result = newImage(png.width, png.height)
   copyMem(result.data[0].addr, png.data[0].addr, png.data.len * 4)
+  result.data.toPremultipliedAlpha()
+
+proc convertToImage*(png: Png): Image {.raises: [].} =
+  ## Converts a PNG into an Image by moving the data. This is faster but can
+  ## only be done once.
+  type Movable = ref object
+    width, height, channels: int
+    data: seq[ColorRGBX]
+
+  result = Image()
+  result.width = png.width
+  result.height = png.height
+  result.data = move cast[Movable](png).data
   result.data.toPremultipliedAlpha()
 
 proc decodePngDimensions*(
