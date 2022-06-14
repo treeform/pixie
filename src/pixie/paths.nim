@@ -49,6 +49,8 @@ type
     partitions: seq[Partition]
     startY, partitionHeight: uint32
 
+  FixedPoint = int32 ## 24.8 fixed point
+
 const
   epsilon: float32 = 0.0001 * PI ## Tiny value used for some computations.
   pixelErrorMargin: float32 = 0.2
@@ -1149,20 +1151,20 @@ proc partitionSegments(
     partition.requiresAntiAliasing =
       requiresAntiAliasing(partition.entries)
 
-proc getIndexForY(partitioning: var Partitioning, y: int): uint32 {.inline.} =
-  if partitioning.partitions.len == 1:
-    0.uint32
-  else:
-    min(
-      (y.uint32 - partitioning.startY) div partitioning.partitionHeight,
-      partitioning.partitions.high.uint32
-    )
-
 proc maxEntryCount(partitioning: var Partitioning): int =
   for i in 0 ..< partitioning.partitions.len:
     result = max(result, partitioning.partitions[i].entries.len)
 
-proc sortHits(hits: var seq[(float32, int16)], inl, inr: int) =
+proc fixedPoint(f: float32): FixedPoint {.inline.} =
+  FixedPoint(f * 256)
+
+proc pixel(p: FixedPoint): int {.inline.} =
+  p div 256
+
+proc trunc(p: FixedPoint): FixedPoint {.inline.} =
+  (p div 256) * 256
+
+proc sortHits(hits: var seq[(FixedPoint, int16)], inl, inr: int) =
   ## Quicksort + insertion sort, in-place and faster than standard lib sort.
   let n = inr - inl + 1
   if n < 32: # Use insertion sort for the rest
@@ -1202,15 +1204,15 @@ proc shouldFill(
     count mod 2 != 0
 
 iterator walk(
-  hits: seq[(float32, int16)],
+  hits: seq[(FixedPoint, int16)],
   numHits: int,
   windingRule: WindingRule,
   y: int,
-  width: float32
-): (float32, float32, int) =
+  width: int
+): (FixedPoint, FixedPoint, int) =
   var
     i, count: int
-    prevAt: float32
+    prevAt: FixedPoint
   while i < numHits:
     let (at, winding) = hits[i]
     if at > 0:
@@ -1236,20 +1238,27 @@ iterator walk(
     inc i
 
   when defined(pixieLeakCheck):
-    if prevAt != width and count != 0:
+    if prevAt != fixedPoint(width.float32) and count != 0:
       echo "Leak detected: ", count, " @ (", prevAt, ", ", y, ")"
 
 proc computeCoverage(
   coverages: ptr UncheckedArray[uint8],
-  hits: var seq[(float32, int16)],
+  hits: var seq[(FixedPoint, int16)],
   numHits: var int,
   aa: var bool,
-  width: float32,
+  width: int,
   y, startX: int,
   partitioning: var Partitioning,
   windingRule: WindingRule
 ) {.inline.} =
-  let partitionIndex = partitioning.getIndexForY(y)
+  let partitionIndex =
+    if partitioning.partitions.len == 1:
+      0.uint32
+    else:
+      min(
+        (y.uint32 - partitioning.startY) div partitioning.partitionHeight,
+        partitioning.partitions.high.uint32
+      )
 
   aa = partitioning.partitions[partitionIndex].requiresAntiAliasing
 
@@ -1271,7 +1280,7 @@ proc computeCoverage(
           else:
             (yLine - entry.b) / entry.m
 
-        hits[numHits] = (min(x, width), entry.winding)
+        hits[numHits] = (fixedPoint(min(x, width.float32)), entry.winding)
         inc numHits
 
     if numHits > 0:
@@ -1279,27 +1288,27 @@ proc computeCoverage(
 
     if aa:
       for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
-        var fillStart = prevAt.int
+        var fillStart = prevAt.pixel
 
         let
-          pixelCrossed = at.int - prevAt.int > 0
+          pixelCrossed = at.pixel != prevAt.pixel
           leftCover =
             if pixelCrossed:
-              trunc(prevAt) + 1 - prevAt
+              prevAt.trunc + fixedPoint(1.0) - prevAt
             else:
               at - prevAt
         if leftCover != 0:
           inc fillStart
-          coverages[prevAt.int - startX] +=
-            (leftCover * sampleCoverage.float32).uint8
+          coverages[prevAt.pixel - startX] +=
+            (leftCover * sampleCoverage.int32).pixel.uint8
 
         if pixelCrossed:
-          let rightCover = at - trunc(at)
+          let rightCover = at - at.trunc
           if rightCover > 0:
-            coverages[at.int - startX] +=
-              (rightCover * sampleCoverage.float32).uint8
+            coverages[at.pixel - startX] +=
+              (rightCover * sampleCoverage.int32).pixel.uint8
 
-        let fillLen = at.int - fillStart
+        let fillLen = at.pixel - fillStart
         if fillLen > 0:
           var i = fillStart
           when defined(amd64) and allowSimd:
@@ -1494,19 +1503,17 @@ proc fillHits(
   image: Image,
   rgbx: ColorRGBX,
   startX, y: int,
-  hits: seq[(float32, int16)],
+  hits: seq[(FixedPoint, int16)],
   numHits: int,
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
-  let
-    blender = blendMode.blender()
-    width = image.width.float32
+  let blender = blendMode.blender()
   var filledTo: int
-  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
+  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, image.width):
     let
-      fillStart = prevAt.int
-      fillLen = at.int - fillStart
+      fillStart = prevAt.pixel
+      fillLen = at.pixel - fillStart
     if fillLen <= 0:
       continue
 
@@ -1556,19 +1563,17 @@ proc fillHits(
 proc fillHits(
   mask: Mask,
   startX, y: int,
-  hits: seq[(float32, int16)],
+  hits: seq[(FixedPoint, int16)],
   numHits: int,
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
-  let
-    masker = blendMode.masker()
-    width = mask.width.float32
+  let masker = blendMode.masker()
   var filledTo: int
-  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
+  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, mask.width):
     let
-      fillStart = prevAt.int
-      fillLen = at.int - fillStart
+      fillStart = prevAt.pixel
+      fillLen = at.pixel - fillStart
     if fillLen <= 0:
       continue
 
@@ -1633,7 +1638,7 @@ proc fillShapes(
   var
     partitioning = partitionSegments(segments, startY, pathHeight - startY)
     coverages = newSeq[uint8](pathWidth)
-    hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
+    hits = newSeq[(FixedPoint, int16)](partitioning.maxEntryCount)
     numHits: int
     aa: bool
 
@@ -1643,7 +1648,7 @@ proc fillShapes(
       hits,
       numHits,
       aa,
-      image.width.float32,
+      image.width,
       y,
       startX,
       partitioning,
@@ -1702,7 +1707,7 @@ proc fillShapes(
   var
     partitioning = partitionSegments(segments, startY, pathHeight)
     coverages = newSeq[uint8](pathWidth)
-    hits = newSeq[(float32, int16)](partitioning.maxEntryCount)
+    hits = newSeq[(FixedPoint, int16)](partitioning.maxEntryCount)
     numHits: int
     aa: bool
 
@@ -1712,7 +1717,7 @@ proc fillShapes(
       hits,
       numHits,
       aa,
-      mask.width.float32,
+      mask.width,
       y,
       startX,
       partitioning,
@@ -2071,7 +2076,7 @@ proc overlaps(
   test: Vec2,
   windingRule: WindingRule
 ): bool =
-  var hits: seq[(float32, int16)]
+  var hits: seq[(FixedPoint, int16)]
 
   let
     scanline = line(vec2(0, test.y), vec2(1000, test.y))
@@ -2081,13 +2086,15 @@ proc overlaps(
       var at: Vec2
       if scanline.intersects(segment, at):
         if segment.to != at:
-          hits.add((at.x, winding))
+          hits.add((fixedPoint(at.x), winding))
 
   sortHits(hits, 0, hits.high)
 
+  let testX = fixedPoint(test.x)
+
   var count: int
   for (at, winding) in hits:
-    if at > test.x:
+    if at > testX:
       return shouldFill(windingRule, count)
     count += winding
 
