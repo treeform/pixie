@@ -184,8 +184,6 @@ proc decodeTiff*(data: string): Tiff =
       if bitsPerSample[i] != bitsPerSample[j]:
         failInvalid()
 
-
-
   var decompressed: string
   case compression:
   of 1: # No compression
