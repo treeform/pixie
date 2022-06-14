@@ -105,6 +105,9 @@ proc decodeGif*(data: string): Gif {.raises: [PixieError].} =
 
       pos += 9
 
+      if pos + localColorTableSize * 3 > data.len:
+        failInvalid()
+
       var localColorTable: seq[ColorRGBX]
       if hasLocalColorTable:
         localColorTable.setLen(localColorTableSize)
@@ -384,7 +387,7 @@ proc decodeGifDimensions*(
   result.height = data.readInt16(8).int
 
 proc newImage*(gif: Gif): Image {.raises: [].} =
-  gif.frames[0]
+  gif.frames[0].copy()
 
 when defined(release):
   {.pop.}
