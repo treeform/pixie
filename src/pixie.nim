@@ -49,7 +49,7 @@ proc decodeImage*(data: string): Image {.raises: [PixieError].} =
     (data.readStr(0, 5) == xmlSignature or data.readStr(0, 4) == svgSignature):
     newImage(parseSvg(data))
   elif data.len > 6 and data.readStr(0, 6) in gifSignatures:
-    decodeGif(data)
+    newImage(decodeGif(data))
   elif data.len > (14+8) and data.readStr(0, 4) == qoiSignature:
     decodeQoi(data).convertToImage()
   elif data.len > 9 and data.readStr(0, 2) in ppmSignatures:
