@@ -21,8 +21,8 @@ type
 template failInvalid() =
   raise newException(PixieError, "Invalid PNG buffer, unable to load")
 
-# template failCRC() =
-#   raise newException(PixieError, "CRC check failed")
+template failCRC() =
+  raise newException(PixieError, "CRC check failed")
 
 when defined(release):
   {.push checks: off.}
@@ -338,8 +338,22 @@ proc decodeImageData(
     discard # Not possible, parseHeader validates
 
 proc newImage*(png: Png): Image {.raises: [PixieError].} =
+  ## Creates a new Image from the PNG.
   result = newImage(png.width, png.height)
   copyMem(result.data[0].addr, png.data[0].addr, png.data.len * 4)
+  result.data.toPremultipliedAlpha()
+
+proc convertToImage*(png: Png): Image {.raises: [].} =
+  ## Converts a PNG into an Image by moving the data. This is faster but can
+  ## only be done once.
+  type Movable = ref object
+    width, height, channels: int
+    data: seq[ColorRGBX]
+
+  result = Image()
+  result.width = png.width
+  result.height = png.height
+  result.data = move cast[Movable](png).data
   result.data.toPremultipliedAlpha()
 
 proc decodePngDimensions*(
@@ -400,8 +414,9 @@ proc decodePng*(data: pointer, len: int): Png {.raises: [PixieError].} =
   prevChunkType = "IHDR"
   inc(pos, 13)
 
-  # if crc32(data[pos - 17 ..< pos]) != read32be(data, pos):
-  #   failCRC()
+  let headerCrc = crc32(data[pos - 17].addr, 17)
+  if headerCrc != data.readUint32(pos).swap():
+    failCRC()
   inc(pos, 4) # CRC
 
   while true:
@@ -462,8 +477,9 @@ proc decodePng*(data: pointer, len: int): Png {.raises: [PixieError].} =
 
     inc(pos, chunkLen)
 
-    # if crc32(data[pos - chunkLen - 4 ..< pos]) != read32be(data, pos):
-    #   failCRC()
+    let chunkCrc = crc32(data[pos - chunkLen - 4].addr, chunkLen + 4)
+    if chunkCrc != data.readUint32(pos).swap():
+      failCRC()
     inc(pos, 4) # CRC
 
     prevChunkType = chunkType
@@ -523,7 +539,7 @@ proc encodePng*(
   result.add(0.char)
   result.add(0.char)
   result.add(0.char)
-  result.addUint32(crc32(result[result.len - 17 ..< result.len]).swap())
+  result.addUint32(crc32(result[result.len - 17].addr, 17).swap())
 
   # Add IDAT
   # Add room for 1 byte before each row for the filter type.
@@ -556,14 +572,15 @@ proc encodePng*(
   result.addUint32(compressed.len.uint32.swap())
   result.add("IDAT")
   result.add(compressed)
-  result.addUint32(
-    crc32(result[result.len - compressed.len - 4 ..< result.len]).swap()
-  )
+  result.addUint32(crc32(
+    result[result.len - compressed.len - 4].addr,
+    compressed.len + 4
+  ).swap())
 
   # Add IEND
   result.addUint32(0)
   result.add("IEND")
-  result.addUint32(crc32(result[result.len - 4 ..< result.len]).swap())
+  result.addUint32(crc32(result[result.len - 4].addr, 4).swap())
 
 proc encodePng*(png: Png): string {.raises: [PixieError].} =
   encodePng(png.width, png.height, 4, png.data[0].addr, png.data.len * 4)
