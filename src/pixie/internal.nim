@@ -10,6 +10,9 @@ template currentExceptionAsPixieError*(): untyped =
   let e = getCurrentException()
   newException(PixieError, e.getStackTrace & e.msg, e)
 
+when defined(release):
+  {.push checks: off.}
+
 proc gaussianKernel*(radius: int): seq[uint16] {.raises: [].} =
   ## Compute lookup table for 1d Gaussian kernel.
   ## Values are [0, 255] * 256.
@@ -194,3 +197,6 @@ when defined(amd64) and allowSimd:
       a = mm_unpacklo_epi8(v, mm_setzero_si128())
       b = mm_unpacklo_epi8(a, mm_setzero_si128())
     result = mm_slli_epi32(b, 24) # Shift the values to uint32 `a`
+
+when defined(release):
+  {.pop.}
