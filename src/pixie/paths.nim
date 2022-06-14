@@ -1320,9 +1320,9 @@ proc clearUnsafe(target: Image | Mask, startX, startY, toX, toY: int) =
     start = target.dataIndex(startX, startY)
     len = target.dataIndex(toX, toY) - start
   when type(target) is Image:
-    target.data.fillUnsafe(rgbx(0, 0, 0, 0), start, len)
+    fillUnsafe(target.data, rgbx(0, 0, 0, 0), start, len)
   else: # target is Mask
-    target.data.fillUnsafe(0, start, len)
+    fillUnsafe(target.data, 0, start, len)
 
 proc fillCoverage(
   image: Image,

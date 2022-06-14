@@ -30,9 +30,23 @@ proc hash(p: ColorRGBA): int =
   (p.r.int * 3 + p.g.int * 5 + p.b.int * 7 + p.a.int * 11) mod indexLen
 
 proc newImage*(qoi: Qoi): Image =
-  ## Converts raw QOI data to `Image`.
+  ## Creates a new Image from the QOI.
   result = newImage(qoi.width, qoi.height)
   copyMem(result.data[0].addr, qoi.data[0].addr, qoi.data.len * 4)
+  result.data.toPremultipliedAlpha()
+
+proc convertToImage*(qoi: Qoi): Image {.raises: [].} =
+  ## Converts a QOI into an Image by moving the data. This is faster but can
+  ## only be done once.
+  type Movable = ref object
+    width, height, channels: int
+    colorspace: Colorspace
+    data: seq[ColorRGBX]
+
+  result = Image()
+  result.width = qoi.width
+  result.height = qoi.height
+  result.data = move cast[Movable](qoi).data
   result.data.toPremultipliedAlpha()
 
 proc decodeQoi*(data: string): Qoi {.raises: [PixieError].} =

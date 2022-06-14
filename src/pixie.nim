@@ -40,7 +40,7 @@ proc decodeImageDimensions*(
 proc decodeImage*(data: string): Image {.raises: [PixieError].} =
   ## Loads an image from memory.
   if data.len > 8 and data.readUint64(0) == cast[uint64](pngSignature):
-    newImage(decodePng(data))
+    decodePng(data).convertToImage()
   elif data.len > 2 and data.readUint16(0) == cast[uint16](jpegStartOfImage):
     decodeJpeg(data)
   elif data.len > 2 and data.readStr(0, 2) == bmpSignature:
@@ -51,7 +51,7 @@ proc decodeImage*(data: string): Image {.raises: [PixieError].} =
   elif data.len > 6 and data.readStr(0, 6) in gifSignatures:
     decodeGif(data)
   elif data.len > (14+8) and data.readStr(0, 4) == qoiSignature:
-    newImage(decodeQoi(data))
+    decodeQoi(data).convertToImage()
   elif data.len > 9 and data.readStr(0, 2) in ppmSignatures:
     decodePpm(data)
   else:
@@ -60,7 +60,7 @@ proc decodeImage*(data: string): Image {.raises: [PixieError].} =
 proc decodeMask*(data: string): Mask {.raises: [PixieError].} =
   ## Loads a mask from memory.
   if data.len > 8 and data.readUint64(0) == cast[uint64](pngSignature):
-    newMask(newImage(decodePng(data)))
+    newMask(decodePng(data).convertToImage())
   else:
     raise newException(PixieError, "Unsupported mask file format")
 

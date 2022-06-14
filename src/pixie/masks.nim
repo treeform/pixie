@@ -254,7 +254,8 @@ proc spread*(mask: Mask, spread: float32) {.raises: [PixieError].} =
   let spread = round(spread).int
   if spread == 0:
     return
-  elif spread > 0:
+
+  if spread > 0:
 
     # Spread in the X direction. Store with dimensions swapped for reading later.
     let spreadX = newMask(mask.height, mask.width)
