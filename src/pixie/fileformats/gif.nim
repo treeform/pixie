@@ -386,7 +386,7 @@ proc decodeGifDimensions*(
   result.width = data.readInt16(6).int
   result.height = data.readInt16(8).int
 
-proc newImage*(gif: Gif): Image {.raises: [].} =
+proc newImage*(gif: Gif): Image {.raises: [PixieError].} =
   gif.frames[0].copy()
 
 when defined(release):
