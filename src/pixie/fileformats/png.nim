@@ -120,7 +120,7 @@ proc unfilter(
       for x in 0 ..< rowBytes:
         var value = uncompressed.readUint8(uncompressedStartIdx + x)
         if x - bpp >= 0:
-          value += result.readUint8(unfilteredStartIx + x - bpp)
+          value += result[unfilteredStartIx + x - bpp]
         result[unfilteredStartIx + x] = value
     of 2: # Up
       let
@@ -129,7 +129,7 @@ proc unfilter(
       for x in 0 ..< rowBytes:
         var value = uncompressed.readUint8(uncompressedStartIdx + x)
         if y - 1 >= 0:
-          value += result.readUint8(unfilteredStartIx + x - rowBytes)
+          value += result[unfilteredStartIx + x - rowBytes]
         result[unfilteredStartIx + x] = value
     of 3: # Average
       let
