@@ -344,8 +344,7 @@ proc decodeImageData(
         unfiltered.readUint8(bytePos + 1)
       )
   of 6:
-    for i in 0 ..< header.height * header.width:
-      result[i] = cast[ColorRGBA](unfiltered.readUint32(i * 4))
+    copyMem(result[0].addr, unfiltered[0].unsafeAddr, unfiltered.len)
   else:
     discard # Not possible, parseHeader validates
 
