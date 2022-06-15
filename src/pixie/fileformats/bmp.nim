@@ -89,9 +89,9 @@ proc decodeDib*(
       var rgba: ColorRGBA
       if offset + 3 > len - 2:
         failInvalid()
-      rgba.r = data.readUint8(offset + 2)
-      rgba.g = data.readUint8(offset + 1)
-      rgba.b = data.readUint8(offset + 0)
+      rgba.r = data[offset + 2]
+      rgba.g = data[offset + 1]
+      rgba.b = data[offset + 0]
       rgba.a = 255
       offset += 4
       colorPalette[i] = rgba
@@ -122,7 +122,7 @@ proc decodeDib*(
         if haveBits == 0:
           if offset >= len:
             failInvalid()
-          colorBits = data.readUint8(offset)
+          colorBits = data[offset]
           haveBits = 8
           offset += 1
         if (colorBits and 0b1000_0000) == 0:
@@ -147,7 +147,7 @@ proc decodeDib*(
         if haveBits == 0:
           if offset >= len:
             failInvalid()
-          colorBits = data.readUint8(offset)
+          colorBits = data[offset]
           haveBits = 8
           offset += 1
         let index = (colorBits and 0b1111_0000) shr 4
@@ -167,7 +167,7 @@ proc decodeDib*(
         if offset >= len:
           failInvalid()
         var rgba: ColorRGBA
-        let index = data.readUint8(offset)
+        let index = data[offset]
         offset += 1
         if index.int >= colorPaletteSize:
           failInvalid()
@@ -183,9 +183,9 @@ proc decodeDib*(
         if offset + 2 >= len:
           failInvalid()
         var rgba: ColorRGBA
-        rgba.r = data.readUint8(offset + 2)
-        rgba.g = data.readUint8(offset + 1)
-        rgba.b = data.readUint8(offset + 0)
+        rgba.r = data[offset + 2]
+        rgba.g = data[offset + 1]
+        rgba.b = data[offset + 0]
         rgba.a = 255
         offset += 3
         result.unsafe[x, result.height - y - 1] = rgba.rgbx()
