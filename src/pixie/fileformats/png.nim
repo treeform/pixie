@@ -90,9 +90,7 @@ proc decodePalette(data: pointer, len: int): seq[ColorRGB] =
 
   result.setLen(len div 3)
 
-  let data = cast[ptr UncheckedArray[uint8]](data)
-  for i in 0 ..< len div 3:
-    copyMem(result[i].addr, data[i * 3].unsafeAddr, 3)
+  copyMem(result[0].addr, data, len)
 
 proc unfilter(
   uncompressed: string, height, rowBytes, bpp: int
@@ -275,12 +273,15 @@ proc decodeImageData(
         result[i].a = 255
 
     let lastOffset = header.height * header.width - 1
-    var rgb: array[3, uint8]
-    copyMem(rgb.addr, unfiltered[lastOffset * 3].unsafeAddr, 3)
-    var rgba = ColorRGBA(r: rgb[0], g: rgb[1], b: rgb[2], a: 255)
+    var rgba = rgba(
+      unfiltered[lastOffset * 3 + 0].uint8,
+      unfiltered[lastOffset * 3 + 1].uint8,
+      unfiltered[lastOffset * 3 + 2].uint8,
+      255
+    )
     if rgba == special:
       rgba.a = 0
-    result[header.height * header.width - 1] = cast[ColorRGBA](rgba)
+    result[header.height * header.width - 1] = rgba
   of 3:
     var bytePos, bitPos: int
     for y in 0 ..< header.height:
