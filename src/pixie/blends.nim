@@ -140,7 +140,7 @@ proc SetSat(C: Color, s: float32): Color {.inline.} =
   if satC > 0:
     result = (C - min([C.r, C.g, C.b])) * s / satC
 
-proc blendNormal*(backdrop, source: ColorRGBX): ColorRGBX =
+proc blendNormal*(backdrop, source: ColorRGBX): ColorRGBX {.inline.} =
   if backdrop.a == 0 or source.a == 255:
     return source
   if source.a == 0:
@@ -152,7 +152,7 @@ proc blendNormal*(backdrop, source: ColorRGBX): ColorRGBX =
   result.b = source.b + ((backdrop.b.uint32 * k) div 255).uint8
   result.a = blendAlpha(backdrop.a, source.a)
 
-proc blendDarken(backdrop, source: ColorRGBX): ColorRGBX =
+proc blendDarken*(backdrop, source: ColorRGBX): ColorRGBX {.inline.} =
   proc blend(
     backdropColor, backdropAlpha, sourceColor, sourceAlpha: uint8
   ): uint8 {.inline.} =
@@ -166,7 +166,7 @@ proc blendDarken(backdrop, source: ColorRGBX): ColorRGBX =
   result.b = blend(backdrop.b, backdrop.a, source.b, source.a)
   result.a = blendAlpha(backdrop.a, source.a)
 
-proc blendMultiply(backdrop, source: ColorRGBX): ColorRGBX =
+proc blendMultiply*(backdrop, source: ColorRGBX): ColorRGBX {.inline.} =
   proc blend(
     backdropColor, backdropAlpha, sourceColor, sourceAlpha: uint8
   ): uint8 {.inline.} =
@@ -191,7 +191,7 @@ proc blendMultiply(backdrop, source: ColorRGBX): ColorRGBX =
 #   result = alphaFix(backdrop, source, result)
 #   result = result.toPremultipliedAlpha()
 
-proc blendColorBurn(backdrop, source: ColorRGBX): ColorRGBX =
+proc blendColorBurn*(backdrop, source: ColorRGBX): ColorRGBX =
   let
     backdrop = backdrop.rgba()
     source = source.rgba()
@@ -208,7 +208,7 @@ proc blendColorBurn(backdrop, source: ColorRGBX): ColorRGBX =
   blended.b = blend(backdrop.b, source.b)
   result = alphaFix(backdrop, source, blended).rgbx()
 
-proc blendLighten(backdrop, source: ColorRGBX): ColorRGBX =
+proc blendLighten*(backdrop, source: ColorRGBX): ColorRGBX {.inline.} =
   proc blend(
     backdropColor, backdropAlpha, sourceColor, sourceAlpha: uint8
   ): uint8 {.inline.} =
@@ -222,7 +222,7 @@ proc blendLighten(backdrop, source: ColorRGBX): ColorRGBX =
   result.b = blend(backdrop.b, backdrop.a, source.b, source.a)
   result.a = blendAlpha(backdrop.a, source.a)
 
-proc blendScreen(backdrop, source: ColorRGBX): ColorRGBX =
+proc blendScreen*(backdrop, source: ColorRGBX): ColorRGBX {.inline.} =
   result.r = screen(backdrop.r, source.r)
   result.g = screen(backdrop.g, source.g)
   result.b = screen(backdrop.b, source.b)
@@ -255,13 +255,13 @@ proc blendColorDodge(backdrop, source: ColorRGBX): ColorRGBX =
   blended.b = blend(backdrop.b, source.b)
   result = alphaFix(backdrop, source, blended).rgbx()
 
-proc blendOverlay(backdrop, source: ColorRGBX): ColorRGBX =
+proc blendOverlay*(backdrop, source: ColorRGBX): ColorRGBX =
   result.r = hardLight(source.r, source.a, backdrop.r, backdrop.a)
   result.g = hardLight(source.g, source.a, backdrop.g, backdrop.a)
   result.b = hardLight(source.b, source.a, backdrop.b, backdrop.a)
   result.a = blendAlpha(backdrop.a, source.a)
 
-proc blendSoftLight(backdrop, source: ColorRGBX): ColorRGBX =
+proc blendSoftLight*(backdrop, source: ColorRGBX): ColorRGBX =
   # proc softLight(backdrop, source: int32): uint8 {.inline.} =
   #   ## Pegtop
   #   (
@@ -335,7 +335,7 @@ proc blendSoftLight(backdrop, source: ColorRGBX): ColorRGBX =
 
   result = rgba.rgbx()
 
-proc blendHardLight(backdrop, source: ColorRGBX): ColorRGBX =
+proc blendHardLight*(backdrop, source: ColorRGBX): ColorRGBX =
   result.r = hardLight(backdrop.r, backdrop.a, source.r, source.a)
   result.g = hardLight(backdrop.g, backdrop.a, source.g, source.a)
   result.b = hardLight(backdrop.b, backdrop.a, source.b, source.a)
@@ -394,44 +394,64 @@ proc blendSaturation(backdrop, source: ColorRGBX): ColorRGBX =
     blended = SetLum(SetSat(backdrop, Sat(source)), Lum(backdrop))
   result = alphaFix(backdrop, source, blended).rgba.rgbx()
 
-proc blendMask*(backdrop, source: ColorRGBX): ColorRGBX =
+proc blendMask*(backdrop, source: ColorRGBX): ColorRGBX {.inline.} =
   let k = source.a.uint32
   result.r = ((backdrop.r * k) div 255).uint8
   result.g = ((backdrop.g * k) div 255).uint8
   result.b = ((backdrop.b * k) div 255).uint8
   result.a = ((backdrop.a * k) div 255).uint8
 
-proc blendSubtractMask(backdrop, source: ColorRGBX): ColorRGBX =
+proc blendSubtractMask*(backdrop, source: ColorRGBX): ColorRGBX {.inline.} =
   let a = (backdrop.a.uint32 * (255 - source.a)) div 255
   result.r = ((backdrop.r * a) div 255).uint8
   result.g = ((backdrop.g * a) div 255).uint8
   result.b = ((backdrop.b * a) div 255).uint8
   result.a = a.uint8
 
-proc blendExcludeMask(backdrop, source: ColorRGBX): ColorRGBX =
+proc blendExcludeMask*(backdrop, source: ColorRGBX): ColorRGBX {.inline.} =
   let a = max(backdrop.a, source.a).uint32 - min(backdrop.a, source.a)
   result.r = ((source.r * a) div 255).uint8
   result.g = ((source.g * a) div 255).uint8
   result.b = ((source.b * a) div 255).uint8
   result.a = a.uint8
 
-proc blendOverwrite(backdrop, source: ColorRGBX): ColorRGBX =
+proc normalBlender(backdrop, source: ColorRGBX): ColorRGBX =
+  blendNormal(backdrop, source)
+
+proc darkenBlender(backdrop, source: ColorRGBX): ColorRGBX =
+  blendDarken(backdrop, source)
+
+proc multiplyBlender(backdrop, source: ColorRGBX): ColorRGBX =
+  blendMultiply(backdrop, source)
+
+proc lightenBlender(backdrop, source: ColorRGBX): ColorRGBX =
+  blendLighten(backdrop, source)
+
+proc screenBlender(backdrop, source: ColorRGBX): ColorRGBX =
+  blendScreen(backdrop, source)
+
+proc maskBlender(backdrop, source: ColorRGBX): ColorRGBX =
+  blendMask(backdrop, source)
+
+proc overwriteBlender(backdrop, source: ColorRGBX): ColorRGBX =
   source
 
-# proc blendWhite(backdrop, source: ColorRGBX): ColorRGBX =
-#   ## For testing
-#   rgbx(255, 255, 255, 255)
+proc subtractMaskBlender(backdrop, source: ColorRGBX): ColorRGBX =
+  blendSubtractMask(backdrop, source)
+
+proc excludeMaskBlender(backdrop, source: ColorRGBX): ColorRGBX =
+  blendExcludeMask(backdrop, source)
 
 proc blender*(blendMode: BlendMode): Blender {.raises: [].} =
   ## Returns a blend function for a given blend mode.
   case blendMode:
-  of NormalBlend: blendNormal
-  of DarkenBlend: blendDarken
-  of MultiplyBlend: blendMultiply
+  of NormalBlend: normalBlender
+  of DarkenBlend: darkenBlender
+  of MultiplyBlend: multiplyBlender
   # of BlendLinearBurn: blendLinearBurn
   of ColorBurnBlend: blendColorBurn
-  of LightenBlend: blendLighten
-  of ScreenBlend: blendScreen
+  of LightenBlend: lightenBlender
+  of ScreenBlend: screenBlender
   # of BlendLinearDodge: blendLinearDodge
   of ColorDodgeBlend: blendColorDodge
   of OverlayBlend: blendOverlay
@@ -443,39 +463,50 @@ proc blender*(blendMode: BlendMode): Blender {.raises: [].} =
   of SaturationBlend: blendSaturation
   of ColorBlend: blendColor
   of LuminosityBlend: blendLuminosity
-  of MaskBlend: blendMask
-  of OverwriteBlend: blendOverwrite
-  of SubtractMaskBlend: blendSubtractMask
-  of ExcludeMaskBlend: blendExcludeMask
+  of MaskBlend: maskBlender
+  of OverwriteBlend: overwriteBlender
+  of SubtractMaskBlend: subtractMaskBlender
+  of ExcludeMaskBlend: excludeMaskBlender
 
-proc maskNormal(backdrop, source: uint8): uint8 =
-  ## Blending masks
+proc maskBlendNormal*(backdrop, source: uint8): uint8 {.inline.} =
+  ## Normal blend masks
   blendAlpha(backdrop, source)
 
-proc maskMaskInline*(backdrop, source: uint8): uint8 {.inline.} =
-  ## Masking masks
+proc maskBlendMask*(backdrop, source: uint8): uint8 {.inline.} =
+  ## Mask blend masks
   ((backdrop.uint32 * source) div 255).uint8
 
-proc maskMask(backdrop, source: uint8): uint8 =
-  maskMaskInline(backdrop, source)
-
-proc maskSubtract(backdrop, source: uint8): uint8 =
+proc maskBlendSubtract*(backdrop, source: uint8): uint8 {.inline.} =
+  ## Subtract blend masks
   ((backdrop.uint32 * (255 - source)) div 255).uint8
 
-proc maskExclude(backdrop, source: uint8): uint8 =
+proc maskBlendExclude*(backdrop, source: uint8): uint8 {.inline.} =
+  ## Exclude blend masks
   max(backdrop, source) - min(backdrop, source)
 
-proc maskOverwrite(backdrop, source: uint8): uint8 =
+proc maskBlendNormalMasker(backdrop, source: uint8): uint8 =
+  maskBlendNormal(backdrop, source)
+
+proc maskBlendMaskMasker(backdrop, source: uint8): uint8 =
+  maskBlendMask(backdrop, source)
+
+proc maskBlendSubtractMasker(backdrop, source: uint8): uint8 =
+  maskBlendSubtract(backdrop, source)
+
+proc maskBlendExcludeMasker(backdrop, source: uint8): uint8 =
+  maskBlendExclude(backdrop, source)
+
+proc maskBlendOverwriteMasker(backdrop, source: uint8): uint8 =
   source
 
 proc masker*(blendMode: BlendMode): Masker {.raises: [PixieError].} =
   ## Returns a blend masking function for a given blend masking mode.
   case blendMode:
-  of NormalBlend: maskNormal
-  of MaskBlend: maskMask
-  of OverwriteBlend: maskOverwrite
-  of SubtractMaskBlend: maskSubtract
-  of ExcludeMaskBlend: maskExclude
+  of NormalBlend: maskBlendNormalMasker
+  of MaskBlend: maskBlendMaskMasker
+  of OverwriteBlend: maskBlendOverwriteMasker
+  of SubtractMaskBlend: maskBlendSubtractMasker
+  of ExcludeMaskBlend: maskBlendExcludeMasker
   else:
     raise newException(PixieError, "No masker for " & $blendMode)
 
@@ -486,7 +517,7 @@ when defined(amd64) and allowSimd:
     MaskerSimd* = proc(blackdrop, source: M128i): M128i {.gcsafe, raises: [].}
       ## Function signature returned by maskerSimd.
 
-  proc blendNormalInlineSimd*(backdrop, source: M128i): M128i {.inline.} =
+  proc blendNormalSimd*(backdrop, source: M128i): M128i {.inline.} =
     let
       alphaMask = mm_set1_epi32(cast[int32](0xff000000))
       oddMask = mm_set1_epi16(cast[int16](0xff00))
@@ -515,10 +546,7 @@ when defined(amd64) and allowSimd:
       mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
     )
 
-  proc blendNormalSimd(backdrop, source: M128i): M128i =
-    blendNormalInlineSimd(backdrop, source)
-
-  proc blendMaskInlineSimd*(backdrop, source: M128i): M128i {.inline.} =
+  proc blendMaskSimd*(backdrop, source: M128i): M128i {.inline.} =
     let
       alphaMask = mm_set1_epi32(cast[int32](0xff000000))
       oddMask = mm_set1_epi16(cast[int16](0xff00))
@@ -539,18 +567,21 @@ when defined(amd64) and allowSimd:
 
     mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
 
-  proc blendMaskSimd(backdrop, source: M128i): M128i =
-    blendMaskInlineSimd(backdrop, source)
+  proc normalSimdBlender(backdrop, source: M128i): M128i =
+    blendNormalSimd(backdrop, source)
 
-  proc blendOverwriteSimd(backdrop, source: M128i): M128i =
+  proc maskSimdBlender(backdrop, source: M128i): M128i =
+    blendMaskSimd(backdrop, source)
+
+  proc overwriteSimdBlender(backdrop, source: M128i): M128i =
     source
 
   proc blenderSimd*(blendMode: BlendMode): BlenderSimd {.raises: [PixieError].} =
     ## Returns a blend function for a given blend mode with SIMD support.
     case blendMode:
-    of NormalBlend: blendNormalSimd
-    of MaskBlend: blendMaskSimd
-    of OverwriteBlend: blendOverwriteSimd
+    of NormalBlend: normalSimdBlender
+    of MaskBlend: maskSimdBlender
+    of OverwriteBlend: overwriteSimdBlender
     else:
       raise newException(PixieError, "No SIMD blender for " & $blendMode)
 
@@ -558,7 +589,7 @@ when defined(amd64) and allowSimd:
     ## Is there a blend function for a given blend mode with SIMD support?
     blendMode in {NormalBlend, MaskBlend, OverwriteBlend}
 
-  proc maskNormalInlineSimd*(backdrop, source: M128i): M128i {.inline.} =
+  proc maskBlendNormalSimd*(backdrop, source: M128i): M128i {.inline.} =
     ## Blending masks
     let
       oddMask = mm_set1_epi16(cast[int16](0xff00))
@@ -595,10 +626,7 @@ when defined(amd64) and allowSimd:
 
     mm_or_si128(blendedEven, mm_slli_epi16(blendedOdd, 8))
 
-  proc maskNormalSimd(backdrop, source: M128i): M128i =
-    maskNormalInlineSimd(backdrop, source)
-
-  proc maskMaskInlineSimd*(backdrop, source: M128i): M128i =
+  proc maskBlendMaskSimd*(backdrop, source: M128i): M128i =
     let
       oddMask = mm_set1_epi16(cast[int16](0xff00))
       div255 = mm_set1_epi16(cast[int16](0x8081))
@@ -619,15 +647,18 @@ when defined(amd64) and allowSimd:
 
     mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
 
-  proc maskMaskSimd(backdrop, source: M128i): M128i =
-    maskMaskInlineSimd(backdrop, source)
+  proc maskBlendNormalMaskerSimd(backdrop, source: M128i): M128i =
+    maskBlendNormalSimd(backdrop, source)
+
+  proc maskBlendMaskMaskerSimd(backdrop, source: M128i): M128i =
+    maskBlendMaskSimd(backdrop, source)
 
   proc maskerSimd*(blendMode: BlendMode): MaskerSimd {.raises: [PixieError].} =
     ## Returns a blend masking function with SIMD support.
     case blendMode:
-    of NormalBlend: maskNormalSimd
-    of MaskBlend: maskMaskSimd
-    of OverwriteBlend: blendOverwriteSimd
+    of NormalBlend: maskBlendNormalMaskerSimd
+    of MaskBlend: maskBlendMaskMaskerSimd
+    of OverwriteBlend: overwriteSimdBlender
     else:
       raise newException(PixieError, "No SIMD masker for " & $blendMode)
 
