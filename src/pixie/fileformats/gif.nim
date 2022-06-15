@@ -171,7 +171,7 @@ proc decodeGif*(data: string): Gif {.raises: [PixieError].} =
         colorIndexes: seq[int]
         codeSize = minCodeSize + 1
         table = newSeq[(int, int)](endCode + 1)
-        prev: (int, int)
+        prev: tuple[offset, len: int]
 
       while true:
         let code = b.readBits(codeSize).int
@@ -194,14 +194,14 @@ proc decodeGif*(data: string): Gif {.raises: [PixieError].} =
         if code < table.len: # If we have seen the code before
           if code < clearCode:
             colorIndexes.add(code)
-            if prev[1] > 0:
-              table.add((prev[0], prev[1] + 1))
+            if prev.len > 0:
+              table.add((prev.offset, prev.len + 1))
             prev = (start, 1)
           else:
             let (offset, len) = table[code]
             for i in 0 ..< len:
               colorIndexes.add(colorIndexes[offset + i])
-            table.add((prev[0], prev[1] + 1))
+            table.add((prev.offset, prev.len + 1))
             prev = (start, len)
         else:
           if prev[1] == 0:
@@ -209,8 +209,8 @@ proc decodeGif*(data: string): Gif {.raises: [PixieError].} =
           for i in 0 ..< prev[1]:
             colorIndexes.add(colorIndexes[prev[0] + i])
           colorIndexes.add(colorIndexes[prev[0]])
-          table.add((start, prev[1] + 1))
-          prev = (start, prev[1] + 1)
+          table.add((start, prev.len + 1))
+          prev = (start, prev.len + 1)
 
       if colorIndexes.len != imageWidth * imageHeight:
         failInvalid()
@@ -243,6 +243,8 @@ proc decodeGif*(data: string): Gif {.raises: [PixieError].} =
               image.data[i] = globalColorTable[colorIndex]
 
         if interlaced:
+          # Just copyMem the rows into the right place. I've only ever seen
+          # interlaced for the first frame so this is unlikely to be a hot path.
           let deinterlaced = newImage(image.width, image.height)
           var
             y: int

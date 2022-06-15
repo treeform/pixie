@@ -10,6 +10,9 @@ template currentExceptionAsPixieError*(): untyped =
   let e = getCurrentException()
   newException(PixieError, e.getStackTrace & e.msg, e)
 
+when defined(release):
+  {.push checks: off.}
+
 proc gaussianKernel*(radius: int): seq[uint16] {.raises: [].} =
   ## Compute lookup table for 1d Gaussian kernel.
   ## Values are [0, 255] * 256.
@@ -81,16 +84,23 @@ proc fillUnsafe*(
     for j in i ..< start + len:
       data[j] = rgbx
 
+const straightAlphaTable = block:
+  var table: array[256, array[256, uint8]]
+  for a in 0 ..< 256:
+    let multiplier = if a > 0: (255 / a.float32) else: 0
+    for c in 0 ..< 256:
+      table[a][c] = min(round((c.float32 * multiplier)), 255).uint8
+  table
+
 proc toStraightAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} =
   ## Converts an image from premultiplied alpha to straight alpha.
   ## This is expensive for large images.
-  for c in data.mitems:
-    if c.a == 0 or c.a == 255:
-      continue
-    let multiplier = ((255 / c.a.float32) * 255).uint32
-    c.r = ((c.r.uint32 * multiplier) div 255).uint8
-    c.g = ((c.g.uint32 * multiplier) div 255).uint8
-    c.b = ((c.b.uint32 * multiplier) div 255).uint8
+  for i in 0 ..< data.len:
+    var c = data[i]
+    c.r = straightAlphaTable[c.a][c.r]
+    c.g = straightAlphaTable[c.a][c.g]
+    c.b = straightAlphaTable[c.a][c.b]
+    data[i] = c
 
 proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} =
   ## Converts an image to premultiplied alpha from straight alpha.
@@ -187,3 +197,6 @@ when defined(amd64) and allowSimd:
       a = mm_unpacklo_epi8(v, mm_setzero_si128())
       b = mm_unpacklo_epi8(a, mm_setzero_si128())
     result = mm_slli_epi32(b, 24) # Shift the values to uint32 `a`
+
+when defined(release):
+  {.pop.}
