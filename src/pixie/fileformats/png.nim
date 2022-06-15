@@ -244,9 +244,7 @@ proc decodeImageData(
           bitPos = 0
 
         let alpha = if value.int == special: 0 else: 255
-        result[x + y * header.width] = ColorRGBA(
-          r: value, g: value, b: value, a: alpha.uint8
-        )
+        result[x + y * header.width] = rgba(value, value, value, alpha.uint8)
 
       # If we move to a new row, skip to the next full byte
       if bitPos > 0:
@@ -315,9 +313,7 @@ proc decodeImageData(
               transparency.readUint8(value.int)
             else:
               255
-        result[x + y * header.width] = ColorRGBA(
-          r: rgb.r, g: rgb.g, b: rgb.b, a: transparency
-        )
+        result[x + y * header.width] = rgba(rgb.r, rgb.g, rgb.b, transparency)
 
       # If we move to a new row, skip to the next full byte
       if bitPos > 0:
@@ -326,11 +322,11 @@ proc decodeImageData(
   of 4:
     for i in 0 ..< header.height * header.width:
       let bytePos = i * 2
-      result[i] = ColorRGBA(
-        r: unfiltered.readUint8(bytePos),
-        g: unfiltered.readUint8(bytePos),
-        b: unfiltered.readUint8(bytePos),
-        a: unfiltered.readUint8(bytePos + 1)
+      result[i] = rgba(
+        unfiltered.readUint8(bytePos),
+        unfiltered.readUint8(bytePos),
+        unfiltered.readUint8(bytePos),
+        unfiltered.readUint8(bytePos + 1)
       )
   of 6:
     for i in 0 ..< header.height * header.width:
