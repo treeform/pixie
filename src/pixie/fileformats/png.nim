@@ -138,11 +138,11 @@ proc unfilter(
       for x in 0 ..< rowBytes:
         var
           value = uncompressed.readUint8(uncompressedStartIdx + x)
-          left, up: int
+          left, up: uint32
         if x - bpp >= 0:
-          left = result[unfilteredStartIx + x - bpp].int
+          left = result[unfilteredStartIx + x - bpp]
         if y - 1 >= 0:
-          up = result[unfilteredStartIx + x - rowBytes].int
+          up = result[unfilteredStartIx + x - rowBytes]
         value += ((left + up) div 2).uint8
         result[unfilteredStartIx + x] = value
     of 4: # Paeth
