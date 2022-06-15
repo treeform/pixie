@@ -94,7 +94,7 @@ proc decodePalette(data: pointer, len: int): seq[ColorRGB] =
 
 proc unfilter(
   uncompressed: string, height, rowBytes, bpp: int
-): string =
+): seq[uint8] =
   result.setLen(uncompressed.len - height)
 
   template uncompressedIdx(x, y: int): int =
@@ -121,7 +121,7 @@ proc unfilter(
         var value = uncompressed.readUint8(uncompressedStartIdx + x)
         if x - bpp >= 0:
           value += result.readUint8(unfilteredStartIx + x - bpp)
-        result[unfilteredStartIx + x] = value.char
+        result[unfilteredStartIx + x] = value
     of 2: # Up
       let
         uncompressedStartIdx = uncompressedIdx(1, y)
@@ -129,8 +129,8 @@ proc unfilter(
       for x in 0 ..< rowBytes:
         var value = uncompressed.readUint8(uncompressedStartIdx + x)
         if y - 1 >= 0:
-          value += result.readUint8(unfiteredIdx(x, y - 1))
-        result[unfilteredStartIx + x] = value.char
+          value += result.readUint8(unfilteredStartIx + x - rowBytes)
+        result[unfilteredStartIx + x] = value
     of 3: # Average
       let
         uncompressedStartIdx = uncompressedIdx(1, y)
@@ -144,7 +144,7 @@ proc unfilter(
         if y - 1 >= 0:
           up = result[unfilteredStartIx + x - rowBytes].int
         value += ((left + up) div 2).uint8
-        result[unfilteredStartIx + x] = value.char
+        result[unfilteredStartIx + x] = value
     of 4: # Paeth
       let
         uncompressedStartIdx = uncompressedIdx(1, y)
@@ -172,7 +172,7 @@ proc unfilter(
           else:
             c
         value += paethPredictor(up, left, upLeft).uint8
-        result[unfilteredStartIx + x] = value.char
+        result[unfilteredStartIx + x] = value
     else:
       discard # Not possible, parseHeader validates
 
