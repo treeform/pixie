@@ -93,9 +93,9 @@ proc decodePalette(data: pointer, len: int): seq[ColorRGB] =
   copyMem(result[0].addr, data, len)
 
 proc unfilter(
-  uncompressed: string, height, rowBytes, bpp: int
+  uncompressed: pointer, len, height, rowBytes, bpp: int
 ): seq[uint8] =
-  result.setLen(uncompressed.len - height)
+  result.setLen(len - height)
 
   template uncompressedIdx(x, y: int): int =
     x + y * (rowBytes + 1)
@@ -103,9 +103,11 @@ proc unfilter(
   template unfiteredIdx(x, y: int): int =
     x + y * rowBytes
 
+  let uncompressed = cast[ptr UncheckedArray[uint8]](uncompressed)
+
   # Unfilter the image data
   for y in 0 ..< height:
-    let filterType = uncompressed.readUint8(uncompressedIdx(0, y))
+    let filterType = uncompressed[uncompressedIdx(0, y)]
     case filterType:
     of 0: # None
       copyMem(
@@ -118,7 +120,7 @@ proc unfilter(
         uncompressedStartIdx = uncompressedIdx(1, y)
         unfilteredStartIx = unfiteredIdx(0, y)
       for x in 0 ..< rowBytes:
-        var value = uncompressed.readUint8(uncompressedStartIdx + x)
+        var value = uncompressed[uncompressedStartIdx + x]
         if x - bpp >= 0:
           value += result[unfilteredStartIx + x - bpp]
         result[unfilteredStartIx + x] = value
@@ -127,7 +129,7 @@ proc unfilter(
         uncompressedStartIdx = uncompressedIdx(1, y)
         unfilteredStartIx = unfiteredIdx(0, y)
       for x in 0 ..< rowBytes:
-        var value = uncompressed.readUint8(uncompressedStartIdx + x)
+        var value = uncompressed[uncompressedStartIdx + x]
         if y - 1 >= 0:
           value += result[unfilteredStartIx + x - rowBytes]
         result[unfilteredStartIx + x] = value
@@ -137,7 +139,7 @@ proc unfilter(
         unfilteredStartIx = unfiteredIdx(0, y)
       for x in 0 ..< rowBytes:
         var
-          value = uncompressed.readUint8(uncompressedStartIdx + x)
+          value = uncompressed[uncompressedStartIdx + x]
           left, up: uint32
         if x - bpp >= 0:
           left = result[unfilteredStartIx + x - bpp]
@@ -151,7 +153,7 @@ proc unfilter(
         unfilteredStartIx = unfiteredIdx(0, y)
       for x in 0 ..< rowBytes:
         var
-          value = uncompressed.readUint8(uncompressedStartIdx + x)
+          value = uncompressed[uncompressedStartIdx + x]
           left, up, upLeft: int
         if x - bpp >= 0:
           left = result[unfilteredStartIx + x - bpp].int
@@ -220,7 +222,8 @@ proc decodeImageData(
     failInvalid()
 
   let unfiltered = unfilter(
-    uncompressed,
+    uncompressed.cstring,
+    uncompressed.len,
     header.height,
     rowBytes,
     max(valuesPerPixel div valuesPerByte, 1)
