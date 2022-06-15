@@ -114,39 +114,51 @@ proc unfilter(
         rowBytes
       )
     of 1: # Sub
+      let
+        uncompressedStartIdx = uncompressedIdx(1, y)
+        unfilteredStartIx = unfiteredIdx(0, y)
       for x in 0 ..< rowBytes:
-        var value = uncompressed.readUint8(uncompressedIdx(x + 1, y))
+        var value = uncompressed.readUint8(uncompressedStartIdx + x)
         if x - bpp >= 0:
-          value += result.readUint8(unfiteredIdx(x - bpp, y))
-        result[unfiteredIdx(x, y)] = value.char
+          value += result.readUint8(unfilteredStartIx + x - bpp)
+        result[unfilteredStartIx + x] = value.char
     of 2: # Up
+      let
+        uncompressedStartIdx = uncompressedIdx(1, y)
+        unfilteredStartIx = unfiteredIdx(0, y)
       for x in 0 ..< rowBytes:
-        var value = uncompressed.readUint8(uncompressedIdx(x + 1, y))
+        var value = uncompressed.readUint8(uncompressedStartIdx + x)
         if y - 1 >= 0:
           value += result.readUint8(unfiteredIdx(x, y - 1))
-        result[unfiteredIdx(x, y)] = value.char
+        result[unfilteredStartIx + x] = value.char
     of 3: # Average
+      let
+        uncompressedStartIdx = uncompressedIdx(1, y)
+        unfilteredStartIx = unfiteredIdx(0, y)
       for x in 0 ..< rowBytes:
         var
-          value = uncompressed.readUint8(uncompressedIdx(x + 1, y))
+          value = uncompressed.readUint8(uncompressedStartIdx + x)
           left, up: int
         if x - bpp >= 0:
-          left = result[unfiteredIdx(x - bpp, y)].int
+          left = result[unfilteredStartIx + x - bpp].int
         if y - 1 >= 0:
-          up = result[unfiteredIdx(x, y - 1)].int
+          up = result[unfilteredStartIx + x - rowBytes].int
         value += ((left + up) div 2).uint8
-        result[unfiteredIdx(x, y)] = value.char
+        result[unfilteredStartIx + x] = value.char
     of 4: # Paeth
+      let
+        uncompressedStartIdx = uncompressedIdx(1, y)
+        unfilteredStartIx = unfiteredIdx(0, y)
       for x in 0 ..< rowBytes:
         var
-          value = uncompressed.readUint8(uncompressedIdx(x + 1, y))
+          value = uncompressed.readUint8(uncompressedStartIdx + x)
           left, up, upLeft: int
         if x - bpp >= 0:
-          left = result[unfiteredIdx(x - bpp, y)].int
+          left = result[unfilteredStartIx + x - bpp].int
         if y - 1 >= 0:
-          up = result[unfiteredIdx(x, y - 1)].int
+          up = result[unfilteredStartIx + x - rowBytes].int
         if x - bpp >= 0 and y - 1 >= 0:
-          upLeft = result[unfiteredIdx(x - bpp, y - 1)].int
+          upLeft = result[unfilteredStartIx + x - rowBytes - bpp].int
         template paethPredictor(a, b, c: int): int =
           let
             p = a + b - c
@@ -160,7 +172,7 @@ proc unfilter(
           else:
             c
         value += paethPredictor(up, left, upLeft).uint8
-        result[unfiteredIdx(x, y)] = value.char
+        result[unfilteredStartIx + x] = value.char
     else:
       discard # Not possible, parseHeader validates
 
