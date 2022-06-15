@@ -235,7 +235,7 @@ proc decodeImageData(
     var bytePos, bitPos: int
     for y in 0 ..< header.height:
       for x in 0 ..< header.width:
-        var value = unfiltered.readUint8(bytePos)
+        var value = unfiltered[bytePos]
         case header.bitDepth:
         of 1:
           value = (value shr (7 - bitPos)) and 1
@@ -299,7 +299,7 @@ proc decodeImageData(
     var bytePos, bitPos: int
     for y in 0 ..< header.height:
       for x in 0 ..< header.width:
-        var value = unfiltered.readUint8(bytePos)
+        var value = unfiltered[bytePos]
         case header.bitDepth:
         of 1:
           value = (value shr (7 - bitPos)) and 1
@@ -338,10 +338,10 @@ proc decodeImageData(
     for i in 0 ..< header.height * header.width:
       let bytePos = i * 2
       result[i] = rgba(
-        unfiltered.readUint8(bytePos),
-        unfiltered.readUint8(bytePos),
-        unfiltered.readUint8(bytePos),
-        unfiltered.readUint8(bytePos + 1)
+        unfiltered[bytePos],
+        unfiltered[bytePos],
+        unfiltered[bytePos],
+        unfiltered[bytePos + 1]
       )
   of 6:
     copyMem(result[0].addr, unfiltered[0].unsafeAddr, unfiltered.len)
