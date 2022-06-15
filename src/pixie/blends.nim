@@ -647,17 +647,17 @@ when defined(amd64) and allowSimd:
 
     mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
 
-  proc maskBlendNormalMaskerSimd(backdrop, source: M128i): M128i =
+  proc maskBlendNormalSimdMasker(backdrop, source: M128i): M128i =
     maskBlendNormalSimd(backdrop, source)
 
-  proc maskBlendMaskMaskerSimd(backdrop, source: M128i): M128i =
+  proc maskBlendMaskSimdMasker(backdrop, source: M128i): M128i =
     maskBlendMaskSimd(backdrop, source)
 
   proc maskerSimd*(blendMode: BlendMode): MaskerSimd {.raises: [PixieError].} =
     ## Returns a blend masking function with SIMD support.
     case blendMode:
-    of NormalBlend: maskBlendNormalMaskerSimd
-    of MaskBlend: maskBlendMaskMaskerSimd
+    of NormalBlend: maskBlendNormalSimdMasker
+    of MaskBlend: maskBlendMaskSimdMasker
     of OverwriteBlend: overwriteSimdBlender
     else:
       raise newException(PixieError, "No SIMD masker for " & $blendMode)
