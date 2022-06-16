@@ -1372,7 +1372,7 @@ proc fillCoverage(
                   let backdrop = mm_loadu_si128(image.data[index + i * 4].addr)
                   mm_storeu_si128(
                     image.data[index + i * 4].addr,
-                    blendNormalInlineSimd(backdrop, colorVec)
+                    blendNormalSimd(backdrop, colorVec)
                   )
             else:
               for i in 0 ..< 4:
@@ -1415,7 +1415,7 @@ proc fillCoverage(
                 coverageVec = mm_srli_si128(coverageVec, 4)
 
             if blendMode == NormalBlend:
-              useCoverage(blendNormalInlineSimd)
+              useCoverage(blendNormalSimd)
             else:
               useCoverage(blenderSimd)
 
@@ -1537,7 +1537,7 @@ proc fillHits(
               backdrop = mm_loadu_si128(image.data[index].addr)
             mm_storeu_si128(
               image.data[index].addr,
-              blendNormalInlineSimd(backdrop, colorVec)
+              blendNormalSimd(backdrop, colorVec)
             )
             x += 4
         else:
