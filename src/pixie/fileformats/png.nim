@@ -90,14 +90,12 @@ proc decodePalette(data: pointer, len: int): seq[ColorRGB] =
 
   result.setLen(len div 3)
 
-  let data = cast[ptr UncheckedArray[uint8]](data)
-  for i in 0 ..< len div 3:
-    copyMem(result[i].addr, data[i * 3].unsafeAddr, 3)
+  copyMem(result[0].addr, data, len)
 
 proc unfilter(
-  uncompressed: string, height, rowBytes, bpp: int
-): string =
-  result.setLen(uncompressed.len - height)
+  uncompressed: pointer, len, height, rowBytes, bpp: int
+): seq[uint8] =
+  result.setLen(len - height)
 
   template uncompressedIdx(x, y: int): int =
     x + y * (rowBytes + 1)
@@ -105,9 +103,11 @@ proc unfilter(
   template unfiteredIdx(x, y: int): int =
     x + y * rowBytes
 
+  let uncompressed = cast[ptr UncheckedArray[uint8]](uncompressed)
+
   # Unfilter the image data
   for y in 0 ..< height:
-    let filterType = uncompressed.readUint8(uncompressedIdx(0, y))
+    let filterType = uncompressed[uncompressedIdx(0, y)]
     case filterType:
     of 0: # None
       copyMem(
@@ -116,39 +116,51 @@ proc unfilter(
         rowBytes
       )
     of 1: # Sub
+      let
+        uncompressedStartIdx = uncompressedIdx(1, y)
+        unfilteredStartIx = unfiteredIdx(0, y)
       for x in 0 ..< rowBytes:
-        var value = uncompressed.readUint8(uncompressedIdx(x + 1, y))
+        var value = uncompressed[uncompressedStartIdx + x]
         if x - bpp >= 0:
-          value += result.readUint8(unfiteredIdx(x - bpp, y))
-        result[unfiteredIdx(x, y)] = value.char
+          value += result[unfilteredStartIx + x - bpp]
+        result[unfilteredStartIx + x] = value
     of 2: # Up
+      let
+        uncompressedStartIdx = uncompressedIdx(1, y)
+        unfilteredStartIx = unfiteredIdx(0, y)
       for x in 0 ..< rowBytes:
-        var value = uncompressed.readUint8(uncompressedIdx(x + 1, y))
+        var value = uncompressed[uncompressedStartIdx + x]
         if y - 1 >= 0:
-          value += result.readUint8(unfiteredIdx(x, y - 1))
-        result[unfiteredIdx(x, y)] = value.char
+          value += result[unfilteredStartIx + x - rowBytes]
+        result[unfilteredStartIx + x] = value
     of 3: # Average
+      let
+        uncompressedStartIdx = uncompressedIdx(1, y)
+        unfilteredStartIx = unfiteredIdx(0, y)
       for x in 0 ..< rowBytes:
         var
-          value = uncompressed.readUint8(uncompressedIdx(x + 1, y))
-          left, up: int
+          value = uncompressed[uncompressedStartIdx + x]
+          left, up: uint32
         if x - bpp >= 0:
-          left = result[unfiteredIdx(x - bpp, y)].int
+          left = result[unfilteredStartIx + x - bpp]
         if y - 1 >= 0:
-          up = result[unfiteredIdx(x, y - 1)].int
+          up = result[unfilteredStartIx + x - rowBytes]
         value += ((left + up) div 2).uint8
-        result[unfiteredIdx(x, y)] = value.char
+        result[unfilteredStartIx + x] = value
     of 4: # Paeth
+      let
+        uncompressedStartIdx = uncompressedIdx(1, y)
+        unfilteredStartIx = unfiteredIdx(0, y)
       for x in 0 ..< rowBytes:
         var
-          value = uncompressed.readUint8(uncompressedIdx(x + 1, y))
+          value = uncompressed[uncompressedStartIdx + x]
           left, up, upLeft: int
         if x - bpp >= 0:
-          left = result[unfiteredIdx(x - bpp, y)].int
+          left = result[unfilteredStartIx + x - bpp].int
         if y - 1 >= 0:
-          up = result[unfiteredIdx(x, y - 1)].int
+          up = result[unfilteredStartIx + x - rowBytes].int
         if x - bpp >= 0 and y - 1 >= 0:
-          upLeft = result[unfiteredIdx(x - bpp, y - 1)].int
+          upLeft = result[unfilteredStartIx + x - rowBytes - bpp].int
         template paethPredictor(a, b, c: int): int =
           let
             p = a + b - c
@@ -162,7 +174,7 @@ proc unfilter(
           else:
             c
         value += paethPredictor(up, left, upLeft).uint8
-        result[unfiteredIdx(x, y)] = value.char
+        result[unfilteredStartIx + x] = value
     else:
       discard # Not possible, parseHeader validates
 
@@ -210,7 +222,8 @@ proc decodeImageData(
     failInvalid()
 
   let unfiltered = unfilter(
-    uncompressed,
+    uncompressed.cstring,
+    uncompressed.len,
     header.height,
     rowBytes,
     max(valuesPerPixel div valuesPerByte, 1)
@@ -222,7 +235,7 @@ proc decodeImageData(
     var bytePos, bitPos: int
     for y in 0 ..< header.height:
       for x in 0 ..< header.width:
-        var value = unfiltered.readUint8(bytePos)
+        var value = unfiltered[bytePos]
         case header.bitDepth:
         of 1:
           value = (value shr (7 - bitPos)) and 1
@@ -246,9 +259,7 @@ proc decodeImageData(
           bitPos = 0
 
         let alpha = if value.int == special: 0 else: 255
-        result[x + y * header.width] = ColorRGBA(
-          r: value, g: value, b: value, a: alpha.uint8
-        )
+        result[x + y * header.width] = rgba(value, value, value, alpha.uint8)
 
       # If we move to a new row, skip to the next full byte
       if bitPos > 0:
@@ -275,17 +286,20 @@ proc decodeImageData(
         result[i].a = 255
 
     let lastOffset = header.height * header.width - 1
-    var rgb: array[3, uint8]
-    copyMem(rgb.addr, unfiltered[lastOffset * 3].unsafeAddr, 3)
-    var rgba = ColorRGBA(r: rgb[0], g: rgb[1], b: rgb[2], a: 255)
+    var rgba = rgba(
+      unfiltered[lastOffset * 3 + 0].uint8,
+      unfiltered[lastOffset * 3 + 1].uint8,
+      unfiltered[lastOffset * 3 + 2].uint8,
+      255
+    )
     if rgba == special:
       rgba.a = 0
-    result[header.height * header.width - 1] = cast[ColorRGBA](rgba)
+    result[header.height * header.width - 1] = rgba
   of 3:
     var bytePos, bitPos: int
     for y in 0 ..< header.height:
       for x in 0 ..< header.width:
-        var value = unfiltered.readUint8(bytePos)
+        var value = unfiltered[bytePos]
         case header.bitDepth:
         of 1:
           value = (value shr (7 - bitPos)) and 1
@@ -314,9 +328,7 @@ proc decodeImageData(
               transparency.readUint8(value.int)
             else:
               255
-        result[x + y * header.width] = ColorRGBA(
-          r: rgb.r, g: rgb.g, b: rgb.b, a: transparency
-        )
+        result[x + y * header.width] = rgba(rgb.r, rgb.g, rgb.b, transparency)
 
       # If we move to a new row, skip to the next full byte
       if bitPos > 0:
@@ -325,15 +337,14 @@ proc decodeImageData(
   of 4:
     for i in 0 ..< header.height * header.width:
       let bytePos = i * 2
-      result[i] = ColorRGBA(
-        r: unfiltered.readUint8(bytePos),
-        g: unfiltered.readUint8(bytePos),
-        b: unfiltered.readUint8(bytePos),
-        a: unfiltered.readUint8(bytePos + 1)
+      result[i] = rgba(
+        unfiltered[bytePos],
+        unfiltered[bytePos],
+        unfiltered[bytePos],
+        unfiltered[bytePos + 1]
       )
   of 6:
-    for i in 0 ..< header.height * header.width:
-      result[i] = cast[ColorRGBA](unfiltered.readUint32(i * 4))
+    copyMem(result[0].addr, unfiltered[0].unsafeAddr, unfiltered.len)
   else:
     discard # Not possible, parseHeader validates
 
