@@ -1,6 +1,9 @@
 import chroma, flatty/binny, math, pixie/common, pixie/images, pixie/internal,
     pixie/masks, zippy, zippy/crc
 
+when defined(amd64) and allowSimd:
+  import nimsimd/sse2
+
 # See http://www.libpng.org/pub/png/spec/1.2/PNG-Contents.html
 
 const
@@ -128,7 +131,19 @@ proc unfilter(
       let
         uncompressedStartIdx = uncompressedIdx(1, y)
         unfilteredStartIx = unfiteredIdx(0, y)
-      for x in 0 ..< rowBytes:
+      var x: int
+      when allowSimd and defined(amd64):
+        if y - 1 >= 0:
+          for _ in 0 ..< rowBytes div 16:
+            let
+              bytes = mm_loadu_si128(uncompressed[uncompressedStartIdx + x].addr)
+              up = mm_loadu_si128(result[unfilteredStartIx + x - rowBytes].addr)
+            mm_storeu_si128(
+              result[unfilteredStartIx + x].addr,
+              mm_add_epi8(bytes, up)
+            )
+            x += 16
+      for x in x ..< rowBytes:
         var value = uncompressed[uncompressedStartIdx + x]
         if y - 1 >= 0:
           value += result[unfilteredStartIx + x - rowBytes]
@@ -556,19 +571,16 @@ proc encodePng*(
   # Add room for 1 byte before each row for the filter type.
   var filtered = newString(width * height * channels + height)
   for y in 0 ..< height:
-    filtered[y * width * channels + y] = 3.char # Average
+    filtered[y * width * channels + y] = 2.char # Up filter type
     for x in 0 ..< width * channels:
       # Move through the image data byte-by-byte
       let
         dataPos = y * width * channels + x
         filteredPos = y * width * channels + y + 1 + x
-      var left, up: int
-      if x - channels >= 0:
-        left = data[dataPos - channels].int
+      var up: uint8
       if y - 1 >= 0:
-        up = data[(y - 1) * width * channels + x].int
-      let avg = ((left + up) div 2).uint8
-      filtered[filteredPos] = (data[dataPos] - avg).char
+        up = data[(y - 1) * width * channels + x]
+      filtered[filteredPos] = (data[dataPos] - up).char
 
   let compressed =
     try:
