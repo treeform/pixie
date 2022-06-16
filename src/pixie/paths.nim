@@ -1563,11 +1563,12 @@ proc fillHits(
           fillUnsafe(image.data, rgbx(0, 0, 0, 0), image.dataIndex(prevFilledTo, y), gapBetweenHits)
         prevFilledTo = filledTo
       block: # Handle this fill
-        var x = fillStart
-        simdBlob(image, x, blendMaskSimd)
-        for x in x ..< fillStart + fillLen:
-          let backdrop = image.unsafe[x, y]
-          image.unsafe[x, y] = blendMask(backdrop, rgbx)
+        if rgbx.a != 255:
+          var x = fillStart
+          simdBlob(image, x, blendMaskSimd)
+          for x in x ..< fillStart + fillLen:
+            let backdrop = image.unsafe[x, y]
+            image.unsafe[x, y] = blendMask(backdrop, rgbx)
 
     image.clearUnsafe(0, y, startX, y)
     image.clearUnsafe(filledTo, y, image.width, y)
