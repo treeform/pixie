@@ -1572,6 +1572,17 @@ proc fillHits(
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
+  template simdBlob(mask: Mask, x: var int, blendProc: untyped) =
+    when allowSimd:
+      when defined(amd64):
+        let vec255 = mm_set1_epi8(255)
+        for _ in 0 ..< fillLen div 16:
+          let
+            index = mask.dataIndex(x, y)
+            backdrop = mm_loadu_si128(mask.data[index].addr)
+          mm_storeu_si128(mask.data[index].addr, blendProc(backdrop, vec255))
+          x += 16
+
   case blendMode:
   of NormalBlend, OverwriteBlend:
     walkHits hits, numHits, windingRule, y, mask.width:
@@ -1590,13 +1601,17 @@ proc fillHits(
 
   of SubtractMaskBlend:
     walkHits hits, numHits, windingRule, y, mask.width:
-      for x in fillStart ..< fillStart + fillLen:
+      var x = fillStart
+      simdBlob(mask, x, maskBlendSubtractSimd)
+      for x in x ..< fillStart + fillLen:
         let backdrop = mask.unsafe[x, y]
         mask.unsafe[x, y] = maskBlendSubtract(backdrop, 255)
 
   of ExcludeMaskBlend:
     walkHits hits, numHits, windingRule, y, mask.width:
-      for x in fillStart ..< fillStart + fillLen:
+      var x = fillStart
+      simdBlob(mask, x, maskBlendExcludeSimd)
+      for x in x ..< fillStart + fillLen:
         let backdrop = mask.unsafe[x, y]
         mask.unsafe[x, y] = maskBlendExclude(backdrop, 255)
 
