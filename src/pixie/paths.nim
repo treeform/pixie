@@ -1555,7 +1555,7 @@ proc fillHits(
           image.unsafe[x, y] = blendNormal(backdrop, rgbx)
 
   of MaskBlend:
-    var prevFilledTo: int
+    var prevFilledTo = startX
     walkHits hits, numHits, windingRule, y, image.width:
       block: # Clear any gap between this fill and the previous fill
         let gapBetween = fillStart - prevFilledTo
@@ -1599,7 +1599,7 @@ proc fillHits(
       fillUnsafe(mask.data, 255, mask.dataIndex(fillStart, y), fillLen)
 
   of MaskBlend:
-    var prevFilledTo: int
+    var prevFilledTo = startX
     walkHits hits, numHits, windingRule,y,  mask.width:
       let gapBetween = fillStart - prevFilledTo
       if gapBetween > 0:
