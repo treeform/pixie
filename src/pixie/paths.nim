@@ -1558,9 +1558,14 @@ proc fillHits(
     var prevFilledTo: int
     walkHits hits, numHits, windingRule, y, image.width:
       block: # Clear any gap between this fill and the previous fill
-        let gapBetweenHits = fillStart - prevFilledTo
-        if gapBetweenHits > 0:
-          fillUnsafe(image.data, rgbx(0, 0, 0, 0), image.dataIndex(prevFilledTo, y), gapBetweenHits)
+        let gapBetween = fillStart - prevFilledTo
+        if gapBetween > 0:
+          fillUnsafe(
+            image.data,
+            rgbx(0, 0, 0, 0),
+            image.dataIndex(prevFilledTo, y),
+            gapBetween
+          )
         prevFilledTo = filledTo
       block: # Handle this fill
         if rgbx.a != 255:
@@ -1596,9 +1601,9 @@ proc fillHits(
   of MaskBlend:
     var prevFilledTo: int
     walkHits hits, numHits, windingRule,y,  mask.width:
-      let gapBetweenHits = fillStart - prevFilledTo
-      if gapBetweenHits > 0:
-        fillUnsafe(mask.data, 0, mask.dataIndex(prevFilledTo, y), gapBetweenHits)
+      let gapBetween = fillStart - prevFilledTo
+      if gapBetween > 0:
+        fillUnsafe(mask.data, 0, mask.dataIndex(prevFilledTo, y), gapBetween)
       prevFilledTo = filledTo
 
     mask.clearUnsafe(0, y, startX, y)
