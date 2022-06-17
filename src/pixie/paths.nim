@@ -1340,6 +1340,19 @@ proc fillCoverage(
 
   when allowSimd:
     when defined(amd64):
+      iterator simd(
+        coverages: seq[uint8], x: var int, startX: int
+      ): (M128i, bool, bool) =
+        for _ in 0 ..< coverages.len div 16:
+          let
+            coverageVec = mm_loadu_si128(coverages[x - startX].unsafeAddr)
+            eqZero = mm_cmpeq_epi8(coverageVec, mm_setzero_si128())
+            eq255 = mm_cmpeq_epi8(coverageVec, mm_set1_epi8(cast[int8](255)))
+            allZeroes = mm_movemask_epi8(eqZero) == 0xffff
+            all255 = mm_movemask_epi8(eq255) == 0xffff
+          yield (coverageVec, allZeroes, all255)
+          x += 16
+
       proc source(colorVec, coverageVec: M128i): M128i {.inline.} =
         let
           oddMask = mm_set1_epi16(cast[int16](0xff00))
@@ -1356,19 +1369,6 @@ proc fillCoverage(
         sourceEven = mm_srli_epi16(mm_mulhi_epu16(sourceEven, div255), 7)
         sourceOdd = mm_srli_epi16(mm_mulhi_epu16(sourceOdd, div255), 7)
         result = mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
-
-      iterator simd(
-        coverages: seq[uint8], x: var int, startX: int
-      ): (M128i, bool, bool) =
-        for _ in 0 ..< coverages.len div 16:
-          let
-            coverageVec = mm_loadu_si128(coverages[x - startX].unsafeAddr)
-            eqZero = mm_cmpeq_epi8(coverageVec, mm_setzero_si128())
-            eq255 = mm_cmpeq_epi8(coverageVec, mm_set1_epi8(cast[int8](255)))
-            allZeroes = mm_movemask_epi8(eqZero) == 0xffff
-            all255 = mm_movemask_epi8(eq255) == 0xffff
-          yield (coverageVec, allZeroes, all255)
-          x += 16
 
       let colorVec = mm_set1_epi32(cast[int32](rgbx))
 
@@ -1434,6 +1434,8 @@ proc fillCoverage(
         image.unsafe[x, y] = blendNormal(backdrop, source(rgbx, coverage))
 
   of MaskBlend:
+    {.linearScanEnd.}
+
     when allowSimd:
       when defined(amd64):
         for (coverageVec, allZeroes, all255) in simd(coverages, x, startX):
@@ -1611,6 +1613,8 @@ proc fillHits(
           image.unsafe[x, y] = blendNormal(backdrop, rgbx)
 
   of MaskBlend:
+    {.linearScanEnd.}
+
     var filledTo = startX
     for (start, len) in hits.walkInteger(numHits, windingRule, y, image.width):
       block: # Clear any gap between this fill and the previous fill
@@ -1633,6 +1637,21 @@ proc fillHits(
 
     image.clearUnsafe(0, y, startX, y)
     image.clearUnsafe(filledTo, y, image.width, y)
+
+  of SubtractMaskBlend:
+    for (start, len) in hits.walkInteger(numHits, windingRule, y, image.width):
+      for x in start ..< start + len:
+        if rgbx.a == 255:
+          image.unsafe[x, y] = rgbx(0, 0, 0, 0)
+        else:
+          let backdrop = image.unsafe[x, y]
+          image.unsafe[x, y] = blendSubtractMask(backdrop, rgbx)
+
+  of ExcludeMaskBlend:
+    for (start, len) in hits.walkInteger(numHits, windingRule, y, image.width):
+      for x in start ..< start + len:
+        let backdrop = image.unsafe[x, y]
+        image.unsafe[x, y] = blendExcludeMask(backdrop, rgbx)
 
   else:
     let blender = blendMode.blender()

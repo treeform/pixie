@@ -47,6 +47,16 @@ block:
     image.fill(rgbx(255, 255, 255, 255))
     image.fillPath(rect, paint)
 
+  timeIt "rect Image SubtractMaskBlend":
+    paint.blendMode = SubtractMaskBlend
+    image.fill(rgbx(255, 255, 255, 255))
+    image.fillPath(rect, paint)
+
+  timeIt "rect Image ExcludeMaskBlend":
+    paint.blendMode = ExcludeMaskBlend
+    image.fill(rgbx(255, 255, 255, 255))
+    image.fillPath(rect, paint)
+
   timeIt "roundedRect Image OverwriteBlend":
     paint.blendMode = OverwriteBlend
     image.fillPath(roundedRect, paint)
@@ -57,6 +67,16 @@ block:
 
   timeIt "roundedRect Image MaskBlend":
     paint.blendMode = MaskBlend
+    image.fill(rgbx(255, 255, 255, 255))
+    image.fillPath(roundedRect, paint)
+
+  timeIt "roundedRect Image SubtractMaskBlend":
+    paint.blendMode = SubtractMaskBlend
+    image.fill(rgbx(255, 255, 255, 255))
+    image.fillPath(roundedRect, paint)
+
+  timeIt "roundedRect Image ExcludeMaskBlend":
+    paint.blendMode = ExcludeMaskBlend
     image.fill(rgbx(255, 255, 255, 255))
     image.fillPath(roundedRect, paint)
 
