@@ -1506,15 +1506,12 @@ template walkHits(
   y, width: int,
   inner: untyped
 ) =
-  var filledTo {.inject.}: int
   for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
     let
       fillStart {.inject.} = prevAt.integer
       fillLen {.inject.} = at.integer - fillStart
     if fillLen <= 0:
       continue
-
-    filledTo = fillStart + fillLen
 
     inner
 
@@ -1555,18 +1552,18 @@ proc fillHits(
           image.unsafe[x, y] = blendNormal(backdrop, rgbx)
 
   of MaskBlend:
-    var prevFilledTo = startX
+    var filledTo = startX
     walkHits hits, numHits, windingRule, y, image.width:
       block: # Clear any gap between this fill and the previous fill
-        let gapBetween = fillStart - prevFilledTo
+        let gapBetween = fillStart - filledTo
         if gapBetween > 0:
           fillUnsafe(
             image.data,
             rgbx(0, 0, 0, 0),
-            image.dataIndex(prevFilledTo, y),
+            image.dataIndex(filledTo, y),
             gapBetween
           )
-        prevFilledTo = filledTo
+        filledTo = fillStart + fillLen
       block: # Handle this fill
         if rgbx.a != 255:
           var x = fillStart
@@ -1599,12 +1596,12 @@ proc fillHits(
       fillUnsafe(mask.data, 255, mask.dataIndex(fillStart, y), fillLen)
 
   of MaskBlend:
-    var prevFilledTo = startX
+    var filledTo = startX
     walkHits hits, numHits, windingRule,y,  mask.width:
-      let gapBetween = fillStart - prevFilledTo
+      let gapBetween = fillStart - filledTo
       if gapBetween > 0:
-        fillUnsafe(mask.data, 0, mask.dataIndex(prevFilledTo, y), gapBetween)
-      prevFilledTo = filledTo
+        fillUnsafe(mask.data, 0, mask.dataIndex(filledTo, y), gapBetween)
+      filledTo = fillStart + fillLen
 
     mask.clearUnsafe(0, y, startX, y)
     mask.clearUnsafe(filledTo, y, mask.width, y)
