@@ -1429,6 +1429,8 @@ proc fillCoverage(
       let coverage = coverages[x - startX]
       if coverage == 255 and rgbx.a == 255:
         image.unsafe[x, y] = rgbx
+      elif coverage == 0:
+        discard
       else:
         let backdrop = image.unsafe[x, y]
         image.unsafe[x, y] = blendNormal(backdrop, source(rgbx, coverage))
