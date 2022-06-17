@@ -1511,10 +1511,8 @@ proc fillHits(
       when defined(amd64):
         let colorVec = mm_set1_epi32(cast[int32](rgbx))
         for _ in 0 ..< fillLen div 4:
-          let
-            index = image.dataIndex(x, y)
-            backdrop = mm_loadu_si128(image.data[index].addr)
-          mm_storeu_si128(image.data[index].addr, blendProc(backdrop, colorVec))
+          let backdrop = mm_loadu_si128(image.unsafe[x, y].addr)
+          mm_storeu_si128(image.unsafe[x, y].addr, blendProc(backdrop, colorVec))
           x += 4
 
   case blendMode:
@@ -1577,10 +1575,8 @@ proc fillHits(
       when defined(amd64):
         let vec255 = mm_set1_epi8(255)
         for _ in 0 ..< fillLen div 16:
-          let
-            index = mask.dataIndex(x, y)
-            backdrop = mm_loadu_si128(mask.data[index].addr)
-          mm_storeu_si128(mask.data[index].addr, blendProc(backdrop, vec255))
+          let backdrop = mm_loadu_si128(mask.unsafe[x, y].addr)
+          mm_storeu_si128(mask.unsafe[x, y].addr, blendProc(backdrop, vec255))
           x += 16
 
   case blendMode:
