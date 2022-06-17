@@ -550,6 +550,7 @@ proc newImage*(svg: Svg): Image {.raises: [PixieError].} =
   result = newImage(svg.width, svg.height)
 
   try:
+    var blendMode = OverwriteBlend # Start as overwrite
     for (path, props) in svg.elements:
       if props.display and props.opacity > 0:
         if props.fill != "none":
@@ -573,8 +574,11 @@ proc newImage*(svg: Svg): Image {.raises: [PixieError].} =
             paint = parseHtmlColor(props.fill).rgbx
 
           paint.opacity = props.fillOpacity * props.opacity
+          paint.blendMode = blendMode
 
           result.fillPath(path, paint, props.transform, props.fillRule)
+
+        blendMode = NormalBlend # Switch to normal when compositing multiple paths
 
         if props.stroke != rgbx(0, 0, 0, 0) and props.strokeWidth > 0:
           let paint = newPaint(props.stroke)
