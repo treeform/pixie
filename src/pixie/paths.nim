@@ -1443,9 +1443,9 @@ proc fillCoverage(
 ) =
   var x = startX
   when defined(amd64) and allowSimd:
-    if blendMode.hasSimdMasker():
+    if blendMode.hasSimdMaskBlender():
       let
-        maskerSimd = blendMode.maskerSimd()
+        maskerSimd = blendMode.maskBlenderSimd()
         vecZero = mm_setzero_si128()
       for _ in 0 ..< coverages.len div 16:
         let
@@ -1465,7 +1465,7 @@ proc fillCoverage(
           mm_storeu_si128(mask.data[index].addr, vecZero)
         x += 16
 
-  let masker = blendMode.masker()
+  let maskBlender = blendMode.maskBlender()
   for x in x ..< startX + coverages.len:
     let coverage = coverages[x - startX]
     if coverage != 0 or blendMode == ExcludeMaskBlend:
@@ -1473,7 +1473,7 @@ proc fillCoverage(
         mask.unsafe[x, y] = coverage
       else:
         let backdrop = mask.unsafe[x, y]
-        mask.unsafe[x, y] = masker(backdrop, coverage)
+        mask.unsafe[x, y] = maskBlender(backdrop, coverage)
     elif blendMode == MaskBlend:
       mask.unsafe[x, y] = 0
 
