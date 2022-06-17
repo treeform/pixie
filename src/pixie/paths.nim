@@ -1164,34 +1164,16 @@ proc integer(p: Fixed32): int {.inline.} =
 proc trunc(p: Fixed32): Fixed32 {.inline.} =
   (p div 256) * 256
 
-proc sortHits(hits: var seq[(Fixed32, int16)], inl, inr: int) =
-  ## Quicksort + insertion sort, in-place and faster than standard lib sort.
-  let n = inr - inl + 1
-  if n < 32: # Use insertion sort for the rest
-    for i in inl + 1 .. inr:
-      var
-        j = i - 1
-        k = i
-      while j >= inl and hits[j][0] > hits[k][0]:
-        swap(hits[j + 1], hits[j])
-        dec j
-        dec k
-    return
-  var
-    l = inl
-    r = inr
-  let p = hits[l + n div 2][0]
-  while l <= r:
-    if hits[l][0] < p:
-      inc l
-    elif hits[r][0] > p:
-      dec r
-    else:
-      swap(hits[l], hits[r])
-      inc l
-      dec r
-  sortHits(hits, inl, r)
-  sortHits(hits, l, inr)
+proc sortHits(hits: var seq[(Fixed32, int16)], len: int) {.inline.} =
+  ## Insertion sort
+  for i in 1 ..< len:
+    var
+      j = i - 1
+      k = i
+    while j >= 0 and hits[j][0] > hits[k][0]:
+      swap(hits[j + 1], hits[j])
+      dec j
+      dec k
 
 proc shouldFill(
   windingRule: WindingRule, count: int
@@ -1284,7 +1266,7 @@ proc computeCoverage(
         inc numHits
 
     if numHits > 0:
-      sortHits(hits, 0, numHits - 1)
+      sortHits(hits, numHits)
 
     if aa:
       for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
@@ -2102,7 +2084,7 @@ proc overlaps(
         if segment.to != at:
           hits.add((at.x.fixed32, winding))
 
-  sortHits(hits, 0, hits.high)
+  sortHits(hits, hits.len)
 
   let testX = test.x.fixed32
 
