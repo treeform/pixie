@@ -847,7 +847,7 @@ proc drawUber(
                           backdropVec = mm_loadu_si128(a.data[backdropIdx].addr)
                         mm_storeu_si128(
                           a.data[backdropIdx].addr,
-                          blendNormalInlineSimd(backdropVec, sourceVec)
+                          blendNormalSimd(backdropVec, sourceVec)
                         )
                 else: # b is a Mask
                   var values = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
@@ -865,7 +865,7 @@ proc drawUber(
                           backdropVec = mm_loadu_si128(a.data[backdropIdx].addr)
                         mm_storeu_si128(
                           a.data[backdropIdx].addr,
-                          blendNormalInlineSimd(backdropVec, sourceVec)
+                          blendNormalSimd(backdropVec, sourceVec)
                         )
                     # Shuffle 32 bits off for the next iteration
                     values = mm_srli_si128(values, 4)
@@ -882,7 +882,7 @@ proc drawUber(
                   let sourceVec = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
                 mm_storeu_si128(
                   a.data[a.dataIndex(x, y)].addr,
-                  maskNormalInlineSimd(backdropVec, sourceVec)
+                  maskBlendNormalSimd(backdropVec, sourceVec)
                 )
               x += 16
               sx += 16
@@ -904,7 +904,7 @@ proc drawUber(
                       let backdropVec = mm_loadu_si128(a.data[a.dataIndex(x + q, y)].addr)
                       mm_storeu_si128(
                         a.data[a.dataIndex(x + q, y)].addr,
-                        blendMaskInlineSimd(backdropVec, sourceVec)
+                        blendMaskSimd(backdropVec, sourceVec)
                       )
                 else: # b is a Mask
                   var values = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
@@ -922,7 +922,7 @@ proc drawUber(
                       let backdropVec = mm_loadu_si128(a.data[a.dataIndex(x + q, y)].addr)
                       mm_storeu_si128(
                         a.data[a.dataIndex(x + q, y)].addr,
-                        blendMaskInlineSimd(backdropVec, sourceVec)
+                        blendMaskSimd(backdropVec, sourceVec)
                       )
                     # Shuffle 32 bits off for the next iteration
                     values = mm_srli_si128(values, 4)
@@ -939,7 +939,7 @@ proc drawUber(
                   let sourceVec = mm_loadu_si128(b.data[b.dataIndex(sx, sy)].addr)
                 mm_storeu_si128(
                   a.data[a.dataIndex(x, y)].addr,
-                  maskMaskInlineSimd(backdropVec, sourceVec)
+                  maskBlendMaskSimd(backdropVec, sourceVec)
                 )
               x += 16
               sx += 16
@@ -1067,7 +1067,7 @@ proc drawUber(
               a.unsafe[x, y] = 0
             elif source != 255:
               let backdrop = a.unsafe[x, y]
-              a.unsafe[x, y] = maskMaskInline(backdrop, source)
+              a.unsafe[x, y] = maskBlendMask(backdrop, source)
           srcPos += dx
       else:
         for x in x ..< xStop:

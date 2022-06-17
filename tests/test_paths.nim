@@ -452,6 +452,24 @@ block:
   image.writeFile("tests/paths/rectMaskAA.png")
 
 block:
+  let image = newImage(100, 100)
+  image.fillPath(
+    "M 10 10 H 60 V 60 H 10 z",
+    rgbx(255, 0, 0, 255)
+  )
+
+  let paint = newPaint(SolidPaint)
+  paint.color = color(0, 1, 0, 1)
+  paint.blendMode = MaskBlend
+
+  image.strokePath(
+    "M 30 30 H 50 V 50 H 30 z",
+    paint,
+    strokeWidth = 10
+  )
+  image.writeFile("tests/paths/rectMaskStroke.png")
+
+block:
   let mask = newMask(100, 100)
   mask.fillPath("M 10 10 H 60 V 60 H 10 z")
   mask.fillPath("M 30 30 H 80 V 80 H 30 z", blendMode = ExcludeMaskBlend)
@@ -477,6 +495,16 @@ block:
   mask.fillPath("M 10.1 10.1 H 60.1 V 60.1 H 10.1 z")
   mask.fillPath("M 30.1 30.1 H 80.1 V 80.1 H 30.1 z", blendMode = MaskBlend)
   writeFile("tests/paths/maskRectMaskAA.png", mask.encodePng())
+
+block:
+  let mask = newMask(100, 100)
+  mask.fillPath("M 10 10 H 60 V 60 H 10 z")
+  mask.strokePath(
+    "M 30 30 H 50 V 50 H 30 z",
+    strokeWidth = 10,
+    blendMode = MaskBlend
+  )
+  writeFile("tests/paths/maskStrokeRectMask.png", mask.encodePng())
 
 block:
   var

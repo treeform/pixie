@@ -1,4 +1,4 @@
-import chroma, system/memory, vmath
+import chroma, common, system/memory, vmath
 
 const allowSimd* = not defined(pixieNoSimd) and not defined(tcc)
 
@@ -9,6 +9,12 @@ template currentExceptionAsPixieError*(): untyped =
   ## Gets the current exception and returns it as a PixieError with stack trace.
   let e = getCurrentException()
   newException(PixieError, e.getStackTrace & e.msg, e)
+
+template failUnsupportedBlendMode*(blendMode: BlendMode) =
+  raise newException(
+    PixieError,
+    "Blend mode " & $blendMode & " not supported here"
+  )
 
 when defined(release):
   {.push checks: off.}
@@ -65,11 +71,17 @@ proc fillUnsafe*(
   else:
     var i = start
     when defined(amd64) and allowSimd:
+      # Align to 16 bytes
+      while i < (start + len) and (cast[uint](data[i].addr) and 15) != 0:
+        data[i] = rgbx
+        inc i
       # When supported, SIMD fill until we run out of room
-      let colorVec = mm_set1_epi32(cast[int32](rgbx))
-      for _ in 0 ..< len div 8:
-        mm_storeu_si128(data[i + 0].addr, colorVec)
-        mm_storeu_si128(data[i + 4].addr, colorVec)
+      let
+        colorVec = mm_set1_epi32(cast[int32](rgbx))
+        remaining = start + len - i
+      for _ in 0 ..< remaining div 8:
+        mm_store_si128(data[i + 0].addr, colorVec)
+        mm_store_si128(data[i + 4].addr, colorVec)
         i += 8
     else:
       when sizeof(int) == 8:
