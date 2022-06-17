@@ -1158,7 +1158,7 @@ proc maxEntryCount(partitioning: var Partitioning): int =
 proc fixed32(f: float32): Fixed32 {.inline.} =
   Fixed32(f * 256)
 
-proc integer(p: Fixed32): int32 {.inline.} =
+proc integer(p: Fixed32): int {.inline.} =
   p div 256
 
 proc trunc(p: Fixed32): Fixed32 {.inline.} =
@@ -1228,7 +1228,7 @@ iterator walkInteger(
   numHits: int,
   windingRule: WindingRule,
   y, width: int
-): (int32, int32) =
+): (int, int) =
   for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
     let
       fillStart = prevAt.integer
@@ -1504,7 +1504,7 @@ proc fillHits(
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
-  template simdBlob(image: Image, x: var int, len: int32, blendProc: untyped) =
+  template simdBlob(image: Image, x: var int, len: int, blendProc: untyped) =
     when allowSimd:
       when defined(amd64):
         let colorVec = mm_set1_epi32(cast[int32](rgbx))
@@ -1568,7 +1568,7 @@ proc fillHits(
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
-  template simdBlob(mask: Mask, x: var int, len: int32, blendProc: untyped) =
+  template simdBlob(mask: Mask, x: var int, len: int, blendProc: untyped) =
     when allowSimd:
       when defined(amd64):
         let vec255 = mm_set1_epi8(255)
