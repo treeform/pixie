@@ -7,14 +7,14 @@ const
   ]
   knownTags = [
     0x0100.uint16, # ImageWidth
-    0x0101, # ImageLength
-    0x0102, # BitsPerSample
-    0x0103, # Compression
-    0x0106, # PhotometricInterpretation
-    0x0111, # StripOffsets
-    0x0116, # RowsPerStrip
-    0x0117, # StripByteCounts
-    0x0140, # ColorMap
+    0x0101,        # ImageLength
+    0x0102,        # BitsPerSample
+    0x0103,        # Compression
+    0x0106,        # PhotometricInterpretation
+    0x0111,        # StripOffsets
+    0x0116,        # RowsPerStrip
+    0x0117,        # StripByteCounts
+    0x0140,        # ColorMap
   ]
 
 type

@@ -1357,7 +1357,9 @@ proc fillCoverage(
         sourceOdd = mm_srli_epi16(mm_mulhi_epu16(sourceOdd, div255), 7)
         result = mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
 
-      iterator simd(coverages: seq[uint8], x: var int, startX: int): (M128i, bool, bool) =
+      iterator simd(
+        coverages: seq[uint8], x: var int, startX: int
+      ): (M128i, bool, bool) =
         for _ in 0 ..< coverages.len div 16:
           let
             coverageVec = mm_loadu_si128(coverages[x - startX].unsafeAddr)
