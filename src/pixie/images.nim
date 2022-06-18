@@ -714,7 +714,7 @@ proc drawUber(
   when type(a) is Image:
     let blender = blendMode.blender()
   else: # a is a Mask
-    let masker = blendMode.masker()
+    let maskBlender = blendMode.maskBlender()
 
   if blendMode == MaskBlend:
     if yMin > 0:
@@ -777,7 +777,7 @@ proc drawUber(
             let sample = b.getRgbaSmooth(srcPos.x, srcPos.y).a
           else: # b is a Mask
             let sample = b.getValueSmooth(srcPos.x, srcPos.y)
-          a.unsafe[x, y] = masker(backdrop, sample)
+          a.unsafe[x, y] = maskBlender(backdrop, sample)
 
         srcPos += dx
 
@@ -972,8 +972,8 @@ proc drawUber(
                   x += 16
                   sx += 16
             else: # is a Mask
-              if blendMode.hasSimdMasker():
-                let maskerSimd = blendMode.maskerSimd()
+              if blendMode.hasSimdMaskBlender():
+                let maskerSimd = blendMode.maskBlenderSimd()
                 for _ in 0 ..< (xStop - xStart) div 16:
                   let backdrop = mm_loadu_si128(a.data[a.dataIndex(x, y)].addr)
                   when type(b) is Image:
@@ -1089,7 +1089,7 @@ proc drawUber(
               let sample = b.unsafe[samplePos.x, samplePos.y].a
             else: # b is a Mask
               let sample = b.unsafe[samplePos.x, samplePos.y]
-            a.unsafe[x, y] = masker(backdrop, sample)
+            a.unsafe[x, y] = maskBlender(backdrop, sample)
           srcPos += dx
 
     if blendMode == MaskBlend:

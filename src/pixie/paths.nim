@@ -1223,6 +1223,20 @@ iterator walk(
     if prevAt != width.float32.fixed32 and count != 0:
       echo "Leak detected: ", count, " @ (", prevAt, ", ", y, ")"
 
+iterator walkInteger(
+  hits: seq[(int32, int16)],
+  numHits: int,
+  windingRule: WindingRule,
+  y, width: int
+): (int, int) =
+  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
+    let
+      fillStart = prevAt.integer
+      fillLen = at.integer - fillStart
+    if fillLen <= 0:
+      continue
+    yield (fillStart, fillLen)
+
 proc computeCoverage(
   coverages: ptr UncheckedArray[uint8],
   hits: var seq[(Fixed32, int16)],
@@ -1443,9 +1457,9 @@ proc fillCoverage(
 ) =
   var x = startX
   when defined(amd64) and allowSimd:
-    if blendMode.hasSimdMasker():
+    if blendMode.hasSimdMaskBlender():
       let
-        maskerSimd = blendMode.maskerSimd()
+        maskerSimd = blendMode.maskBlenderSimd()
         vecZero = mm_setzero_si128()
       for _ in 0 ..< coverages.len div 16:
         let
@@ -1465,7 +1479,7 @@ proc fillCoverage(
           mm_storeu_si128(mask.data[index].addr, vecZero)
         x += 16
 
-  let masker = blendMode.masker()
+  let maskBlender = blendMode.maskBlender()
   for x in x ..< startX + coverages.len:
     let coverage = coverages[x - startX]
     if coverage != 0 or blendMode == ExcludeMaskBlend:
@@ -1473,29 +1487,13 @@ proc fillCoverage(
         mask.unsafe[x, y] = coverage
       else:
         let backdrop = mask.unsafe[x, y]
-        mask.unsafe[x, y] = masker(backdrop, coverage)
+        mask.unsafe[x, y] = maskBlender(backdrop, coverage)
     elif blendMode == MaskBlend:
       mask.unsafe[x, y] = 0
 
   if blendMode == MaskBlend:
     mask.clearUnsafe(0, y, startX, y)
     mask.clearUnsafe(startX + coverages.len, y, mask.width, y)
-
-template walkHits(
-  hits: seq[(int32, int16)],
-  numHits: int,
-  windingRule: WindingRule,
-  y, width: int,
-  inner: untyped
-) =
-  for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
-    let
-      fillStart {.inject.} = prevAt.integer
-      fillLen {.inject.} = at.integer - fillStart
-    if fillLen <= 0:
-      continue
-
-    inner
 
 proc fillHits(
   image: Image,
@@ -1506,38 +1504,36 @@ proc fillHits(
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
-  template simdBlob(image: Image, x: var int, blendProc: untyped) =
+  template simdBlob(image: Image, x: var int, len: int, blendProc: untyped) =
     when allowSimd:
       when defined(amd64):
         let colorVec = mm_set1_epi32(cast[int32](rgbx))
-        for _ in 0 ..< fillLen div 4:
-          let
-            index = image.dataIndex(x, y)
-            backdrop = mm_loadu_si128(image.data[index].addr)
-          mm_storeu_si128(image.data[index].addr, blendProc(backdrop, colorVec))
+        for _ in 0 ..< len div 4:
+          let backdrop = mm_loadu_si128(image.unsafe[x, y].addr)
+          mm_storeu_si128(image.unsafe[x, y].addr, blendProc(backdrop, colorVec))
           x += 4
 
   case blendMode:
   of OverwriteBlend:
-    walkHits hits, numHits, windingRule, y, image.width:
-      fillUnsafe(image.data, rgbx, image.dataIndex(fillStart, y), fillLen)
+    for (start, len) in hits.walkInteger(numHits, windingRule, y, image.width):
+      fillUnsafe(image.data, rgbx, image.dataIndex(start, y), len)
 
   of NormalBlend:
-    walkHits hits, numHits, windingRule, y, image.width:
+    for (start, len) in hits.walkInteger(numHits, windingRule, y, image.width):
       if rgbx.a == 255:
-        fillUnsafe(image.data, rgbx, image.dataIndex(fillStart, y), fillLen)
+        fillUnsafe(image.data, rgbx, image.dataIndex(start, y), len)
       else:
-        var x = fillStart
-        simdBlob(image, x, blendNormalSimd)
-        for x in x ..< fillStart + fillLen:
+        var x = start
+        simdBlob(image, x, len, blendNormalSimd)
+        for x in x ..< start + len:
           let backdrop = image.unsafe[x, y]
           image.unsafe[x, y] = blendNormal(backdrop, rgbx)
 
   of MaskBlend:
     var filledTo = startX
-    walkHits hits, numHits, windingRule, y, image.width:
+    for (start, len) in hits.walkInteger(numHits, windingRule, y, image.width):
       block: # Clear any gap between this fill and the previous fill
-        let gapBetween = fillStart - filledTo
+        let gapBetween = start - filledTo
         if gapBetween > 0:
           fillUnsafe(
             image.data,
@@ -1545,12 +1541,12 @@ proc fillHits(
             image.dataIndex(filledTo, y),
             gapBetween
           )
-        filledTo = fillStart + fillLen
+        filledTo = start + len
       block: # Handle this fill
         if rgbx.a != 255:
-          var x = fillStart
-          simdBlob(image, x, blendMaskSimd)
-          for x in x ..< fillStart + fillLen:
+          var x = start
+          simdBlob(image, x, len, blendMaskSimd)
+          for x in x ..< start + len:
             let backdrop = image.unsafe[x, y]
             image.unsafe[x, y] = blendMask(backdrop, rgbx)
 
@@ -1559,8 +1555,8 @@ proc fillHits(
 
   else:
     let blender = blendMode.blender()
-    walkHits hits, numHits, windingRule, y, image.width:
-      for x in fillStart ..< fillStart + fillLen:
+    for (start, len) in hits.walkInteger(numHits, windingRule, y, image.width):
+      for x in start ..< start + len:
         let backdrop = image.unsafe[x, y]
         image.unsafe[x, y] = blender(backdrop, rgbx)
 
@@ -1572,31 +1568,44 @@ proc fillHits(
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
+  template simdBlob(mask: Mask, x: var int, len: int, blendProc: untyped) =
+    when allowSimd:
+      when defined(amd64):
+        let vec255 = mm_set1_epi8(255)
+        for _ in 0 ..< len div 16:
+          let backdrop = mm_loadu_si128(mask.unsafe[x, y].addr)
+          mm_storeu_si128(mask.unsafe[x, y].addr, blendProc(backdrop, vec255))
+          x += 16
+
   case blendMode:
   of NormalBlend, OverwriteBlend:
-    walkHits hits, numHits, windingRule, y, mask.width:
-      fillUnsafe(mask.data, 255, mask.dataIndex(fillStart, y), fillLen)
+    for (start, len) in hits.walkInteger(numHits, windingRule, y, mask.width):
+      fillUnsafe(mask.data, 255, mask.dataIndex(start, y), len)
 
   of MaskBlend:
     var filledTo = startX
-    walkHits hits, numHits, windingRule,y,  mask.width:
-      let gapBetween = fillStart - filledTo
+    for (start, len) in hits.walkInteger(numHits, windingRule, y, mask.width):
+      let gapBetween = start - filledTo
       if gapBetween > 0:
         fillUnsafe(mask.data, 0, mask.dataIndex(filledTo, y), gapBetween)
-      filledTo = fillStart + fillLen
+      filledTo = start + len
 
     mask.clearUnsafe(0, y, startX, y)
     mask.clearUnsafe(filledTo, y, mask.width, y)
 
   of SubtractMaskBlend:
-    walkHits hits, numHits, windingRule, y, mask.width:
-      for x in fillStart ..< fillStart + fillLen:
+    for (start, len) in hits.walkInteger(numHits, windingRule, y, mask.width):
+      var x = start
+      simdBlob(mask, x, len, maskBlendSubtractSimd)
+      for x in x ..< start + len:
         let backdrop = mask.unsafe[x, y]
         mask.unsafe[x, y] = maskBlendSubtract(backdrop, 255)
 
   of ExcludeMaskBlend:
-    walkHits hits, numHits, windingRule, y, mask.width:
-      for x in fillStart ..< fillStart + fillLen:
+    for (start, len) in hits.walkInteger(numHits, windingRule, y, mask.width):
+      var x = start
+      simdBlob(mask, x, len, maskBlendExcludeSimd)
+      for x in x ..< start + len:
         let backdrop = mask.unsafe[x, y]
         mask.unsafe[x, y] = maskBlendExclude(backdrop, 255)
 
