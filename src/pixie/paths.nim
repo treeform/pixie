@@ -1540,6 +1540,8 @@ proc fillCoverage(
     blendBlob(maskBlendNormal)
 
   of MaskBlend:
+    {.linearScanEnd.}
+
     when allowSimd:
       when defined(amd64):
         for _ in 0 ..< coverages.len div 16:
@@ -1685,6 +1687,8 @@ proc fillHits(
       fillUnsafe(mask.data, 255, mask.dataIndex(start, y), len)
 
   of MaskBlend:
+    {.linearScanEnd.}
+
     var filledTo = startX
     for (start, len) in hits.walkInteger(numHits, windingRule, y, mask.width):
       let gapBetween = start - filledTo
