@@ -1,6 +1,4 @@
-import benchy, chroma, pixie/images, vmath
-
-include pixie/blends
+import benchy, chroma, pixie/blends, pixie/images, vmath
 
 let
   backdrop = newImage(256, 256)
