@@ -121,7 +121,6 @@ proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} 
     # When supported, SIMD convert as much as possible
     let
       alphaMask = mm_set1_epi32(cast[int32](0xff000000))
-      notAlphaMask = mm_set1_epi32(0x00ffffff)
       oddMask = mm_set1_epi16(cast[int16](0xff00))
       div255 = mm_set1_epi16(cast[int16](0x8081))
     for _ in 0 ..< data.len div 4:
