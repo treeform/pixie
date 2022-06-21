@@ -93,7 +93,7 @@ proc minifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
           firstByte = cast[M128i](
             [uint8.high, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
           )
-        for _ in countup(0, result.width - 16, 8):
+        while x <= result.width - 16:
           let
             top = mm_loadu_si128(src.data[src.dataIndex(x * 2, y * 2 + 0)].addr)
             btm = mm_loadu_si128(src.data[src.dataIndex(x * 2, y * 2 + 1)].addr)
@@ -101,22 +101,22 @@ proc minifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
             btmShifted = mm_srli_si128(btm, 1)
 
             topEven = mm_andnot_si128(oddMask, top)
-            topOdd = mm_srli_epi16(mm_and_si128(top, oddMask), 8)
+            topOdd = mm_srli_epi16(top, 8)
             btmEven = mm_andnot_si128(oddMask, btm)
-            btmOdd = mm_srli_epi16(mm_and_si128(btm, oddMask), 8)
+            btmOdd = mm_srli_epi16(btm, 8)
 
             topShiftedEven = mm_andnot_si128(oddMask, topShifted)
-            topShiftedOdd = mm_srli_epi16(mm_and_si128(topShifted, oddMask), 8)
+            topShiftedOdd = mm_srli_epi16(topShifted, 8)
             btmShiftedEven = mm_andnot_si128(oddMask, btmShifted)
-            btmShiftedOdd = mm_srli_epi16(mm_and_si128(btmShifted, oddMask), 8)
+            btmShiftedOdd = mm_srli_epi16(btmShifted, 8)
 
             topAddedEven = mm_add_epi16(topEven, topShiftedEven)
             btmAddedEven = mm_add_epi16(btmEven, btmShiftedEven)
             topAddedOdd = mm_add_epi16(topOdd, topShiftedOdd)
-            bottomAddedOdd = mm_add_epi16(btmOdd, btmShiftedOdd)
+            btmAddedOdd = mm_add_epi16(btmOdd, btmShiftedOdd)
 
             addedEven = mm_add_epi16(topAddedEven, btmAddedEven)
-            addedOdd = mm_add_epi16(topAddedOdd, bottomAddedOdd)
+            addedOdd = mm_add_epi16(topAddedOdd, btmAddedOdd)
 
             addedEvenDiv4 = mm_srli_epi16(addedEven, 2)
             addedOddDiv4 = mm_srli_epi16(addedOdd, 2)
