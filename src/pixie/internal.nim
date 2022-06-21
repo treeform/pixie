@@ -121,34 +121,28 @@ proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} 
     # When supported, SIMD convert as much as possible
     let
       alphaMask = mm_set1_epi32(cast[int32](0xff000000))
-      notAlphaMask = mm_set1_epi32(0x00ffffff)
       oddMask = mm_set1_epi16(cast[int16](0xff00))
       div255 = mm_set1_epi16(cast[int16](0x8081))
     for _ in 0 ..< data.len div 4:
-      var
-        color = mm_loadu_si128(data[i].addr)
-        alpha = mm_and_si128(color, alphaMask)
-      if mm_movemask_epi8(mm_cmpeq_epi16(alpha, alphaMask)) != 0xffff:
-        # If not all of the alpha values are 255, premultiply
+      let
+        values = mm_loadu_si128(data[i].addr)
+        alpha = mm_and_si128(values, alphaMask)
+        eq = mm_cmpeq_epi8(values, alphaMask)
+      if (mm_movemask_epi8(eq) and 0x00008888) != 0x00008888:
+        let
+          evenMultiplier = mm_or_si128(alpha, mm_srli_epi32(alpha, 16))
+          oddMultiplier = mm_or_si128(evenMultiplier, alphaMask)
         var
-          colorEven = mm_slli_epi16(color, 8)
-          colorOdd = mm_and_si128(color, oddMask)
-
-        alpha = mm_or_si128(alpha, mm_srli_epi32(alpha, 16))
-
-        colorEven = mm_mulhi_epu16(colorEven, alpha)
-        colorOdd = mm_mulhi_epu16(colorOdd, alpha)
-
-        colorEven = mm_srli_epi16(mm_mulhi_epu16(colorEven, div255), 7)
-        colorOdd = mm_srli_epi16(mm_mulhi_epu16(colorOdd, div255), 7)
-
-        color = mm_or_si128(colorEven, mm_slli_epi16(colorOdd, 8))
-        color = mm_or_si128(
-          mm_and_si128(alpha, alphaMask), mm_and_si128(color, notAlphaMask)
+          colorsEven = mm_slli_epi16(values, 8)
+          colorsOdd = mm_and_si128(values, oddMask)
+        colorsEven = mm_mulhi_epu16(colorsEven, evenMultiplier)
+        colorsOdd = mm_mulhi_epu16(colorsOdd, oddMultiplier)
+        colorsEven = mm_srli_epi16(mm_mulhi_epu16(colorsEven, div255), 7)
+        colorsOdd = mm_srli_epi16(mm_mulhi_epu16(colorsOdd, div255), 7)
+        mm_storeu_si128(
+          data[i].addr,
+          mm_or_si128(colorsEven, mm_slli_epi16(colorsOdd, 8))
         )
-
-        mm_storeu_si128(data[i].addr, color)
-
       i += 4
 
   # Convert whatever is left
@@ -165,9 +159,7 @@ proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
 
   var i = start
   when defined(amd64) and allowSimd:
-    let
-      vec255 = mm_set1_epi32(cast[int32](uint32.high))
-      colorMask = mm_set1_epi32(cast[int32]([255.uint8, 255, 255, 0]))
+    let vec255 = mm_set1_epi32(cast[int32](uint32.high))
     for _ in start ..< (start + len) div 16:
       let
         values0 = mm_loadu_si128(data[i + 0].addr)
@@ -176,8 +168,9 @@ proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
         values3 = mm_loadu_si128(data[i + 12].addr)
         values01 = mm_and_si128(values0, values1)
         values23 = mm_and_si128(values2, values3)
-        values = mm_or_si128(mm_and_si128(values01, values23), colorMask)
-      if mm_movemask_epi8(mm_cmpeq_epi8(values, vec255)) != 0xffff:
+        values = mm_and_si128(values01, values23)
+        eq = mm_cmpeq_epi8(values, vec255)
+      if (mm_movemask_epi8(eq) and 0x00008888) != 0x00008888:
         return false
       i += 16
 
@@ -186,14 +179,11 @@ proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
       return false
 
 when defined(amd64) and allowSimd:
-  proc packAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
+  proc packAlphaValues(v: M128i): M128i {.inline, raises: [].} =
     ## Shuffle the alpha values for these 4 colors to the first 4 bytes
-    let mask = mm_set1_epi32(cast[int32](0xff000000))
-    result = mm_and_si128(v, mask)
-    result = mm_srli_epi32(result, 24)
-    result = mm_packus_epi16(result, result)
-    result = mm_packus_epi16(result, result)
-    result = mm_srli_si128(result, 12)
+    result = mm_srli_epi32(v, 24)
+    result = mm_packus_epi16(result, mm_setzero_si128())
+    result = mm_packus_epi16(result, mm_setzero_si128())
 
   proc pack4xAlphaValues*(i, j, k, l: M128i): M128i {.inline, raises: [].} =
     let
@@ -205,10 +195,8 @@ when defined(amd64) and allowSimd:
 
   proc unpackAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
     ## Unpack the first 32 bits into 4 rgba(0, 0, 0, value)
-    let
-      a = mm_unpacklo_epi8(v, mm_setzero_si128())
-      b = mm_unpacklo_epi8(a, mm_setzero_si128())
-    result = mm_slli_epi32(b, 24) # Shift the values to uint32 `a`
+    result = mm_unpacklo_epi8(mm_setzero_si128(), v)
+    result = mm_unpacklo_epi8(mm_setzero_si128(), result)
 
 when defined(release):
   {.pop.}
