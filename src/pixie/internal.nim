@@ -205,10 +205,8 @@ when defined(amd64) and allowSimd:
 
   proc unpackAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
     ## Unpack the first 32 bits into 4 rgba(0, 0, 0, value)
-    let
-      a = mm_unpacklo_epi8(v, mm_setzero_si128())
-      b = mm_unpacklo_epi8(a, mm_setzero_si128())
-    result = mm_slli_epi32(b, 24) # Shift the values to uint32 `a`
+    result = mm_unpacklo_epi8(mm_setzero_si128(), v)
+    result = mm_unpacklo_epi8(mm_setzero_si128(), result)
 
 when defined(release):
   {.pop.}
