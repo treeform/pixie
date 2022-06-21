@@ -88,11 +88,7 @@ proc minifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
     for y in 0 ..< result.height:
       var x: int
       when defined(amd64) and allowSimd:
-        let
-          oddMask = mm_set1_epi16(cast[int16](0xff00))
-          firstByte = cast[M128i](
-            [uint8.high, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-          )
+        let oddMask = mm_set1_epi16(cast[int16](0xff00))
         while x <= result.width - 16:
           let
             top = mm_loadu_si128(src.data[src.dataIndex(x * 2, y * 2 + 0)].addr)
@@ -122,29 +118,14 @@ proc minifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
             addedOddDiv4 = mm_srli_epi16(addedOdd, 2)
 
             merged = mm_or_si128(addedEvenDiv4, mm_slli_epi16(addedOddDiv4, 8))
+            # Merged has the correct values in the even indices
+            # Mask out the odd values for packing
+            masked = mm_andnot_si128(oddMask, merged)
 
-            # merged has the correct values in the even indices
-
-            a = mm_and_si128(merged, firstByte)
-            b = mm_and_si128(mm_srli_si128(merged, 2), firstByte)
-            c = mm_and_si128(mm_srli_si128(merged, 4), firstByte)
-            d = mm_and_si128(mm_srli_si128(merged, 6), firstByte)
-            e = mm_and_si128(mm_srli_si128(merged, 8), firstByte)
-            f = mm_and_si128(mm_srli_si128(merged, 10), firstByte)
-            g = mm_and_si128(mm_srli_si128(merged, 12), firstByte)
-            h = mm_and_si128(mm_srli_si128(merged, 14), firstByte)
-
-            ab = mm_or_si128(a, mm_slli_si128(b, 1))
-            cd = mm_or_si128(c, mm_slli_si128(d, 1))
-            ef = mm_or_si128(e, mm_slli_si128(f, 1))
-            gh = mm_or_si128(g, mm_slli_si128(h, 1))
-
-            abcd = mm_or_si128(ab, mm_slli_si128(cd, 2))
-            efgh = mm_or_si128(ef, mm_slli_si128(gh, 2))
-
-            abcdefgh = mm_or_si128(abcd, mm_slli_si128(efgh, 4))
-
-          mm_storeu_si128(result.data[result.dataIndex(x, y)].addr, abcdefgh)
+          mm_storeu_si128(
+            result.data[result.dataIndex(x, y)].addr,
+            mm_packus_epi16(masked, mm_setzero_si128())
+          )
           x += 8
 
       for x in x ..< result.width:
