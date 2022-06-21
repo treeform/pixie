@@ -1375,16 +1375,17 @@ proc fillCoverage(
       let colorVec = mm_set1_epi32(cast[int32](rgbx))
 
   proc source(rgbx: ColorRGBX, coverage: uint8): ColorRGBX {.inline.} =
-    if coverage > 0:
-      if coverage == 255:
-        result = rgbx
-      else:
-        result = rgbx(
-          ((rgbx.r.uint32 * coverage) div 255).uint8,
-          ((rgbx.g.uint32 * coverage) div 255).uint8,
-          ((rgbx.b.uint32 * coverage) div 255).uint8,
-          ((rgbx.a.uint32 * coverage) div 255).uint8
-        )
+    if coverage == 0:
+      discard
+    elif coverage == 255:
+      result = rgbx
+    else:
+      result = rgbx(
+        ((rgbx.r.uint32 * coverage) div 255).uint8,
+        ((rgbx.g.uint32 * coverage) div 255).uint8,
+        ((rgbx.b.uint32 * coverage) div 255).uint8,
+        ((rgbx.a.uint32 * coverage) div 255).uint8
+      )
 
   case blendMode:
   of OverwriteBlend:
