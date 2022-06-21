@@ -205,3 +205,13 @@ block:
 
   let minified = mask.minifyBy2()
   minified.writeFile("tests/masks/minifiedBlur.png")
+
+block:
+  let path = newPath()
+  path.polygon(vec2(50, 50), 30, 6)
+
+  let mask = newMask(100, 100)
+  mask.fillPath(path)
+
+  let magnified = mask.magnifyBy2()
+  magnified.writeFile("tests/masks/drawPolygonMagnified.png")

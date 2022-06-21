@@ -172,17 +172,14 @@ proc magnifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
     when defined(amd64) and allowSimd:
       if scale == 2:
         while x <= mask.width - 16:
-          let
-            values = mm_loadu_si128(mask.data[mask.dataIndex(x, y)].addr)
-            lo = mm_unpacklo_epi8(values, mm_setzero_si128())
-            hi = mm_unpacklo_epi8(values, mm_setzero_si128())
+          let values = mm_loadu_si128(mask.unsafe[x, y].addr)
           mm_storeu_si128(
             result.data[result.dataIndex(x * scale + 0, y * scale)].addr,
-            mm_or_si128(lo, mm_slli_si128(lo, 1))
+            mm_unpacklo_epi8(values, values)
           )
           mm_storeu_si128(
             result.data[result.dataIndex(x * scale + 16, y * scale)].addr,
-            mm_or_si128(hi, mm_slli_si128(hi, 1))
+            mm_unpackhi_epi8(values, values)
           )
           x += 16
     for x in x ..< mask.width:
@@ -237,17 +234,15 @@ proc invert*(mask: Mask) {.raises: [].} =
   ## Inverts all of the values - creates a negative of the mask.
   var i: int
   when defined(amd64) and allowSimd:
-    let vec255 = mm_set1_epi8(cast[int8](255))
-    let byteLen = mask.data.len
-    for _ in 0 ..< byteLen div 16:
-      let index = i
-      var values = mm_loadu_si128(mask.data[index].addr)
+    let vec255 = mm_set1_epi8(255)
+    for _ in 0 ..< mask.data.len div 16:
+      var values = mm_loadu_si128(mask.data[i].addr)
       values = mm_sub_epi8(vec255, values)
-      mm_storeu_si128(mask.data[index].addr, values)
+      mm_storeu_si128(mask.data[i].addr, values)
       i += 16
 
   for j in i ..< mask.data.len:
-    mask.data[j] = (255 - mask.data[j]).uint8
+    mask.data[j] = 255 - mask.data[j]
 
 proc spread*(mask: Mask, spread: float32) {.raises: [PixieError].} =
   ## Grows the mask by spread.
