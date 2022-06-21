@@ -412,18 +412,14 @@ proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
         let index = i
 
       let values = mm_loadu_si128(target.data[index].addr)
-
       if mm_movemask_epi8(mm_cmpeq_epi16(values, zeroVec)) != 0xffff:
         var
           valuesEven = mm_slli_epi16(values, 8)
           valuesOdd = mm_and_si128(values, oddMask)
-
         valuesEven = mm_mulhi_epu16(valuesEven, opacityVec)
         valuesOdd = mm_mulhi_epu16(valuesOdd, opacityVec)
-
         valuesEven = mm_srli_epi16(mm_mulhi_epu16(valuesEven, div255), 7)
         valuesOdd = mm_srli_epi16(mm_mulhi_epu16(valuesOdd, div255), 7)
-
         mm_storeu_si128(
           target.data[index].addr,
           mm_or_si128(valuesEven, mm_slli_epi16(valuesOdd, 8))
