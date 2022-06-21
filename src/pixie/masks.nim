@@ -316,7 +316,7 @@ proc ceil*(mask: Mask) {.raises: [].} =
   when defined(amd64) and allowSimd:
     let
       zeroVec = mm_setzero_si128()
-      vec255 = mm_set1_epi32(cast[int32](uint32.high))
+      vec255 = mm_set1_epi8(255)
     for _ in 0 ..< mask.data.len div 16:
       var values = mm_loadu_si128(mask.data[i].addr)
       values = mm_cmpeq_epi8(values, zeroVec)
