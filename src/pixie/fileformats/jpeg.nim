@@ -16,6 +16,7 @@ when defined(amd64) and allowSimd:
 
 # * https://github.com/daviddrysdale/libjpeg
 # * https://www.youtube.com/watch?v=Kv1Hiv3ox8I
+# * https://www.youtube.com/watch?v=0me3guauqOU
 # * https://dev.exiv2.org/projects/exiv2/wiki/The_Metadata_in_JPEG_files
 # * https://www.media.mit.edu/pia/Research/deepview/exif.html
 # * https://www.ccoderun.ca/programming/2017-01-31_jpeg/
