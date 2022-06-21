@@ -262,7 +262,7 @@ proc minifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
       when defined(amd64) and allowSimd:
         let
           oddMask = mm_set1_epi16(cast[int16](0xff00))
-          first32 = cast[M128i]([uint32.high, 0, 0, 0])
+          mergedMask = mm_set_epi32(0, uint32.high, 0, uint32.high)
         for _ in countup(0, resultEvenWidth - 4, 2):
           let
             top = mm_loadu_si128(src.data[src.dataIndex(x * 2, y * 2 + 0)].addr)
@@ -271,36 +271,36 @@ proc minifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
             btmShifted = mm_srli_si128(btm, 4)
 
             topEven = mm_andnot_si128(oddMask, top)
-            topOdd = mm_srli_epi16(mm_and_si128(top, oddMask), 8)
+            topOdd = mm_srli_epi16(top, 8)
             btmEven = mm_andnot_si128(oddMask, btm)
-            btmOdd = mm_srli_epi16(mm_and_si128(btm, oddMask), 8)
+            btmOdd = mm_srli_epi16(btm, 8)
 
             topShiftedEven = mm_andnot_si128(oddMask, topShifted)
-            topShiftedOdd = mm_srli_epi16(mm_and_si128(topShifted, oddMask), 8)
+            topShiftedOdd = mm_srli_epi16(topShifted, 8)
             btmShiftedEven = mm_andnot_si128(oddMask, btmShifted)
-            btmShiftedOdd = mm_srli_epi16(mm_and_si128(btmShifted, oddMask), 8)
+            btmShiftedOdd = mm_srli_epi16(btmShifted, 8)
 
             topAddedEven = mm_add_epi16(topEven, topShiftedEven)
             btmAddedEven = mm_add_epi16(btmEven, btmShiftedEven)
             topAddedOdd = mm_add_epi16(topOdd, topShiftedOdd)
-            bottomAddedOdd = mm_add_epi16(btmOdd, btmShiftedOdd)
+            btmAddedOdd = mm_add_epi16(btmOdd, btmShiftedOdd)
 
             addedEven = mm_add_epi16(topAddedEven, btmAddedEven)
-            addedOdd = mm_add_epi16(topAddedOdd, bottomAddedOdd)
+            addedOdd = mm_add_epi16(topAddedOdd, btmAddedOdd)
 
             addedEvenDiv4 = mm_srli_epi16(addedEven, 2)
             addedOddDiv4 = mm_srli_epi16(addedOdd, 2)
 
             merged = mm_or_si128(addedEvenDiv4, mm_slli_epi16(addedOddDiv4, 8))
+            # Merged has the correct values for the next two pixels at
+            # index 0 and 2 so mask the others out and shift 0 and 2 into
+            # position and store
+            masked = mm_and_si128(merged, mergedMask)
 
-            # merged [0, 1, 2, 3] has the correct values for the next two pixels
-            # at index 0 and 2 so shift those into position and store
-
-            zero = mm_and_si128(merged, first32)
-            two = mm_and_si128(mm_srli_si128(merged, 8), first32)
-            zeroTwo = mm_or_si128(zero, mm_slli_si128(two, 4))
-
-          mm_storeu_si128(result.data[result.dataIndex(x, y)].addr, zeroTwo)
+          mm_storeu_si128(
+            result.data[result.dataIndex(x, y)].addr,
+            mm_shuffle_epi32(masked, MM_SHUFFLE(0, 0, 2, 0))
+          )
           x += 2
 
       for x in x ..< resultEvenWidth:
