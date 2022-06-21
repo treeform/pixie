@@ -125,30 +125,25 @@ proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} 
       oddMask = mm_set1_epi16(cast[int16](0xff00))
       div255 = mm_set1_epi16(cast[int16](0x8081))
     for _ in 0 ..< data.len div 4:
-      var
-        color = mm_loadu_si128(data[i].addr)
-        alpha = mm_and_si128(color, alphaMask)
-      if mm_movemask_epi8(mm_cmpeq_epi16(alpha, alphaMask)) != 0xffff:
-        # If not all of the alpha values are 255, premultiply
+      let
+        values = mm_loadu_si128(data[i].addr)
+        alpha = mm_and_si128(values, alphaMask)
+        eq = mm_cmpeq_epi8(values, alphaMask)
+      if (mm_movemask_epi8(eq) and 0x00008888) != 0x00008888:
+        let
+          evenMultiplier = mm_or_si128(alpha, mm_srli_epi32(alpha, 16))
+          oddMultiplier = mm_or_si128(evenMultiplier, alphaMask)
         var
-          colorEven = mm_slli_epi16(color, 8)
-          colorOdd = mm_and_si128(color, oddMask)
-
-        alpha = mm_or_si128(alpha, mm_srli_epi32(alpha, 16))
-
-        colorEven = mm_mulhi_epu16(colorEven, alpha)
-        colorOdd = mm_mulhi_epu16(colorOdd, alpha)
-
-        colorEven = mm_srli_epi16(mm_mulhi_epu16(colorEven, div255), 7)
-        colorOdd = mm_srli_epi16(mm_mulhi_epu16(colorOdd, div255), 7)
-
-        color = mm_or_si128(colorEven, mm_slli_epi16(colorOdd, 8))
-        color = mm_or_si128(
-          mm_and_si128(alpha, alphaMask), mm_and_si128(color, notAlphaMask)
+          colorsEven = mm_slli_epi16(values, 8)
+          colorsOdd = mm_and_si128(values, oddMask)
+        colorsEven = mm_mulhi_epu16(colorsEven, evenMultiplier)
+        colorsOdd = mm_mulhi_epu16(colorsOdd, oddMultiplier)
+        colorsEven = mm_srli_epi16(mm_mulhi_epu16(colorsEven, div255), 7)
+        colorsOdd = mm_srli_epi16(mm_mulhi_epu16(colorsOdd, div255), 7)
+        mm_storeu_si128(
+          data[i].addr,
+          mm_or_si128(colorsEven, mm_slli_epi16(colorsOdd, 8))
         )
-
-        mm_storeu_si128(data[i].addr, color)
-
       i += 4
 
   # Convert whatever is left
