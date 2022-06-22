@@ -1313,7 +1313,7 @@ proc computeCoverage(
         if fillLen > 0:
           var i = fillStart
           when defined(amd64) and allowSimd:
-            let sampleCoverageVec = mm_set1_epi8(cast[int8](sampleCoverage))
+            let sampleCoverageVec = mm_set1_epi8(sampleCoverage)
             for _ in 0 ..< fillLen div 16:
               var coverageVec = mm_loadu_si128(coverages[i - startX].addr)
               coverageVec = mm_add_epi8(coverageVec, sampleCoverageVec)
@@ -1354,7 +1354,7 @@ proc fillCoverage(
           let
             coverageVec = mm_loadu_si128(coverages[x - startX].unsafeAddr)
             eqZero = mm_cmpeq_epi8(coverageVec, mm_setzero_si128())
-            eq255 = mm_cmpeq_epi8(coverageVec, mm_set1_epi8(cast[int8](255)))
+            eq255 = mm_cmpeq_epi8(coverageVec, mm_set1_epi8(255))
             allZeroes = mm_movemask_epi8(eqZero) == 0xffff
             all255 = mm_movemask_epi8(eq255) == 0xffff
           yield (coverageVec, allZeroes, all255)
