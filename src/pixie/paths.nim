@@ -1133,9 +1133,9 @@ proc partitionSegments(
   result.partitionHeight = height.uint32 div numPartitions
 
   for (segment, winding) in segments:
-    let entry = initPartitionEntry(segment, winding)
+    var entry = initPartitionEntry(segment, winding)
     if result.partitionHeight == 0:
-      result.partitions[0].entries.add(entry)
+      result.partitions[0].entries.add(move entry)
     else:
       var
         atPartition = max(0, segment.at.y - result.startY.float32).uint32
@@ -1619,16 +1619,15 @@ proc fillHits(
   template simdBlob(image: Image, x: var int, len: int, blendProc: untyped) =
     when allowSimd:
       when defined(amd64):
-        let colorVec = mm_set1_epi32(cast[int32](rgbx))
-        var dataIndex = image.dataIndex(x, y)
-        for _ in 0 ..< len div 4:
-          let backdrop = mm_loadu_si128(image.data[dataIndex].addr)
-          mm_storeu_si128(
-            image.data[dataIndex].addr,
-            blendProc(backdrop, colorVec)
-          )
-          x += 4
-          dataIndex += 4
+        var p = cast[uint](image.data[image.dataIndex(x, y)].addr)
+        let
+          iterations = len div 4
+          colorVec = mm_set1_epi32(cast[int32](rgbx))
+        for _ in 0 ..< iterations:
+          let backdrop = mm_loadu_si128(cast[pointer](p))
+          mm_storeu_si128(cast[pointer](p), blendProc(backdrop, colorVec))
+          p += 16
+        x += iterations * 4
 
   case blendMode:
   of OverwriteBlend:
@@ -1714,16 +1713,15 @@ proc fillHits(
   template simdBlob(mask: Mask, x: var int, len: int, blendProc: untyped) =
     when allowSimd:
       when defined(amd64):
-        let vec255 = mm_set1_epi8(255)
-        var dataIndex = mask.dataIndex(x, y)
-        for _ in 0 ..< len div 16:
-          let backdrop = mm_loadu_si128(mask.data[dataIndex].addr)
-          mm_storeu_si128(
-            mask.data[dataIndex].addr,
-            blendProc(backdrop, vec255)
-          )
-          x += 16
-          dataIndex += 16
+        var p = cast[uint](mask.data[mask.dataIndex(x, y)].addr)
+        let
+          iterations = len div 16
+          vec255 = mm_set1_epi8(255)
+        for _ in 0 ..< iterations:
+          let backdrop = mm_loadu_si128(cast[pointer](p))
+          mm_storeu_si128(cast[pointer](p), blendProc(backdrop, vec255))
+          p += 16
+        x += iterations * 16
 
   case blendMode:
   of NormalBlend, OverwriteBlend:
