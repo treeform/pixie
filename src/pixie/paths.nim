@@ -44,10 +44,7 @@ type
   Partition = object
     entries: seq[PartitionEntry]
     requiresAntiAliasing: bool
-
-  Partitioning = object
-    partitions: seq[Partition]
-    startY, partitionHeight: uint32
+    bottom: int
 
   Fixed32 = int32 ## 24.8 fixed point
 
@@ -1122,38 +1119,51 @@ proc requiresAntiAliasing(entries: var seq[PartitionEntry]): bool =
 
 proc partitionSegments(
   segments: seq[(Segment, int16)], top, height: int
-): Partitioning =
+): seq[Partition] =
   ## Puts segments into the height partitions they intersect with.
   let
     maxPartitions = max(1, height div 4).uint32
     numPartitions = min(maxPartitions, max(1, segments.len div 2).uint32)
 
-  result.partitions.setLen(numPartitions)
-  result.startY = top.uint32
-  result.partitionHeight = height.uint32 div numPartitions
+  result.setLen(numPartitions)
+
+  let
+    startY = top.uint32
+    partitionHeight = height.uint32 div numPartitions
 
   for (segment, winding) in segments:
-    let entry = initPartitionEntry(segment, winding)
-    if result.partitionHeight == 0:
-      result.partitions[0].entries.add(entry)
+    var entry = initPartitionEntry(segment, winding)
+    if partitionHeight == 0:
+      result[0].entries.add(move entry)
     else:
       var
-        atPartition = max(0, segment.at.y - result.startY.float32).uint32
-        toPartition = max(0, segment.to.y - result.startY.float32).uint32
-      atPartition = atPartition div result.partitionHeight
-      toPartition = toPartition div result.partitionHeight
-      atPartition = min(atPartition, result.partitions.high.uint32)
-      toPartition = min(toPartition, result.partitions.high.uint32)
+        atPartition = max(0, segment.at.y - startY.float32).uint32
+        toPartition = max(0, segment.to.y - startY.float32).uint32
+      atPartition = atPartition div partitionHeight
+      toPartition = toPartition div partitionHeight
+      atPartition = min(atPartition, result.high.uint32)
+      toPartition = min(toPartition, result.high.uint32)
       for i in atPartition .. toPartition:
-        result.partitions[i].entries.add(entry)
+        result[i].entries.add(entry)
 
-  for partition in result.partitions.mitems:
+  # Set the bottom values for the partitions (y value where this partition ends)
+
+  var partitionBottom = top + partitionHeight.int
+
+  for partition in result.mitems:
+    partition.bottom = partitionBottom
     partition.requiresAntiAliasing =
       requiresAntiAliasing(partition.entries)
+    partitionBottom += partitionHeight.int
 
-proc maxEntryCount(partitioning: var Partitioning): int =
-  for i in 0 ..< partitioning.partitions.len:
-    result = max(result, partitioning.partitions[i].entries.len)
+  # Ensure the final partition goes to the actual bottom
+  # This is needed since the final partition includes
+  # height - (height div numPartitions) * numPartitions
+  result[^1].bottom = top + height
+
+proc maxEntryCount(partitions: var seq[Partition]): int =
+  for i in 0 ..< partitions.len:
+    result = max(result, partitions[i].entries.len)
 
 proc fixed32(f: float32): Fixed32 {.inline.} =
   Fixed32(f * 256)
@@ -1244,19 +1254,14 @@ proc computeCoverage(
   aa: var bool,
   width: int,
   y, startX: int,
-  partitioning: var Partitioning,
+  partitions: var seq[Partition],
+  partitionIndex: var int,
   windingRule: WindingRule
 ) {.inline.} =
-  let partitionIndex =
-    if partitioning.partitions.len == 1:
-      0.uint32
-    else:
-      min(
-        (y.uint32 - partitioning.startY) div partitioning.partitionHeight,
-        partitioning.partitions.high.uint32
-      )
+  if y >= partitions[partitionIndex].bottom:
+    inc partitionIndex
 
-  aa = partitioning.partitions[partitionIndex].requiresAntiAliasing
+  aa = partitions[partitionIndex].requiresAntiAliasing
 
   let
     quality = if aa: 5 else: 1 # Must divide 255 cleanly (1, 3, 5, 15, 17, 51, 85)
@@ -1268,7 +1273,7 @@ proc computeCoverage(
   for m in 0 ..< quality:
     yLine += offset
     numHits = 0
-    for entry in partitioning.partitions[partitionIndex].entries.mitems:
+    for entry in partitions[partitionIndex].entries.mitems:
       if entry.segment.at.y <= yLine and entry.segment.to.y >= yLine:
         let x =
           if entry.m == 0:
@@ -1619,16 +1624,15 @@ proc fillHits(
   template simdBlob(image: Image, x: var int, len: int, blendProc: untyped) =
     when allowSimd:
       when defined(amd64):
-        let colorVec = mm_set1_epi32(cast[int32](rgbx))
-        var dataIndex = image.dataIndex(x, y)
-        for _ in 0 ..< len div 4:
-          let backdrop = mm_loadu_si128(image.data[dataIndex].addr)
-          mm_storeu_si128(
-            image.data[dataIndex].addr,
-            blendProc(backdrop, colorVec)
-          )
-          x += 4
-          dataIndex += 4
+        var p = cast[uint](image.data[image.dataIndex(x, y)].addr)
+        let
+          iterations = len div 4
+          colorVec = mm_set1_epi32(cast[int32](rgbx))
+        for _ in 0 ..< iterations:
+          let backdrop = mm_loadu_si128(cast[pointer](p))
+          mm_storeu_si128(cast[pointer](p), blendProc(backdrop, colorVec))
+          p += 16
+        x += iterations * 4
 
   case blendMode:
   of OverwriteBlend:
@@ -1714,16 +1718,15 @@ proc fillHits(
   template simdBlob(mask: Mask, x: var int, len: int, blendProc: untyped) =
     when allowSimd:
       when defined(amd64):
-        let vec255 = mm_set1_epi8(255)
-        var dataIndex = mask.dataIndex(x, y)
-        for _ in 0 ..< len div 16:
-          let backdrop = mm_loadu_si128(mask.data[dataIndex].addr)
-          mm_storeu_si128(
-            mask.data[dataIndex].addr,
-            blendProc(backdrop, vec255)
-          )
-          x += 16
-          dataIndex += 16
+        var p = cast[uint](mask.data[mask.dataIndex(x, y)].addr)
+        let
+          iterations = len div 16
+          vec255 = mm_set1_epi8(255)
+        for _ in 0 ..< iterations:
+          let backdrop = mm_loadu_si128(cast[pointer](p))
+          mm_storeu_si128(cast[pointer](p), blendProc(backdrop, vec255))
+          p += 16
+        x += iterations * 16
 
   case blendMode:
   of NormalBlend, OverwriteBlend:
@@ -1795,9 +1798,10 @@ proc fillShapes(
     raise newException(PixieError, "Path int overflow detected")
 
   var
-    partitioning = partitionSegments(segments, startY, pathHeight - startY)
+    partitions = partitionSegments(segments, startY, pathHeight - startY)
+    partitionIndex: int
     coverages = newSeq[uint8](pathWidth)
-    hits = newSeq[(Fixed32, int16)](partitioning.maxEntryCount)
+    hits = newSeq[(Fixed32, int16)](partitions.maxEntryCount)
     numHits: int
     aa: bool
 
@@ -1810,7 +1814,8 @@ proc fillShapes(
       image.width,
       y,
       startX,
-      partitioning,
+      partitions,
+      partitionIndex,
       windingRule
     )
     if aa:
@@ -1864,9 +1869,10 @@ proc fillShapes(
     raise newException(PixieError, "Path int overflow detected")
 
   var
-    partitioning = partitionSegments(segments, startY, pathHeight)
+    partitions = partitionSegments(segments, startY, pathHeight)
+    partitionIndex: int
     coverages = newSeq[uint8](pathWidth)
-    hits = newSeq[(Fixed32, int16)](partitioning.maxEntryCount)
+    hits = newSeq[(Fixed32, int16)](partitions.maxEntryCount)
     numHits: int
     aa: bool
 
@@ -1879,7 +1885,8 @@ proc fillShapes(
       mask.width,
       y,
       startX,
-      partitioning,
+      partitions,
+      partitionIndex,
       windingRule
     )
     if aa:

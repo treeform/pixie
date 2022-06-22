@@ -52,7 +52,7 @@ proc `*`*(color: ColorRGBX, opacity: float32): ColorRGBX {.raises: [].} =
 
 proc fillUnsafe*(
   data: var seq[uint8], value: uint8, start, len: int
-) {.raises: [].} =
+) {.inline, raises: [].} =
   ## Fills the mask data with the value starting at index start and
   ## continuing for len indices.
   nimSetMem(data[start].addr, value.cint, len)
@@ -62,9 +62,7 @@ proc fillUnsafe*(
 ) {.raises: [].} =
   ## Fills the image data with the color starting at index start and
   ## continuing for len indices.
-
   let rgbx = color.asRgbx()
-
   # Use memset when every byte has the same value
   if rgbx.r == rgbx.g and rgbx.r == rgbx.b and rgbx.r == rgbx.a:
     nimSetMem(data[start].addr, rgbx.r.cint, len * 4)
@@ -78,11 +76,13 @@ proc fillUnsafe*(
       # When supported, SIMD fill until we run out of room
       let
         colorVec = mm_set1_epi32(cast[int32](rgbx))
-        remaining = start + len - i
-      for _ in 0 ..< remaining div 8:
-        mm_store_si128(data[i + 0].addr, colorVec)
-        mm_store_si128(data[i + 4].addr, colorVec)
-        i += 8
+        iterations = (start + len - i) div 8
+      var p = cast[uint](data[i].addr)
+      for _ in 0 ..< iterations:
+        mm_store_si128(cast[pointer](p), colorVec)
+        mm_store_si128(cast[pointer](p + 16), colorVec)
+        p += 32
+      i += iterations * 8
     else:
       when sizeof(int) == 8:
         # Fill 8 bytes at a time when possible
