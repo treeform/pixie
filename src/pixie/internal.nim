@@ -3,7 +3,8 @@ import chroma, common, system/memory, vmath
 const allowSimd* = not defined(pixieNoSimd) and not defined(tcc)
 
 when defined(amd64) and allowSimd:
-  import nimsimd/sse2
+  import nimsimd/runtimecheck, nimsimd/sse2, simd/avx
+  let cpuHasAvx* = checkInstructionSets({AVX})
 
 template currentExceptionAsPixieError*(): untyped =
   ## Gets the current exception and returns it as a PixieError with stack trace.
@@ -63,6 +64,13 @@ proc fillUnsafe*(
   ## Fills the image data with the color starting at index start and
   ## continuing for len indices.
   let rgbx = color.asRgbx()
+
+  # If we can use AVX, do so
+  when defined(amd64) and allowSimd:
+    if cpuHasAvx and len >= 64:
+      fillUnsafeAvx(data, rgbx, start, len)
+      return
+
   # Use memset when every byte has the same value
   if rgbx.r == rgbx.g and rgbx.r == rgbx.b and rgbx.r == rgbx.a:
     nimSetMem(data[start].addr, rgbx.r.cint, len * 4)
@@ -70,14 +78,15 @@ proc fillUnsafe*(
     var i = start
     when defined(amd64) and allowSimd:
       # Align to 16 bytes
-      while i < (start + len) and (cast[uint](data[i].addr) and 15) != 0:
+      var p = cast[uint](data[i].addr)
+      while i < (start + len) and (p and 15) != 0:
         data[i] = rgbx
         inc i
+        p += 4
       # When supported, SIMD fill until we run out of room
       let
         colorVec = mm_set1_epi32(cast[int32](rgbx))
         iterations = (start + len - i) div 8
-      var p = cast[uint](data[i].addr)
       for _ in 0 ..< iterations:
         mm_store_si128(cast[pointer](p), colorVec)
         mm_store_si128(cast[pointer](p + 16), colorVec)
@@ -93,8 +102,8 @@ proc fillUnsafe*(
           copyMem(data[i].addr, u64.addr, 8)
           i += 2
     # Fill whatever is left the slow way
-    for j in i ..< start + len:
-      data[j] = rgbx
+    for i in i ..< start + len:
+      data[i] = rgbx
 
 const straightAlphaTable = block:
   var table: array[256, array[256, uint8]]
