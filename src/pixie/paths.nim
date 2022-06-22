@@ -44,6 +44,7 @@ type
   Partition = object
     entries: seq[PartitionEntry]
     requiresAntiAliasing: bool
+    bottom: int
 
   Partitioning = object
     partitions: seq[Partition]
@@ -1147,9 +1148,20 @@ proc partitionSegments(
       for i in atPartition .. toPartition:
         result.partitions[i].entries.add(entry)
 
+  # Set the bottom values for the partitions (y value where this partition ends)
+
+  var partitionBottom = top + result.partitionHeight.int
+
   for partition in result.partitions.mitems:
+    partition.bottom = partitionBottom
     partition.requiresAntiAliasing =
       requiresAntiAliasing(partition.entries)
+    partitionBottom += result.partitionHeight.int
+
+  # Ensure the final partition goes to the actual bottom
+  # This is needed since the final partition includes
+  # height - (height div numPartitions) * numPartitions
+  result.partitions[^1].bottom = top + height
 
 proc maxEntryCount(partitioning: var Partitioning): int =
   for i in 0 ..< partitioning.partitions.len:
@@ -1245,16 +1257,11 @@ proc computeCoverage(
   width: int,
   y, startX: int,
   partitioning: var Partitioning,
+  partitionIndex: var int,
   windingRule: WindingRule
 ) {.inline.} =
-  let partitionIndex =
-    if partitioning.partitions.len == 1:
-      0.uint32
-    else:
-      min(
-        (y.uint32 - partitioning.startY) div partitioning.partitionHeight,
-        partitioning.partitions.high.uint32
-      )
+  if y >= partitioning.partitions[partitionIndex].bottom:
+    inc partitionIndex
 
   aa = partitioning.partitions[partitionIndex].requiresAntiAliasing
 
@@ -1794,6 +1801,7 @@ proc fillShapes(
 
   var
     partitioning = partitionSegments(segments, startY, pathHeight - startY)
+    partitionIndex: int
     coverages = newSeq[uint8](pathWidth)
     hits = newSeq[(Fixed32, int16)](partitioning.maxEntryCount)
     numHits: int
@@ -1809,6 +1817,7 @@ proc fillShapes(
       y,
       startX,
       partitioning,
+      partitionIndex,
       windingRule
     )
     if aa:
@@ -1863,6 +1872,7 @@ proc fillShapes(
 
   var
     partitioning = partitionSegments(segments, startY, pathHeight)
+    partitionIndex: int
     coverages = newSeq[uint8](pathWidth)
     hits = newSeq[(Fixed32, int16)](partitioning.maxEntryCount)
     numHits: int
@@ -1878,6 +1888,7 @@ proc fillShapes(
       y,
       startX,
       partitioning,
+      partitionIndex,
       windingRule
     )
     if aa:
