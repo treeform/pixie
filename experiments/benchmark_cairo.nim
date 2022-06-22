@@ -13,21 +13,33 @@ type
 
 var benchmarks: seq[Benchmark]
 
+let
+  opaque = newPaint(SolidPaint)
+  notOpaque = newPaint(SolidPaint)
+opaque.color = color(0, 0, 0, 1)
+notOpaque.color = color(0, 0, 0, 0.5)
+
 block: # Basic rect
   let path = newPath()
-  path.rect(rect(0, 0, 900, 900))
+  path.rect(rect(50, 50, 800, 800))
 
-  let
-    shapes = path.commandsToShapes(true, 1)
-    paint = newPaint(SolidPaint)
-  paint.color = color(0, 0, 0, 1)
+  let shapes = path.commandsToShapes(true, 1)
 
   benchmarks.add(Benchmark(
-    name: "rect",
+    name: "rect opaque",
     fills: @[Fill(
     shapes: shapes,
     transform: mat3(),
-    paint: paint,
+    paint: opaque,
+    windingRule: NonZero
+  )]))
+
+  benchmarks.add(Benchmark(
+    name: "rect not opaque",
+    fills: @[Fill(
+    shapes: shapes,
+    transform: mat3(),
+    paint: notOpaque,
     windingRule: NonZero
   )]))
 
@@ -35,17 +47,23 @@ block: # Rounded rect
   let path = newPath()
   path.roundedRect(rect(0, 0, 900, 900), 20, 20, 20, 20)
 
-  let
-    shapes = path.commandsToShapes(true, 1)
-    paint = newPaint(SolidPaint)
-  paint.color = color(0, 0, 0, 1)
+  let shapes = path.commandsToShapes(true, 1)
 
   benchmarks.add(Benchmark(
-    name: "roundedRect",
+    name: "roundedRect opaque",
     fills: @[Fill(
     shapes: shapes,
     transform: mat3(),
-    paint: paint,
+    paint: opaque,
+    windingRule: NonZero
+    )]))
+
+  benchmarks.add(Benchmark(
+    name: "roundedRect not opaque",
+    fills: @[Fill(
+    shapes: shapes,
+    transform: mat3(),
+    paint: notOpaque,
     windingRule: NonZero
     )]))
 
@@ -58,17 +76,23 @@ block: # Heart
       Q 100,600 100,300 z
   """)
 
-  let
-    shapes = path.commandsToShapes(true, 1)
-    paint = newPaint(SolidPaint)
-  paint.color = color(0, 0, 0, 1)
+  let shapes = path.commandsToShapes(true, 1)
 
   benchmarks.add(Benchmark(
-    name: "Heart",
+    name: "heart opaque",
     fills: @[Fill(
     shapes: shapes,
     transform: mat3(),
-    paint: paint,
+    paint: opaque,
+    windingRule: NonZero
+  )]))
+
+  benchmarks.add(Benchmark(
+    name: "heart not opaque",
+    fills: @[Fill(
+    shapes: shapes,
+    transform: mat3(),
+    paint: notOpaque,
     windingRule: NonZero
   )]))
 
@@ -111,7 +135,10 @@ block: # Tiger
           windingRule: NonZero
         ))
 
-  # benchmarks.add(fills)
+  benchmarks.add(Benchmark(
+    name: "tiger",
+    fills: fills
+  ))
 
 block:
   for benchmark in benchmarks:
