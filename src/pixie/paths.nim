@@ -1131,25 +1131,43 @@ proc partitionSegments(
     startY = top.uint32
     partitionHeight = height.uint32 div numPartitions
 
-  for (segment, winding) in segments:
-    var entry = initPartitionEntry(segment, winding)
-    if partitionHeight == 0:
-      result[0].entries.add(move entry)
-    else:
+  var entries = newSeq[PartitionEntry](segments.len)
+  for i, (segment, winding) in segments:
+    entries[i] = initPartitionEntry(segment, winding)
+
+  if numPartitions == 1:
+    result[0].entries = move entries
+  else:
+    iterator partitionRange(
+      segment: Segment,
+      numPartitions, startY, partitionHeight: uint32
+    ): uint32 =
       var
         atPartition = max(0, segment.at.y - startY.float32).uint32
         toPartition = max(0, segment.to.y - startY.float32).uint32
       atPartition = atPartition div partitionHeight
       toPartition = toPartition div partitionHeight
-      atPartition = min(atPartition, result.high.uint32)
-      toPartition = min(toPartition, result.high.uint32)
-      for i in atPartition .. toPartition:
-        result[i].entries.add(entry)
+      atPartition = min(atPartition, numPartitions - 1)
+      toPartition = min(toPartition, numPartitions - 1)
+      for partitionIndex in atPartition .. toPartition:
+        yield partitionIndex
+
+    var entryCounts = newSeq[int](numPartitions)
+    for (segment, _) in segments:
+      for partitionIndex in segment.partitionRange(numPartitions, startY, partitionHeight):
+        inc entryCounts[partitionIndex]
+
+    for partitionIndex, entryCounts in entryCounts:
+      result[partitionIndex].entries.setLen(entryCounts)
+
+    var indexes = newSeq[int](numPartitions)
+    for i, (segment, winding) in segments:
+      for partitionIndex in segment.partitionRange(numPartitions, startY, partitionHeight):
+        result[partitionIndex].entries[indexes[partitionIndex]] = entries[i]
+        inc indexes[partitionIndex]
 
   # Set the bottom values for the partitions (y value where this partition ends)
-
   var partitionBottom = top + partitionHeight.int
-
   for partition in result.mitems:
     partition.bottom = partitionBottom
     partition.requiresAntiAliasing =
@@ -1313,7 +1331,7 @@ proc computeCoverage(
         if fillLen > 0:
           var i = fillStart
           when defined(amd64) and allowSimd:
-            let sampleCoverageVec = mm_set1_epi8(cast[int8](sampleCoverage))
+            let sampleCoverageVec = mm_set1_epi8(sampleCoverage)
             for _ in 0 ..< fillLen div 16:
               var coverageVec = mm_loadu_si128(coverages[i - startX].addr)
               coverageVec = mm_add_epi8(coverageVec, sampleCoverageVec)
@@ -1354,7 +1372,7 @@ proc fillCoverage(
           let
             coverageVec = mm_loadu_si128(coverages[x - startX].unsafeAddr)
             eqZero = mm_cmpeq_epi8(coverageVec, mm_setzero_si128())
-            eq255 = mm_cmpeq_epi8(coverageVec, mm_set1_epi8(cast[int8](255)))
+            eq255 = mm_cmpeq_epi8(coverageVec, mm_set1_epi8(255))
             allZeroes = mm_movemask_epi8(eqZero) == 0xffff
             all255 = mm_movemask_epi8(eq255) == 0xffff
           yield (coverageVec, allZeroes, all255)
