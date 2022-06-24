@@ -44,7 +44,7 @@ type
   Partition = object
     entries: seq[PartitionEntry]
     requiresAntiAliasing: bool
-    bottom: int
+    top, bottom: int
 
   Fixed32 = int32 ## 24.8 fixed point
 
@@ -1131,6 +1131,18 @@ proc partitionSegments(
     startY = top.uint32
     partitionHeight = height.uint32 div numPartitions
 
+  # Set the bottom values for the partitions (y value where this partition ends)
+  result[0].top = top
+  result[0].bottom = top + partitionHeight.int
+  for i in 1 ..< result.len:
+    result[i].top = result[i - 1].bottom
+    result[i].bottom = result[i - 1].bottom + partitionHeight.int
+
+  # Ensure the final partition goes to the actual bottom
+  # This is needed since the final partition includes
+  # height - (height div numPartitions) * numPartitions
+  result[^1].bottom = top + height
+
   var entries = newSeq[PartitionEntry](segments.len)
   for i, (segment, winding) in segments:
     entries[i] = initPartitionEntry(segment, winding)
@@ -1166,18 +1178,8 @@ proc partitionSegments(
         result[partitionIndex].entries[indexes[partitionIndex]] = entries[i]
         inc indexes[partitionIndex]
 
-  # Set the bottom values for the partitions (y value where this partition ends)
-  var partitionBottom = top + partitionHeight.int
   for partition in result.mitems:
-    partition.bottom = partitionBottom
-    partition.requiresAntiAliasing =
-      requiresAntiAliasing(partition.entries)
-    partitionBottom += partitionHeight.int
-
-  # Ensure the final partition goes to the actual bottom
-  # This is needed since the final partition includes
-  # height - (height div numPartitions) * numPartitions
-  result[^1].bottom = top + height
+    partition.requiresAntiAliasing = requiresAntiAliasing(partition.entries)
 
 proc maxEntryCount(partitions: var seq[Partition]): int =
   for i in 0 ..< partitions.len:
@@ -1273,12 +1275,9 @@ proc computeCoverage(
   width: int,
   y, startX: int,
   partitions: var seq[Partition],
-  partitionIndex: var int,
+  partitionIndex: int,
   windingRule: WindingRule
 ) {.inline.} =
-  if y >= partitions[partitionIndex].bottom:
-    inc partitionIndex
-
   aa = partitions[partitionIndex].requiresAntiAliasing
 
   let
@@ -1823,7 +1822,11 @@ proc fillShapes(
     numHits: int
     aa: bool
 
-  for y in startY ..< pathHeight:
+  var y = startY
+  while y < pathHeight:
+    if y >= partitions[partitionIndex].bottom:
+      inc partitionIndex
+
     computeCoverage(
       cast[ptr UncheckedArray[uint8]](coverages[0].addr),
       hits,
@@ -1836,6 +1839,7 @@ proc fillShapes(
       partitionIndex,
       windingRule
     )
+
     if aa:
       image.fillCoverage(
         rgbx,
@@ -1855,6 +1859,8 @@ proc fillShapes(
         windingRule,
         blendMode
       )
+
+    inc y
 
   if blendMode == MaskBlend:
     image.clearUnsafe(0, 0, 0, startY)
@@ -1895,6 +1901,9 @@ proc fillShapes(
     aa: bool
 
   for y in startY ..< pathHeight:
+    if y >= partitions[partitionIndex].bottom:
+      inc partitionIndex
+
     computeCoverage(
       cast[ptr UncheckedArray[uint8]](coverages[0].addr),
       hits,
