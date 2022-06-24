@@ -1180,13 +1180,11 @@ proc partitionSegments(
 
   for partition in result.mitems:
     partition.requiresAntiAliasing = requiresAntiAliasing(partition.entries)
-
-    let
-      top = partition.top.float32
-      bottom = partition.bottom.float32
     if partition.entries.len == 2:
       # Clip the entries to the parition bounds
       let
+        top = partition.top.float32
+        bottom = partition.bottom.float32
         topLine = line(vec2(0, top), vec2(1000, top))
         bottomLine = line(vec2(0, bottom), vec2(1000, bottom))
       for entry in partition.entries.mitems:
