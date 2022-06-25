@@ -45,7 +45,7 @@ block: # Basic rect
 
 block: # Rounded rect
   let path = newPath()
-  path.roundedRect(rect(0, 0, 900, 900), 20, 20, 20, 20)
+  path.roundedRect(rect(0, 0, 900, 900), 100, 100, 100, 100)
 
   let shapes = path.commandsToShapes(true, 1)
 
@@ -66,6 +66,54 @@ block: # Rounded rect
     paint: notOpaque,
     windingRule: NonZero
     )]))
+
+block: # Pentagon
+  let path = newPath()
+  path.polygon(vec2(450, 450), 400, 5)
+
+  let shapes = path.commandsToShapes(true, 1)
+
+  benchmarks.add(Benchmark(
+    name: "pentagon opaque",
+    fills: @[Fill(
+    shapes: shapes,
+    transform: mat3(),
+    paint: opaque,
+    windingRule: NonZero
+  )]))
+
+  benchmarks.add(Benchmark(
+    name: "pentagon not opaque",
+    fills: @[Fill(
+    shapes: shapes,
+    transform: mat3(),
+    paint: notOpaque,
+    windingRule: NonZero
+  )]))
+
+block: # Circle
+  let path = newPath()
+  path.circle(circle(vec2(450, 450), 400))
+
+  let shapes = path.commandsToShapes(true, 1)
+
+  benchmarks.add(Benchmark(
+    name: "circle opaque",
+    fills: @[Fill(
+    shapes: shapes,
+    transform: mat3(),
+    paint: opaque,
+    windingRule: NonZero
+  )]))
+
+  benchmarks.add(Benchmark(
+    name: "circle not opaque",
+    fills: @[Fill(
+    shapes: shapes,
+    transform: mat3(),
+    paint: notOpaque,
+    windingRule: NonZero
+  )]))
 
 block: # Heart
   let path = parsePath("""
