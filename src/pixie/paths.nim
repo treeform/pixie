@@ -43,8 +43,8 @@ type
 
   Partition = object
     entries: seq[PartitionEntry]
-    requiresAntiAliasing: bool
-    bottom: int
+    requiresAntiAliasing, twoNonintersectingSpanningSegments: bool
+    top, bottom: int
 
   Fixed32 = int32 ## 24.8 fixed point
 
@@ -1131,6 +1131,18 @@ proc partitionSegments(
     startY = top.uint32
     partitionHeight = height.uint32 div numPartitions
 
+  # Set the bottom values for the partitions (y value where this partition ends)
+  result[0].top = top
+  result[0].bottom = top + partitionHeight.int
+  for i in 1 ..< result.len:
+    result[i].top = result[i - 1].bottom
+    result[i].bottom = result[i - 1].bottom + partitionHeight.int
+
+  # Ensure the final partition goes to the actual bottom
+  # This is needed since the final partition includes
+  # height - (height div numPartitions) * numPartitions
+  result[^1].bottom = top + height
+
   var entries = newSeq[PartitionEntry](segments.len)
   for i, (segment, winding) in segments:
     entries[i] = initPartitionEntry(segment, winding)
@@ -1166,18 +1178,33 @@ proc partitionSegments(
         result[partitionIndex].entries[indexes[partitionIndex]] = entries[i]
         inc indexes[partitionIndex]
 
-  # Set the bottom values for the partitions (y value where this partition ends)
-  var partitionBottom = top + partitionHeight.int
   for partition in result.mitems:
-    partition.bottom = partitionBottom
-    partition.requiresAntiAliasing =
-      requiresAntiAliasing(partition.entries)
-    partitionBottom += partitionHeight.int
+    partition.requiresAntiAliasing = requiresAntiAliasing(partition.entries)
+    if partition.entries.len == 2:
+      # Clip the entries to the parition bounds
+      let
+        top = partition.top.float32
+        bottom = partition.bottom.float32
+        topLine = line(vec2(0, top), vec2(1000, top))
+        bottomLine = line(vec2(0, bottom), vec2(1000, bottom))
+      for entry in partition.entries.mitems:
+        if entry.segment.at.y <= top and entry.segment.to.y >= bottom:
+          var at: Vec2
+          discard intersects(entry.segment, topLine, at)
+          entry.segment.at = at
+          discard intersects(entry.segment, bottomLine, at)
+          entry.segment.to = at
 
-  # Ensure the final partition goes to the actual bottom
-  # This is needed since the final partition includes
-  # height - (height div numPartitions) * numPartitions
-  result[^1].bottom = top + height
+      let
+        entry0 = partition.entries[0].segment
+        entry1 = partition.entries[1].segment
+      var at: Vec2
+      if not intersects(entry0, entry1, at):
+        # These two segments do not intersect, enable shortcut
+        partition.twoNonintersectingSpanningSegments = true
+        # Ensure entry[0] is on the left
+        if entry1.at.x < entry0.at.x:
+          swap partition.entries[1], partition.entries[0]
 
 proc maxEntryCount(partitions: var seq[Partition]): int =
   for i in 0 ..< partitions.len:
@@ -1273,12 +1300,9 @@ proc computeCoverage(
   width: int,
   y, startX: int,
   partitions: var seq[Partition],
-  partitionIndex: var int,
+  partitionIndex: int,
   windingRule: WindingRule
 ) {.inline.} =
-  if y >= partitions[partitionIndex].bottom:
-    inc partitionIndex
-
   aa = partitions[partitionIndex].requiresAntiAliasing
 
   let
@@ -1823,7 +1847,45 @@ proc fillShapes(
     numHits: int
     aa: bool
 
-  for y in startY ..< pathHeight:
+  var y = startY
+  while y < pathHeight:
+    if y >= partitions[partitionIndex].bottom:
+      inc partitionIndex
+
+    let
+      partitionTop = partitions[partitionIndex].top
+      partitionBottom = partitions[partitionIndex].bottom
+      partitionHeight = partitionBottom - partitionTop
+    if partitionHeight == 0:
+      continue
+
+    if partitions[partitionIndex].twoNonintersectingSpanningSegments:
+      if partitions[partitionIndex].requiresAntiAliasing:
+        discard
+      else: # No AA required, must be 2 vertical pixel-aligned lines
+        let
+          left = partitions[partitionIndex].entries[0].segment.at.x.int
+          right = partitions[partitionIndex].entries[1].segment.at.x.int
+          minX = left.clamp(0, image.width)
+          maxX = right.clamp(0, image.width)
+          skipBlending =
+            blendMode == OverwriteBlend or
+            (blendMode == NormalBlend and rgbx.a == 255)
+        if skipBlending and minX == 0 and maxX == image.width:
+          # We can be greedy, just do one big mult-row fill
+          let
+            start = image.dataIndex(0, y)
+            len = image.dataIndex(0, y + partitionHeight) - start
+          fillUnsafe(image.data, rgbx, start, len)
+        else:
+          for r in 0 ..< partitionHeight:
+            hits[0] = (cast[Fixed32](minX * 256), 1.int16)
+            hits[1] = (cast[Fixed32](maxX * 256), -1.int16)
+            image.fillHits(rgbx, 0, y + r, hits, 2, NonZero, blendMode)
+
+        y += partitionHeight
+        continue
+
     computeCoverage(
       cast[ptr UncheckedArray[uint8]](coverages[0].addr),
       hits,
@@ -1836,6 +1898,7 @@ proc fillShapes(
       partitionIndex,
       windingRule
     )
+
     if aa:
       image.fillCoverage(
         rgbx,
@@ -1855,6 +1918,8 @@ proc fillShapes(
         windingRule,
         blendMode
       )
+
+    inc y
 
   if blendMode == MaskBlend:
     image.clearUnsafe(0, 0, 0, startY)
@@ -1895,6 +1960,9 @@ proc fillShapes(
     aa: bool
 
   for y in startY ..< pathHeight:
+    if y >= partitions[partitionIndex].bottom:
+      inc partitionIndex
+
     computeCoverage(
       cast[ptr UncheckedArray[uint8]](coverages[0].addr),
       hits,
