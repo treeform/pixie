@@ -1205,7 +1205,7 @@ proc partitionSegments(
         entry0 = partition.entries[0].segment
         entry1 = partition.entries[1].segment
       var at: Vec2
-      if not intersects(entry0, entry1, at):
+      if not intersectsInside(entry0, entry1, at):
         # These two segments do not intersect, enable shortcut
         partition.twoNonintersectingSpanningSegments = true
         # Ensure entry[0] is on the left
@@ -1916,7 +1916,7 @@ proc fillShapes(
 
     if allEntriesInScanlineSpanIt and tmp == 2:
       var at: Vec2
-      if not intersects(
+      if not intersectsInside(
         partitions[partitionIndex].entries[entryIndices[0]].segment,
         partitions[partitionIndex].entries[entryIndices[1]].segment,
         at
@@ -1925,9 +1925,13 @@ proc fillShapes(
         var
           left = partitions[partitionIndex].entries[entryIndices[0]]
           right = partitions[partitionIndex].entries[entryIndices[1]]
-        # Ensure left is on the left
-        if left.segment.at.x > right.segment.at.x:
-          swap left, right
+        block:
+          # Ensure left is actually on the left
+          let
+            maybeLeftMaxX = max(left.segment.at.x, left.segment.to.x)
+            maybeRightMaxX = max(right.segment.at.x, right.segment.to.x)
+          if maybeLeftMaxX > maybeRightMaxX:
+            swap left, right
 
         let requiresAntiAliasing =
           left.segment.requiresAntiAliasing or

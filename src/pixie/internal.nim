@@ -1,4 +1,4 @@
-import chroma, common, system/memory, vmath
+import bumpy, chroma, common, system/memory, vmath
 
 const allowSimd* = not defined(pixieNoSimd) and not defined(tcc)
 
@@ -50,6 +50,20 @@ proc `*`*(color: ColorRGBX, opacity: float32): ColorRGBX {.raises: [].} =
       b = ((color.b * x) div 255).uint8
       a = ((color.a * x) div 255).uint8
     rgbx(r, g, b, a)
+
+proc intersectsInside*(a, b: Segment, at: var Vec2): bool {.inline.} =
+  ## Checks if the a segment intersects b segment (excluding endpoints).
+  ## If it returns true, at will have point of intersection
+  let
+    s1 = a.to - a.at
+    s2 = b.to - b.at
+    denominator = (-s2.x * s1.y + s1.x * s2.y)
+    s = (-s1.y * (a.at.x - b.at.x) + s1.x * (a.at.y - b.at.y)) / denominator
+    t = (s2.x * (a.at.y - b.at.y) - s2.y * (a.at.x - b.at.x)) / denominator
+
+  if s > 0 and s < 1 and t > 0 and t < 1:
+    at = a.at + (t * s1)
+    return true
 
 proc fillUnsafe*(
   data: var seq[uint8], value: uint8, start, len: int
