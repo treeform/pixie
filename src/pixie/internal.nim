@@ -202,6 +202,13 @@ proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
       return false
 
 when defined(amd64) and allowSimd:
+  proc applyOpacity*(color: M128, opacity: float32): ColorRGBX {.inline.} =
+    let opacityVec =  mm_set1_ps(opacity)
+    var finalColor =  mm_cvtps_epi32(mm_mul_ps(color, opacityVec))
+    finalColor = mm_packus_epi16(finalColor, mm_setzero_si128())
+    finalColor = mm_packus_epi16(finalColor, mm_setzero_si128())
+    cast[ColorRGBX](mm_cvtsi128_si32(finalColor))
+
   proc packAlphaValues(v: M128i): M128i {.inline, raises: [].} =
     ## Shuffle the alpha values for these 4 colors to the first 4 bytes
     result = mm_srli_epi32(v, 24)

@@ -1941,6 +1941,14 @@ proc fillShapes(
           # We have 2 non-intersecting lines that require anti-aliasing
           # Use trapezoid coverage at the edges and fill in the middle
 
+          when allowSimd and defined(amd64):
+            let vecRgbx = mm_set_ps(
+              rgbx.a.float32,
+              rgbx.b.float32,
+              rgbx.g.float32,
+              rgbx.r.float32
+            )
+
           proc solveX(entry: PartitionEntry, y: float32): float32 =
             if entry.m == 0:
               entry.b
@@ -2010,7 +2018,11 @@ proc fillShapes(
                   area = triangleArea + rectArea + rightRectArea
                   dataIndex = image.dataIndex(x, y)
                   backdrop = image.data[dataIndex]
-                  source = rgbx * area
+                  source =
+                    when allowSimd and defined(amd64):
+                      applyOpacity(vecRgbx, area)
+                    else:
+                      rgbx * area
                 image.data[dataIndex] = blender(backdrop, source)
 
             block: # Right-side partial coverage
@@ -2044,7 +2056,11 @@ proc fillShapes(
                   area = leftRectArea + triangleArea + rectArea
                   dataIndex = image.dataIndex(x, y)
                   backdrop = image.data[dataIndex]
-                  source = rgbx * area
+                  source =
+                    when allowSimd and defined(amd64):
+                      applyOpacity(vecRgbx, area)
+                    else:
+                      rgbx * area
                 image.data[dataIndex] = blender(backdrop, source)
 
             let
