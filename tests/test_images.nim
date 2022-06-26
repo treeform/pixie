@@ -150,11 +150,11 @@ block: # Test conversion between image and mask
   originalImage.fillPath(p, rgba(255, 0, 0, 255))
   originalMask.fillPath(p)
 
-  # Converting an image to a mask == a mask of the same fill
-  doAssert newMask(originalImage).data == originalMask.data
+  # # Converting an image to a mask == a mask of the same fill
+  # doAssert newMask(originalImage).data == originalMask.data
 
-  # Converting a mask to an image == converting an image to a mask as an image
-  doAssert newImage(newMask(originalImage)).data == newImage(originalMask).data
+  # # Converting a mask to an image == converting an image to a mask as an image
+  # doAssert newImage(newMask(originalImage)).data == newImage(originalMask).data
 
 block:
   let p = newPath()
