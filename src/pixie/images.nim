@@ -1102,37 +1102,25 @@ proc draw*(
   a, b: Image, transform = mat3(), blendMode = NormalBlend
 ) {.inline, raises: [PixieError].} =
   ## Draws one image onto another using matrix with color blending.
-  when type(transform) is Vec2:
-    a.drawUber(b, translate(transform), blendMode)
-  else:
-    a.drawUber(b, transform, blendMode)
+  a.drawUber(b, transform, blendMode)
 
 proc draw*(
   a, b: Mask, transform = mat3(), blendMode = MaskBlend
 ) {.inline, raises: [PixieError].} =
   ## Draws a mask onto a mask using a matrix with color blending.
-  when type(transform) is Vec2:
-    a.drawUber(b, translate(transform), blendMode)
-  else:
-    a.drawUber(b, transform, blendMode)
+  a.drawUber(b, transform, blendMode)
 
 proc draw*(
   image: Image, mask: Mask, transform = mat3(), blendMode = MaskBlend
 ) {.inline, raises: [PixieError].} =
   ## Draws a mask onto an image using a matrix with color blending.
-  when type(transform) is Vec2:
-    image.drawUber(mask, translate(transform), blendMode)
-  else:
-    image.drawUber(mask, transform, blendMode)
+  image.drawUber(mask, transform, blendMode)
 
 proc draw*(
   mask: Mask, image: Image, transform = mat3(), blendMode = MaskBlend
 ) {.inline, raises: [PixieError].} =
   ## Draws a image onto a mask using a matrix with color blending.
-  when type(transform) is Vec2:
-    mask.drawUber(image, translate(transform), blendMode)
-  else:
-    mask.drawUber(image, transform, blendMode)
+  mask.drawUber(image, transform, blendMode)
 
 proc drawTiled*(
   dst, src: Image, mat: Mat3, blendMode = NormalBlend
