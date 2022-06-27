@@ -169,13 +169,13 @@ proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} 
       i += 4
 
   # Convert whatever is left
-  for j in i ..< data.len:
-    var c = data[j]
+  for i in i ..< data.len:
+    var c = data[i]
     if c.a != 255:
-      c.r = ((c.r.uint32 * c.a.uint32) div 255).uint8
-      c.g = ((c.g.uint32 * c.a.uint32) div 255).uint8
-      c.b = ((c.b.uint32 * c.a.uint32) div 255).uint8
-      data[j] = c
+      c.r = ((c.r.uint32 * c.a) div 255).uint8
+      c.g = ((c.g.uint32 * c.a) div 255).uint8
+      c.b = ((c.b.uint32 * c.a) div 255).uint8
+      data[i] = c
 
 proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
   result = true
