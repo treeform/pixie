@@ -1171,7 +1171,9 @@ proc partitionSegments(
 
     var entryCounts = newSeq[int](numPartitions)
     for (segment, _) in segments:
-      for partitionIndex in segment.partitionRange(numPartitions, startY, partitionHeight):
+      for partitionIndex in segment.partitionRange(
+        numPartitions, startY, partitionHeight
+      ):
         inc entryCounts[partitionIndex]
 
     for partitionIndex, entryCounts in entryCounts:
@@ -1179,7 +1181,9 @@ proc partitionSegments(
 
     var indexes = newSeq[int](numPartitions)
     for i, (segment, winding) in segments:
-      for partitionIndex in segment.partitionRange(numPartitions, startY, partitionHeight):
+      for partitionIndex in segment.partitionRange(
+        numPartitions, startY, partitionHeight
+      ):
         result[partitionIndex].entries[indexes[partitionIndex]] = entries[i]
         inc indexes[partitionIndex]
 
