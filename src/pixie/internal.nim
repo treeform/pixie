@@ -3,7 +3,7 @@ import bumpy, chroma, common, system/memory, vmath
 const allowSimd* = not defined(pixieNoSimd) and not defined(tcc)
 
 when defined(amd64) and allowSimd:
-  import nimsimd/runtimecheck, nimsimd/sse2, simd/avx
+  import nimsimd/runtimecheck, nimsimd/sse2, runtimechecked/avx
   let cpuHasAvx* = checkInstructionSets({AVX})
 
 template currentExceptionAsPixieError*(): untyped =
