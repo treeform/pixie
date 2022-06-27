@@ -1971,14 +1971,10 @@ proc fillShapes(
           rightBottom.x = right.solveX(rightBottom.y)
 
           let
-            # leftMinX = min(leftTop.x, leftBottom.x)
             leftMaxX = max(leftTop.x, leftBottom.x)
             rightMinX = min(rightTop.x, rightBottom.x)
-            # rightMaxX = max(rightTop.x, rightBottom.x)
-            # leftCoverBegin = leftMinX.trunc
             leftCoverEnd = leftMaxX.ceil.int
             rightCoverBegin = rightMinX.trunc.int
-            # rightCoverEnd = rightMaxX.ceil
 
           if leftCoverEnd < rightCoverBegin:
             # Only take this shortcut if the partial coverage areas on the
