@@ -102,5 +102,42 @@ proc isOpaqueAvx2*(data: var seq[ColorRGBX], start, len: int): bool =
     if data[i].a != 255:
       return false
 
+proc toPremultipliedAlphaAvx2*(data: var seq[ColorRGBA | ColorRGBX]) =
+  var i: int
+
+  let
+    alphaMask = mm256_set1_epi32(cast[int32](0xff000000))
+    oddMask = mm256_set1_epi16(cast[int16](0xff00))
+    div255 = mm256_set1_epi16(cast[int16](0x8081))
+  for _ in 0 ..< data.len div 8:
+    let
+      values = mm256_loadu_si256(data[i].addr)
+      alpha = mm256_and_si256(values, alphaMask)
+      eq = mm256_cmpeq_epi8(values, alphaMask)
+    if (mm256_movemask_epi8(eq) and 0x88888888) != 0x88888888:
+      let
+        evenMultiplier = mm256_or_si256(alpha, mm256_srli_epi32(alpha, 16))
+        oddMultiplier = mm256_or_si256(evenMultiplier, alphaMask)
+      var
+        colorsEven = mm256_slli_epi16(values, 8)
+        colorsOdd = mm256_and_si256(values, oddMask)
+      colorsEven = mm256_mulhi_epu16(colorsEven, evenMultiplier)
+      colorsOdd = mm256_mulhi_epu16(colorsOdd, oddMultiplier)
+      colorsEven = mm256_srli_epi16(mm256_mulhi_epu16(colorsEven, div255), 7)
+      colorsOdd = mm256_srli_epi16(mm256_mulhi_epu16(colorsOdd, div255), 7)
+      mm256_storeu_si256(
+        data[i].addr,
+        mm256_or_si256(colorsEven, mm256_slli_epi16(colorsOdd, 8))
+      )
+    i += 8
+
+  for i in i ..< data.len:
+    var c = data[i]
+    if c.a != 255:
+      c.r = ((c.r.uint32 * c.a) div 255).uint8
+      c.g = ((c.g.uint32 * c.a) div 255).uint8
+      c.b = ((c.b.uint32 * c.a) div 255).uint8
+      data[i] = c
+
 when defined(release):
   {.pop.}
