@@ -3,8 +3,10 @@ import bumpy, chroma, common, system/memory, vmath
 const allowSimd* = not defined(pixieNoSimd) and not defined(tcc)
 
 when defined(amd64) and allowSimd:
-  import nimsimd/runtimecheck, nimsimd/sse2, runtimechecked/avx
-  let cpuHasAvx* = checkInstructionSets({AVX})
+  import nimsimd/runtimecheck, nimsimd/sse2, runtimechecked/avx, runtimechecked/avx2
+  let
+    cpuHasAvx* = checkInstructionSets({AVX})
+    cpuHasAvx2* = checkInstructionSets({AVX, AVX2})
 
 template currentExceptionAsPixieError*(): untyped =
   ## Gets the current exception and returns it as a PixieError with stack trace.
@@ -178,27 +180,42 @@ proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} 
       data[i] = c
 
 proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
+  when defined(amd64) and allowSimd:
+    if cpuHasAvx2 and len >= 64:
+      return isOpaqueAvx2(data, start, len)
+
   result = true
 
   var i = start
   when defined(amd64) and allowSimd:
-    let vec255 = mm_set1_epi32(cast[int32](uint32.high))
-    for _ in start ..< (start + len) div 16:
+    # Align to 16 bytes
+    var p = cast[uint](data[i].addr)
+    while i < (start + len) and (p and 15) != 0:
+      if data[i].a != 255:
+        return false
+      inc i
+      p += 4
+
+    let
+      vec255 = mm_set1_epi8(255)
+      iterations = (start + len - i) div 16
+    for _ in 0 ..< iterations:
       let
-        values0 = mm_loadu_si128(data[i + 0].addr)
-        values1 = mm_loadu_si128(data[i + 4].addr)
-        values2 = mm_loadu_si128(data[i + 8].addr)
-        values3 = mm_loadu_si128(data[i + 12].addr)
+        values0 = mm_load_si128(cast[pointer](p))
+        values1 = mm_load_si128(cast[pointer](p + 16))
+        values2 = mm_load_si128(cast[pointer](p + 32))
+        values3 = mm_load_si128(cast[pointer](p + 48))
         values01 = mm_and_si128(values0, values1)
         values23 = mm_and_si128(values2, values3)
-        values = mm_and_si128(values01, values23)
-        eq = mm_cmpeq_epi8(values, vec255)
+        values0123 = mm_and_si128(values01, values23)
+        eq = mm_cmpeq_epi8(values0123, vec255)
       if (mm_movemask_epi8(eq) and 0x00008888) != 0x00008888:
         return false
-      i += 16
+      p += 64
+    i += 16 * iterations
 
-  for j in i ..< start + len:
-    if data[j].a != 255:
+  for i in i ..< start + len:
+    if data[i].a != 255:
       return false
 
 when defined(amd64) and allowSimd:
