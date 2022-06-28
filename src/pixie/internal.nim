@@ -141,39 +141,36 @@ proc toStraightAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} =
 
 proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} =
   ## Converts an image to premultiplied alpha from straight alpha.
-  when defined(amd64) and allowSimd:
-    if cpuHasAvx2:
-      toPremultipliedAlphaAvx2(data)
-      return
-
   var i: int
   when defined(amd64) and allowSimd:
-    # When supported, SIMD convert as much as possible
-    let
-      alphaMask = mm_set1_epi32(cast[int32](0xff000000))
-      oddMask = mm_set1_epi16(cast[int16](0xff00))
-      div255 = mm_set1_epi16(cast[int16](0x8081))
-    for _ in 0 ..< data.len div 4:
+    if cpuHasAvx2:
+      i = toPremultipliedAlphaAvx2(data)
+    else:
       let
-        values = mm_loadu_si128(data[i].addr)
-        alpha = mm_and_si128(values, alphaMask)
-        eq = mm_cmpeq_epi8(values, alphaMask)
-      if (mm_movemask_epi8(eq) and 0x00008888) != 0x00008888:
+        alphaMask = mm_set1_epi32(cast[int32](0xff000000))
+        oddMask = mm_set1_epi16(cast[int16](0xff00))
+        div255 = mm_set1_epi16(cast[int16](0x8081))
+      for _ in 0 ..< data.len div 4:
         let
-          evenMultiplier = mm_or_si128(alpha, mm_srli_epi32(alpha, 16))
-          oddMultiplier = mm_or_si128(evenMultiplier, alphaMask)
-        var
-          colorsEven = mm_slli_epi16(values, 8)
-          colorsOdd = mm_and_si128(values, oddMask)
-        colorsEven = mm_mulhi_epu16(colorsEven, evenMultiplier)
-        colorsOdd = mm_mulhi_epu16(colorsOdd, oddMultiplier)
-        colorsEven = mm_srli_epi16(mm_mulhi_epu16(colorsEven, div255), 7)
-        colorsOdd = mm_srli_epi16(mm_mulhi_epu16(colorsOdd, div255), 7)
-        mm_storeu_si128(
-          data[i].addr,
-          mm_or_si128(colorsEven, mm_slli_epi16(colorsOdd, 8))
-        )
-      i += 4
+          values = mm_loadu_si128(data[i].addr)
+          alpha = mm_and_si128(values, alphaMask)
+          eq = mm_cmpeq_epi8(values, alphaMask)
+        if (mm_movemask_epi8(eq) and 0x00008888) != 0x00008888:
+          let
+            evenMultiplier = mm_or_si128(alpha, mm_srli_epi32(alpha, 16))
+            oddMultiplier = mm_or_si128(evenMultiplier, alphaMask)
+          var
+            colorsEven = mm_slli_epi16(values, 8)
+            colorsOdd = mm_and_si128(values, oddMask)
+          colorsEven = mm_mulhi_epu16(colorsEven, evenMultiplier)
+          colorsOdd = mm_mulhi_epu16(colorsOdd, oddMultiplier)
+          colorsEven = mm_srli_epi16(mm_mulhi_epu16(colorsEven, div255), 7)
+          colorsOdd = mm_srli_epi16(mm_mulhi_epu16(colorsOdd, div255), 7)
+          mm_storeu_si128(
+            data[i].addr,
+            mm_or_si128(colorsEven, mm_slli_epi16(colorsOdd, 8))
+          )
+        i += 4
 
   # Convert whatever is left
   for i in i ..< data.len:
