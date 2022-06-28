@@ -1,5 +1,5 @@
 import chroma, flatty/binny, pixie/common, pixie/images, pixie/internal,
-    pixie/masks, sequtils, std/decls, strutils
+    pixie/masks, std/decls, std/sequtils, std/strutils
 
 when defined(amd64) and allowSimd:
   import nimsimd/sse2

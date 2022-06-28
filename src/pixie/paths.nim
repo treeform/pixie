@@ -1,5 +1,5 @@
-import blends, bumpy, chroma, common, fenv, images, internal, masks, paints,
-    strutils, vmath
+import blends, bumpy, chroma, common, images, internal, masks, paints, std/fenv,
+    std/strutils, vmath
 
 when defined(amd64) and allowSimd:
   import nimsimd/sse2
