@@ -31,21 +31,18 @@ proc newImage*(width, height: int): Image {.raises: [PixieError].} =
 
 proc newImage*(mask: Mask): Image {.raises: [PixieError].} =
   result = newImage(mask.width, mask.height)
-  var i: int
-  when defined(amd64) and allowSimd:
-    for _ in 0 ..< mask.data.len div 16:
-      var alphas = mm_loadu_si128(mask.data[i].addr)
-      for j in 0 ..< 4:
-        var unpacked = unpackAlphaValues(alphas)
-        unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 8))
-        unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
-        mm_storeu_si128(result.data[i + j * 4].addr, unpacked)
-        alphas = mm_srli_si128(alphas, 4)
-      i += 16
 
-  for j in i ..< mask.data.len:
-    let v = mask.data[j]
-    result.data[j] = rgbx(v, v, v, v)
+  when allowSimd and compiles(newImageFromMaskSimd):
+    newImageFromMaskSimd(
+      cast[ptr UncheckedArray[ColorRGBX]](result.data[0].addr),
+      cast[ptr UncheckedArray[uint8]](mask.data[0].addr),
+      mask.data.len
+    )
+    return
+
+  for i in 0 ..< mask.data.len:
+    let v = mask.data[i]
+    result.data[i] = rgbx(v, v, v, v)
 
 proc copy*(image: Image): Image {.raises: [PixieError].} =
   ## Copies the image data into a new image.
@@ -421,7 +418,7 @@ proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
 
 proc invert*(image: Image) {.raises: [].} =
   ## Inverts all of the colors and alpha.
-  if allowSimd and compiles(invertSimd):
+  when allowSimd and compiles(invertSimd):
     invertSimd(
       cast[ptr UncheckedArray[ColorRGBX]](image.data[0].addr),
       image.data.len
@@ -506,22 +503,16 @@ proc newMask*(image: Image): Mask {.raises: [PixieError].} =
   ## Returns a new mask using the alpha values of the image.
   result = newMask(image.width, image.height)
 
-  var i: int
-  when defined(amd64) and allowSimd:
-    for _ in 0 ..< image.data.len div 16:
-      let
-        a = mm_loadu_si128(image.data[i + 0].addr)
-        b = mm_loadu_si128(image.data[i + 4].addr)
-        c = mm_loadu_si128(image.data[i + 8].addr)
-        d = mm_loadu_si128(image.data[i + 12].addr)
-      mm_storeu_si128(
-        result.data[i].addr,
-        pack4xAlphaValues(a, b, c, d)
-      )
-      i += 16
+  when allowSimd and compiles(newMaskFromImageSimd):
+    newMaskFromImageSimd(
+      cast[ptr UncheckedArray[uint8]](result.data[0].addr),
+      cast[ptr UncheckedArray[ColorRGBX]](image.data[0].addr),
+      image.data.len
+    )
+    return
 
-  for j in i ..< image.data.len:
-    result.data[j] = image.data[j].a
+  for i in 0 ..< image.data.len:
+    result.data[i] = image.data[i].a
 
 proc getRgbaSmooth*(
   image: Image, x, y: float32, wrapped = false

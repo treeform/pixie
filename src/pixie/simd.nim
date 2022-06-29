@@ -7,6 +7,25 @@ when defined(amd64):
     cpuHasAvx* = checkInstructionSets({AVX})
     cpuHasAvx2* = checkInstructionSets({AVX, AVX2})
 
+  proc packAlphaValues(v: M128i): M128i {.inline.} =
+    ## Shuffle the alpha values for these 4 colors to the first 4 bytes.
+    result = mm_srli_epi32(v, 24)
+    result = mm_packus_epi16(result, mm_setzero_si128())
+    result = mm_packus_epi16(result, mm_setzero_si128())
+
+  proc pack4xAlphaValues*(i, j, k, l: M128i): M128i {.inline.} =
+    let
+      i = packAlphaValues(i)
+      j = mm_slli_si128(packAlphaValues(j), 4)
+      k = mm_slli_si128(packAlphaValues(k), 8)
+      l = mm_slli_si128(packAlphaValues(l), 12)
+    mm_or_si128(mm_or_si128(i, j), mm_or_si128(k, l))
+
+  proc unpackAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
+    ## Unpack the first 32 bits into 4 rgba(0, 0, 0, value).
+    result = mm_unpacklo_epi8(mm_setzero_si128(), v)
+    result = mm_unpacklo_epi8(mm_setzero_si128(), result)
+
   proc fillUnsafeSimd*(
     data: ptr UncheckedArray[ColorRGBX],
     len: int,
@@ -170,6 +189,47 @@ when defined(amd64):
       c.g = ((c.g.uint32 * c.a) div 255).uint8
       c.b = ((c.b.uint32 * c.a) div 255).uint8
       copyMem(data[i].addr, c.addr, 4)
+
+  proc newImageFromMaskSimd*(
+    dst: ptr UncheckedArray[ColorRGBX],
+    src: ptr UncheckedArray[uint8],
+    len: int
+  ) =
+    var i: int
+    for _ in 0 ..< len div 16:
+      var alphas = mm_loadu_si128(src[i].addr)
+      for j in 0 ..< 4:
+        var unpacked = unpackAlphaValues(alphas)
+        unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 8))
+        unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
+        mm_storeu_si128(dst[i + j * 4].addr, unpacked)
+        alphas = mm_srli_si128(alphas, 4)
+      i += 16
+
+    for i in i ..< len:
+      let v = src[i]
+      dst[i] = rgbx(v, v, v, v)
+
+  proc newMaskFromImageSimd*(
+    dst: ptr UncheckedArray[uint8],
+    src: ptr UncheckedArray[ColorRGBX],
+    len: int
+  ) =
+    var i: int
+    for _ in 0 ..< len div 16:
+      let
+        a = mm_loadu_si128(src[i + 0].addr)
+        b = mm_loadu_si128(src[i + 4].addr)
+        c = mm_loadu_si128(src[i + 8].addr)
+        d = mm_loadu_si128(src[i + 12].addr)
+      mm_storeu_si128(
+        dst[i].addr,
+        pack4xAlphaValues(a, b, c, d)
+      )
+      i += 16
+
+    for i in i ..< len:
+      dst[i] = src[i].a
 
   proc invertSimd*(data: ptr UncheckedArray[ColorRGBX], len: int) =
     var i: int
