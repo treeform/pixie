@@ -1919,155 +1919,147 @@ proc fillShapes(
           break
 
     if allEntriesInScanlineSpanIt and tmp == 2:
-      var at: Vec2
-      if not intersectsInside(
-        partitions[partitionIndex].entries[entryIndices[0]].segment,
-        partitions[partitionIndex].entries[entryIndices[1]].segment,
-        at
-      ):
-        # We have 2 non-intersecting lines
-        var
-          left = partitions[partitionIndex].entries[entryIndices[0]]
-          right = partitions[partitionIndex].entries[entryIndices[1]]
-        block:
-          # Ensure left is actually on the left
+      var
+        left = partitions[partitionIndex].entries[entryIndices[0]]
+        right = partitions[partitionIndex].entries[entryIndices[1]]
+      block:
+        # Ensure left is actually on the left
+        let
+          maybeLeftMaxX = max(left.segment.at.x, left.segment.to.x)
+          maybeRightMaxX = max(right.segment.at.x, right.segment.to.x)
+        if maybeLeftMaxX > maybeRightMaxX:
+          swap left, right
+
+      # Use trapezoid coverage at the edges and fill in the middle
+
+      when allowSimd and defined(amd64):
+        let vecRgbx = mm_set_ps(
+          rgbx.a.float32,
+          rgbx.b.float32,
+          rgbx.g.float32,
+          rgbx.r.float32
+        )
+
+      proc solveX(entry: PartitionEntry, y: float32): float32 =
+        if entry.m == 0:
+          entry.b
+        else:
+          (y - entry.b) / entry.m
+
+      proc solveY(entry: PartitionEntry, x: float32): float32 =
+        entry.m * x + entry.b
+
+      var
+        leftTop = vec2(0, y.float32)
+        leftBottom = vec2(0, (y + 1).float32)
+      leftTop.x = left.solveX(leftTop.y.float32)
+      leftBottom.x = left.solveX(leftBottom.y)
+
+      var
+        rightTop = vec2(0, y.float32)
+        rightBottom = vec2(0, (y + 1).float32)
+      rightTop.x = right.solveX(rightTop.y)
+      rightBottom.x = right.solveX(rightBottom.y)
+
+      let
+        leftMaxX = max(leftTop.x, leftBottom.x)
+        rightMinX = min(rightTop.x, rightBottom.x)
+        leftCoverEnd = leftMaxX.ceil.int
+        rightCoverBegin = rightMinX.trunc.int
+
+      if leftCoverEnd < rightCoverBegin:
+        # Only take this shortcut if the partial coverage areas on the
+        # left and the right do not overlap
+
+        let blender = blendMode.blender()
+
+        block: # Left-side partial coverage
           let
-            maybeLeftMaxX = max(left.segment.at.x, left.segment.to.x)
-            maybeRightMaxX = max(right.segment.at.x, right.segment.to.x)
-          if maybeLeftMaxX > maybeRightMaxX:
-            swap left, right
+            inverted = leftTop.x < leftBottom.x
+            sliverStart = min(leftTop.x, leftBottom.x)
+            rectStart = max(leftTop.x, leftBottom.x)
+          var
+            pen = sliverStart
+            prevPen = pen
+            penY = if inverted: y.float32 else: (y + 1).float32
+            prevPenY = penY
+          for x in sliverStart.int ..< rectStart.ceil.int:
+            prevPen = pen
+            pen = (x + 1).float32
+            var rightRectArea = 0.float32
+            if pen > rectStart:
+              rightRectArea = pen - rectStart
+              pen = rectStart
+            prevPenY = penY
+            penY = left.solveY(pen)
+            if x < 0 or x >= image.width:
+              continue
+            let
+              run = pen - prevPen
+              triangleArea = 0.5.float32 * run * abs(penY - prevPenY)
+              rectArea =
+                if inverted:
+                  (prevPenY - y.float32) * run
+                else:
+                  ((y + 1).float32 - prevPenY) * run
+              area = triangleArea + rectArea + rightRectArea
+              dataIndex = image.dataIndex(x, y)
+              backdrop = image.data[dataIndex]
+              source =
+                when allowSimd and defined(amd64):
+                  applyOpacity(vecRgbx, area)
+                else:
+                  rgbx * area
+            image.data[dataIndex] = blender(backdrop, source)
 
-        # We have 2 non-intersecting lines that require anti-aliasing
-        # Use trapezoid coverage at the edges and fill in the middle
-
-        when allowSimd and defined(amd64):
-          let vecRgbx = mm_set_ps(
-            rgbx.a.float32,
-            rgbx.b.float32,
-            rgbx.g.float32,
-            rgbx.r.float32
-          )
-
-        proc solveX(entry: PartitionEntry, y: float32): float32 =
-          if entry.m == 0:
-            entry.b
-          else:
-            (y - entry.b) / entry.m
-
-        proc solveY(entry: PartitionEntry, x: float32): float32 =
-          entry.m * x + entry.b
-
-        var
-          leftTop = vec2(0, y.float32)
-          leftBottom = vec2(0, (y + 1).float32)
-        leftTop.x = left.solveX(leftTop.y.float32)
-        leftBottom.x = left.solveX(leftBottom.y)
-
-        var
-          rightTop = vec2(0, y.float32)
-          rightBottom = vec2(0, (y + 1).float32)
-        rightTop.x = right.solveX(rightTop.y)
-        rightBottom.x = right.solveX(rightBottom.y)
+        block: # Right-side partial coverage
+          let
+            inverted = rightTop.x > rightBottom.x
+            rectEnd = min(rightTop.x, rightBottom.x)
+            sliverEnd = max(rightTop.x, rightBottom.x)
+          var
+            pen = rectEnd
+            prevPen = pen
+            penY = if inverted: (y + 1).float32 else: y.float32
+            prevPenY = penY
+          for x in rectEnd.int ..< sliverEnd.ceil.int:
+            prevPen = pen
+            pen = (x + 1).float32
+            let leftRectArea = prevPen.fractional
+            if pen > sliverEnd:
+              pen = sliverEnd
+            prevPenY = penY
+            penY = right.solveY(pen)
+            if x < 0 or x >= image.width:
+              continue
+            let
+              run = pen - prevPen
+              triangleArea = 0.5.float32 * run * abs(penY - prevPenY)
+              rectArea =
+                if inverted:
+                  (penY - y.float32) * run
+                else:
+                  ((y + 1).float32 - penY) * run
+              area = leftRectArea + triangleArea + rectArea
+              dataIndex = image.dataIndex(x, y)
+              backdrop = image.data[dataIndex]
+              source =
+                when allowSimd and defined(amd64):
+                  applyOpacity(vecRgbx, area)
+                else:
+                  rgbx * area
+            image.data[dataIndex] = blender(backdrop, source)
 
         let
-          leftMaxX = max(leftTop.x, leftBottom.x)
-          rightMinX = min(rightTop.x, rightBottom.x)
-          leftCoverEnd = leftMaxX.ceil.int
-          rightCoverBegin = rightMinX.trunc.int
+          fillBegin = leftCoverEnd.clamp(0, image.width)
+          fillEnd = rightCoverBegin.clamp(0, image.width)
+        if fillEnd - fillBegin > 0:
+          hits[0] = (fixed32(fillBegin.float32), 1.int16)
+          hits[1] = (fixed32(fillEnd.float32), -1.int16)
+          image.fillHits(rgbx, 0, y, hits, 2, NonZero, blendMode)
 
-        if leftCoverEnd < rightCoverBegin:
-          # Only take this shortcut if the partial coverage areas on the
-          # left and the right do not overlap
-
-          let blender = blendMode.blender()
-
-          block: # Left-side partial coverage
-            let
-              inverted = leftTop.x < leftBottom.x
-              sliverStart = min(leftTop.x, leftBottom.x)
-              rectStart = max(leftTop.x, leftBottom.x)
-            var
-              pen = sliverStart
-              prevPen = pen
-              penY = if inverted: y.float32 else: (y + 1).float32
-              prevPenY = penY
-            for x in sliverStart.int ..< rectStart.ceil.int:
-              prevPen = pen
-              pen = (x + 1).float32
-              var rightRectArea = 0.float32
-              if pen > rectStart:
-                rightRectArea = pen - rectStart
-                pen = rectStart
-              prevPenY = penY
-              penY = left.solveY(pen)
-              if x < 0 or x >= image.width:
-                continue
-              let
-                run = pen - prevPen
-                triangleArea = 0.5.float32 * run * abs(penY - prevPenY)
-                rectArea =
-                  if inverted:
-                    (prevPenY - y.float32) * run
-                  else:
-                    ((y + 1).float32 - prevPenY) * run
-                area = triangleArea + rectArea + rightRectArea
-                dataIndex = image.dataIndex(x, y)
-                backdrop = image.data[dataIndex]
-                source =
-                  when allowSimd and defined(amd64):
-                    applyOpacity(vecRgbx, area)
-                  else:
-                    rgbx * area
-              image.data[dataIndex] = blender(backdrop, source)
-
-          block: # Right-side partial coverage
-            let
-              inverted = rightTop.x > rightBottom.x
-              rectEnd = min(rightTop.x, rightBottom.x)
-              sliverEnd = max(rightTop.x, rightBottom.x)
-            var
-              pen = rectEnd
-              prevPen = pen
-              penY = if inverted: (y + 1).float32 else: y.float32
-              prevPenY = penY
-            for x in rectEnd.int ..< sliverEnd.ceil.int:
-              prevPen = pen
-              pen = (x + 1).float32
-              let leftRectArea = prevPen.fractional
-              if pen > sliverEnd:
-                pen = sliverEnd
-              prevPenY = penY
-              penY = right.solveY(pen)
-              if x < 0 or x >= image.width:
-                continue
-              let
-                run = pen - prevPen
-                triangleArea = 0.5.float32 * run * abs(penY - prevPenY)
-                rectArea =
-                  if inverted:
-                    (penY - y.float32) * run
-                  else:
-                    ((y + 1).float32 - penY) * run
-                area = leftRectArea + triangleArea + rectArea
-                dataIndex = image.dataIndex(x, y)
-                backdrop = image.data[dataIndex]
-                source =
-                  when allowSimd and defined(amd64):
-                    applyOpacity(vecRgbx, area)
-                  else:
-                    rgbx * area
-              image.data[dataIndex] = blender(backdrop, source)
-
-          let
-            fillBegin = leftCoverEnd.clamp(0, image.width)
-            fillEnd = rightCoverBegin.clamp(0, image.width)
-          if fillEnd - fillBegin > 0:
-            hits[0] = (fixed32(fillBegin.float32), 1.int16)
-            hits[1] = (fixed32(fillEnd.float32), -1.int16)
-            image.fillHits(rgbx, 0, y, hits, 2, NonZero, blendMode)
-
-          inc y
-          continue
+        inc y
+        continue
 
     computeCoverage(
       cast[ptr UncheckedArray[uint8]](coverages[0].addr),
