@@ -170,3 +170,28 @@ when defined(amd64):
       c.g = ((c.g.uint32 * c.a) div 255).uint8
       c.b = ((c.b.uint32 * c.a) div 255).uint8
       copyMem(data[i].addr, c.addr, 4)
+
+  proc invertSimd*(data: ptr UncheckedArray[ColorRGBX], len: int) =
+    var i: int
+    let vec255 = mm_set1_epi8(cast[int8](255))
+    for _ in 0 ..< len div 16:
+      let
+        a = mm_loadu_si128(data[i + 0].addr)
+        b = mm_loadu_si128(data[i + 4].addr)
+        c = mm_loadu_si128(data[i + 8].addr)
+        d = mm_loadu_si128(data[i + 12].addr)
+      mm_storeu_si128(data[i + 0].addr, mm_sub_epi8(vec255, a))
+      mm_storeu_si128(data[i + 4].addr, mm_sub_epi8(vec255, b))
+      mm_storeu_si128(data[i + 8].addr, mm_sub_epi8(vec255, c))
+      mm_storeu_si128(data[i + 12].addr, mm_sub_epi8(vec255, d))
+      i += 16
+
+    for i in i ..< len:
+      var rgbx = data[i]
+      rgbx.r = 255 - rgbx.r
+      rgbx.g = 255 - rgbx.g
+      rgbx.b = 255 - rgbx.b
+      rgbx.a = 255 - rgbx.a
+      data[i] = rgbx
+
+    toPremultipliedAlphaSimd(cast[ptr UncheckedArray[uint32]](data), len)

@@ -421,28 +421,20 @@ proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
 
 proc invert*(image: Image) {.raises: [].} =
   ## Inverts all of the colors and alpha.
-  var i: int
-  when defined(amd64) and allowSimd:
-    let vec255 = mm_set1_epi8(cast[int8](255))
-    for _ in 0 ..< image.data.len div 16:
-      let
-        a = mm_loadu_si128(image.data[i + 0].addr)
-        b = mm_loadu_si128(image.data[i + 4].addr)
-        c = mm_loadu_si128(image.data[i + 8].addr)
-        d = mm_loadu_si128(image.data[i + 12].addr)
-      mm_storeu_si128(image.data[i + 0].addr, mm_sub_epi8(vec255, a))
-      mm_storeu_si128(image.data[i + 4].addr, mm_sub_epi8(vec255, b))
-      mm_storeu_si128(image.data[i + 8].addr, mm_sub_epi8(vec255, c))
-      mm_storeu_si128(image.data[i + 12].addr, mm_sub_epi8(vec255, d))
-      i += 16
+  if allowSimd and compiles(invertSimd):
+    invertSimd(
+      cast[ptr UncheckedArray[ColorRGBX]](image.data[0].addr),
+      image.data.len
+    )
+    return
 
-  for j in i ..< image.data.len:
-    var rgbx = image.data[j]
+  for i in 0 ..< image.data.len:
+    var rgbx = image.data[i]
     rgbx.r = 255 - rgbx.r
     rgbx.g = 255 - rgbx.g
     rgbx.b = 255 - rgbx.b
     rgbx.a = 255 - rgbx.a
-    image.data[j] = rgbx
+    image.data[i] = rgbx
 
   # Inverting rgbx(50, 100, 150, 200) becomes rgbx(205, 155, 105, 55). This
   # is not a valid premultiplied alpha color.
