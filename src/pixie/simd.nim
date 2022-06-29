@@ -1,5 +1,8 @@
 import chroma
 
+when defined(release):
+  {.push checks: off.}
+
 when defined(amd64):
   import nimsimd/runtimecheck, nimsimd/sse2, runtimechecked/avx, runtimechecked/avx2
 
@@ -283,3 +286,6 @@ when defined(amd64):
     for i in i ..< len:
       if data[i] != 0:
         data[i] = 255
+
+when defined(release):
+  {.pop.}
