@@ -1,4 +1,4 @@
-import chroma
+import chroma, vmath
 
 when defined(release):
   {.push checks: off.}
@@ -286,6 +286,36 @@ when defined(amd64):
     for i in i ..< len:
       if data[i] != 0:
         data[i] = 255
+
+  proc applyOpacitySimd*(
+    data: ptr UncheckedArray[uint8],
+    len: int,
+    opacity: uint16
+  ) =
+    var i: int
+    let
+      oddMask = mm_set1_epi16(cast[int16](0xff00))
+      div255 = mm_set1_epi16(cast[int16](0x8081))
+      zeroVec = mm_setzero_si128()
+      opacityVec = mm_slli_epi16(mm_set1_epi16(cast[int16](opacity)), 8)
+    for _ in 0 ..< len div 16:
+      let values = mm_loadu_si128(data[i].addr)
+      if mm_movemask_epi8(mm_cmpeq_epi16(values, zeroVec)) != 0xffff:
+        var
+          valuesEven = mm_slli_epi16(values, 8)
+          valuesOdd = mm_and_si128(values, oddMask)
+        valuesEven = mm_mulhi_epu16(valuesEven, opacityVec)
+        valuesOdd = mm_mulhi_epu16(valuesOdd, opacityVec)
+        valuesEven = mm_srli_epi16(mm_mulhi_epu16(valuesEven, div255), 7)
+        valuesOdd = mm_srli_epi16(mm_mulhi_epu16(valuesOdd, div255), 7)
+        mm_storeu_si128(
+          data[i].addr,
+          mm_or_si128(valuesEven, mm_slli_epi16(valuesOdd, 8))
+        )
+      i += 16
+
+    for i in i ..< len:
+      data[i] = ((data[i] * opacity) div 255).uint8
 
 when defined(release):
   {.pop.}

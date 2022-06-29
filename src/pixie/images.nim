@@ -357,64 +357,31 @@ proc magnifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
         result.width * 4
       )
 
-proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
+proc applyOpacity*(image: Image, opacity: float32) {.raises: [].} =
   ## Multiplies alpha of the image by opacity.
   let opacity = round(255 * opacity).uint16
   if opacity == 255:
     return
 
   if opacity == 0:
-    when type(target) is Image:
-      target.fill(rgbx(0, 0, 0, 0))
-    else:
-      target.fill(0)
+    image.fill(rgbx(0, 0, 0, 0))
     return
 
-  var i: int
-  when defined(amd64) and allowSimd:
-    when type(target) is Image:
-      let byteLen = target.data.len * 4
-    else:
-      let byteLen = target.data.len
+  when allowSimd and compiles(applyOpacitySimd):
+    applyOpacitySimd(
+      cast[ptr UncheckedArray[uint8]](image.data[0].addr),
+      image.data.len * 4,
+      opacity
+    )
+    return
 
-    let
-      oddMask = mm_set1_epi16(cast[int16](0xff00))
-      div255 = mm_set1_epi16(cast[int16](0x8081))
-      zeroVec = mm_setzero_si128()
-      opacityVec = mm_slli_epi16(mm_set1_epi16(cast[int16](opacity)), 8)
-    for _ in 0 ..< byteLen div 16:
-      when type(target) is Image:
-        let index = i div 4
-      else:
-        let index = i
-
-      let values = mm_loadu_si128(target.data[index].addr)
-      if mm_movemask_epi8(mm_cmpeq_epi16(values, zeroVec)) != 0xffff:
-        var
-          valuesEven = mm_slli_epi16(values, 8)
-          valuesOdd = mm_and_si128(values, oddMask)
-        valuesEven = mm_mulhi_epu16(valuesEven, opacityVec)
-        valuesOdd = mm_mulhi_epu16(valuesOdd, opacityVec)
-        valuesEven = mm_srli_epi16(mm_mulhi_epu16(valuesEven, div255), 7)
-        valuesOdd = mm_srli_epi16(mm_mulhi_epu16(valuesOdd, div255), 7)
-        mm_storeu_si128(
-          target.data[index].addr,
-          mm_or_si128(valuesEven, mm_slli_epi16(valuesOdd, 8))
-        )
-
-      i += 16
-
-  when type(target) is Image:
-    for j in i div 4 ..< target.data.len:
-      var rgbx = target.data[j]
-      rgbx.r = ((rgbx.r * opacity) div 255).uint8
-      rgbx.g = ((rgbx.g * opacity) div 255).uint8
-      rgbx.b = ((rgbx.b * opacity) div 255).uint8
-      rgbx.a = ((rgbx.a * opacity) div 255).uint8
-      target.data[j] = rgbx
-  else:
-    for j in i ..< target.data.len:
-      target.data[j] = ((target.data[j] * opacity) div 255).uint8
+  for i in 0 ..< image.data.len:
+    var rgbx = image.data[i]
+    rgbx.r = ((rgbx.r * opacity) div 255).uint8
+    rgbx.g = ((rgbx.g * opacity) div 255).uint8
+    rgbx.b = ((rgbx.b * opacity) div 255).uint8
+    rgbx.a = ((rgbx.a * opacity) div 255).uint8
+    image.data[i] = rgbx
 
 proc invert*(image: Image) {.raises: [].} =
   ## Inverts all of the colors and alpha.

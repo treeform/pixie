@@ -75,6 +75,10 @@ proc setValue*(mask: Mask, x, y: int, value: uint8) {.inline, raises: [].} =
   ## Sets a value at (x, y) or does nothing if outside of bounds.
   mask[x, y] = value
 
+proc fill*(mask: Mask, value: uint8) {.inline, raises: [].} =
+  ## Fills the mask with the value.
+  fillUnsafe(mask.data, value, 0, mask.data.len)
+
 proc minifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
   ## Scales the mask down by an integer scale.
   if power < 0:
@@ -179,9 +183,26 @@ proc magnifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
         result.width * 4
       )
 
-proc fill*(mask: Mask, value: uint8) {.inline, raises: [].} =
-  ## Fills the mask with the value.
-  fillUnsafe(mask.data, value, 0, mask.data.len)
+proc applyOpacity*(mask: Mask, opacity: float32) {.raises: [].} =
+  ## Multiplies alpha of the image by opacity.
+  let opacity = round(255 * opacity).uint16
+  if opacity == 255:
+    return
+
+  if opacity == 0:
+    mask.fill(0)
+    return
+
+  when allowSimd and compiles(applyOpacitySimd):
+    applyOpacitySimd(
+      cast[ptr UncheckedArray[uint8]](mask.data[0].addr),
+      mask.data.len,
+      opacity
+    )
+    return
+
+  for i in 0 ..< mask.data.len:
+    mask.data[i] = ((mask.data[i] * opacity) div 255).uint8
 
 proc getValueSmooth*(mask: Mask, x, y: float32): uint8 {.raises: [].} =
   ## Gets a interpolated value with float point coordinates.
