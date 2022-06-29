@@ -286,21 +286,16 @@ proc spread*(mask: Mask, spread: float32) {.raises: [PixieError].} =
 
 proc ceil*(mask: Mask) {.raises: [].} =
   ## A value of 0 stays 0. Anything else turns into 255.
-  var i: int
-  when defined(amd64) and allowSimd:
-    let
-      zeroVec = mm_setzero_si128()
-      vec255 = mm_set1_epi8(255)
-    for _ in 0 ..< mask.data.len div 16:
-      var values = mm_loadu_si128(mask.data[i].addr)
-      values = mm_cmpeq_epi8(values, zeroVec)
-      values = mm_andnot_si128(values, vec255)
-      mm_storeu_si128(mask.data[i].addr, values)
-      i += 16
+  when allowSimd and compiles(invertImageSimd):
+    ceilMaskSimd(
+      cast[ptr UncheckedArray[uint8]](mask.data[0].addr),
+      mask.data.len
+    )
+    return
 
-  for j in i ..< mask.data.len:
-    if mask.data[j] != 0:
-      mask.data[j] = 255
+  for i in 0 ..< mask.data.len:
+    if mask.data[i] != 0:
+      mask.data[i] = 255
 
 proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) {.raises: [PixieError].} =
   ## Applies Gaussian blur to the image given a radius.
