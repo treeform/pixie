@@ -1,7 +1,10 @@
-import blends, bumpy, chroma, common, masks, pixie/internal, vmath
+import blends, bumpy, chroma, common, masks, internal, vmath
 
-when defined(amd64) and allowSimd:
-  import nimsimd/sse2, runtimechecked/avx2
+when allowSimd:
+  import simd
+
+  when defined(amd64):
+    import nimsimd/sse2
 
 const h = 0.5.float32
 
@@ -101,83 +104,30 @@ proc fill*(image: Image, color: SomeColor) {.inline, raises: [].} =
 
 proc isOneColor*(image: Image): bool {.raises: [].} =
   ## Checks if the entire image is the same color.
-  when defined(amd64) and allowSimd:
-    if cpuHasAvx2:
-      return isOneColorAvx2(image.data, 0, image.data.len)
+  when allowSimd and compiles(isOneColorSimd):
+    return isOneColorSimd(
+      cast[ptr UncheckedArray[ColorRGBX]](image.data[0].addr),
+      image.data.len
+    )
 
   result = true
 
-  let color = image.data[0]
-
-  var i: int
-  when defined(amd64) and allowSimd:
-    # Align to 16 bytes
-    var p = cast[uint](image.data[i].addr)
-    while i < image.data.len and (p and 15) != 0:
-      if image.data[i] != color:
-        return false
-      inc i
-      p += 4
-
-    let
-      colorVec = mm_set1_epi32(cast[int32](color))
-      iterations = (image.data.len - i) div 16
-    for _ in 0 ..< iterations:
-      let
-        values0 = mm_load_si128(cast[pointer](p))
-        values1 = mm_load_si128(cast[pointer](p + 16))
-        values2 = mm_load_si128(cast[pointer](p + 32))
-        values3 = mm_load_si128(cast[pointer](p + 48))
-        eq0 = mm_cmpeq_epi8(values0, colorVec)
-        eq1 = mm_cmpeq_epi8(values1, colorVec)
-        eq2 = mm_cmpeq_epi8(values2, colorVec)
-        eq3 = mm_cmpeq_epi8(values3, colorVec)
-        eq0123 = mm_and_si128(mm_and_si128(eq0, eq1), mm_and_si128(eq2, eq3))
-      if mm_movemask_epi8(eq0123) != 0xffff:
-        return false
-      p += 64
-    i += 16 * iterations
-
-  for i in i ..< image.data.len:
-    if image.data[i] != color:
+  let color = cast[uint32](image.data[0])
+  for i in 0 ..< image.data.len:
+    if cast[uint32](image.data[i]) != color:
       return false
 
 proc isTransparent*(image: Image): bool {.raises: [].} =
   ## Checks if this image is fully transparent or not.
-  when defined(amd64) and allowSimd:
-    if cpuHasAvx2:
-      return isTransparentAvx2(image.data, 0, image.data.len)
+  when allowSimd and compiles(isTransparentSimd):
+    return isTransparentSimd(
+      cast[ptr UncheckedArray[ColorRGBX]](image.data[0].addr),
+      image.data.len
+    )
 
   result = true
 
-  var i: int
-  when defined(amd64) and allowSimd:
-    # Align to 16 bytes
-    var p = cast[uint](image.data[i].addr)
-    while i < image.data.len and (p and 15) != 0:
-      if image.data[i].a != 0:
-        return false
-      inc i
-      p += 4
-
-    let
-      vecZero = mm_setzero_si128()
-      iterations = (image.data.len - i) div 16
-    for _ in 0 ..< iterations:
-      let
-        values0 = mm_load_si128(cast[pointer](p))
-        values1 = mm_load_si128(cast[pointer](p + 16))
-        values2 = mm_load_si128(cast[pointer](p + 32))
-        values3 = mm_load_si128(cast[pointer](p + 48))
-        values01 = mm_or_si128(values0, values1)
-        values23 = mm_or_si128(values2, values3)
-        values0123 = mm_or_si128(values01, values23)
-      if mm_movemask_epi8(mm_cmpeq_epi8(values0123, vecZero)) != 0xffff:
-        return false
-      p += 64
-    i += 16 * iterations
-
-  for i in i ..< image.data.len:
+  for i in 0 ..< image.data.len:
     if image.data[i].a != 0:
       return false
 
