@@ -1823,7 +1823,7 @@ proc fillHits(
 
 proc fillShapes(
   image: Image,
-  shapes: seq[Polygon],
+  shapes: var seq[Polygon],
   color: SomeColor,
   windingRule: WindingRule,
   blendMode: BlendMode
@@ -1852,8 +1852,10 @@ proc fillShapes(
   var
     partitions = partitionSegments(segments, startY, pathHeight - startY)
     partitionIndex: int
+    entryIndices = newSeq[int](partitions.maxEntryCount)
+    numEntryIndices: int
     coverages = newSeq[uint8](pathWidth)
-    hits = newSeq[(Fixed32, int16)](partitions.maxEntryCount)
+    hits = newSeq[(Fixed32, int16)](entryIndices.len)
     numHits: int
     aa: bool
 
@@ -1895,13 +1897,13 @@ proc fillShapes(
         y += partitionHeight
         continue
 
-    var
-      allEntriesInScanlineSpanIt = true
-      tmp: int
-      entryIndices: array[2, int]
+    var allEntriesInScanlineSpanIt = true
+    numEntryIndices = 0
+
     if partitions[partitionIndex].twoNonintersectingSpanningSegments:
-      tmp = 2
-      entryIndices = [0, 1]
+      numEntryIndices = 2
+      entryIndices[0] = 0
+      entryIndices[1] = 1
     else:
       for i in 0 ..< partitions[partitionIndex].entries.len:
         if partitions[partitionIndex].entries[i].segment.to.y < y.float32 or
@@ -1911,14 +1913,10 @@ proc fillShapes(
           partitions[partitionIndex].entries[i].segment.to.y < (y + 1).float32:
           allEntriesInScanlineSpanIt = false
           break
-        if tmp < 2:
-          entryIndices[tmp] = i
-          inc tmp
-        else:
-          tmp = 0
-          break
+        entryIndices[numEntryIndices] = i
+        inc numEntryIndices
 
-    if allEntriesInScanlineSpanIt and tmp == 2:
+    if allEntriesInScanlineSpanIt and numEntryIndices == 2:
       var
         left = partitions[partitionIndex].entries[entryIndices[0]]
         right = partitions[partitionIndex].entries[entryIndices[1]]
