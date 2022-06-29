@@ -3,8 +3,10 @@ import bumpy, chroma, common, system/memory, vmath
 const allowSimd* = not defined(pixieNoSimd) and not defined(tcc)
 
 when defined(amd64) and allowSimd:
-  import nimsimd/runtimecheck, nimsimd/sse2, simd/avx
-  let cpuHasAvx* = checkInstructionSets({AVX})
+  import nimsimd/runtimecheck, nimsimd/sse2, runtimechecked/avx, runtimechecked/avx2
+  let
+    cpuHasAvx* = checkInstructionSets({AVX})
+    cpuHasAvx2* = checkInstructionSets({AVX, AVX2})
 
 template currentExceptionAsPixieError*(): untyped =
   ## Gets the current exception and returns it as a PixieError with stack trace.
@@ -141,70 +143,87 @@ proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} 
   ## Converts an image to premultiplied alpha from straight alpha.
   var i: int
   when defined(amd64) and allowSimd:
-    # When supported, SIMD convert as much as possible
-    let
-      alphaMask = mm_set1_epi32(cast[int32](0xff000000))
-      oddMask = mm_set1_epi16(cast[int16](0xff00))
-      div255 = mm_set1_epi16(cast[int16](0x8081))
-    for _ in 0 ..< data.len div 4:
+    if cpuHasAvx2:
+      i = toPremultipliedAlphaAvx2(data)
+    else:
       let
-        values = mm_loadu_si128(data[i].addr)
-        alpha = mm_and_si128(values, alphaMask)
-        eq = mm_cmpeq_epi8(values, alphaMask)
-      if (mm_movemask_epi8(eq) and 0x00008888) != 0x00008888:
+        alphaMask = mm_set1_epi32(cast[int32](0xff000000))
+        oddMask = mm_set1_epi16(cast[int16](0xff00))
+        div255 = mm_set1_epi16(cast[int16](0x8081))
+      for _ in 0 ..< data.len div 4:
         let
-          evenMultiplier = mm_or_si128(alpha, mm_srli_epi32(alpha, 16))
-          oddMultiplier = mm_or_si128(evenMultiplier, alphaMask)
-        var
-          colorsEven = mm_slli_epi16(values, 8)
-          colorsOdd = mm_and_si128(values, oddMask)
-        colorsEven = mm_mulhi_epu16(colorsEven, evenMultiplier)
-        colorsOdd = mm_mulhi_epu16(colorsOdd, oddMultiplier)
-        colorsEven = mm_srli_epi16(mm_mulhi_epu16(colorsEven, div255), 7)
-        colorsOdd = mm_srli_epi16(mm_mulhi_epu16(colorsOdd, div255), 7)
-        mm_storeu_si128(
-          data[i].addr,
-          mm_or_si128(colorsEven, mm_slli_epi16(colorsOdd, 8))
-        )
-      i += 4
+          values = mm_loadu_si128(data[i].addr)
+          alpha = mm_and_si128(values, alphaMask)
+          eq = mm_cmpeq_epi8(values, alphaMask)
+        if (mm_movemask_epi8(eq) and 0x00008888) != 0x00008888:
+          let
+            evenMultiplier = mm_or_si128(alpha, mm_srli_epi32(alpha, 16))
+            oddMultiplier = mm_or_si128(evenMultiplier, alphaMask)
+          var
+            colorsEven = mm_slli_epi16(values, 8)
+            colorsOdd = mm_and_si128(values, oddMask)
+          colorsEven = mm_mulhi_epu16(colorsEven, evenMultiplier)
+          colorsOdd = mm_mulhi_epu16(colorsOdd, oddMultiplier)
+          colorsEven = mm_srli_epi16(mm_mulhi_epu16(colorsEven, div255), 7)
+          colorsOdd = mm_srli_epi16(mm_mulhi_epu16(colorsOdd, div255), 7)
+          mm_storeu_si128(
+            data[i].addr,
+            mm_or_si128(colorsEven, mm_slli_epi16(colorsOdd, 8))
+          )
+        i += 4
 
   # Convert whatever is left
-  for j in i ..< data.len:
-    var c = data[j]
+  for i in i ..< data.len:
+    var c = data[i]
     if c.a != 255:
-      c.r = ((c.r.uint32 * c.a.uint32) div 255).uint8
-      c.g = ((c.g.uint32 * c.a.uint32) div 255).uint8
-      c.b = ((c.b.uint32 * c.a.uint32) div 255).uint8
-      data[j] = c
+      c.r = ((c.r.uint32 * c.a) div 255).uint8
+      c.g = ((c.g.uint32 * c.a) div 255).uint8
+      c.b = ((c.b.uint32 * c.a) div 255).uint8
+      data[i] = c
 
 proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
+  when defined(amd64) and allowSimd:
+    if cpuHasAvx2 and len >= 64:
+      return isOpaqueAvx2(data, start, len)
+
   result = true
 
   var i = start
   when defined(amd64) and allowSimd:
-    let vec255 = mm_set1_epi32(cast[int32](uint32.high))
-    for _ in start ..< (start + len) div 16:
+    # Align to 16 bytes
+    var p = cast[uint](data[i].addr)
+    while i < (start + len) and (p and 15) != 0:
+      if data[i].a != 255:
+        return false
+      inc i
+      p += 4
+
+    let
+      vec255 = mm_set1_epi8(255)
+      iterations = (start + len - i) div 16
+    for _ in 0 ..< iterations:
       let
-        values0 = mm_loadu_si128(data[i + 0].addr)
-        values1 = mm_loadu_si128(data[i + 4].addr)
-        values2 = mm_loadu_si128(data[i + 8].addr)
-        values3 = mm_loadu_si128(data[i + 12].addr)
+        values0 = mm_load_si128(cast[pointer](p))
+        values1 = mm_load_si128(cast[pointer](p + 16))
+        values2 = mm_load_si128(cast[pointer](p + 32))
+        values3 = mm_load_si128(cast[pointer](p + 48))
         values01 = mm_and_si128(values0, values1)
         values23 = mm_and_si128(values2, values3)
-        values = mm_and_si128(values01, values23)
-        eq = mm_cmpeq_epi8(values, vec255)
+        values0123 = mm_and_si128(values01, values23)
+        eq = mm_cmpeq_epi8(values0123, vec255)
       if (mm_movemask_epi8(eq) and 0x00008888) != 0x00008888:
         return false
-      i += 16
+      p += 64
+    i += 16 * iterations
 
-  for j in i ..< start + len:
-    if data[j].a != 255:
+  for i in i ..< start + len:
+    if data[i].a != 255:
       return false
 
 when defined(amd64) and allowSimd:
   proc applyOpacity*(color: M128, opacity: float32): ColorRGBX {.inline.} =
-    let opacityVec =  mm_set1_ps(opacity)
-    var finalColor =  mm_cvtps_epi32(mm_mul_ps(color, opacityVec))
+    let opacityVec = mm_set1_ps(opacity)
+    var finalColor = mm_cvtps_epi32(mm_mul_ps(color, opacityVec))
     finalColor = mm_packus_epi16(finalColor, mm_setzero_si128())
     finalColor = mm_packus_epi16(finalColor, mm_setzero_si128())
     cast[ColorRGBX](mm_cvtsi128_si32(finalColor))

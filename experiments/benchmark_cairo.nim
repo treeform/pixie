@@ -194,6 +194,8 @@ block:
       surface = imageSurfaceCreate(FORMAT_ARGB32, 900, 900)
       ctx = surface.create()
 
+    ctx.setLineWidth(1)
+
     timeIt "[cairo] " & benchmark.name:
       for fill in benchmark.fills:
         if fill.shapes.len > 0:
@@ -221,6 +223,7 @@ block:
               FillRuleEvenOdd
           )
           ctx.fill()
+          # ctx.stroke()
 
     # discard surface.writeToPng(("cairo_" & benchmark.name & ".png").cstring)
 
@@ -242,5 +245,11 @@ block:
             fill.transform,
             fill.windingRule
           )
+          # image.strokePath(
+          #   p,
+          #   fill.paint,
+          #   fill.transform,
+          #   1
+          # )
 
     # image.writeFile("pixie_" & benchmark.name & ".png")
