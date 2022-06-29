@@ -4,7 +4,8 @@ when defined(release):
   {.push checks: off.}
 
 when defined(amd64):
-  import nimsimd/runtimecheck, nimsimd/sse2, runtimechecked/avx, runtimechecked/avx2
+  import nimsimd/runtimecheck, nimsimd/sse2, runtimechecked/avx,
+      runtimechecked/avx2
 
   let
     cpuHasAvx* = checkInstructionSets({AVX})

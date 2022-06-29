@@ -87,7 +87,10 @@ proc isOpaqueAvx2*(data: ptr UncheckedArray[ColorRGBX], len: int): bool =
     if data[i].a != 255:
       return false
 
-proc toPremultipliedAlphaAvx2*(data: ptr UncheckedArray[uint32], len: int): int =
+proc toPremultipliedAlphaAvx2*(
+  data: ptr UncheckedArray[uint32],
+  len: int
+): int =
   let
     alphaMask = mm256_set1_epi32(cast[int32](0xff000000))
     oddMask = mm256_set1_epi16(cast[int16](0xff00))

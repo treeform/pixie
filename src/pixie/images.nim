@@ -1,4 +1,4 @@
-import blends, bumpy, chroma, common, masks, internal, vmath
+import blends, bumpy, chroma, common, internal, masks, vmath
 
 when allowSimd:
   import simd
