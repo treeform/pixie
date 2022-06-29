@@ -231,7 +231,7 @@ when defined(amd64):
     for i in i ..< len:
       dst[i] = src[i].a
 
-  proc invertSimd*(data: ptr UncheckedArray[ColorRGBX], len: int) =
+  proc invertImageSimd*(data: ptr UncheckedArray[ColorRGBX], len: int) =
     var i: int
     let vec255 = mm_set1_epi8(cast[int8](255))
     for _ in 0 ..< len div 16:
