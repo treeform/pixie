@@ -213,17 +213,15 @@ proc getValueSmooth*(mask: Mask, x, y: float32): uint8 {.raises: [].} =
 
 proc invert*(mask: Mask) {.raises: [].} =
   ## Inverts all of the values - creates a negative of the mask.
-  var i: int
-  when defined(amd64) and allowSimd:
-    let vec255 = mm_set1_epi8(255)
-    for _ in 0 ..< mask.data.len div 16:
-      var values = mm_loadu_si128(mask.data[i].addr)
-      values = mm_sub_epi8(vec255, values)
-      mm_storeu_si128(mask.data[i].addr, values)
-      i += 16
+  when allowSimd and compiles(invertImageSimd):
+    invertMaskSimd(
+      cast[ptr UncheckedArray[uint8]](mask.data[0].addr),
+      mask.data.len
+    )
+    return
 
-  for j in i ..< mask.data.len:
-    mask.data[j] = 255 - mask.data[j]
+  for i in 0 ..< mask.data.len:
+    mask.data[i] = 255 - mask.data[i]
 
 proc spread*(mask: Mask, spread: float32) {.raises: [PixieError].} =
   ## Grows the mask by spread.

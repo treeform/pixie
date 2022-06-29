@@ -255,3 +255,15 @@ when defined(amd64):
       data[i] = rgbx
 
     toPremultipliedAlphaSimd(cast[ptr UncheckedArray[uint32]](data), len)
+
+  proc invertMaskSimd*(data: ptr UncheckedArray[uint8], len: int) =
+    var i: int
+    let vec255 = mm_set1_epi8(255)
+    for _ in 0 ..< len div 16:
+      var values = mm_loadu_si128(data[i].addr)
+      values = mm_sub_epi8(vec255, values)
+      mm_storeu_si128(data[i].addr, values)
+      i += 16
+
+    for j in i ..< len:
+      data[j] = 255 - data[j]
