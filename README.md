@@ -90,10 +90,10 @@ Format        | Supported     | Description           |
 ------------- | ------------- | --------------------- |
 M m           | ✅            | move to               |
 L l           | ✅            | line to               |
-h h           | ✅            | horizontal line to    |
+H h           | ✅            | horizontal line to    |
 V v           | ✅            | vertical line to      |
-C c S s       | ✅            | cublic to             |
-Q q T t       | ✅            | quadratic to          |
+C c S s       | ✅            | cubic curve to        |
+Q q T t       | ✅            | quadratic curve to    |
 A a           | ✅            | arc to                |
 z             | ✅            | close path            |
 
