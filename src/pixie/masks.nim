@@ -308,10 +308,7 @@ proc spread*(mask: Mask, spread: float32) {.raises: [PixieError].} =
 proc ceil*(mask: Mask) {.raises: [].} =
   ## A value of 0 stays 0. Anything else turns into 255.
   when allowSimd and compiles(invertImageSimd):
-    ceilMaskSimd(
-      cast[ptr UncheckedArray[uint8]](mask.data[0].addr),
-      mask.data.len
-    )
+    ceilMaskSimd(mask.data)
     return
 
   for i in 0 ..< mask.data.len:

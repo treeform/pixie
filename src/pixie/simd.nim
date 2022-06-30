@@ -317,19 +317,24 @@ when defined(amd64):
     for i in i ..< data.len:
       data[i] = 255 - data[i]
 
-  proc ceilMaskSimd*(data: ptr UncheckedArray[uint8], len: int) =
-    var i: int
+  proc ceilMaskSimd*(data: var seq[uint8]) =
+    var
+      i: int
+      p = cast[uint](data[0].addr)
+
     let
       zeroVec = mm_setzero_si128()
       vec255 = mm_set1_epi8(255)
-    for _ in 0 ..< len div 16:
-      var values = mm_loadu_si128(data[i].addr)
+      iterations = data.len div 16
+    for _ in 0 ..< iterations:
+      var values = mm_loadu_si128(cast[pointer](p))
       values = mm_cmpeq_epi8(values, zeroVec)
       values = mm_andnot_si128(values, vec255)
-      mm_storeu_si128(data[i].addr, values)
-      i += 16
+      mm_storeu_si128(cast[pointer](p), values)
+      p += 16
+    i += 16 * iterations
 
-    for i in i ..< len:
+    for i in i ..< data.len:
       if data[i] != 0:
         data[i] = 255
 
