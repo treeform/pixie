@@ -7,28 +7,23 @@ when defined(release):
   {.push checks: off.}
 
 proc fillUnsafeAvx*(
-  data: var seq[ColorRGBX],
-  rgbx: ColorRGBX,
-  start, len: int
+  data: ptr UncheckedArray[ColorRGBX],
+  len: int,
+  rgbx: ColorRGBX
 ) =
-  var
-    i = start
-    p = cast[uint](data[i].addr)
-  # Align to 32 bytes
-  while i < (start + len) and (p and 31) != 0:
+  var i: int
+  while i < len and (cast[uint](data[i].addr) and 31) != 0: # Align to 32 bytes
     data[i] = rgbx
     inc i
-    p += 4
-  # When supported, SIMD fill until we run out of room
+
   let
-    iterations = (start + len - i) div 8
+    iterations = (len - i) div 8
     colorVec = mm256_set1_epi32(cast[int32](rgbx))
   for _ in 0 ..< iterations:
-    mm256_store_si256(cast[pointer](p), colorVec)
-    p += 32
-  i += iterations * 8
+    mm256_store_si256(data[i].addr, colorVec)
+    i += 8
   # Fill whatever is left the slow way
-  for i in i ..< start + len:
+  for i in i ..< len:
     data[i] = rgbx
 
 when defined(release):

@@ -1,7 +1,10 @@
-import blends, bumpy, chroma, common, masks, pixie/internal, vmath
+import blends, bumpy, chroma, common, internal, masks, vmath
 
-when defined(amd64) and allowSimd:
-  import nimsimd/sse2, runtimechecked/avx2
+when allowSimd:
+  import simd
+
+  when defined(amd64):
+    import nimsimd/sse2
 
 const h = 0.5.float32
 
@@ -28,21 +31,18 @@ proc newImage*(width, height: int): Image {.raises: [PixieError].} =
 
 proc newImage*(mask: Mask): Image {.raises: [PixieError].} =
   result = newImage(mask.width, mask.height)
-  var i: int
-  when defined(amd64) and allowSimd:
-    for _ in 0 ..< mask.data.len div 16:
-      var alphas = mm_loadu_si128(mask.data[i].addr)
-      for j in 0 ..< 4:
-        var unpacked = unpackAlphaValues(alphas)
-        unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 8))
-        unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
-        mm_storeu_si128(result.data[i + j * 4].addr, unpacked)
-        alphas = mm_srli_si128(alphas, 4)
-      i += 16
 
-  for j in i ..< mask.data.len:
-    let v = mask.data[j]
-    result.data[j] = rgbx(v, v, v, v)
+  when allowSimd and compiles(newImageFromMaskSimd):
+    newImageFromMaskSimd(
+      cast[ptr UncheckedArray[ColorRGBX]](result.data[0].addr),
+      cast[ptr UncheckedArray[uint8]](mask.data[0].addr),
+      mask.data.len
+    )
+    return
+
+  for i in 0 ..< mask.data.len:
+    let v = mask.data[i]
+    result.data[i] = rgbx(v, v, v, v)
 
 proc copy*(image: Image): Image {.raises: [PixieError].} =
   ## Copies the image data into a new image.
@@ -101,83 +101,30 @@ proc fill*(image: Image, color: SomeColor) {.inline, raises: [].} =
 
 proc isOneColor*(image: Image): bool {.raises: [].} =
   ## Checks if the entire image is the same color.
-  when defined(amd64) and allowSimd:
-    if cpuHasAvx2:
-      return isOneColorAvx2(image.data, 0, image.data.len)
+  when allowSimd and compiles(isOneColorSimd):
+    return isOneColorSimd(
+      cast[ptr UncheckedArray[ColorRGBX]](image.data[0].addr),
+      image.data.len
+    )
 
   result = true
 
-  let color = image.data[0]
-
-  var i: int
-  when defined(amd64) and allowSimd:
-    # Align to 16 bytes
-    var p = cast[uint](image.data[i].addr)
-    while i < image.data.len and (p and 15) != 0:
-      if image.data[i] != color:
-        return false
-      inc i
-      p += 4
-
-    let
-      colorVec = mm_set1_epi32(cast[int32](color))
-      iterations = (image.data.len - i) div 16
-    for _ in 0 ..< iterations:
-      let
-        values0 = mm_load_si128(cast[pointer](p))
-        values1 = mm_load_si128(cast[pointer](p + 16))
-        values2 = mm_load_si128(cast[pointer](p + 32))
-        values3 = mm_load_si128(cast[pointer](p + 48))
-        eq0 = mm_cmpeq_epi8(values0, colorVec)
-        eq1 = mm_cmpeq_epi8(values1, colorVec)
-        eq2 = mm_cmpeq_epi8(values2, colorVec)
-        eq3 = mm_cmpeq_epi8(values3, colorVec)
-        eq0123 = mm_and_si128(mm_and_si128(eq0, eq1), mm_and_si128(eq2, eq3))
-      if mm_movemask_epi8(eq0123) != 0xffff:
-        return false
-      p += 64
-    i += 16 * iterations
-
-  for i in i ..< image.data.len:
-    if image.data[i] != color:
+  let color = cast[uint32](image.data[0])
+  for i in 0 ..< image.data.len:
+    if cast[uint32](image.data[i]) != color:
       return false
 
 proc isTransparent*(image: Image): bool {.raises: [].} =
   ## Checks if this image is fully transparent or not.
-  when defined(amd64) and allowSimd:
-    if cpuHasAvx2:
-      return isTransparentAvx2(image.data, 0, image.data.len)
+  when allowSimd and compiles(isTransparentSimd):
+    return isTransparentSimd(
+      cast[ptr UncheckedArray[ColorRGBX]](image.data[0].addr),
+      image.data.len
+    )
 
   result = true
 
-  var i: int
-  when defined(amd64) and allowSimd:
-    # Align to 16 bytes
-    var p = cast[uint](image.data[i].addr)
-    while i < image.data.len and (p and 15) != 0:
-      if image.data[i].a != 0:
-        return false
-      inc i
-      p += 4
-
-    let
-      vecZero = mm_setzero_si128()
-      iterations = (image.data.len - i) div 16
-    for _ in 0 ..< iterations:
-      let
-        values0 = mm_load_si128(cast[pointer](p))
-        values1 = mm_load_si128(cast[pointer](p + 16))
-        values2 = mm_load_si128(cast[pointer](p + 32))
-        values3 = mm_load_si128(cast[pointer](p + 48))
-        values01 = mm_or_si128(values0, values1)
-        values23 = mm_or_si128(values2, values3)
-        values0123 = mm_or_si128(values01, values23)
-      if mm_movemask_epi8(mm_cmpeq_epi8(values0123, vecZero)) != 0xffff:
-        return false
-      p += 64
-    i += 16 * iterations
-
-  for i in i ..< image.data.len:
+  for i in 0 ..< image.data.len:
     if image.data[i].a != 0:
       return false
 
@@ -410,89 +357,48 @@ proc magnifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
         result.width * 4
       )
 
-proc applyOpacity*(target: Image | Mask, opacity: float32) {.raises: [].} =
+proc applyOpacity*(image: Image, opacity: float32) {.raises: [].} =
   ## Multiplies alpha of the image by opacity.
   let opacity = round(255 * opacity).uint16
   if opacity == 255:
     return
 
   if opacity == 0:
-    when type(target) is Image:
-      target.fill(rgbx(0, 0, 0, 0))
-    else:
-      target.fill(0)
+    image.fill(rgbx(0, 0, 0, 0))
     return
 
-  var i: int
-  when defined(amd64) and allowSimd:
-    when type(target) is Image:
-      let byteLen = target.data.len * 4
-    else:
-      let byteLen = target.data.len
+  when allowSimd and compiles(applyOpacitySimd):
+    applyOpacitySimd(
+      cast[ptr UncheckedArray[uint8]](image.data[0].addr),
+      image.data.len * 4,
+      opacity
+    )
+    return
 
-    let
-      oddMask = mm_set1_epi16(cast[int16](0xff00))
-      div255 = mm_set1_epi16(cast[int16](0x8081))
-      zeroVec = mm_setzero_si128()
-      opacityVec = mm_slli_epi16(mm_set1_epi16(cast[int16](opacity)), 8)
-    for _ in 0 ..< byteLen div 16:
-      when type(target) is Image:
-        let index = i div 4
-      else:
-        let index = i
-
-      let values = mm_loadu_si128(target.data[index].addr)
-      if mm_movemask_epi8(mm_cmpeq_epi16(values, zeroVec)) != 0xffff:
-        var
-          valuesEven = mm_slli_epi16(values, 8)
-          valuesOdd = mm_and_si128(values, oddMask)
-        valuesEven = mm_mulhi_epu16(valuesEven, opacityVec)
-        valuesOdd = mm_mulhi_epu16(valuesOdd, opacityVec)
-        valuesEven = mm_srli_epi16(mm_mulhi_epu16(valuesEven, div255), 7)
-        valuesOdd = mm_srli_epi16(mm_mulhi_epu16(valuesOdd, div255), 7)
-        mm_storeu_si128(
-          target.data[index].addr,
-          mm_or_si128(valuesEven, mm_slli_epi16(valuesOdd, 8))
-        )
-
-      i += 16
-
-  when type(target) is Image:
-    for j in i div 4 ..< target.data.len:
-      var rgbx = target.data[j]
-      rgbx.r = ((rgbx.r * opacity) div 255).uint8
-      rgbx.g = ((rgbx.g * opacity) div 255).uint8
-      rgbx.b = ((rgbx.b * opacity) div 255).uint8
-      rgbx.a = ((rgbx.a * opacity) div 255).uint8
-      target.data[j] = rgbx
-  else:
-    for j in i ..< target.data.len:
-      target.data[j] = ((target.data[j] * opacity) div 255).uint8
+  for i in 0 ..< image.data.len:
+    var rgbx = image.data[i]
+    rgbx.r = ((rgbx.r * opacity) div 255).uint8
+    rgbx.g = ((rgbx.g * opacity) div 255).uint8
+    rgbx.b = ((rgbx.b * opacity) div 255).uint8
+    rgbx.a = ((rgbx.a * opacity) div 255).uint8
+    image.data[i] = rgbx
 
 proc invert*(image: Image) {.raises: [].} =
   ## Inverts all of the colors and alpha.
-  var i: int
-  when defined(amd64) and allowSimd:
-    let vec255 = mm_set1_epi8(cast[int8](255))
-    for _ in 0 ..< image.data.len div 16:
-      let
-        a = mm_loadu_si128(image.data[i + 0].addr)
-        b = mm_loadu_si128(image.data[i + 4].addr)
-        c = mm_loadu_si128(image.data[i + 8].addr)
-        d = mm_loadu_si128(image.data[i + 12].addr)
-      mm_storeu_si128(image.data[i + 0].addr, mm_sub_epi8(vec255, a))
-      mm_storeu_si128(image.data[i + 4].addr, mm_sub_epi8(vec255, b))
-      mm_storeu_si128(image.data[i + 8].addr, mm_sub_epi8(vec255, c))
-      mm_storeu_si128(image.data[i + 12].addr, mm_sub_epi8(vec255, d))
-      i += 16
+  when allowSimd and compiles(invertImageSimd):
+    invertImageSimd(
+      cast[ptr UncheckedArray[ColorRGBX]](image.data[0].addr),
+      image.data.len
+    )
+    return
 
-  for j in i ..< image.data.len:
-    var rgbx = image.data[j]
+  for i in 0 ..< image.data.len:
+    var rgbx = image.data[i]
     rgbx.r = 255 - rgbx.r
     rgbx.g = 255 - rgbx.g
     rgbx.b = 255 - rgbx.b
     rgbx.a = 255 - rgbx.a
-    image.data[j] = rgbx
+    image.data[i] = rgbx
 
   # Inverting rgbx(50, 100, 150, 200) becomes rgbx(205, 155, 105, 55). This
   # is not a valid premultiplied alpha color.
@@ -564,22 +470,16 @@ proc newMask*(image: Image): Mask {.raises: [PixieError].} =
   ## Returns a new mask using the alpha values of the image.
   result = newMask(image.width, image.height)
 
-  var i: int
-  when defined(amd64) and allowSimd:
-    for _ in 0 ..< image.data.len div 16:
-      let
-        a = mm_loadu_si128(image.data[i + 0].addr)
-        b = mm_loadu_si128(image.data[i + 4].addr)
-        c = mm_loadu_si128(image.data[i + 8].addr)
-        d = mm_loadu_si128(image.data[i + 12].addr)
-      mm_storeu_si128(
-        result.data[i].addr,
-        pack4xAlphaValues(a, b, c, d)
-      )
-      i += 16
+  when allowSimd and compiles(newMaskFromImageSimd):
+    newMaskFromImageSimd(
+      cast[ptr UncheckedArray[uint8]](result.data[0].addr),
+      cast[ptr UncheckedArray[ColorRGBX]](image.data[0].addr),
+      image.data.len
+    )
+    return
 
-  for j in i ..< image.data.len:
-    result.data[j] = image.data[j].a
+  for i in 0 ..< image.data.len:
+    result.data[i] = image.data[i].a
 
 proc getRgbaSmooth*(
   image: Image, x, y: float32, wrapped = false

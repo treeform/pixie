@@ -75,6 +75,10 @@ proc setValue*(mask: Mask, x, y: int, value: uint8) {.inline, raises: [].} =
   ## Sets a value at (x, y) or does nothing if outside of bounds.
   mask[x, y] = value
 
+proc fill*(mask: Mask, value: uint8) {.inline, raises: [].} =
+  ## Fills the mask with the value.
+  fillUnsafe(mask.data, value, 0, mask.data.len)
+
 proc minifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
   ## Scales the mask down by an integer scale.
   if power < 0:
@@ -179,9 +183,26 @@ proc magnifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
         result.width * 4
       )
 
-proc fill*(mask: Mask, value: uint8) {.inline, raises: [].} =
-  ## Fills the mask with the value.
-  fillUnsafe(mask.data, value, 0, mask.data.len)
+proc applyOpacity*(mask: Mask, opacity: float32) {.raises: [].} =
+  ## Multiplies alpha of the image by opacity.
+  let opacity = round(255 * opacity).uint16
+  if opacity == 255:
+    return
+
+  if opacity == 0:
+    mask.fill(0)
+    return
+
+  when allowSimd and compiles(applyOpacitySimd):
+    applyOpacitySimd(
+      cast[ptr UncheckedArray[uint8]](mask.data[0].addr),
+      mask.data.len,
+      opacity
+    )
+    return
+
+  for i in 0 ..< mask.data.len:
+    mask.data[i] = ((mask.data[i] * opacity) div 255).uint8
 
 proc getValueSmooth*(mask: Mask, x, y: float32): uint8 {.raises: [].} =
   ## Gets a interpolated value with float point coordinates.
@@ -213,17 +234,15 @@ proc getValueSmooth*(mask: Mask, x, y: float32): uint8 {.raises: [].} =
 
 proc invert*(mask: Mask) {.raises: [].} =
   ## Inverts all of the values - creates a negative of the mask.
-  var i: int
-  when defined(amd64) and allowSimd:
-    let vec255 = mm_set1_epi8(255)
-    for _ in 0 ..< mask.data.len div 16:
-      var values = mm_loadu_si128(mask.data[i].addr)
-      values = mm_sub_epi8(vec255, values)
-      mm_storeu_si128(mask.data[i].addr, values)
-      i += 16
+  when allowSimd and compiles(invertImageSimd):
+    invertMaskSimd(
+      cast[ptr UncheckedArray[uint8]](mask.data[0].addr),
+      mask.data.len
+    )
+    return
 
-  for j in i ..< mask.data.len:
-    mask.data[j] = 255 - mask.data[j]
+  for i in 0 ..< mask.data.len:
+    mask.data[i] = 255 - mask.data[i]
 
 proc spread*(mask: Mask, spread: float32) {.raises: [PixieError].} =
   ## Grows the mask by spread.
@@ -288,21 +307,16 @@ proc spread*(mask: Mask, spread: float32) {.raises: [PixieError].} =
 
 proc ceil*(mask: Mask) {.raises: [].} =
   ## A value of 0 stays 0. Anything else turns into 255.
-  var i: int
-  when defined(amd64) and allowSimd:
-    let
-      zeroVec = mm_setzero_si128()
-      vec255 = mm_set1_epi8(255)
-    for _ in 0 ..< mask.data.len div 16:
-      var values = mm_loadu_si128(mask.data[i].addr)
-      values = mm_cmpeq_epi8(values, zeroVec)
-      values = mm_andnot_si128(values, vec255)
-      mm_storeu_si128(mask.data[i].addr, values)
-      i += 16
+  when allowSimd and compiles(invertImageSimd):
+    ceilMaskSimd(
+      cast[ptr UncheckedArray[uint8]](mask.data[0].addr),
+      mask.data.len
+    )
+    return
 
-  for j in i ..< mask.data.len:
-    if mask.data[j] != 0:
-      mask.data[j] = 255
+  for i in 0 ..< mask.data.len:
+    if mask.data[i] != 0:
+      mask.data[i] = 255
 
 proc blur*(mask: Mask, radius: float32, outOfBounds: uint8 = 0) {.raises: [PixieError].} =
   ## Applies Gaussian blur to the image given a radius.
