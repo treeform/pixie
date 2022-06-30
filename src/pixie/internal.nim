@@ -113,10 +113,7 @@ proc toStraightAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} =
 proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} =
   ## Converts an image to premultiplied alpha from straight alpha.
   when allowSimd and compiles(toPremultipliedAlphaSimd):
-    toPremultipliedAlphaSimd(
-      cast[ptr UncheckedArray[uint32]](data[0].addr),
-      data.len
-    )
+    toPremultipliedAlphaSimd(data)
     return
 
   for i in 0 ..< data.len:

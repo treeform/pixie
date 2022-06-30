@@ -163,44 +163,47 @@ when defined(amd64):
       if data[i].a != 255:
         return false
 
-  proc toPremultipliedAlphaSimd*(data: ptr UncheckedArray[uint32], len: int) =
-    var i: int
+  proc toPremultipliedAlphaSimd*(data: var seq[ColorRGBA | ColorRGBX]) =
     if cpuHasAvx2:
-      i = toPremultipliedAlphaAvx2(data, len)
-    else:
-      let
-        alphaMask = mm_set1_epi32(cast[int32](0xff000000))
-        oddMask = mm_set1_epi16(cast[int16](0xff00))
-        div255 = mm_set1_epi16(cast[int16](0x8081))
-      for _ in 0 ..< len div 4:
-        let
-          values = mm_loadu_si128(data[i].addr)
-          alpha = mm_and_si128(values, alphaMask)
-          eq = mm_cmpeq_epi8(values, alphaMask)
-        if (mm_movemask_epi8(eq) and 0x00008888) != 0x00008888:
-          let
-            evenMultiplier = mm_or_si128(alpha, mm_srli_epi32(alpha, 16))
-            oddMultiplier = mm_or_si128(evenMultiplier, alphaMask)
-          var
-            colorsEven = mm_slli_epi16(values, 8)
-            colorsOdd = mm_and_si128(values, oddMask)
-          colorsEven = mm_mulhi_epu16(colorsEven, evenMultiplier)
-          colorsOdd = mm_mulhi_epu16(colorsOdd, oddMultiplier)
-          colorsEven = mm_srli_epi16(mm_mulhi_epu16(colorsEven, div255), 7)
-          colorsOdd = mm_srli_epi16(mm_mulhi_epu16(colorsOdd, div255), 7)
-          mm_storeu_si128(
-            data[i].addr,
-            mm_or_si128(colorsEven, mm_slli_epi16(colorsOdd, 8))
-          )
-        i += 4
+      toPremultipliedAlphaAvx2(data)
+      return
 
-    for i in i ..< len:
-      var c: ColorRGBX
-      copyMem(c.addr, data[i].addr, 4)
-      c.r = ((c.r.uint32 * c.a) div 255).uint8
-      c.g = ((c.g.uint32 * c.a) div 255).uint8
-      c.b = ((c.b.uint32 * c.a) div 255).uint8
-      copyMem(data[i].addr, c.addr, 4)
+    var i: int
+
+    let
+      alphaMask = mm_set1_epi32(cast[int32](0xff000000))
+      oddMask = mm_set1_epi16(0xff00)
+      div255 = mm_set1_epi16(0x8081)
+      iterations = data.len div 4
+    for _ in 0 ..< iterations:
+      let
+        values = mm_loadu_si128(data[i].addr)
+        alpha = mm_and_si128(values, alphaMask)
+        eq = mm_cmpeq_epi8(values, alphaMask)
+      if (mm_movemask_epi8(eq) and 0x00008888) != 0x00008888:
+        let
+          evenMultiplier = mm_or_si128(alpha, mm_srli_epi32(alpha, 16))
+          oddMultiplier = mm_or_si128(evenMultiplier, alphaMask)
+        var
+          colorsEven = mm_slli_epi16(values, 8)
+          colorsOdd = mm_and_si128(values, oddMask)
+        colorsEven = mm_mulhi_epu16(colorsEven, evenMultiplier)
+        colorsOdd = mm_mulhi_epu16(colorsOdd, oddMultiplier)
+        colorsEven = mm_srli_epi16(mm_mulhi_epu16(colorsEven, div255), 7)
+        colorsOdd = mm_srli_epi16(mm_mulhi_epu16(colorsOdd, div255), 7)
+        mm_storeu_si128(
+          data[i].addr,
+          mm_or_si128(colorsEven, mm_slli_epi16(colorsOdd, 8))
+        )
+      i += 4
+
+    for i in i ..< data.len:
+      var c = data[i]
+      if c.a != 255:
+        c.r = ((c.r.uint32 * c.a) div 255).uint8
+        c.g = ((c.g.uint32 * c.a) div 255).uint8
+        c.b = ((c.b.uint32 * c.a) div 255).uint8
+        data[i] = c
 
   proc newImageFromMaskSimd*(
     dst: ptr UncheckedArray[ColorRGBX],
@@ -282,7 +285,7 @@ when defined(amd64):
       rgbx.a = 255 - rgbx.a
       data[i] = rgbx
 
-    toPremultipliedAlphaSimd(cast[ptr UncheckedArray[uint32]](data[0].addr), data.len)
+    toPremultipliedAlphaSimd(data)
 
   proc invertMaskSimd*(data: var seq[uint8]) =
     var
