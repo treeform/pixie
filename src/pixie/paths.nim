@@ -675,10 +675,20 @@ proc commandsToShapes(
   proc addCubic(shape: var Polygon, at, ctrl1, ctrl2, to: Vec2) =
     ## Adds cubic segments to shape.
     proc compute(at, ctrl1, ctrl2, to: Vec2, t: float32): Vec2 {.inline.} =
-      pow(1 - t, 3) * at +
-      pow(1 - t, 2) * 3 * t * ctrl1 +
-      (1 - t) * 3 * pow(t, 2) * ctrl2 +
-      pow(t, 3) * to
+      let
+        t2 = t*t
+        t3 = t2*t
+      at * (-t3 + 3*t2 - 3*t + 1) +
+      ctrl1 * (3*t3 - 6*t2 + 3*t) +
+      ctrl2 * (-3*t3 + 3*t2) +
+      to * (t3)
+
+    proc computeDeriv(at, ctrl1, ctrl2, to: Vec2, t: float32): Vec2 {.inline.} =
+      let t2 = t*t
+      at * (-3*t2 + 6*t - 3) +
+      ctrl1 * (9*t2 - 12*t + 3) +
+      ctrl2 * (-9*t2 + 6*t) +
+      to * (3 * t2)
 
     var
       t: float32       # Where we are at on the curve from [0, 1]
@@ -691,8 +701,12 @@ proc commandsToShapes(
         raise newException(PixieError, "Unable to discretize cubic")
       let
         midpoint = (prev + next) / 2
+        lineTangent = midpoint - prev
+        curveTangent = computeDeriv(at, ctrl1, ctrl2, to, t + step / 2)
+        curveTangentScaled = curveTangent.normalize() * lineTangent.length()
         error = (midpoint - halfway).lengthSq
-      if error > errorMarginSq:
+        errorTangent = (lineTangent - curveTangentScaled).lengthSq
+      if error + errorTangent > errorMarginSq:
         next = halfway
         halfway = compute(at, ctrl1, ctrl2, to, t + step / 4)
         step /= 2
