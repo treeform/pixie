@@ -130,21 +130,22 @@ when defined(amd64):
       if data[i].a != 0:
         return false
 
-  proc isOpaqueSimd*(data: ptr UncheckedArray[ColorRGBX], len: int): bool =
+  proc isOpaqueSimd*(data: var seq[ColorRGBX], start, len: int): bool =
     if cpuHasAvx2:
-      return isOpaqueAvx2(data, len)
+      return isOpaqueAvx2(data, start, len)
 
     result = true
 
-    var i: int
-    while i < len and (cast[uint](data[i].addr) and 15) != 0: # Align to 16 bytes
+    var i = start
+    # Align to 16 bytes
+    while i < (start + len) and (cast[uint](data[i].addr) and 15) != 0:
       if data[i].a != 255:
         return false
       inc i
 
     let
       vec255 = mm_set1_epi8(255)
-      iterations = (len - i) div 16
+      iterations = (start + len - i) div 16
     for _ in 0 ..< iterations:
       let
         values0 = mm_load_si128(data[i].addr)
@@ -159,7 +160,7 @@ when defined(amd64):
         return false
       i += 16
 
-    for i in i ..< len:
+    for i in i ..< start + len:
       if data[i].a != 255:
         return false
 

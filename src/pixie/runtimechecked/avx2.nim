@@ -61,18 +61,19 @@ proc isTransparentAvx2*(data: ptr UncheckedArray[ColorRGBX], len: int): bool =
     if data[i].a != 0:
       return false
 
-proc isOpaqueAvx2*(data: ptr UncheckedArray[ColorRGBX], len: int): bool =
+proc isOpaqueAvx2*(data: var seq[ColorRGBX], start, len: int): bool =
   result = true
 
-  var i: int
-  while i < len and (cast[uint](data[i].addr) and 31) != 0: # Align to 32 bytes
+  var i = start
+  # Align to 32 bytes
+  while i < (start + len) and (cast[uint](data[i].addr) and 31) != 0:
     if data[i].a != 255:
       return false
     inc i
 
   let
     vec255 = mm256_set1_epi8(255)
-    iterations = (len - i) div 16
+    iterations = (start + len - i) div 16
   for _ in 0 ..< iterations:
     let
       values0 = mm256_load_si256(data[i].addr)
@@ -83,7 +84,7 @@ proc isOpaqueAvx2*(data: ptr UncheckedArray[ColorRGBX], len: int): bool =
       return false
     i += 16
 
-  for i in i ..< len:
+  for i in i ..< start + len:
     if data[i].a != 255:
       return false
 

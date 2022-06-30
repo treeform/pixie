@@ -126,10 +126,7 @@ proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} 
 
 proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
   when allowSimd and compiles(isOpaqueSimd):
-    return isOpaqueSimd(
-      cast[ptr UncheckedArray[ColorRGBX]](data[start].addr),
-      len
-    )
+    return isOpaqueSimd(data, start, len)
 
   result = true
 
