@@ -79,15 +79,11 @@ proc fillUnsafe*(
 ) {.raises: [].} =
   ## Fills the image data with the color starting at index start and
   ## continuing for len indices.
-  let rgbx = color.asRgbx()
-
   when allowSimd and compiles(fillUnsafeSimd):
-    fillUnsafeSimd(
-      cast[ptr UncheckedArray[ColorRGBX]](data[start].addr),
-      len,
-      rgbx
-    )
+    fillUnsafeSimd(data, start, len, color)
     return
+
+  let rgbx = color.asRgbx()
 
   # Use memset when every byte has the same value
   if rgbx.r == rgbx.g and rgbx.r == rgbx.b and rgbx.r == rgbx.a:
@@ -117,10 +113,7 @@ proc toStraightAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} =
 proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} =
   ## Converts an image to premultiplied alpha from straight alpha.
   when allowSimd and compiles(toPremultipliedAlphaSimd):
-    toPremultipliedAlphaSimd(
-      cast[ptr UncheckedArray[uint32]](data[0].addr),
-      data.len
-    )
+    toPremultipliedAlphaSimd(data)
     return
 
   for i in 0 ..< data.len:
@@ -133,10 +126,7 @@ proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} 
 
 proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
   when allowSimd and compiles(isOpaqueSimd):
-    return isOpaqueSimd(
-      cast[ptr UncheckedArray[ColorRGBX]](data[start].addr),
-      len
-    )
+    return isOpaqueSimd(data, start, len)
 
   result = true
 

@@ -33,11 +33,7 @@ proc newImage*(mask: Mask): Image {.raises: [PixieError].} =
   result = newImage(mask.width, mask.height)
 
   when allowSimd and compiles(newImageFromMaskSimd):
-    newImageFromMaskSimd(
-      cast[ptr UncheckedArray[ColorRGBX]](result.data[0].addr),
-      cast[ptr UncheckedArray[uint8]](mask.data[0].addr),
-      mask.data.len
-    )
+    newImageFromMaskSimd(result.data, mask.data)
     return
 
   for i in 0 ..< mask.data.len:
@@ -102,10 +98,7 @@ proc fill*(image: Image, color: SomeColor) {.inline, raises: [].} =
 proc isOneColor*(image: Image): bool {.raises: [].} =
   ## Checks if the entire image is the same color.
   when allowSimd and compiles(isOneColorSimd):
-    return isOneColorSimd(
-      cast[ptr UncheckedArray[ColorRGBX]](image.data[0].addr),
-      image.data.len
-    )
+    return isOneColorSimd(image.data)
 
   result = true
 
@@ -117,10 +110,7 @@ proc isOneColor*(image: Image): bool {.raises: [].} =
 proc isTransparent*(image: Image): bool {.raises: [].} =
   ## Checks if this image is fully transparent or not.
   when allowSimd and compiles(isTransparentSimd):
-    return isTransparentSimd(
-      cast[ptr UncheckedArray[ColorRGBX]](image.data[0].addr),
-      image.data.len
-    )
+    return isTransparentSimd(image.data)
 
   result = true
 
@@ -368,11 +358,7 @@ proc applyOpacity*(image: Image, opacity: float32) {.raises: [].} =
     return
 
   when allowSimd and compiles(applyOpacitySimd):
-    applyOpacitySimd(
-      cast[ptr UncheckedArray[uint8]](image.data[0].addr),
-      image.data.len * 4,
-      opacity
-    )
+    applyOpacitySimd(image.data, opacity)
     return
 
   for i in 0 ..< image.data.len:
@@ -386,10 +372,7 @@ proc applyOpacity*(image: Image, opacity: float32) {.raises: [].} =
 proc invert*(image: Image) {.raises: [].} =
   ## Inverts all of the colors and alpha.
   when allowSimd and compiles(invertImageSimd):
-    invertImageSimd(
-      cast[ptr UncheckedArray[ColorRGBX]](image.data[0].addr),
-      image.data.len
-    )
+    invertImageSimd(image.data)
     return
 
   for i in 0 ..< image.data.len:
@@ -471,11 +454,7 @@ proc newMask*(image: Image): Mask {.raises: [PixieError].} =
   result = newMask(image.width, image.height)
 
   when allowSimd and compiles(newMaskFromImageSimd):
-    newMaskFromImageSimd(
-      cast[ptr UncheckedArray[uint8]](result.data[0].addr),
-      cast[ptr UncheckedArray[ColorRGBX]](image.data[0].addr),
-      image.data.len
-    )
+    newMaskFromImageSimd(result.data, image.data)
     return
 
   for i in 0 ..< image.data.len:

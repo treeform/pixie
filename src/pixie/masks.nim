@@ -1,7 +1,10 @@
 import common, internal, vmath
 
-when defined(amd64) and allowSimd:
-  import nimsimd/sse2
+when allowSimd:
+  import simd
+
+  when defined(amd64):
+    import nimsimd/sse2
 
 type
   Mask* = ref object
@@ -194,11 +197,7 @@ proc applyOpacity*(mask: Mask, opacity: float32) {.raises: [].} =
     return
 
   when allowSimd and compiles(applyOpacitySimd):
-    applyOpacitySimd(
-      cast[ptr UncheckedArray[uint8]](mask.data[0].addr),
-      mask.data.len,
-      opacity
-    )
+    applyOpacitySimd(mask.data, opacity)
     return
 
   for i in 0 ..< mask.data.len:
@@ -234,11 +233,8 @@ proc getValueSmooth*(mask: Mask, x, y: float32): uint8 {.raises: [].} =
 
 proc invert*(mask: Mask) {.raises: [].} =
   ## Inverts all of the values - creates a negative of the mask.
-  when allowSimd and compiles(invertImageSimd):
-    invertMaskSimd(
-      cast[ptr UncheckedArray[uint8]](mask.data[0].addr),
-      mask.data.len
-    )
+  when allowSimd and compiles(invertMaskSimd):
+    invertMaskSimd(mask.data)
     return
 
   for i in 0 ..< mask.data.len:
@@ -308,10 +304,7 @@ proc spread*(mask: Mask, spread: float32) {.raises: [PixieError].} =
 proc ceil*(mask: Mask) {.raises: [].} =
   ## A value of 0 stays 0. Anything else turns into 255.
   when allowSimd and compiles(invertImageSimd):
-    ceilMaskSimd(
-      cast[ptr UncheckedArray[uint8]](mask.data[0].addr),
-      mask.data.len
-    )
+    ceilMaskSimd(mask.data)
     return
 
   for i in 0 ..< mask.data.len:
