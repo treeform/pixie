@@ -368,11 +368,7 @@ proc applyOpacity*(image: Image, opacity: float32) {.raises: [].} =
     return
 
   when allowSimd and compiles(applyOpacitySimd):
-    applyOpacitySimd(
-      cast[ptr UncheckedArray[uint8]](image.data[0].addr),
-      image.data.len * 4,
-      opacity
-    )
+    applyOpacitySimd(image.data, opacity)
     return
 
   for i in 0 ..< image.data.len:

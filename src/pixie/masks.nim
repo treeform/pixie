@@ -197,11 +197,7 @@ proc applyOpacity*(mask: Mask, opacity: float32) {.raises: [].} =
     return
 
   when allowSimd and compiles(applyOpacitySimd):
-    applyOpacitySimd(
-      cast[ptr UncheckedArray[uint8]](mask.data[0].addr),
-      mask.data.len,
-      opacity
-    )
+    applyOpacitySimd(mask.data, opacity)
     return
 
   for i in 0 ..< mask.data.len:

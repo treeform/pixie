@@ -338,19 +338,24 @@ when defined(amd64):
       if data[i] != 0:
         data[i] = 255
 
-  proc applyOpacitySimd*(
-    data: ptr UncheckedArray[uint8],
-    len: int,
-    opacity: uint16
-  ) =
-    var i: int
+  proc applyOpacitySimd*(data: var seq[uint8 | ColorRGBX], opacity: uint16) =
+    var
+      i: int
+      p = cast[uint](data[0].addr)
+      len =
+        when data is seq[ColorRGBX]:
+          data.len * 4
+        else:
+          data.len
+
     let
       oddMask = mm_set1_epi16(0xff00)
       div255 = mm_set1_epi16(0x8081)
       zeroVec = mm_setzero_si128()
       opacityVec = mm_slli_epi16(mm_set1_epi16(opacity), 8)
+      iterations = len div 16
     for _ in 0 ..< len div 16:
-      let values = mm_loadu_si128(data[i].addr)
+      let values = mm_loadu_si128(cast[pointer](p))
       if mm_movemask_epi8(mm_cmpeq_epi16(values, zeroVec)) != 0xffff:
         var
           valuesEven = mm_slli_epi16(values, 8)
@@ -360,13 +365,23 @@ when defined(amd64):
         valuesEven = mm_srli_epi16(mm_mulhi_epu16(valuesEven, div255), 7)
         valuesOdd = mm_srli_epi16(mm_mulhi_epu16(valuesOdd, div255), 7)
         mm_storeu_si128(
-          data[i].addr,
+          cast[pointer](p),
           mm_or_si128(valuesEven, mm_slli_epi16(valuesOdd, 8))
         )
-      i += 16
+      p += 16
+    i += 16 * iterations
 
-    for i in i ..< len:
-      data[i] = ((data[i] * opacity) div 255).uint8
+    when data is seq[ColorRGBX]:
+      for i in i div 4 ..< data.len:
+        var rgbx = data[i]
+        rgbx.r = ((rgbx.r * opacity) div 255).uint8
+        rgbx.g = ((rgbx.g * opacity) div 255).uint8
+        rgbx.b = ((rgbx.b * opacity) div 255).uint8
+        rgbx.a = ((rgbx.a * opacity) div 255).uint8
+        data[i] = rgbx
+    else:
+      for i in i ..< data.len:
+        data[i] = ((data[i] * opacity) div 255).uint8
 
 when defined(release):
   {.pop.}
