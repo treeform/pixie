@@ -23,8 +23,8 @@ proc fillUnsafeAvx*(
     p += 4
 
   let
-    iterations = (start + len - i) div 8
     colorVec = mm256_set1_epi32(cast[int32](rgbx))
+    iterations = (start + len - i) div 8
   for _ in 0 ..< iterations:
     mm256_store_si256(cast[pointer](p), colorVec)
     p += 32

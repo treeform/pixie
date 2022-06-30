@@ -386,10 +386,7 @@ proc applyOpacity*(image: Image, opacity: float32) {.raises: [].} =
 proc invert*(image: Image) {.raises: [].} =
   ## Inverts all of the colors and alpha.
   when allowSimd and compiles(invertImageSimd):
-    invertImageSimd(
-      cast[ptr UncheckedArray[ColorRGBX]](image.data[0].addr),
-      image.data.len
-    )
+    invertImageSimd(image.data)
     return
 
   for i in 0 ..< image.data.len:

@@ -243,22 +243,38 @@ when defined(amd64):
     for i in i ..< len:
       dst[i] = src[i].a
 
-  proc invertImageSimd*(data: ptr UncheckedArray[ColorRGBX], len: int) =
-    var i: int
-    let vec255 = mm_set1_epi8(cast[int8](255))
-    for _ in 0 ..< len div 16:
-      let
-        a = mm_loadu_si128(data[i + 0].addr)
-        b = mm_loadu_si128(data[i + 4].addr)
-        c = mm_loadu_si128(data[i + 8].addr)
-        d = mm_loadu_si128(data[i + 12].addr)
-      mm_storeu_si128(data[i + 0].addr, mm_sub_epi8(vec255, a))
-      mm_storeu_si128(data[i + 4].addr, mm_sub_epi8(vec255, b))
-      mm_storeu_si128(data[i + 8].addr, mm_sub_epi8(vec255, c))
-      mm_storeu_si128(data[i + 12].addr, mm_sub_epi8(vec255, d))
-      i += 16
+  proc invertImageSimd*(data: var seq[ColorRGBX]) =
+    var
+      i: int
+      p = cast[uint](data[0].addr)
+    # Align to 16 bytes
+    while i < data.len and (p and 15) != 0:
+      var rgbx = data[i]
+      rgbx.r = 255 - rgbx.r
+      rgbx.g = 255 - rgbx.g
+      rgbx.b = 255 - rgbx.b
+      rgbx.a = 255 - rgbx.a
+      data[i] = rgbx
+      inc i
+      p += 4
 
-    for i in i ..< len:
+    let
+      vec255 = mm_set1_epi8(255)
+      iterations = data.len div 16
+    for _ in 0 ..< iterations:
+      let
+        a = mm_load_si128(cast[pointer](p))
+        b = mm_load_si128(cast[pointer](p + 16))
+        c = mm_load_si128(cast[pointer](p + 32))
+        d = mm_load_si128(cast[pointer](p + 48))
+      mm_store_si128(cast[pointer](p), mm_sub_epi8(vec255, a))
+      mm_store_si128(cast[pointer](p + 16), mm_sub_epi8(vec255, b))
+      mm_store_si128(cast[pointer](p + 32), mm_sub_epi8(vec255, c))
+      mm_store_si128(cast[pointer](p + 48), mm_sub_epi8(vec255, d))
+      p += 64
+    i += 16 * iterations
+
+    for i in i ..< data.len:
       var rgbx = data[i]
       rgbx.r = 255 - rgbx.r
       rgbx.g = 255 - rgbx.g
@@ -266,19 +282,36 @@ when defined(amd64):
       rgbx.a = 255 - rgbx.a
       data[i] = rgbx
 
-    toPremultipliedAlphaSimd(cast[ptr UncheckedArray[uint32]](data), len)
+    toPremultipliedAlphaSimd(cast[ptr UncheckedArray[uint32]](data[0].addr), data.len)
 
-  proc invertMaskSimd*(data: ptr UncheckedArray[uint8], len: int) =
-    var i: int
-    let vec255 = mm_set1_epi8(255)
-    for _ in 0 ..< len div 16:
-      var values = mm_loadu_si128(data[i].addr)
-      values = mm_sub_epi8(vec255, values)
-      mm_storeu_si128(data[i].addr, values)
-      i += 16
+  proc invertMaskSimd*(data: var seq[uint8]) =
+    var
+      i: int
+      p = cast[uint](data[0].addr)
+    # Align to 16 bytes
+    while i < data.len and (p and 15) != 0:
+      data[i] = 255 - data[i]
+      inc i
+      inc p
 
-    for j in i ..< len:
-      data[j] = 255 - data[j]
+    let
+      vec255 = mm_set1_epi8(255)
+      iterations = data.len div 64
+    for _ in 0 ..< iterations:
+      let
+        a = mm_load_si128(cast[pointer](p))
+        b = mm_load_si128(cast[pointer](p + 16))
+        c = mm_load_si128(cast[pointer](p + 32))
+        d = mm_load_si128(cast[pointer](p + 48))
+      mm_store_si128(cast[pointer](p), mm_sub_epi8(vec255, a))
+      mm_store_si128(cast[pointer](p + 16), mm_sub_epi8(vec255, b))
+      mm_store_si128(cast[pointer](p + 32), mm_sub_epi8(vec255, c))
+      mm_store_si128(cast[pointer](p + 48), mm_sub_epi8(vec255, d))
+      p += 64
+    i += 64 * iterations
+
+    for i in i ..< data.len:
+      data[i] = 255 - data[i]
 
   proc ceilMaskSimd*(data: ptr UncheckedArray[uint8], len: int) =
     var i: int
@@ -303,10 +336,10 @@ when defined(amd64):
   ) =
     var i: int
     let
-      oddMask = mm_set1_epi16(cast[int16](0xff00))
-      div255 = mm_set1_epi16(cast[int16](0x8081))
+      oddMask = mm_set1_epi16(0xff00)
+      div255 = mm_set1_epi16(0x8081)
       zeroVec = mm_setzero_si128()
-      opacityVec = mm_slli_epi16(mm_set1_epi16(cast[int16](opacity)), 8)
+      opacityVec = mm_slli_epi16(mm_set1_epi16(opacity), 8)
     for _ in 0 ..< len div 16:
       let values = mm_loadu_si128(data[i].addr)
       if mm_movemask_epi8(mm_cmpeq_epi16(values, zeroVec)) != 0xffff:
