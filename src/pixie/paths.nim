@@ -723,9 +723,10 @@ proc commandsToShapes(
   proc addQuadratic(shape: var Polygon, at, ctrl, to: Vec2) =
     ## Adds quadratic segments to shape.
     proc compute(at, ctrl, to: Vec2, t: float32): Vec2 {.inline.} =
-      pow(1 - t, 2) * at +
-      2 * (1 - t) * t * ctrl +
-      pow(t, 2) * to
+      let t2 = t*t
+      at * (t2 - 2*t + 1) +
+      ctrl * (-2*t2 + 2*t) +
+      to * t2
 
     var
       t: float32       # Where we are at on the curve from [0, 1]
