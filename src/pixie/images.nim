@@ -33,11 +33,7 @@ proc newImage*(mask: Mask): Image {.raises: [PixieError].} =
   result = newImage(mask.width, mask.height)
 
   when allowSimd and compiles(newImageFromMaskSimd):
-    newImageFromMaskSimd(
-      cast[ptr UncheckedArray[ColorRGBX]](result.data[0].addr),
-      cast[ptr UncheckedArray[uint8]](mask.data[0].addr),
-      mask.data.len
-    )
+    newImageFromMaskSimd(result.data, mask.data)
     return
 
   for i in 0 ..< mask.data.len:
@@ -458,11 +454,7 @@ proc newMask*(image: Image): Mask {.raises: [PixieError].} =
   result = newMask(image.width, image.height)
 
   when allowSimd and compiles(newMaskFromImageSimd):
-    newMaskFromImageSimd(
-      cast[ptr UncheckedArray[uint8]](result.data[0].addr),
-      cast[ptr UncheckedArray[ColorRGBX]](image.data[0].addr),
-      image.data.len
-    )
+    newMaskFromImageSimd(result.data, image.data)
     return
 
   for i in 0 ..< image.data.len:

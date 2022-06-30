@@ -220,13 +220,9 @@ when defined(amd64):
         c.b = ((c.b.uint32 * c.a) div 255).uint8
         data[i] = c
 
-  proc newImageFromMaskSimd*(
-    dst: ptr UncheckedArray[ColorRGBX],
-    src: ptr UncheckedArray[uint8],
-    len: int
-  ) =
+  proc newImageFromMaskSimd*(dst: var seq[ColorRGBX], src: var seq[uint8]) =
     var i: int
-    for _ in 0 ..< len div 16:
+    for _ in 0 ..< src.len div 16:
       var alphas = mm_loadu_si128(src[i].addr)
       for j in 0 ..< 4:
         var unpacked = unpackAlphaValues(alphas)
@@ -236,17 +232,13 @@ when defined(amd64):
         alphas = mm_srli_si128(alphas, 4)
       i += 16
 
-    for i in i ..< len:
+    for i in i ..< src.len:
       let v = src[i]
       dst[i] = rgbx(v, v, v, v)
 
-  proc newMaskFromImageSimd*(
-    dst: ptr UncheckedArray[uint8],
-    src: ptr UncheckedArray[ColorRGBX],
-    len: int
-  ) =
+  proc newMaskFromImageSimd*(dst: var seq[uint8], src: var seq[ColorRGBX]) =
     var i: int
-    for _ in 0 ..< len div 16:
+    for _ in 0 ..< src.len div 16:
       let
         a = mm_loadu_si128(src[i + 0].addr)
         b = mm_loadu_si128(src[i + 4].addr)
@@ -258,7 +250,7 @@ when defined(amd64):
       )
       i += 16
 
-    for i in i ..< len:
+    for i in i ..< src.len:
       dst[i] = src[i].a
 
   proc invertImageSimd*(data: var seq[ColorRGBX]) =
