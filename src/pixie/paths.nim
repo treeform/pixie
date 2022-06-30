@@ -1118,6 +1118,18 @@ proc initPartitionEntry(segment: Segment, winding: int16): PartitionEntry =
     result.m = (segment.at.y - segment.to.y) / d
     result.b = segment.at.y - result.m * segment.at.x
 
+proc solveX(entry: PartitionEntry, y: float32): float32 {.inline.}  =
+  if entry.m == 0:
+    entry.b
+  else:
+    (y - entry.b) / entry.m
+
+proc solveY(entry: PartitionEntry, x: float32): float32 {.inline.} =
+  entry.m * x + entry.b
+
+proc midpointX(segment: Segment): float32 {.inline.} =
+  (segment.at.x + segment.to.x) * 0.5
+
 proc requiresAntiAliasing(segment: Segment): bool {.inline.} =
   ## Returns true if the segment requires antialiasing.
 
@@ -1225,11 +1237,13 @@ proc partitionSegments(
         entry1 = partition.entries[1].segment
       var at: Vec2
       if not intersectsInside(entry0, entry1, at):
-        # These two segments do not intersect, enable shortcut
-        partition.twoNonintersectingSpanningSegments = true
-        # Ensure entry[0] is on the left
-        if entry1.at.x < entry0.at.x:
-          swap partition.entries[1], partition.entries[0]
+        if entry0.at.y <= top and entry0.to.y >= bottom and
+          entry1.at.y <= top and entry1.to.y >= bottom:
+          # These two segments do not intersect and span the partition
+          partition.twoNonintersectingSpanningSegments = true
+          # Ensure entry[0] is on the left
+          if entry0.midpointX > entry1.midpointX:
+            swap partition.entries[1], partition.entries[0]
 
 proc maxEntryCount(partitions: var seq[Partition]): int =
   for i in 0 ..< partitions.len:
@@ -1321,16 +1335,16 @@ proc computeCoverage(
   coverages: ptr UncheckedArray[uint8],
   hits: var seq[(Fixed32, int16)],
   numHits: var int,
-  aa: var bool,
   width: int,
   y, startX: int,
   partitions: var seq[Partition],
   partitionIndex: int,
+  entryIndices: seq[int],
+  numEntryIndices: int,
   windingRule: WindingRule
 ) {.inline.} =
-  aa = partitions[partitionIndex].requiresAntiAliasing
-
   let
+    aa = partitions[partitionIndex].requiresAntiAliasing
     quality = if aa: 5 else: 1 # Must divide 255 cleanly (1, 3, 5, 15, 17, 51, 85)
     sampleCoverage = (255 div quality).uint8
     offset = 1 / quality.float32
@@ -1340,7 +1354,10 @@ proc computeCoverage(
   for m in 0 ..< quality:
     yLine += offset
     numHits = 0
-    for entry in partitions[partitionIndex].entries.mitems:
+    for i in 0 ..< numEntryIndices:
+      let
+        entryIndex = entryIndices[i]
+        entry = partitions[partitionIndex].entries[entryIndex].addr
       if entry.segment.at.y <= yLine and entry.segment.to.y >= yLine:
         let x =
           if entry.m == 0:
@@ -1429,8 +1446,8 @@ proc fillCoverage(
 
       proc source(colorVec, coverageVec: M128i): M128i {.inline.} =
         let
-          oddMask = mm_set1_epi16(cast[int16](0xff00))
-          div255 = mm_set1_epi16(cast[int16](0x8081))
+          oddMask = mm_set1_epi16(0xff00)
+          div255 = mm_set1_epi16(0x8081)
 
         var unpacked = unpackAlphaValues(coverageVec)
         unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
@@ -1838,7 +1855,7 @@ proc fillHits(
 
 proc fillShapes(
   image: Image,
-  shapes: var seq[Polygon],
+  shapes: seq[Polygon],
   color: SomeColor,
   windingRule: WindingRule,
   blendMode: BlendMode
@@ -1869,10 +1886,10 @@ proc fillShapes(
     partitionIndex: int
     entryIndices = newSeq[int](partitions.maxEntryCount)
     numEntryIndices: int
+    trapezoidSegments = newSeq[Segment](entryIndices.len)
     coverages = newSeq[uint8](pathWidth)
     hits = newSeq[(Fixed32, int16)](entryIndices.len)
     numHits: int
-    aa: bool
 
   var y = startY
   while y < pathHeight:
@@ -1880,18 +1897,19 @@ proc fillShapes(
       inc partitionIndex
 
     let
-      partitionTop = partitions[partitionIndex].top
-      partitionBottom = partitions[partitionIndex].bottom
+      partition = partitions[partitionIndex].addr
+      partitionTop = partition.top
+      partitionBottom = partition.bottom
       partitionHeight = partitionBottom - partitionTop
     if partitionHeight == 0:
       continue
 
-    if partitions[partitionIndex].twoNonintersectingSpanningSegments:
-      if not partitions[partitionIndex].requiresAntiAliasing:
+    if partition.twoNonintersectingSpanningSegments:
+      if not partition.requiresAntiAliasing:
         # No AA required, must be 2 vertical pixel-aligned lines
         let
-          left = partitions[partitionIndex].entries[0].segment.at.x.int
-          right = partitions[partitionIndex].entries[1].segment.at.x.int
+          left = partition.entries[0].segment.at.x.int
+          right = partition.entries[1].segment.at.x.int
           minX = left.clamp(0, image.width)
           maxX = right.clamp(0, image.width)
           skipBlending =
@@ -1912,182 +1930,213 @@ proc fillShapes(
         y += partitionHeight
         continue
 
+    let
+      scanTop = y.float32
+      scanBottom = (y + 1).float32
+
     var allEntriesInScanlineSpanIt = true
     numEntryIndices = 0
-
-    if partitions[partitionIndex].twoNonintersectingSpanningSegments:
+    if partition.twoNonintersectingSpanningSegments:
       numEntryIndices = 2
       entryIndices[0] = 0
       entryIndices[1] = 1
     else:
-      for i in 0 ..< partitions[partitionIndex].entries.len:
-        if partitions[partitionIndex].entries[i].segment.to.y < y.float32 or
-          partitions[partitionIndex].entries[i].segment.at.y >= (y + 1).float32:
+      for i in 0 ..< partition.entries.len:
+        if partition.entries[i].segment.to.y <= scanTop or
+          partition.entries[i].segment.at.y >= scanBottom:
           continue
-        if partitions[partitionIndex].entries[i].segment.at.y > y.float32 or
-          partitions[partitionIndex].entries[i].segment.to.y < (y + 1).float32:
+        if partition.entries[i].segment.at.y > scanTop or
+          partition.entries[i].segment.to.y < scanBottom:
           allEntriesInScanlineSpanIt = false
-          break
         entryIndices[numEntryIndices] = i
         inc numEntryIndices
 
-    if allEntriesInScanlineSpanIt and numEntryIndices == 2:
-      var
-        left = partitions[partitionIndex].entries[entryIndices[0]]
-        right = partitions[partitionIndex].entries[entryIndices[1]]
-      block:
-        # Ensure left is actually on the left
+    if allEntriesInScanlineSpanIt and numEntryIndices mod 2 == 0:
+      for i in 0 ..< numEntryIndices:
+        let index = entryIndices[i]
+        trapezoidSegments[index].at.y = scanTop
+        trapezoidSegments[index].to.y = scanBottom
+        trapezoidSegments[index].at.x =
+          partition.entries[index].solveX(scanTop)
+        trapezoidSegments[index].to.x =
+          partition.entries[index].solveX(scanBottom)
+
+      # Sort the segments by midpoint. If they intersect this will be wrong
+      # but it will get caught when we check partial coverage overlap and we
+      # won't take the shortcut.
+
+      var noEntriesInScanlineOverlap = true
+
+      for i in 1 ..< numEntryIndices:
+        var
+          j = i - 1
+          k = i
+        while j >= 0 and
+          trapezoidSegments[entryIndices[j]].midpointX >
+          trapezoidSegments[entryIndices[k]].midpointX:
+          swap(entryIndices[j + 1], entryIndices[j])
+          dec j
+          dec k
+
+      # Only take this shortcut if the partial coverage areas on the
+      # left and the right do not overlap
+      for i in 0 ..< numEntryIndices - 1:
         let
-          maybeLeftMaxX = max(left.segment.at.x, left.segment.to.x)
-          maybeRightMaxX = max(right.segment.at.x, right.segment.to.x)
-        if maybeLeftMaxX > maybeRightMaxX:
-          swap left, right
+          left = trapezoidSegments[entryIndices[i]]
+          right = trapezoidSegments[entryIndices[i + 1]]
+          leftMaxX = max(left.at.x, left.to.x)
+          rightMinX = min(right.at.x, right.to.x)
+        if leftMaxX.ceil.int > rightMinX.int:
+          noEntriesInScanlineOverlap = false
+          break
 
-      # Use trapezoid coverage at the edges and fill in the middle
+      if noEntriesInScanlineOverlap:
+        # Confirm the pairs of points represent simple fills between them
+        var
+          onlySimpleFillPairs = true
+          i, windingCount: int
+        while i < numEntryIndices:
+          windingCount += partition.entries[entryIndices[i]].winding
+          if not windingRule.shouldFill(windingCount):
+            onlySimpleFillPairs = false
+            break
+          windingCount += partition.entries[entryIndices[i + 1]].winding
+          if windingRule.shouldFill(windingCount):
+            onlySimpleFillPairs = false
+            break
+          i += 2
 
-      when allowSimd and defined(amd64):
-        let vecRgbx = mm_set_ps(
-          rgbx.a.float32,
-          rgbx.b.float32,
-          rgbx.g.float32,
-          rgbx.r.float32
-        )
-
-      proc solveX(entry: PartitionEntry, y: float32): float32 =
-        if entry.m == 0:
-          entry.b
-        else:
-          (y - entry.b) / entry.m
-
-      proc solveY(entry: PartitionEntry, x: float32): float32 =
-        entry.m * x + entry.b
-
-      var
-        leftTop = vec2(0, y.float32)
-        leftBottom = vec2(0, (y + 1).float32)
-      leftTop.x = left.solveX(leftTop.y.float32)
-      leftBottom.x = left.solveX(leftBottom.y)
-
-      var
-        rightTop = vec2(0, y.float32)
-        rightBottom = vec2(0, (y + 1).float32)
-      rightTop.x = right.solveX(rightTop.y)
-      rightBottom.x = right.solveX(rightBottom.y)
-
-      let
-        leftMaxX = max(leftTop.x, leftBottom.x)
-        rightMinX = min(rightTop.x, rightBottom.x)
-        leftCoverEnd = leftMaxX.ceil.int
-        rightCoverBegin = rightMinX.trunc.int
-
-      if leftCoverEnd < rightCoverBegin:
-        # Only take this shortcut if the partial coverage areas on the
-        # left and the right do not overlap
-
-        let blender = blendMode.blender()
-
-        block: # Left-side partial coverage
-          let
-            inverted = leftTop.x < leftBottom.x
-            sliverStart = min(leftTop.x, leftBottom.x)
-            rectStart = max(leftTop.x, leftBottom.x)
-          var
-            pen = sliverStart
-            prevPen = pen
-            penY = if inverted: y.float32 else: (y + 1).float32
-            prevPenY = penY
-          for x in sliverStart.int ..< rectStart.ceil.int:
-            prevPen = pen
-            pen = (x + 1).float32
-            var rightRectArea = 0.float32
-            if pen > rectStart:
-              rightRectArea = pen - rectStart
-              pen = rectStart
-            prevPenY = penY
-            penY = left.solveY(pen)
-            if x < 0 or x >= image.width:
-              continue
+        if onlySimpleFillPairs:
+          var i: int
+          while i < numEntryIndices:
             let
-              run = pen - prevPen
-              triangleArea = 0.5.float32 * run * abs(penY - prevPenY)
-              rectArea =
-                if inverted:
-                  (prevPenY - y.float32) * run
-                else:
-                  ((y + 1).float32 - prevPenY) * run
-              area = triangleArea + rectArea + rightRectArea
-              dataIndex = image.dataIndex(x, y)
-              backdrop = image.data[dataIndex]
-              source =
-                when allowSimd and defined(amd64):
-                  applyOpacity(vecRgbx, area)
-                else:
-                  rgbx * area
-            image.data[dataIndex] = blender(backdrop, source)
+              left = partition.entries[entryIndices[i]]
+              right = partition.entries[entryIndices[i + 1]]
+              trapLeft = trapezoidSegments[entryIndices[i]]
+              trapRight = trapezoidSegments[entryIndices[i + 1]]
 
-        block: # Right-side partial coverage
-          let
-            inverted = rightTop.x > rightBottom.x
-            rectEnd = min(rightTop.x, rightBottom.x)
-            sliverEnd = max(rightTop.x, rightBottom.x)
-          var
-            pen = rectEnd
-            prevPen = pen
-            penY = if inverted: (y + 1).float32 else: y.float32
-            prevPenY = penY
-          for x in rectEnd.int ..< sliverEnd.ceil.int:
-            prevPen = pen
-            pen = (x + 1).float32
-            let leftRectArea = prevPen.fractional
-            if pen > sliverEnd:
-              pen = sliverEnd
-            prevPenY = penY
-            penY = right.solveY(pen)
-            if x < 0 or x >= image.width:
-              continue
+            # Use trapezoid coverage at the edges and fill in the middle
+
+            when allowSimd and defined(amd64):
+              let vecRgbx = mm_set_ps(
+                rgbx.a.float32,
+                rgbx.b.float32,
+                rgbx.g.float32,
+                rgbx.r.float32
+              )
+
             let
-              run = pen - prevPen
-              triangleArea = 0.5.float32 * run * abs(penY - prevPenY)
-              rectArea =
-                if inverted:
-                  (penY - y.float32) * run
-                else:
-                  ((y + 1).float32 - penY) * run
-              area = leftRectArea + triangleArea + rectArea
-              dataIndex = image.dataIndex(x, y)
-              backdrop = image.data[dataIndex]
-              source =
-                when allowSimd and defined(amd64):
-                  applyOpacity(vecRgbx, area)
-                else:
-                  rgbx * area
-            image.data[dataIndex] = blender(backdrop, source)
+              leftMaxX = max(trapLeft.at.x, trapLeft.to.x)
+              rightMinX = min(trapRight.at.x, trapRight.to.x)
+              leftCoverEnd = leftMaxX.ceil.int
+              rightCoverBegin = rightMinX.trunc.int
+              blender = blendMode.blender()
 
-        let
-          fillBegin = leftCoverEnd.clamp(0, image.width)
-          fillEnd = rightCoverBegin.clamp(0, image.width)
-        if fillEnd - fillBegin > 0:
-          hits[0] = (fixed32(fillBegin.float32), 1.int16)
-          hits[1] = (fixed32(fillEnd.float32), -1.int16)
-          image.fillHits(rgbx, 0, y, hits, 2, NonZero, blendMode)
+            block: # Left-side partial coverage
+              let
+                inverted = trapLeft.at.x < trapLeft.to.x
+                sliverStart = min(trapLeft.at.x, trapLeft.to.x)
+                rectStart = leftMaxX
+              var
+                pen = sliverStart
+                prevPen = pen
+                penY = if inverted: y.float32 else: (y + 1).float32
+                prevPenY = penY
+              for x in sliverStart.int ..< rectStart.ceil.int:
+                prevPen = pen
+                pen = (x + 1).float32
+                var rightRectArea = 0.float32
+                if pen > rectStart:
+                  rightRectArea = pen - rectStart
+                  pen = rectStart
+                prevPenY = penY
+                penY = left.solveY(pen)
+                if x < 0 or x >= image.width:
+                  continue
+                let
+                  run = pen - prevPen
+                  triangleArea = 0.5.float32 * run * abs(penY - prevPenY)
+                  rectArea =
+                    if inverted:
+                      (prevPenY - y.float32) * run
+                    else:
+                      ((y + 1).float32 - prevPenY) * run
+                  area = triangleArea + rectArea + rightRectArea
+                  dataIndex = image.dataIndex(x, y)
+                  backdrop = image.data[dataIndex]
+                  source =
+                    when allowSimd and defined(amd64):
+                      applyOpacity(vecRgbx, area)
+                    else:
+                      rgbx * area
+                image.data[dataIndex] = blender(backdrop, source)
 
-        inc y
-        continue
+            block: # Right-side partial coverage
+              let
+                inverted = trapRight.at.x > trapRight.to.x
+                rectEnd = rightMinX
+                sliverEnd = max(trapRight.at.x, trapRight.to.x)
+              var
+                pen = rectEnd
+                prevPen = pen
+                penY = if inverted: (y + 1).float32 else: y.float32
+                prevPenY = penY
+              for x in rectEnd.int ..< sliverEnd.ceil.int:
+                prevPen = pen
+                pen = (x + 1).float32
+                let leftRectArea = prevPen.fractional
+                if pen > sliverEnd:
+                  pen = sliverEnd
+                prevPenY = penY
+                penY = right.solveY(pen)
+                if x < 0 or x >= image.width:
+                  continue
+                let
+                  run = pen - prevPen
+                  triangleArea = 0.5.float32 * run * abs(penY - prevPenY)
+                  rectArea =
+                    if inverted:
+                      (penY - y.float32) * run
+                    else:
+                      ((y + 1).float32 - penY) * run
+                  area = leftRectArea + triangleArea + rectArea
+                  dataIndex = image.dataIndex(x, y)
+                  backdrop = image.data[dataIndex]
+                  source =
+                    when allowSimd and defined(amd64):
+                      applyOpacity(vecRgbx, area)
+                    else:
+                      rgbx * area
+                image.data[dataIndex] = blender(backdrop, source)
+
+            let
+              fillBegin = leftCoverEnd.clamp(0, image.width)
+              fillEnd = rightCoverBegin.clamp(0, image.width)
+            if fillEnd - fillBegin > 0:
+              hits[0] = (fixed32(fillBegin.float32), 1.int16)
+              hits[1] = (fixed32(fillEnd.float32), -1.int16)
+              image.fillHits(rgbx, 0, y, hits, 2, NonZero, blendMode)
+
+            i += 2
+
+          inc y
+          continue
 
     computeCoverage(
       cast[ptr UncheckedArray[uint8]](coverages[0].addr),
       hits,
       numHits,
-      aa,
       image.width,
       y,
       startX,
       partitions,
       partitionIndex,
+      entryIndices,
+      numEntryIndices,
       windingRule
     )
 
-    if aa:
+    if partitions[partitionIndex].requiresAntiAliasing:
       image.fillCoverage(
         rgbx,
         startX,
@@ -2142,28 +2191,55 @@ proc fillShapes(
   var
     partitions = partitionSegments(segments, startY, pathHeight)
     partitionIndex: int
+    entryIndices = newSeq[int](partitions.maxEntryCount)
+    numEntryIndices: int
     coverages = newSeq[uint8](pathWidth)
     hits = newSeq[(Fixed32, int16)](partitions.maxEntryCount)
     numHits: int
-    aa: bool
 
   for y in startY ..< pathHeight:
     if y >= partitions[partitionIndex].bottom:
       inc partitionIndex
 
+    let
+      partition = partitions[partitionIndex].addr
+      partitionTop = partition.top
+      partitionBottom = partition.bottom
+      partitionHeight = partitionBottom - partitionTop
+    if partitionHeight == 0:
+      continue
+
+    let
+      scanTop = y.float32
+      scanBottom = (y + 1).float32
+
+    numEntryIndices = 0
+    if partition.twoNonintersectingSpanningSegments:
+      numEntryIndices = 2
+      entryIndices[0] = 0
+      entryIndices[1] = 1
+    else:
+      for i in 0 ..< partition.entries.len:
+        if partition.entries[i].segment.to.y < scanTop or
+          partition.entries[i].segment.at.y >= scanBottom:
+          continue
+        entryIndices[numEntryIndices] = i
+        inc numEntryIndices
+
     computeCoverage(
       cast[ptr UncheckedArray[uint8]](coverages[0].addr),
       hits,
       numHits,
-      aa,
       mask.width,
       y,
       startX,
       partitions,
       partitionIndex,
+      entryIndices,
+      numEntryIndices,
       windingRule
     )
-    if aa:
+    if partitions[partitionIndex].requiresAntiAliasing:
       mask.fillCoverage(startX, y, coverages, blendMode)
       zeroMem(coverages[0].addr, coverages.len)
     else:
