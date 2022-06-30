@@ -1127,6 +1127,9 @@ proc solveX(entry: PartitionEntry, y: float32): float32 {.inline.}  =
 proc solveY(entry: PartitionEntry, x: float32): float32 {.inline.} =
   entry.m * x + entry.b
 
+proc midpointX(segment: Segment): float32 {.inline.} =
+  (segment.at.x + segment.to.x) * 0.5
+
 proc requiresAntiAliasing(segment: Segment): bool {.inline.} =
   ## Returns true if the segment requires antialiasing.
 
@@ -1234,11 +1237,13 @@ proc partitionSegments(
         entry1 = partition.entries[1].segment
       var at: Vec2
       if not intersectsInside(entry0, entry1, at):
-        # These two segments do not intersect, enable shortcut
-        partition.twoNonintersectingSpanningSegments = true
-        # Ensure entry[0] is on the left
-        if entry1.at.x < entry0.at.x:
-          swap partition.entries[1], partition.entries[0]
+        if entry0.at.y <= top and entry0.to.y >= bottom and
+          entry1.at.y <= top and entry1.to.y >= bottom:
+          # These two segments do not intersect and span the partition
+          partition.twoNonintersectingSpanningSegments = true
+          # Ensure entry[0] is on the left
+          if entry0.midpointX > entry1.midpointX:
+            swap partition.entries[1], partition.entries[0]
 
 proc maxEntryCount(partitions: var seq[Partition]): int =
   for i in 0 ..< partitions.len:
@@ -1961,9 +1966,6 @@ proc fillShapes(
       # won't take the shortcut.
 
       var noEntriesInScanlineOverlap = true
-
-      proc midpointX(segment: Segment): float32 {.inline.} =
-        (segment.at.x + segment.to.x) * 0.5
 
       for i in 1 ..< numEntryIndices:
         var
