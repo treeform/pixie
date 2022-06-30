@@ -1054,8 +1054,23 @@ proc commandsToShapes(
 
 proc shapesToSegments(shapes: seq[Polygon]): seq[(Segment, int16)] =
   ## Converts the shapes into a set of filtered segments with winding value.
-  for shape in shapes:
-    for segment in shape.segments:
+
+  # Quantize the segment to prevent leaks
+  template quantizeY(v: Vec2): Vec2 =
+    vec2(v.x, v.y.quantize(1 / 256))
+
+  for poly in shapes:
+    var
+      vec1 = poly[^1].quantizeY()
+      vec2: Vec2
+      segment: Segment
+    for i in 0 ..< poly.len:
+      vec2 = poly[i].quantizeY()
+      if i == 0 and vec1 == vec2:
+        continue
+      segment = segment(vec1, vec2)
+      vec1 = vec2
+
       if segment.at.y == segment.to.y: # Skip horizontal
         continue
       var
@@ -1064,12 +1079,6 @@ proc shapesToSegments(shapes: seq[Polygon]): seq[(Segment, int16)] =
       if segment.at.y > segment.to.y:
         swap(segment.at, segment.to)
         winding = -1
-
-      # Quantize the segment to prevent leaks
-      segment = segment(
-        vec2(segment.at.x.quantize(1 / 256), segment.at.y.quantize(1 / 256)),
-        vec2(segment.to.x.quantize(1 / 256), segment.to.y.quantize(1 / 256))
-      )
 
       result.add((segment, winding))
 
