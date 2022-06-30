@@ -683,9 +683,8 @@ proc commandsToShapes(
       ctrl2 * (-3*t3 + 3*t2) +
       to * (t3)
 
-    proc computeDerv(at, ctrl1, ctrl2, to: Vec2, t: float32): Vec2 {.inline.} =
-      let
-        t2 = t*t
+    proc computeDeriv(at, ctrl1, ctrl2, to: Vec2, t: float32): Vec2 {.inline.} =
+      let t2 = t*t
       at * (-3*t2 + 6*t - 3) +
       ctrl1 * (9*t2 - 12*t + 3) +
       ctrl2 * (-9*t2 + 6*t) +
@@ -703,11 +702,11 @@ proc commandsToShapes(
       let
         midpoint = (prev + next) / 2
         lineTangent = midpoint - prev
-        curveTangent = computeDerv(at, ctrl1, ctrl2, to, t + step / 2)
+        curveTangent = computeDeriv(at, ctrl1, ctrl2, to, t + step / 2)
         curveTangentScaled = curveTangent.normalize() * lineTangent.length()
-        error = (midpoint - halfway).lengthSq +
-          (lineTangent - curveTangentScaled).lengthSq
-      if error > errorMarginSq:
+        error = (midpoint - halfway).lengthSq
+        errorTangent = (lineTangent - curveTangentScaled).lengthSq
+      if error + errorTangent > errorMarginSq:
         next = halfway
         halfway = compute(at, ctrl1, ctrl2, to, t + step / 4)
         step /= 2
