@@ -62,29 +62,33 @@ when defined(amd64):
     for i in i ..< start + len:
       data[i] = rgbx
 
-  proc isOneColorSimd*(data: ptr UncheckedArray[ColorRGBX], len: int): bool =
+  proc isOneColorSimd*(data: var seq[ColorRGBX]): bool =
     if cpuHasAvx2:
-      return isOneColorAvx2(data, len)
+      return isOneColorAvx2(data)
 
     result = true
 
     let color = data[0]
 
-    var i: int
-    while i < len and (cast[uint](data[i].addr) and 15) != 0: # Align to 16 bytes
+    var
+      i: int
+      p = cast[uint](data[0].addr)
+    # Align to 16 bytes
+    while i < data.len and (p and 15) != 0:
       if data[i] != color:
         return false
       inc i
+      p += 4
 
     let
       colorVec = mm_set1_epi32(cast[int32](color))
-      iterations = (len - i) div 16
+      iterations = (data.len - i) div 16
     for _ in 0 ..< iterations:
       let
-        values0 = mm_load_si128(data[i].addr)
-        values1 = mm_load_si128(data[i + 4].addr)
-        values2 = mm_load_si128(data[i + 8].addr)
-        values3 = mm_load_si128(data[i + 12].addr)
+        values0 = mm_load_si128(cast[pointer](p))
+        values1 = mm_load_si128(cast[pointer](p + 16))
+        values2 = mm_load_si128(cast[pointer](p + 32))
+        values3 = mm_load_si128(cast[pointer](p + 48))
         eq0 = mm_cmpeq_epi8(values0, colorVec)
         eq1 = mm_cmpeq_epi8(values1, colorVec)
         eq2 = mm_cmpeq_epi8(values2, colorVec)
@@ -92,41 +96,47 @@ when defined(amd64):
         eq0123 = mm_and_si128(mm_and_si128(eq0, eq1), mm_and_si128(eq2, eq3))
       if mm_movemask_epi8(eq0123) != 0xffff:
         return false
-      i += 16
+      p += 64
+    i += 16 * iterations
 
-    for i in i ..< len:
+    for i in i ..< data.len:
       if data[i] != color:
         return false
 
-  proc isTransparentSimd*(data: ptr UncheckedArray[ColorRGBX], len: int): bool =
+  proc isTransparentSimd*(data: var seq[ColorRGBX]): bool =
     if cpuHasAvx2:
-      return isTransparentAvx2(data, len)
+      return isTransparentAvx2(data)
 
-    var i: int
-    while i < len and (cast[uint](data[i].addr) and 15) != 0: # Align to 16 bytes
+    var
+      i: int
+      p = cast[uint](data[0].addr)
+    # Align to 16 bytes
+    while i < data.len and (p and 15) != 0:
       if data[i].a != 0:
         return false
       inc i
+      p += 4
 
     result = true
 
     let
       vecZero = mm_setzero_si128()
-      iterations = (len - i) div 16
+      iterations = (data.len - i) div 16
     for _ in 0 ..< iterations:
       let
-        values0 = mm_load_si128(data[i].addr)
-        values1 = mm_load_si128(data[i + 4].addr)
-        values2 = mm_load_si128(data[i + 8].addr)
-        values3 = mm_load_si128(data[i + 12].addr)
+        values0 = mm_load_si128(cast[pointer](p))
+        values1 = mm_load_si128(cast[pointer](p + 16))
+        values2 = mm_load_si128(cast[pointer](p + 32))
+        values3 = mm_load_si128(cast[pointer](p + 48))
         values01 = mm_or_si128(values0, values1)
         values23 = mm_or_si128(values2, values3)
         values0123 = mm_or_si128(values01, values23)
       if mm_movemask_epi8(mm_cmpeq_epi8(values0123, vecZero)) != 0xffff:
         return false
-      i += 16
+      p += 64
+    i += 16 * iterations
 
-    for i in i ..< len:
+    for i in i ..< data.len:
       if data[i].a != 0:
         return false
 
@@ -136,29 +146,33 @@ when defined(amd64):
 
     result = true
 
-    var i = start
+    var
+      i = start
+      p = cast[uint](data[0].addr)
     # Align to 16 bytes
-    while i < (start + len) and (cast[uint](data[i].addr) and 15) != 0:
+    while i < (start + len) and (p and 15) != 0:
       if data[i].a != 255:
         return false
       inc i
+      p += 4
 
     let
       vec255 = mm_set1_epi8(255)
       iterations = (start + len - i) div 16
     for _ in 0 ..< iterations:
       let
-        values0 = mm_load_si128(data[i].addr)
-        values1 = mm_load_si128(data[i + 4].addr)
-        values2 = mm_load_si128(data[i + 8].addr)
-        values3 = mm_load_si128(data[i + 12].addr)
+        values0 = mm_load_si128(cast[pointer](p))
+        values1 = mm_load_si128(cast[pointer](p + 16))
+        values2 = mm_load_si128(cast[pointer](p + 32))
+        values3 = mm_load_si128(cast[pointer](p + 48))
         values01 = mm_and_si128(values0, values1)
         values23 = mm_and_si128(values2, values3)
         values0123 = mm_and_si128(values01, values23)
         eq = mm_cmpeq_epi8(values0123, vec255)
       if (mm_movemask_epi8(eq) and 0x00008888) != 0x00008888:
         return false
-      i += 16
+      p += 64
+    i += 16 * iterations
 
     for i in i ..< start + len:
       if data[i].a != 255:

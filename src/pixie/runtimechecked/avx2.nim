@@ -6,20 +6,21 @@ when defined(gcc) or defined(clang):
 when defined(release):
   {.push checks: off.}
 
-proc isOneColorAvx2*(data: ptr UncheckedArray[ColorRGBX], len: int): bool =
+proc isOneColorAvx2*(data: var seq[ColorRGBX]): bool =
   result = true
 
   let color = data[0]
 
   var i: int
-  while i < len and (cast[uint](data[i].addr) and 31) != 0: # Align to 32 bytes
+  # Align to 32 bytes
+  while i < data.len and (cast[uint](data[i].addr) and 31) != 0:
     if data[i] != color:
       return false
     inc i
 
   let
     colorVec = mm256_set1_epi32(cast[int32](color))
-    iterations = (len - i) div 16
+    iterations = (data.len - i) div 16
   for _ in 0 ..< iterations:
     let
       values0 = mm256_load_si256(data[i].addr)
@@ -31,22 +32,23 @@ proc isOneColorAvx2*(data: ptr UncheckedArray[ColorRGBX], len: int): bool =
       return false
     i += 16
 
-  for i in i ..< len:
+  for i in i ..< data.len:
     if data[i] != color:
       return false
 
-proc isTransparentAvx2*(data: ptr UncheckedArray[ColorRGBX], len: int): bool =
+proc isTransparentAvx2*(data: var seq[ColorRGBX]): bool =
   result = true
 
   var i: int
-  while i < len and (cast[uint](data[i].addr) and 31) != 0: # Align to 32 bytes
+  # Align to 32 bytes
+  while i < data.len and (cast[uint](data[i].addr) and 31) != 0:
     if data[i].a != 0:
       return false
     inc i
 
   let
     vecZero = mm256_setzero_si256()
-    iterations = (len - i) div 16
+    iterations = (data.len - i) div 16
   for _ in 0 ..< iterations:
     let
       values0 = mm256_load_si256(data[i].addr)
@@ -57,7 +59,7 @@ proc isTransparentAvx2*(data: ptr UncheckedArray[ColorRGBX], len: int): bool =
       return false
     i += 16
 
-  for i in i ..< len:
+  for i in i ..< data.len:
     if data[i].a != 0:
       return false
 

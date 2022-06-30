@@ -102,10 +102,7 @@ proc fill*(image: Image, color: SomeColor) {.inline, raises: [].} =
 proc isOneColor*(image: Image): bool {.raises: [].} =
   ## Checks if the entire image is the same color.
   when allowSimd and compiles(isOneColorSimd):
-    return isOneColorSimd(
-      cast[ptr UncheckedArray[ColorRGBX]](image.data[0].addr),
-      image.data.len
-    )
+    return isOneColorSimd(image.data)
 
   result = true
 
@@ -117,10 +114,7 @@ proc isOneColor*(image: Image): bool {.raises: [].} =
 proc isTransparent*(image: Image): bool {.raises: [].} =
   ## Checks if this image is fully transparent or not.
   when allowSimd and compiles(isTransparentSimd):
-    return isTransparentSimd(
-      cast[ptr UncheckedArray[ColorRGBX]](image.data[0].addr),
-      image.data.len
-    )
+    return isTransparentSimd(image.data)
 
   result = true
 
