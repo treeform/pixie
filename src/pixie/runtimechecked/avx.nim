@@ -9,8 +9,10 @@ when defined(release):
 proc fillUnsafeAvx*(
   data: ptr UncheckedArray[ColorRGBX],
   len: int,
-  rgbx: ColorRGBX
+  color: SomeColor
 ) =
+  let rgbx = color.asRgbx()
+
   var i: int
   while i < len and (cast[uint](data[i].addr) and 31) != 0: # Align to 32 bytes
     data[i] = rgbx

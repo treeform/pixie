@@ -79,15 +79,15 @@ proc fillUnsafe*(
 ) {.raises: [].} =
   ## Fills the image data with the color starting at index start and
   ## continuing for len indices.
-  let rgbx = color.asRgbx()
-
   when allowSimd and compiles(fillUnsafeSimd):
     fillUnsafeSimd(
       cast[ptr UncheckedArray[ColorRGBX]](data[start].addr),
       len,
-      rgbx
+      color
     )
     return
+
+  let rgbx = color.asRgbx()
 
   # Use memset when every byte has the same value
   if rgbx.r == rgbx.g and rgbx.r == rgbx.b and rgbx.r == rgbx.a:

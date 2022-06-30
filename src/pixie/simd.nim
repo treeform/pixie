@@ -1,4 +1,4 @@
-import chroma, vmath
+import chroma
 
 when defined(release):
   {.push checks: off.}
@@ -33,11 +33,13 @@ when defined(amd64):
   proc fillUnsafeSimd*(
     data: ptr UncheckedArray[ColorRGBX],
     len: int,
-    rgbx: ColorRGBX
+    color: SomeColor
   ) =
     if cpuHasAvx and len >= 64:
-      fillUnsafeAvx(data, len, rgbx)
+      fillUnsafeAvx(data, len, color)
     else:
+      let rgbx = color.asRgbx()
+
       var i: int
       while i < len and (cast[uint](data[i].addr) and 15) != 0: # Align to 16 bytes
         data[i] = rgbx
