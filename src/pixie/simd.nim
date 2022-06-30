@@ -31,30 +31,36 @@ when defined(amd64):
     result = mm_unpacklo_epi8(mm_setzero_si128(), result)
 
   proc fillUnsafeSimd*(
-    data: ptr UncheckedArray[ColorRGBX],
-    len: int,
+    data: var seq[ColorRGBX],
+    start, len: int,
     color: SomeColor
   ) =
-    if cpuHasAvx and len >= 64:
-      fillUnsafeAvx(data, len, color)
-    else:
-      let rgbx = color.asRgbx()
+    if cpuHasAvx:
+      fillUnsafeAvx(data, start, len, color)
+      return
 
-      var i: int
-      while i < len and (cast[uint](data[i].addr) and 15) != 0: # Align to 16 bytes
-        data[i] = rgbx
-        inc i
+    let rgbx = color.asRgbx()
 
-      let
-        colorVec = mm_set1_epi32(cast[int32](rgbx))
-        iterations = (len - i) div 8
-      for _ in 0 ..< iterations:
-        mm_store_si128(data[i].addr, colorVec)
-        mm_store_si128(data[i + 4].addr, colorVec)
-        i += 8
+    var
+      i = start
+      p = cast[uint](data[i].addr)
+    # Align to 16 bytes
+    while i < (start + len) and (p and 15) != 0:
+      data[i] = rgbx
+      inc i
+      p += 4
 
-      for i in i ..< len:
-        data[i] = rgbx
+    let
+      colorVec = mm_set1_epi32(cast[int32](rgbx))
+      iterations = (start + len - i) div 8
+    for _ in 0 ..< iterations:
+      mm_store_si128(cast[pointer](p), colorVec)
+      mm_store_si128(cast[pointer](p + 16), colorVec)
+      p += 32
+    i += iterations * 8
+
+    for i in i ..< start + len:
+      data[i] = rgbx
 
   proc isOneColorSimd*(data: ptr UncheckedArray[ColorRGBX], len: int): bool =
     if cpuHasAvx2:

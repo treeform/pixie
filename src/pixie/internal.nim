@@ -80,11 +80,7 @@ proc fillUnsafe*(
   ## Fills the image data with the color starting at index start and
   ## continuing for len indices.
   when allowSimd and compiles(fillUnsafeSimd):
-    fillUnsafeSimd(
-      cast[ptr UncheckedArray[ColorRGBX]](data[start].addr),
-      len,
-      color
-    )
+    fillUnsafeSimd(data, start, len, color)
     return
 
   let rgbx = color.asRgbx()
