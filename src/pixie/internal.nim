@@ -1,12 +1,4 @@
-import bumpy, chroma, common, system/memory, vmath
-
-const allowSimd* = not defined(pixieNoSimd) and not defined(tcc)
-
-when allowSimd:
-  import simd
-
-  when defined(amd64):
-    import nimsimd/sse2
+import bumpy, chroma, common, simd, system/memory, vmath
 
 template currentExceptionAsPixieError*(): untyped =
   ## Gets the current exception and returns it as a PixieError with stack trace.
@@ -76,7 +68,7 @@ proc fillUnsafe*(
 
 proc fillUnsafe*(
   data: var seq[ColorRGBX], color: SomeColor, start, len: int
-) {.raises: [].} =
+) {.hasSimd, raises: [].} =
   ## Fills the image data with the color starting at index start and
   ## continuing for len indices.
   when allowSimd and compiles(fillUnsafeSimd):
@@ -110,12 +102,10 @@ proc toStraightAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} =
     c.b = straightAlphaTable[c.a][c.b]
     data[i] = c
 
-proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} =
+proc toPremultipliedAlpha*(
+  data: var seq[ColorRGBA | ColorRGBX]
+) {.hasSimd, raises: [].} =
   ## Converts an image to premultiplied alpha from straight alpha.
-  when allowSimd and compiles(toPremultipliedAlphaSimd):
-    toPremultipliedAlphaSimd(data)
-    return
-
   for i in 0 ..< data.len:
     var c = data[i]
     if c.a != 255:
@@ -124,25 +114,15 @@ proc toPremultipliedAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} 
       c.b = ((c.b.uint32 * c.a) div 255).uint8
       data[i] = c
 
-proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
-  when allowSimd and compiles(isOpaqueSimd):
-    return isOpaqueSimd(data, start, len)
-
+proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool {.hasSimd.} =
   result = true
-
   for i in start ..< start + len:
     if data[i].a != 255:
       return false
 
 when defined(amd64) and allowSimd:
-  proc applyOpacity*(color: M128, opacity: float32): ColorRGBX {.inline.} =
-    let opacityVec = mm_set1_ps(opacity)
-    var finalColor = mm_cvtps_epi32(mm_mul_ps(color, opacityVec))
-    finalColor = mm_packus_epi16(finalColor, mm_setzero_si128())
-    finalColor = mm_packus_epi16(finalColor, mm_setzero_si128())
-    cast[ColorRGBX](mm_cvtsi128_si32(finalColor))
-
-  export pack4xAlphaValues, unpackAlphaValues
+  import simd/todo
+  export todo
 
 when defined(release):
   {.pop.}

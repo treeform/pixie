@@ -1,4 +1,4 @@
-import chroma, nimsimd/avx2
+import chroma, internal, nimsimd/avx2, pixie/common
 
 when defined(gcc) or defined(clang):
   {.localPassc: "-mavx2".}
@@ -6,25 +6,25 @@ when defined(gcc) or defined(clang):
 when defined(release):
   {.push checks: off.}
 
-proc isOneColorAvx2*(data: var seq[ColorRGBX]): bool =
+proc isOneColorAvx2*(image: Image): bool {.simd.} =
   result = true
 
-  let color = data[0]
+  let color = image.data[0]
 
   var i: int
   # Align to 32 bytes
-  while i < data.len and (cast[uint](data[i].addr) and 31) != 0:
-    if data[i] != color:
+  while i < image.data.len and (cast[uint](image.data[i].addr) and 31) != 0:
+    if image.data[i] != color:
       return false
     inc i
 
   let
     colorVec = mm256_set1_epi32(cast[int32](color))
-    iterations = (data.len - i) div 16
+    iterations = (image.data.len - i) div 16
   for _ in 0 ..< iterations:
     let
-      values0 = mm256_load_si256(data[i].addr)
-      values1 = mm256_load_si256(data[i + 8].addr)
+      values0 = mm256_load_si256(image.data[i].addr)
+      values1 = mm256_load_si256(image.data[i + 8].addr)
       eq0 = mm256_cmpeq_epi8(values0, colorVec)
       eq1 = mm256_cmpeq_epi8(values1, colorVec)
       eq01 = mm256_and_si256(eq0, eq1)
@@ -32,38 +32,38 @@ proc isOneColorAvx2*(data: var seq[ColorRGBX]): bool =
       return false
     i += 16
 
-  for i in i ..< data.len:
-    if data[i] != color:
+  for i in i ..< image.data.len:
+    if image.data[i] != color:
       return false
 
-proc isTransparentAvx2*(data: var seq[ColorRGBX]): bool =
+proc isTransparentAvx2*(image: Image): bool {.simd.} =
   result = true
 
   var i: int
   # Align to 32 bytes
-  while i < data.len and (cast[uint](data[i].addr) and 31) != 0:
-    if data[i].a != 0:
+  while i < image.data.len and (cast[uint](image.data[i].addr) and 31) != 0:
+    if image.data[i].a != 0:
       return false
     inc i
 
   let
     vecZero = mm256_setzero_si256()
-    iterations = (data.len - i) div 16
+    iterations = (image.data.len - i) div 16
   for _ in 0 ..< iterations:
     let
-      values0 = mm256_load_si256(data[i].addr)
-      values1 = mm256_load_si256(data[i + 8].addr)
+      values0 = mm256_load_si256(image.data[i].addr)
+      values1 = mm256_load_si256(image.data[i + 8].addr)
       values01 = mm256_or_si256(values0, values1)
       eq = mm256_cmpeq_epi8(values01, vecZero)
     if mm256_movemask_epi8(eq) != cast[int32](0xffffffff):
       return false
     i += 16
 
-  for i in i ..< data.len:
-    if data[i].a != 0:
+  for i in i ..< image.data.len:
+    if image.data[i].a != 0:
       return false
 
-proc isOpaqueAvx2*(data: var seq[ColorRGBX], start, len: int): bool =
+proc isOpaqueAvx2*(data: var seq[ColorRGBX], start, len: int): bool {.simd.} =
   result = true
 
   var i = start
@@ -90,7 +90,7 @@ proc isOpaqueAvx2*(data: var seq[ColorRGBX], start, len: int): bool =
     if data[i].a != 255:
       return false
 
-proc toPremultipliedAlphaAvx2*(data: var seq[ColorRGBA | ColorRGBX]) =
+proc toPremultipliedAlphaAvx2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
   var i: int
 
   let

@@ -1,8 +1,5 @@
 import chroma, flatty/binny, pixie/common, pixie/images, pixie/internal,
-    pixie/masks, std/decls, std/sequtils, std/strutils
-
-when defined(amd64) and allowSimd:
-  import nimsimd/sse2
+    pixie/masks, pixie/simd, std/decls, std/sequtils, std/strutils
 
 # This JPEG decoder is loosely based on stb_image which is public domain.
 

@@ -1,8 +1,5 @@
 import chroma, flatty/binny, math, pixie/common, pixie/images, pixie/internal,
-    zippy, zippy/crc
-
-when defined(amd64) and allowSimd:
-  import nimsimd/sse2
+    pixie/simd, zippy, zippy/crc
 
 # See http://www.libpng.org/pub/png/spec/1.2/PNG-Contents.html
 

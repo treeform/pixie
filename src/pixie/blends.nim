@@ -1,9 +1,6 @@
 ## Blending modes.
 
-import chroma, common, internal, std/math
-
-when defined(amd64) and allowSimd:
-  import nimsimd/sse2
+import chroma, common, simd, std/math
 
 # See https://www.w3.org/TR/compositing-1/
 # See https://www.khronos.org/registry/OpenGL/extensions/KHR/KHR_blend_equation_advanced.txt

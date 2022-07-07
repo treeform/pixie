@@ -1,4 +1,4 @@
-import chroma, nimsimd/avx
+import chroma, internal, nimsimd/avx
 
 when defined(gcc) or defined(clang):
   {.localPassc: "-mavx".}
@@ -8,9 +8,9 @@ when defined(release):
 
 proc fillUnsafeAvx*(
   data: var seq[ColorRGBX],
-  start, len: int,
-  color: SomeColor
-) =
+  color: SomeColor,
+  start, len: int
+) {.simd.} =
   let rgbx = color.asRgbx()
 
   var

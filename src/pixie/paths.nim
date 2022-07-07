@@ -1,8 +1,5 @@
-import blends, bumpy, chroma, common, images, internal, masks, paints, std/fenv,
-    std/strutils, vmath
-
-when defined(amd64) and allowSimd:
-  import nimsimd/sse2
+import blends, bumpy, chroma, common, images, internal, masks, paints, simd,
+    std/fenv, std/strutils, vmath
 
 type
   WindingRule* = enum

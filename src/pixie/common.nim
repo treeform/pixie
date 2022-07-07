@@ -41,6 +41,26 @@ type
     width*, height*: int
     data*: seq[uint8]
 
+proc newImage*(width, height: int): Image {.raises: [PixieError].} =
+  ## Creates a new image with the parameter dimensions.
+  if width <= 0 or height <= 0:
+    raise newException(PixieError, "Image width and height must be > 0")
+
+  result = Image()
+  result.width = width
+  result.height = height
+  result.data = newSeq[ColorRGBX](width * height)
+
+proc newMask*(width, height: int): Mask {.raises: [PixieError].} =
+  ## Creates a new mask with the parameter dimensions.
+  if width <= 0 or height <= 0:
+    raise newException(PixieError, "Mask width and height must be > 0")
+
+  result = Mask()
+  result.width = width
+  result.height = height
+  result.data = newSeq[uint8](width * height)
+
 proc mix*(a, b: uint8, t: float32): uint8 {.inline, raises: [].} =
   ## Linearly interpolate between a and b using t.
   let t = round(t * 255).uint32

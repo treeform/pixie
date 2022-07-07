@@ -1,7 +1,4 @@
-import chroma, common, images, internal, vmath
-
-when defined(amd64) and allowSimd:
-  import nimsimd/sse2
+import chroma, common, images, simd, vmath
 
 type
   PaintKind* = enum

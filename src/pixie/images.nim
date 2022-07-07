@@ -1,10 +1,4 @@
-import blends, bumpy, chroma, common, internal, masks, vmath
-
-when allowSimd:
-  import simd
-
-  when defined(amd64):
-    import nimsimd/sse2
+import blends, bumpy, chroma, common, internal, masks, simd, vmath
 
 const h = 0.5.float32
 
@@ -13,26 +7,17 @@ type UnsafeImage = distinct Image
 when defined(release):
   {.push checks: off.}
 
-proc newImage*(width, height: int): Image {.raises: [PixieError].} =
-  ## Creates a new image with the parameter dimensions.
-  if width <= 0 or height <= 0:
-    raise newException(PixieError, "Image width and height must be > 0")
-
-  result = Image()
-  result.width = width
-  result.height = height
-  result.data = newSeq[ColorRGBX](width * height)
-
-proc newImage*(mask: Mask): Image {.raises: [PixieError].} =
+proc newImage*(mask: Mask): Image {.hasSimd, raises: [PixieError].} =
   result = newImage(mask.width, mask.height)
-
-  when allowSimd and compiles(newImageFromMaskSimd):
-    newImageFromMaskSimd(result.data, mask.data)
-    return
-
   for i in 0 ..< mask.data.len:
     let v = mask.data[i]
     result.data[i] = rgbx(v, v, v, v)
+
+proc newMask*(image: Image): Mask {.hasSimd, raises: [PixieError].} =
+  ## Returns a new mask using the alpha values of the image.
+  result = newMask(image.width, image.height)
+  for i in 0 ..< image.data.len:
+    result.data[i] = image.data[i].a
 
 proc copy*(image: Image): Image {.raises: [PixieError].} =
   ## Copies the image data into a new image.
@@ -89,25 +74,17 @@ proc fill*(image: Image, color: SomeColor) {.inline, raises: [].} =
   ## Fills the image with the color.
   fillUnsafe(image.data, color, 0, image.data.len)
 
-proc isOneColor*(image: Image): bool {.raises: [].} =
+proc isOneColor*(image: Image): bool {.hasSimd, raises: [].} =
   ## Checks if the entire image is the same color.
-  when allowSimd and compiles(isOneColorSimd):
-    return isOneColorSimd(image.data)
-
   result = true
-
   let color = cast[uint32](image.data[0])
   for i in 0 ..< image.data.len:
     if cast[uint32](image.data[i]) != color:
       return false
 
-proc isTransparent*(image: Image): bool {.raises: [].} =
+proc isTransparent*(image: Image): bool {.hasSimd, raises: [].} =
   ## Checks if this image is fully transparent or not.
-  when allowSimd and compiles(isTransparentSimd):
-    return isTransparentSimd(image.data)
-
   result = true
-
   for i in 0 ..< image.data.len:
     if image.data[i].a != 0:
       return false
@@ -341,46 +318,38 @@ proc magnifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
         result.width * 4
       )
 
-proc applyOpacity*(image: Image, opacity: float32) {.raises: [].} =
+proc applyOpacity*(target: Image, opacity: float32) {.hasSimd, raises: [].} =
   ## Multiplies alpha of the image by opacity.
   let opacity = round(255 * opacity).uint16
   if opacity == 255:
     return
 
   if opacity == 0:
-    image.fill(rgbx(0, 0, 0, 0))
+    target.fill(rgbx(0, 0, 0, 0))
     return
 
-  when allowSimd and compiles(applyOpacitySimd):
-    applyOpacitySimd(image.data, opacity)
-    return
-
-  for i in 0 ..< image.data.len:
-    var rgbx = image.data[i]
+  for i in 0 ..< target.data.len:
+    var rgbx = target.data[i]
     rgbx.r = ((rgbx.r * opacity) div 255).uint8
     rgbx.g = ((rgbx.g * opacity) div 255).uint8
     rgbx.b = ((rgbx.b * opacity) div 255).uint8
     rgbx.a = ((rgbx.a * opacity) div 255).uint8
-    image.data[i] = rgbx
+    target.data[i] = rgbx
 
-proc invert*(image: Image) {.raises: [].} =
+proc invert*(target: Image) {.hasSimd, raises: [].} =
   ## Inverts all of the colors and alpha.
-  when allowSimd and compiles(invertImageSimd):
-    invertImageSimd(image.data)
-    return
-
-  for i in 0 ..< image.data.len:
-    var rgbx = image.data[i]
+  for i in 0 ..< target.data.len:
+    var rgbx = target.data[i]
     rgbx.r = 255 - rgbx.r
     rgbx.g = 255 - rgbx.g
     rgbx.b = 255 - rgbx.b
     rgbx.a = 255 - rgbx.a
-    image.data[i] = rgbx
+    target.data[i] = rgbx
 
   # Inverting rgbx(50, 100, 150, 200) becomes rgbx(205, 155, 105, 55). This
   # is not a valid premultiplied alpha color.
   # We need to convert back to premultiplied alpha after inverting.
-  image.data.toPremultipliedAlpha()
+  target.data.toPremultipliedAlpha()
 
 proc blur*(
   image: Image, radius: float32, outOfBounds: SomeColor = color(0, 0, 0, 0)
@@ -442,17 +411,6 @@ proc blur*(
       for yy in max(y - radius, image.height) .. y + radius:
         values += outOfBounds * kernel[yy - y + radius]
       image.unsafe[x, y] = rgbx(values)
-
-proc newMask*(image: Image): Mask {.raises: [PixieError].} =
-  ## Returns a new mask using the alpha values of the image.
-  result = newMask(image.width, image.height)
-
-  when allowSimd and compiles(newMaskFromImageSimd):
-    newMaskFromImageSimd(result.data, image.data)
-    return
-
-  for i in 0 ..< image.data.len:
-    result.data[i] = image.data[i].a
 
 proc getRgbaSmooth*(
   image: Image, x, y: float32, wrapped = false
