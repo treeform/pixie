@@ -1,5 +1,5 @@
 import chroma, flatty/binny, math, pixie/common, pixie/images, pixie/internal,
-    pixie/masks, zippy, zippy/crc
+    zippy, zippy/crc
 
 when defined(amd64) and allowSimd:
   import nimsimd/sse2
