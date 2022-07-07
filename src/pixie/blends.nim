@@ -273,67 +273,16 @@ proc blendSoftLight*(backdrop, source: ColorRGBX): ColorRGBX =
     backdrop = backdrop.rgba()
     source = source.rgba()
 
-  var rgba: ColorRGBA
-  when defined(amd64) and allowSimd:
-    let
-      vb = mm_setr_ps(
-        backdrop.r.float32,
-        backdrop.g.float32,
-        backdrop.b.float32,
-        0
-      )
-      vs = mm_setr_ps(source.r.float32, source.g.float32, source.b.float32, 0)
-      v2 = mm_set1_ps(2)
-      v255 = mm_set1_ps(255)
-      v255sq = mm_set1_ps(255 * 255)
-      vm = ((v255 - v2 * vs) * vb * vb) / v255sq + (v2 * vs * vb) / v255
-      values = cast[array[4, uint32]](mm_cvtps_epi32(vm))
+  let
+    b = backdrop.color
+    s = source.color
+  var blended: Color
+  blended.r = softLight(b.r, s.r)
+  blended.g = softLight(b.g, s.g)
+  blended.b = softLight(b.b, s.b)
+  blended = alphaFix(b, s, blended)
 
-    rgba.r = values[0].uint8
-    rgba.g = values[1].uint8
-    rgba.b = values[2].uint8
-
-    # proc alphaFix(backdrop, source, mixed: ColorRGBX): ColorRGBX {.inline.} =
-    #   if backdrop.a == 0 and source.a == 0:
-    #     return
-    #   let
-    #     vb = mm_setr_ps(backdrop.r.float32, backdrop.g.float32, backdrop.b.float32, 0)
-    #     vs = mm_setr_ps(source.r.float32, source.g.float32, source.b.float32, 0)
-    #     vm = mm_setr_ps(mixed.r.float32, mixed.g.float32, mixed.b.float32, 0)
-    #   alphaFix(backdrop, source, vb, vs, vm)
-
-    let
-      sa = source.a.float32
-      ba = backdrop.a.float32
-      a = sa + ba * (255 - sa) / 255
-    if a == 0:
-      return
-
-    let
-      t0 = mm_set1_ps(sa * (255 - ba))
-      t1 = mm_set1_ps(sa * ba)
-      t2 = mm_set1_ps((255 - sa) * ba)
-      va = mm_set1_ps(a)
-      final = cast[array[4, uint32]](
-        mm_cvtps_epi32((t0 * vs + t1 * vm + t2 * vb) / va / v255)
-      )
-
-    rgba.r = final[0].uint8
-    rgba.g = final[1].uint8
-    rgba.b = final[2].uint8
-    rgba.a = a.uint8
-  else:
-    let
-      b = backdrop.color
-      s = source.color
-    var blended: Color
-    blended.r = softLight(b.r, s.r)
-    blended.g = softLight(b.g, s.g)
-    blended.b = softLight(b.b, s.b)
-    blended = alphaFix(b, s, blended)
-    rgba = blended.rgba
-
-  result = rgba.rgbx()
+  result = blended.rgbx()
 
 proc blendHardLight*(backdrop, source: ColorRGBX): ColorRGBX =
   result.r = hardLight(backdrop.r, backdrop.a, source.r, source.a)
