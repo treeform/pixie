@@ -31,6 +31,16 @@ type
   ImageDimensions* = object
     width*, height*: int
 
+  Image* = ref object
+    ## Image object that holds bitmap data in premultiplied alpha RGBA format.
+    width*, height*: int
+    data*: seq[ColorRGBX]
+
+  Mask* = ref object
+    ## Mask object that holds mask opacity data.
+    width*, height*: int
+    data*: seq[uint8]
+
 proc mix*(a, b: uint8, t: float32): uint8 {.inline, raises: [].} =
   ## Linearly interpolate between a and b using t.
   let t = round(t * 255).uint32

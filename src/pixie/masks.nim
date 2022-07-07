@@ -6,13 +6,7 @@ when allowSimd:
   when defined(amd64):
     import nimsimd/sse2
 
-type
-  Mask* = ref object
-    ## Mask object that holds mask opacity data.
-    width*, height*: int
-    data*: seq[uint8]
-
-  UnsafeMask = distinct Mask
+type UnsafeMask = distinct Mask
 
 when defined(release):
   {.push checks: off.}

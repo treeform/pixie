@@ -8,13 +8,7 @@ when allowSimd:
 
 const h = 0.5.float32
 
-type
-  Image* = ref object
-    ## Image object that holds bitmap data in RGBA format.
-    width*, height*: int
-    data*: seq[ColorRGBX]
-
-  UnsafeImage = distinct Image
+type UnsafeImage = distinct Image
 
 when defined(release):
   {.push checks: off.}
