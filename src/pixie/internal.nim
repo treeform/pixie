@@ -89,8 +89,8 @@ proc fillUnsafe*(
   if rgbx.r == rgbx.g and rgbx.r == rgbx.b and rgbx.r == rgbx.a:
     nimSetMem(data[start].addr, rgbx.r.cint, len * 4)
   else:
-    for color in data.mitems:
-      color = rgbx
+    for i in start ..< start + len:
+          data[i] = rgbx
 
 const straightAlphaTable = block:
   var table: array[256, array[256, uint8]]
