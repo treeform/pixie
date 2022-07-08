@@ -71,12 +71,7 @@ proc fillUnsafe*(
 ) {.hasSimd, raises: [].} =
   ## Fills the image data with the color starting at index start and
   ## continuing for len indices.
-  when allowSimd and compiles(fillUnsafeSimd):
-    fillUnsafeSimd(data, start, len, color)
-    return
-
   let rgbx = color.asRgbx()
-
   # Use memset when every byte has the same value
   if rgbx.r == rgbx.g and rgbx.r == rgbx.b and rgbx.r == rgbx.a:
     nimSetMem(data[start].addr, rgbx.r.cint, len * 4)
