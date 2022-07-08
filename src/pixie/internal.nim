@@ -120,9 +120,5 @@ proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool {.hasSimd.} =
     if data[i].a != 255:
       return false
 
-when defined(amd64) and allowSimd:
-  import simd/todo
-  export todo
-
 when defined(release):
   {.pop.}
