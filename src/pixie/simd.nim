@@ -42,11 +42,7 @@ when allowSimd and defined(amd64):
   import simd/sse2, simd/avx, simd/avx2
   export sse2, avx, avx2
 
-  when defined(pixieNoAvx):
-    const
-      cpuHasAvx* = false
-      cpuHasAvx2* = false
-  else:
+  when not defined(pixieNoAvx):
     import nimsimd/runtimecheck
     let
       cpuHasAvx* = checkInstructionSets({AVX})
