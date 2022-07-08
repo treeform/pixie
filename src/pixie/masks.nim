@@ -1,5 +1,7 @@
 import common, internal, simd, vmath
 
+export Mask, newMask
+
 type UnsafeMask = distinct Mask
 
 when defined(release):

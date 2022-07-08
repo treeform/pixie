@@ -1,5 +1,7 @@
 import blends, bumpy, chroma, common, internal, masks, simd, vmath
 
+export Image, newImage
+
 const h = 0.5.float32
 
 type UnsafeImage = distinct Image
