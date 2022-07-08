@@ -1,31 +1,11 @@
-import common, internal, vmath
+import common, internal, simd, vmath
 
-when allowSimd:
-  import simd
+export Mask, newMask
 
-  when defined(amd64):
-    import nimsimd/sse2
-
-type
-  Mask* = ref object
-    ## Mask object that holds mask opacity data.
-    width*, height*: int
-    data*: seq[uint8]
-
-  UnsafeMask = distinct Mask
+type UnsafeMask = distinct Mask
 
 when defined(release):
   {.push checks: off.}
-
-proc newMask*(width, height: int): Mask {.raises: [PixieError].} =
-  ## Creates a new mask with the parameter dimensions.
-  if width <= 0 or height <= 0:
-    raise newException(PixieError, "Mask width and height must be > 0")
-
-  result = Mask()
-  result.width = width
-  result.height = height
-  result.data = newSeq[uint8](width * height)
 
 proc copy*(mask: Mask): Mask {.raises: [PixieError].} =
   ## Copies the image data into a new image.
@@ -186,22 +166,18 @@ proc magnifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
         result.width * 4
       )
 
-proc applyOpacity*(mask: Mask, opacity: float32) {.raises: [].} =
+proc applyOpacity*(target: Mask, opacity: float32) {.hasSimd, raises: [].} =
   ## Multiplies alpha of the image by opacity.
   let opacity = round(255 * opacity).uint16
   if opacity == 255:
     return
 
   if opacity == 0:
-    mask.fill(0)
+    target.fill(0)
     return
 
-  when allowSimd and compiles(applyOpacitySimd):
-    applyOpacitySimd(mask.data, opacity)
-    return
-
-  for i in 0 ..< mask.data.len:
-    mask.data[i] = ((mask.data[i] * opacity) div 255).uint8
+  for i in 0 ..< target.data.len:
+    target.data[i] = ((target.data[i] * opacity) div 255).uint8
 
 proc getValueSmooth*(mask: Mask, x, y: float32): uint8 {.raises: [].} =
   ## Gets a interpolated value with float point coordinates.
@@ -231,14 +207,10 @@ proc getValueSmooth*(mask: Mask, x, y: float32): uint8 {.raises: [].} =
   else:
     topMix
 
-proc invert*(mask: Mask) {.raises: [].} =
+proc invert*(target: Mask) {.hasSimd, raises: [].} =
   ## Inverts all of the values - creates a negative of the mask.
-  when allowSimd and compiles(invertMaskSimd):
-    invertMaskSimd(mask.data)
-    return
-
-  for i in 0 ..< mask.data.len:
-    mask.data[i] = 255 - mask.data[i]
+  for i in 0 ..< target.data.len:
+    target.data[i] = 255 - target.data[i]
 
 proc spread*(mask: Mask, spread: float32) {.raises: [PixieError].} =
   ## Grows the mask by spread.
@@ -301,12 +273,8 @@ proc spread*(mask: Mask, spread: float32) {.raises: [PixieError].} =
             break
         mask.unsafe[x, y] = maxValue
 
-proc ceil*(mask: Mask) {.raises: [].} =
+proc ceil*(mask: Mask) {.hasSimd, raises: [].} =
   ## A value of 0 stays 0. Anything else turns into 255.
-  when allowSimd and compiles(invertImageSimd):
-    ceilMaskSimd(mask.data)
-    return
-
   for i in 0 ..< mask.data.len:
     if mask.data[i] != 0:
       mask.data[i] = 255

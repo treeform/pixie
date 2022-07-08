@@ -16,3 +16,4 @@ bindings/generated
 dump.txt
 tests/fileformats/jpeg/generated
 tests/fileformats/jpeg/diffs
+*.dylib
