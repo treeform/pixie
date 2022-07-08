@@ -32,7 +32,6 @@ macro hasSimd*(procedure: untyped) =
       `bodySse2`
   else:
     body.add quote do:
-      echo "using ", `name`, " scalar"
       `originalBody`
 
   procedure[6] = body
