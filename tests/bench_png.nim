@@ -1,4 +1,4 @@
-import benchy, cairo, nimPNG, pixie/fileformats/png, stb_image/read as stbi,
+import benchy, nimPNG, pixie/fileformats/png, stb_image/read as stbi,
     stb_image/write as stbr
 
 let
@@ -53,13 +53,13 @@ block:
   timeIt "stb_image encode":
     discard writePNG(width, height, channels, decoded).len
 
-block:
-  timeIt "cairo decode":
-    discard imageSurfaceCreateFromPng(filePath.cstring)
+# block:
+#   timeIt "cairo decode":
+#     discard imageSurfaceCreateFromPng(filePath.cstring)
 
-  let decoded = imageSurfaceCreateFromPng(filePath.cstring)
-  timeIt "cairo encode":
-    var write: WriteFunc =
-      proc(closure: pointer, data: cstring, len: int32): Status {.cdecl.} =
-        StatusSuccess
-    discard decoded.writeToPng(write, nil)
+#   let decoded = imageSurfaceCreateFromPng(filePath.cstring)
+#   timeIt "cairo encode":
+#     var write: WriteFunc =
+#       proc(closure: pointer, data: cstring, len: int32): Status {.cdecl.} =
+#         StatusSuccess
+#     discard decoded.writeToPng(write, nil)
