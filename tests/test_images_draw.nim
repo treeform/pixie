@@ -1,13 +1,5 @@
 import pixie, strformat, utils
 
-proc doDiff(rendered: Image, name: string) =
-  rendered.diffVs(&"tests/images/rendered/{name}.png")
-  let
-    master = readImage(&"tests/images/masters/{name}.png")
-    (diffScore, diffImage) = diff(master, rendered)
-  echo &"{name} score: {diffScore}"
-  diffImage.diffVs(&"tests/images/diffs/{name}.png")
-
 block:
   let
     a = newImage(1000, 1000)
@@ -143,7 +135,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   b.fill(rgbx(0, 0, 0, 255))
   a.draw(b, translate(vec2(0.5, 0.5)))
-  doDiff(a, "smooth1")
+  a.diffVs("tests/images/masters/smooth1.png")
 
 block:
   let
@@ -152,7 +144,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   b.fill(rgbx(0, 0, 0, 255))
   a.draw(b, translate(vec2(0, 50)) * rotate(45.toRadians))
-  doDiff(a, "smooth2")
+  a.diffVs("tests/images/masters/smooth2.png")
 
 block:
   let
@@ -161,7 +153,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   b.fill(rgba(0, 0, 0, 255))
   a.draw(b, translate(vec2(25.2, 25)))
-  doDiff(a, "smooth3")
+  a.diffVs("tests/images/masters/smooth3.png")
 
 block:
   let
@@ -170,7 +162,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   b.fill(rgba(0, 0, 0, 255))
   a.draw(b, translate(vec2(25.2, 25.6)))
-  doDiff(a, "smooth4")
+  a.diffVs("tests/images/masters/smooth4.png")
 
 block:
   let
@@ -180,7 +172,7 @@ block:
   b.fill(rgbx(255, 0, 0, 255))
   let m = translate(vec2(50, 50)) * rotate(30.toRadians)
   a.draw(b, m)
-  doDiff(a, "smooth5")
+  a.diffVs("tests/images/masters/smooth5.png")
 
 block:
   let
@@ -189,7 +181,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   let m = translate(vec2(50, 50)) * rotate(30.toRadians)
   a.draw(b, m)
-  doDiff(a, "smooth6")
+  a.diffVs("tests/images/masters/smooth6.png")
 
 block:
   let
@@ -198,7 +190,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   let m = translate(vec2(50, 50)) * rotate(30.toRadians) * scale(vec2(0.1, 0.1))
   a.draw(b, m)
-  doDiff(a, "smooth7")
+  a.diffVs("tests/images/masters/smooth7.png")
 
 block:
   let
@@ -207,7 +199,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   let m = scale(vec2(2, 2))
   a.draw(b, m)
-  doDiff(a, "smooth8")
+  a.diffVs("tests/images/masters/smooth8.png")
 
 block:
   let
@@ -216,7 +208,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   let m = translate(vec2(1, 1)) * scale(vec2(2, 2))
   a.draw(b, m)
-  doDiff(a, "smooth9")
+  a.diffVs("tests/images/masters/smooth9.png")
 
 block:
   let
@@ -225,7 +217,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   let m = translate(vec2(0.5, 0.5)) * scale(vec2(2, 2))
   a.draw(b, m)
-  doDiff(a, "smooth10")
+  a.diffVs("tests/images/masters/smooth10.png")
 
 block:
   let
@@ -236,7 +228,7 @@ block:
     rotate(-15.toRadians) *
     scale(vec2(263.86/40, 263.86/40))
   a.draw(b, m)
-  doDiff(a, "smooth11")
+  a.diffVs("tests/images/masters/smooth11.png")
 
 block:
   let
@@ -248,7 +240,7 @@ block:
   a.draw(b, m * translate(vec2(-40, 0)))
   a.draw(b, m * translate(vec2(-40, -40)))
   a.draw(b, m * translate(vec2(0, -40)))
-  doDiff(a, "smooth12")
+  a.diffVs("tests/images/masters/smooth12.png")
 
 block:
   let
@@ -257,19 +249,19 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   b.fill(rgba(0, 0, 0, 255))
   a.draw(b, scale(vec2(0.5, 0.5)))
-  doDiff(a, "minify_odd")
+  a.diffVs("tests/images/masters/minify_odd.png")
 
 block:
   let
     rock = readImage("tests/images/rock.png")
     minified = rock.minifyBy2()
-  doDiff(minified, "rock_minified")
+  minified.diffVs("tests/images/masters/rock_minified.png")
 
 block:
   let
     rock = readImage("tests/images/rock.png")
     minified = rock.minifyBy2(2)
-  doDiff(minified, "rock_minified2")
+  minified.diffVs("tests/images/masters/rock_minified2.png")
 
 block:
   let pathStr = """
