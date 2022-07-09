@@ -7,7 +7,7 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   b.fill(rgba(0, 255, 0, 255))
 
-  timeIt "draw small-on-big NormalBlend":
+  timeIt "small-on-big NormalBlend":
     a.draw(b, translate(vec2(25, 25)), NormalBlend)
     keep(b)
 
@@ -18,7 +18,7 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   b.fill(rgba(0, 255, 0, 255))
 
-  timeIt "draw small-on-big Smooth NormalBlend":
+  timeIt "small-on-big Smooth NormalBlend":
     a.draw(b, translate(vec2(25.2, 25.2)), NormalBlend)
     keep(b)
 
@@ -29,7 +29,7 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   b.fill(rgba(0, 255, 0, 255))
 
-  timeIt "draw big-on-bigger NormalBlend":
+  timeIt "big-on-bigger NormalBlend":
     a.draw(b, translate(vec2(25, 25)), NormalBlend)
     keep(b)
 
@@ -40,7 +40,7 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   b.fill(rgba(0, 255, 0, 255))
 
-  timeIt "draw [scale 0.5]":
+  timeIt "scale x0.5":
     a.draw(b, translate(vec2(25, 25)) * scale(vec2(0.5, 0.5)), NormalBlend)
     keep(b)
 
@@ -51,7 +51,7 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   b.fill(rgba(0, 255, 0, 255))
 
-  timeIt "draw [scale 2]":
+  timeIt "scale x2":
     a.draw(b, translate(vec2(25, 25)) * scale(vec2(2, 2)), NormalBlend)
     keep(b)
 
@@ -62,7 +62,7 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   b.fill(rgba(0, rand(255).uint8, 0, 255))
 
-  timeIt "draw Smooth [x translate]":
+  timeIt "smooth x-translate":
     a.draw(b, translate(vec2(25.2, 0)), NormalBlend)
     keep(b)
 
@@ -73,7 +73,7 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   b.fill(rgba(0, rand(255).uint8, 0, 255))
 
-  timeIt "draw Smooth [y translate]":
+  timeIt "smooth y-translate":
     a.draw(b, translate(vec2(0, 25.2)), NormalBlend)
     keep(b)
 
@@ -84,7 +84,7 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   b.fill(rgba(0, rand(255).uint8, 0, 255))
 
-  timeIt "draw Smooth [x + y translate]":
+  timeIt "smooth translate":
     a.draw(b, translate(vec2(25.2, 25.2)), NormalBlend)
     keep(b)
 
@@ -95,7 +95,7 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   b.fill(rgba(0, rand(255).uint8, 0, 255))
 
-  timeIt "draw Smooth [rotate 45 deg]":
+  timeIt "smooth rotate 45":
     a.draw(b, translate(vec2(0, 500)) * rotate(toRadians(45)), NormalBlend)
     keep(b)
 
@@ -106,7 +106,7 @@ block:
   a.fill(rgba(255, 0, 0, 255))
   b.fill(rand(255).uint8)
 
-  timeIt "draw mask Smooth [rotate 45 deg]":
+  timeIt "mask smooth rotate 45 deg":
     a.draw(b, translate(vec2(0, 500)) * rotate(toRadians(45)), NormalBlend)
     keep(b)
 
@@ -115,7 +115,7 @@ block:
     a = newImage(100, 100)
     b = newImage(50, 50)
 
-  timeIt "shadow (no offset)":
+  timeIt "shadow no offset":
     b.fill(rgba(0, 0, 0, 255))
     a.draw(b, translate(vec2(25, 25)))
 
@@ -132,7 +132,7 @@ block:
     a = newImage(100, 100)
     b = newImage(50, 50)
 
-  timeIt "shadow (with offset)":
+  timeIt "shadow with offset":
     b.fill(rgba(0, 0, 0, 255))
     a.draw(b, translate(vec2(25, 25)))
 
