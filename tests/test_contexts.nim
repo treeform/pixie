@@ -19,7 +19,7 @@ proc diffVs(image: Image, masterPath: string) =
   makeDirs(xRayPath.splitPath.head)
   image.writeFile(imagePath)
   xRay.writeFile(xRayPath)
-  echo &"diff {masterPath} vs {imagePath} -> {xRayPath} with {score}"
+  echo &"diff {masterPath} -> {score*100:0.3f} %"
 
 block:
   let ctx = newContext(newImage(300, 160))
