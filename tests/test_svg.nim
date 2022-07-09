@@ -1,4 +1,4 @@
-import pixie, pixie/fileformats/svg, strformat, utils
+import pixie, pixie/fileformats/svg, strformat, xrays
 
 const files = [
   "line01",
@@ -19,7 +19,7 @@ const files = [
 
 for file in files:
   let image = readImage(&"tests/fileformats/svg/{file}.svg")
-  image.diffVs(&"tests/fileformats/svg/masters/{file}.png")
+  image.xray(&"tests/fileformats/svg/masters/{file}.png")
 
 block:
   let
@@ -28,4 +28,4 @@ block:
       512, 512
     )
     image = newImage(svg)
-  image.diffVs(&"tests/fileformats/svg/masters/accessibility-outline.png")
+  image.xray(&"tests/fileformats/svg/masters/accessibility-outline.png")

@@ -1,4 +1,4 @@
-import chroma, pixie, utils
+import chroma, pixie, xrays
 
 block:
   let ctx = newContext(newImage(300, 160))
@@ -17,7 +17,7 @@ block:
 
   ctx.clearRect(10, 10, 120, 100)
 
-  ctx.image.diffVs("tests/contexts/clearRect_1.png")
+  ctx.image.xray("tests/contexts/clearRect_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -34,7 +34,7 @@ block:
   ctx.lineTo(120, 120)
   ctx.stroke()
 
-  ctx.image.diffVs("tests/contexts/beginPath_1.png")
+  ctx.image.xray("tests/contexts/beginPath_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -46,7 +46,7 @@ block:
   ctx.lineTo(280, 120)
   ctx.stroke()
 
-  ctx.image.diffVs("tests/contexts/moveTo_1.png")
+  ctx.image.xray("tests/contexts/moveTo_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -63,7 +63,7 @@ block:
   ctx.fillStyle = "green"
   ctx.fill(region, EvenOdd)
 
-  ctx.image.diffVs("tests/contexts/fill_1.png")
+  ctx.image.xray("tests/contexts/fill_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -71,7 +71,7 @@ block:
   ctx.rect(10, 10, 150, 100)
   ctx.stroke()
 
-  ctx.image.diffVs("tests/contexts/stroke_1.png")
+  ctx.image.xray("tests/contexts/stroke_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -94,7 +94,7 @@ block:
   ctx.lineTo(280, 140)
   ctx.stroke()
 
-  ctx.image.diffVs("tests/contexts/stroke_2.png")
+  ctx.image.xray("tests/contexts/stroke_2.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -112,7 +112,7 @@ block:
   ctx.stroke()
   ctx.fill()
 
-  ctx.image.diffVs("tests/contexts/stroke_3.png")
+  ctx.image.xray("tests/contexts/stroke_3.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -124,7 +124,7 @@ block:
   ctx.closePath()
   ctx.stroke()
 
-  ctx.image.diffVs("tests/contexts/closePath_1.png")
+  ctx.image.xray("tests/contexts/closePath_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -140,7 +140,7 @@ block:
   ctx.bezierCurveTo(cp1, cp2, to)
   ctx.stroke()
 
-  ctx.image.diffVs("tests/contexts/bezierCurveTo_1.png")
+  ctx.image.xray("tests/contexts/bezierCurveTo_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -150,7 +150,7 @@ block:
   ctx.bezierCurveTo(120, 160, 180, 10, 220, 140)
   ctx.stroke()
 
-  ctx.image.diffVs("tests/contexts/bezierCurveTo_2.png")
+  ctx.image.xray("tests/contexts/bezierCurveTo_2.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -159,7 +159,7 @@ block:
   ctx.quadraticCurveTo(230, 30, 50, 100)
   ctx.stroke()
 
-  ctx.image.diffVs("tests/contexts/quadracticCurveTo_1.png")
+  ctx.image.xray("tests/contexts/quadracticCurveTo_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -169,7 +169,7 @@ block:
   ctx.quadraticCurveTo(230, 150, 250, 20)
   ctx.stroke()
 
-  ctx.image.diffVs("tests/contexts/quadracticCurveTo_2.png")
+  ctx.image.xray("tests/contexts/quadracticCurveTo_2.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -178,7 +178,7 @@ block:
   ctx.ellipse(100, 75, 75, 50)
   ctx.stroke()
 
-  ctx.image.diffVs("tests/contexts/ellipse_1.png")
+  ctx.image.xray("tests/contexts/ellipse_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -186,7 +186,7 @@ block:
   ctx.strokeStyle = "green"
   ctx.strokeRect(20, 10, 160, 100)
 
-  ctx.image.diffVs("tests/contexts/strokeRect_1.png")
+  ctx.image.xray("tests/contexts/strokeRect_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -196,7 +196,7 @@ block:
   ctx.strokeStyle = "#38f"
   ctx.strokeRect(30, 30, 160, 90)
 
-  ctx.image.diffVs("tests/contexts/strokeRect_2.png")
+  ctx.image.xray("tests/contexts/strokeRect_2.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -204,7 +204,7 @@ block:
   ctx.setTransform(mat3(1, 0.2, 0, 0.8, 1, 0, 0, 0, 1))
   ctx.fillRect(0, 0, 100, 100)
 
-  ctx.image.diffVs("tests/contexts/setTransform_1.png")
+  ctx.image.xray("tests/contexts/setTransform_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -212,7 +212,7 @@ block:
   ctx.setTransform(mat3(1, 0.2, 0, 0.8, 1, 0, 0, 0, 1))
   ctx.fillRect(0, 0, 100, 100)
 
-  ctx.image.diffVs("tests/contexts/resetTransform_1.png")
+  ctx.image.xray("tests/contexts/resetTransform_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -220,7 +220,7 @@ block:
   ctx.rotate(45 * PI / 180)
   ctx.fillRect(60, 0, 100, 30)
 
-  ctx.image.diffVs("tests/contexts/resetTransform_1.png")
+  ctx.image.xray("tests/contexts/resetTransform_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -235,7 +235,7 @@ block:
   ctx.fillRect(40, 40, 50, 20)
   ctx.fillRect(40, 90, 50, 20)
 
-  ctx.image.diffVs("tests/contexts/resetTransform_2.png")
+  ctx.image.xray("tests/contexts/resetTransform_2.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -249,7 +249,7 @@ block:
   ctx.fillStyle = "gray"
   ctx.fillRect(0, 0, 80, 80)
 
-  ctx.image.diffVs("tests/contexts/translate_1.png")
+  ctx.image.xray("tests/contexts/translate_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -263,7 +263,7 @@ block:
   ctx.fillStyle = "gray"
   ctx.fillRect(10, 10, 8, 20)
 
-  ctx.image.diffVs("tests/contexts/scale_1.png")
+  ctx.image.xray("tests/contexts/scale_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -275,7 +275,7 @@ block:
   ctx.fillStyle = "red"
   ctx.fillRect(100, 0, 80, 20)
 
-  ctx.image.diffVs("tests/contexts/rotate_1.png")
+  ctx.image.xray("tests/contexts/rotate_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -288,7 +288,7 @@ block:
 
   ctx.fillText("Hello world", 50, 90)
 
-  ctx.image.diffVs("tests/contexts/fillText_1.png")
+  ctx.image.xray("tests/contexts/fillText_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -298,7 +298,7 @@ block:
 
   ctx.strokeText("Hello world", 50, 90)
 
-  ctx.image.diffVs("tests/contexts/strokeText_1.png")
+  ctx.image.xray("tests/contexts/strokeText_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -312,7 +312,7 @@ block:
 
   ctx.fillRect(150, 40, 100, 100)
 
-  ctx.image.diffVs("tests/contexts/save_1.png")
+  ctx.image.xray("tests/contexts/save_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -326,7 +326,7 @@ block:
   ctx.fillStyle = "orange"
   ctx.fillRect(0, 0, 100, 100)
 
-  ctx.image.diffVs("tests/contexts/clip_1.png")
+  ctx.image.xray("tests/contexts/clip_1.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -343,7 +343,7 @@ block:
   ctx.fillStyle = "orange"
   ctx.fillRect(0, 0, 100, 100)
 
-  ctx.image.diffVs("tests/contexts/clip_1b.png")
+  ctx.image.xray("tests/contexts/clip_1b.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -364,7 +364,7 @@ block:
   ctx.fillStyle = "blue"
   ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
 
-  ctx.image.diffVs("tests/contexts/clip_1c.png")
+  ctx.image.xray("tests/contexts/clip_1c.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -385,7 +385,7 @@ block:
 
   ctx.restore()
 
-  ctx.image.diffVs("tests/contexts/clip_1d.png")
+  ctx.image.xray("tests/contexts/clip_1d.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -409,7 +409,7 @@ block:
   ctx.fillStyle = "blue"
   ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
 
-  ctx.image.diffVs("tests/contexts/clip_1e.png")
+  ctx.image.xray("tests/contexts/clip_1e.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -433,7 +433,7 @@ block:
 
   ctx.restore() # Pop the layer
 
-  ctx.image.diffVs("tests/contexts/clip_1f.png")
+  ctx.image.xray("tests/contexts/clip_1f.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -446,7 +446,7 @@ block:
   ctx.fillStyle = "blue"
   ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
 
-  ctx.image.diffVs("tests/contexts/clip_2.png")
+  ctx.image.xray("tests/contexts/clip_2.png")
 
 block:
   let image = newImage(300, 150)
@@ -464,7 +464,7 @@ block:
   ctx.fillStyle = "blue"
   ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
 
-  image.diffVs("tests/contexts/clip_3.png")
+  image.xray("tests/contexts/clip_3.png")
 
 block:
   let image = newImage(300, 150)
@@ -485,7 +485,7 @@ block:
 
   ctx.restore()
 
-  image.diffVs("tests/contexts/clip_text.png")
+  image.xray("tests/contexts/clip_text.png")
 
 block:
   let ctx = newContext(100, 100)
@@ -517,7 +517,7 @@ block:
   drawDashedLine(@[20.float32, 3, 3, 3, 3, 3, 3, 3])
   drawDashedLine(@[12.float32, 3, 3])
 
-  image.diffVs("tests/contexts/setLineDash_1.png")
+  image.xray("tests/contexts/setLineDash_1.png")
 
 block:
   let
@@ -534,7 +534,7 @@ block:
 
   ctx.fillRect(10, 10, 100, 100)
 
-  image.diffVs("tests/contexts/blendmode_1.png")
+  image.xray("tests/contexts/blendmode_1.png")
 
 block:
   let
@@ -551,7 +551,7 @@ block:
   ctx.fillStyle = "red"
   ctx.fillRect(50, 50, 100, 100)
 
-  image.diffVs("tests/contexts/globalAlpha_1.png")
+  image.xray("tests/contexts/globalAlpha_1.png")
 
 block:
   let
@@ -560,7 +560,7 @@ block:
     testImage = readImage("tests/images/pip1.png")
   ctx.drawImage(testImage, 0, 0)
   ctx.drawImage(testImage, 30, 30)
-  image.diffVs("tests/contexts/draw_image.png")
+  image.xray("tests/contexts/draw_image.png")
 
 block:
   let
@@ -570,7 +570,7 @@ block:
   ctx.translate(30, 30)
   ctx.drawImage(testImage, -30, -30)
   ctx.drawImage(testImage, 0, 0)
-  image.diffVs("tests/contexts/draw_image_translated.png")
+  image.xray("tests/contexts/draw_image_translated.png")
 
 block:
   let
@@ -581,7 +581,7 @@ block:
   ctx.drawImage(testImage, 0, 0)
   ctx.scale(0.25, 0.25)
   ctx.drawImage(testImage, 0, 0)
-  image.diffVs("tests/contexts/draw_image_scaled.png")
+  image.xray("tests/contexts/draw_image_scaled.png")
 
 block:
   let
@@ -589,7 +589,7 @@ block:
     ctx = newContext(image)
     testImage = readImage("tests/images/pip1.png")
   ctx.drawImage(testImage, 30, 30, 20, 20)
-  image.diffVs("tests/contexts/draw_image_self_scaled.png")
+  image.xray("tests/contexts/draw_image_self_scaled.png")
 
 block:
   let
@@ -597,7 +597,7 @@ block:
     ctx = newContext(image)
     rhino = readImage("tests/images/rhino.png")
   ctx.drawImage(rhino, 33, 71, 104, 124, 21, 20, 87, 104)
-  image.diffVs("tests/contexts/draw_image_rhino.png")
+  image.xray("tests/contexts/draw_image_rhino.png")
 
 block:
   let
@@ -605,7 +605,7 @@ block:
     ctx = newContext(image)
     rhino = readImage("tests/images/rhino.png")
   ctx.drawImage(rhino, rect(33, 71, 104, 124), rect(21, 20, 87, 104))
-  image.diffVs("tests/contexts/draw_image_rhino2.png")
+  image.xray("tests/contexts/draw_image_rhino2.png")
 
 block:
   let
@@ -643,7 +643,7 @@ block:
   ctx.fillStyle.color = color(0, 0, 1, 1)
   ctx.restore()
   ctx.fillRect(0, 0, ctx.image.width.float32, ctx.image.height.float32)
-  ctx.image.diffVs("tests/contexts/paintSaveRestore.png")
+  ctx.image.xray("tests/contexts/paintSaveRestore.png")
 
 block:
   # From https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/textBaseline
@@ -674,4 +674,4 @@ block:
     ctx.stroke()
     ctx.fillText("Abcdefghijklmnop (" & $baseline & ")", 0, y)
 
-  ctx.image.diffVs("tests/contexts/textBaseline_1.png")
+  ctx.image.xray("tests/contexts/textBaseline_1.png")

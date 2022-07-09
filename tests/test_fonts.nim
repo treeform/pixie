@@ -1,4 +1,4 @@
-import os, pixie, pixie/fileformats/png, strformat, unicode, utils
+import os, pixie, pixie/fileformats/png, strformat, unicode, xrays
 
 proc wh(image: Image): Vec2 =
   ## Return with and height as a size vector.
@@ -25,7 +25,7 @@ block:
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, "fill")
 
-  image.diffVs("tests/fonts/masters/image_fill.png")
+  image.xray("tests/fonts/masters/image_fill.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -34,7 +34,7 @@ block:
   image.fill(rgba(255, 255, 255, 255))
   image.strokeText(font, "stroke")
 
-  image.diffVs("tests/fonts/masters/image_stroke.png")
+  image.xray("tests/fonts/masters/image_stroke.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -42,7 +42,7 @@ block:
   let mask = newMask(200, 100)
   mask.fillText(font, "fill")
 
-  mask.diffVs("tests/fonts/masters/mask_fill.png")
+  mask.xray("tests/fonts/masters/mask_fill.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -50,7 +50,7 @@ block:
   let mask = newMask(200, 100)
   mask.strokeText(font, "stroke")
 
-  mask.diffVs("tests/fonts/masters/mask_stroke.png")
+  mask.xray("tests/fonts/masters/mask_stroke.png")
 
 block:
   # SVG Fonts have no masters
@@ -59,35 +59,35 @@ block:
     font.size = 48
     let mask = newMask(200, 100)
     mask.fillText(font, "Changa")
-    mask.diffVs("tests/fonts/svg_changa.png")
+    mask.xray("tests/fonts/svg_changa.png")
 
   block:
     var font = readFont("tests/fonts/DejaVuSans.svg")
     font.size = 48
     let mask = newMask(200, 100)
     mask.fillText(font, "Deja vu ")
-    mask.diffVs("tests/fonts/svg_dejavu.png")
+    mask.xray("tests/fonts/svg_dejavu.png")
 
   block:
     var font = readFont("tests/fonts/IBMPlexSans-Regular.svg")
     font.size = 48
     let mask = newMask(200, 100)
     mask.fillText(font, "IBM ")
-    mask.diffVs("tests/fonts/svg_ibm.png")
+    mask.xray("tests/fonts/svg_ibm.png")
 
   block:
     var font = readFont("tests/fonts/Moon-Bold.svg")
     font.size = 48
     let mask = newMask(200, 100)
     mask.fillText(font, "Moon ")
-    mask.diffVs("tests/fonts/svg_moon.png")
+    mask.xray("tests/fonts/svg_moon.png")
 
   block:
     var font = readFont("tests/fonts/Ubuntu.svg")
     font.size = 48
     let mask = newMask(200, 100)
     mask.fillText(font, "Ubuntu ")
-    mask.diffVs("tests/fonts/svg_ubuntu.png")
+    mask.xray("tests/fonts/svg_ubuntu.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -97,7 +97,7 @@ block:
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, "asdf")
 
-  image.diffVs("tests/fonts/masters/basic1.png")
+  image.xray("tests/fonts/masters/basic1.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -107,7 +107,7 @@ block:
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, "A cow")
 
-  image.diffVs("tests/fonts/masters/basic2.png")
+  image.xray("tests/fonts/masters/basic2.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -117,7 +117,7 @@ block:
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, "A bit of text HERE")
 
-  image.diffVs("tests/fonts/masters/basic3.png")
+  image.xray("tests/fonts/masters/basic3.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -128,7 +128,7 @@ block:
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, "Line height")
 
-  image.diffVs("tests/fonts/masters/basic4.png")
+  image.xray("tests/fonts/masters/basic4.png")
 
 block:
   var font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
@@ -138,7 +138,7 @@ block:
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, "Another font")
 
-  image.diffVs("tests/fonts/masters/basic5.png")
+  image.xray("tests/fonts/masters/basic5.png")
 
 block:
   var font = readFont("tests/fonts/Aclonica-Regular_1.ttf")
@@ -148,7 +148,7 @@ block:
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, "Different font")
 
-  image.diffVs("tests/fonts/masters/basic6.png")
+  image.xray("tests/fonts/masters/basic6.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -161,7 +161,7 @@ block:
     font, "Second line", translate(vec2(0, font.defaultLineHeight))
   )
 
-  image.diffVs("tests/fonts/masters/basic7.png")
+  image.xray("tests/fonts/masters/basic7.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -175,7 +175,7 @@ block:
     bounds = vec2(200, 0)
   )
 
-  image.diffVs("tests/fonts/masters/basic8.png")
+  image.xray("tests/fonts/masters/basic8.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -189,7 +189,7 @@ block:
     bounds = vec2(100, 0)
   )
 
-  image.diffVs("tests/fonts/masters/basic8b.png")
+  image.xray("tests/fonts/masters/basic8b.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -203,7 +203,7 @@ block:
     bounds = vec2(200, 0)
   )
 
-  image.diffVs("tests/fonts/masters/basic9.png")
+  image.xray("tests/fonts/masters/basic9.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -218,7 +218,7 @@ block:
     hAlign = RightAlign
   )
 
-  image.diffVs("tests/fonts/masters/basic10.png")
+  image.xray("tests/fonts/masters/basic10.png")
 
 const
   paragraph = "ShehadcometotheconclusionthatyoucouldtellalotaboutapersonbytheirearsThewaytheystuckoutandthesizeoftheearlobescouldgiveyou"
@@ -241,7 +241,7 @@ block:
     )
 
     let name = if i > 0: &"paragraph1_{i + 1}" else: "paragraph1"
-    image.diffVs(&"tests/fonts/masters/{name}.png")
+    image.xray(&"tests/fonts/masters/{name}.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -259,7 +259,7 @@ block:
     )
 
     let name = if i > 0: &"paragraph1_nokern_{i + 1}" else: "paragraph1_nokern"
-    image.diffVs(&"tests/fonts/masters/{name}.png")
+    image.xray(&"tests/fonts/masters/{name}.png")
 
 block:
   var font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
@@ -276,7 +276,7 @@ block:
     )
 
     let name = if i > 0: &"paragraph2_{i + 1}" else: "paragraph2"
-    image.diffVs(&"tests/fonts/masters/{name}.png")
+    image.xray(&"tests/fonts/masters/{name}.png")
 
 block:
   var font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
@@ -294,7 +294,7 @@ block:
     )
 
     let name = if i > 0: &"paragraph2_nokern_{i + 1}" else: "paragraph2_nokern"
-    image.diffVs(&"tests/fonts/masters/{name}.png")
+    image.xray(&"tests/fonts/masters/{name}.png")
 
 block:
   var font = readFont("tests/fonts/IBMPlexSans-Regular_2.ttf")
@@ -311,7 +311,7 @@ block:
     )
 
     let name = if i > 0: &"paragraph3_{i + 1}" else: "paragraph3"
-    image.diffVs(&"tests/fonts/masters/{name}.png")
+    image.xray(&"tests/fonts/masters/{name}.png")
 
 block:
   var font = readFont("tests/fonts/IBMPlexSans-Regular_2.ttf")
@@ -329,7 +329,7 @@ block:
     )
 
     let name = if i > 0: &"paragraph3_nokern_{i + 1}" else: "paragraph3_nokern"
-    image.diffVs(&"tests/fonts/masters/{name}.png")
+    image.xray(&"tests/fonts/masters/{name}.png")
 
 block:
   var font = readFont("tests/fonts/NotoSans-Regular_4.ttf")
@@ -346,7 +346,7 @@ block:
     )
 
     let name = if i > 0: &"paragraph4_{i + 1}" else: "paragraph4"
-    image.diffVs(&"tests/fonts/masters/{name}.png")
+    image.xray(&"tests/fonts/masters/{name}.png")
 
 block:
   var font = readFont("tests/fonts/NotoSans-Regular_4.ttf")
@@ -364,7 +364,7 @@ block:
     )
 
     let name = if i > 0: &"paragraph4_nokern_{i + 1}" else: "paragraph4_nokern"
-    image.diffVs(&"tests/fonts/masters/{name}.png")
+    image.xray(&"tests/fonts/masters/{name}.png")
 
 block:
   var font = readFont("tests/fonts/Pacifico-Regular_4.ttf")
@@ -381,7 +381,7 @@ block:
     )
 
     let name = if i > 0: &"paragraph5_{i + 1}" else: "paragraph5"
-    image.diffVs(&"tests/fonts/masters/{name}.png")
+    image.xray(&"tests/fonts/masters/{name}.png")
 
 block:
   var font = readFont("tests/fonts/Pacifico-Regular_4.ttf")
@@ -399,7 +399,7 @@ block:
     )
 
     let name = if i > 0: &"paragraph5_nokern_{i + 1}" else: "paragraph5_nokern"
-    image.diffVs(&"tests/fonts/masters/{name}.png")
+    image.xray(&"tests/fonts/masters/{name}.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -413,7 +413,7 @@ block:
     bounds = image.wh
   )
 
-  image.diffVs("tests/fonts/masters/huge1.png")
+  image.xray("tests/fonts/masters/huge1.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -428,7 +428,7 @@ block:
     bounds = image.wh
   )
 
-  image.diffVs("tests/fonts/masters/huge1_nokern.png")
+  image.xray("tests/fonts/masters/huge1_nokern.png")
 
 block:
   var font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
@@ -442,7 +442,7 @@ block:
     bounds = image.wh
   )
 
-  image.diffVs("tests/fonts/masters/huge2.png")
+  image.xray("tests/fonts/masters/huge2.png")
 
 block:
   var font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
@@ -457,7 +457,7 @@ block:
     bounds = image.wh
   )
 
-  image.diffVs("tests/fonts/masters/huge2_nokern.png")
+  image.xray("tests/fonts/masters/huge2_nokern.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -471,7 +471,7 @@ block:
     bounds = image.wh
   )
 
-  image.diffVs("tests/fonts/masters/huge3.png")
+  image.xray("tests/fonts/masters/huge3.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -486,7 +486,7 @@ block:
     bounds = image.wh
   )
 
-  image.diffVs("tests/fonts/masters/huge3_nokern.png")
+  image.xray("tests/fonts/masters/huge3_nokern.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -500,7 +500,7 @@ block:
     bounds = image.wh
   )
 
-  image.diffVs("tests/fonts/masters/pairs1.png")
+  image.xray("tests/fonts/masters/pairs1.png")
 
 block:
   var font = readFont("tests/fonts/Ubuntu-Regular_1.ttf")
@@ -514,7 +514,7 @@ block:
     bounds = image.wh
   )
 
-  image.diffVs("tests/fonts/masters/pairs2.png")
+  image.xray("tests/fonts/masters/pairs2.png")
 
 block:
   var font = readFont("tests/fonts/IBMPlexSans-Regular_2.ttf")
@@ -528,7 +528,7 @@ block:
     bounds = image.wh
   )
 
-  image.diffVs("tests/fonts/masters/pairs3.png")
+  image.xray("tests/fonts/masters/pairs3.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -548,7 +548,7 @@ Seventh line""",
     bounds = image.wh
   )
 
-  image.diffVs("tests/fonts/masters/lines1.png")
+  image.xray("tests/fonts/masters/lines1.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -567,7 +567,7 @@ Fifth line""",
     bounds = image.wh
   )
 
-  image.diffVs("tests/fonts/masters/lines2.png")
+  image.xray("tests/fonts/masters/lines2.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -648,7 +648,7 @@ block:
     vAlign = BottomAlign
   )
 
-  image.diffVs("tests/fonts/masters/alignments.png")
+  image.xray("tests/fonts/masters/alignments.png")
 
 block:
   var font = readFont("tests/fonts/IBMPlexSans-Regular_2.ttf")
@@ -667,7 +667,7 @@ block:
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, "Text")
 
-  image.diffVs("tests/fonts/masters/image_paint_fill.png")
+  image.xray("tests/fonts/masters/image_paint_fill.png")
 
 block:
   var font1 = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -692,14 +692,14 @@ block:
 
   image.fillText(arrangement)
 
-  image.diffVs("tests/fonts/masters/spans1.png")
+  image.xray("tests/fonts/masters/spans1.png")
 
   let ctx = newContext(image)
   ctx.fillStyle = rgba(127, 127, 127, 127)
   for i, rect in arrangement.selectionRects:
     ctx.fillRect(rect)
 
-  image.diffVs("tests/fonts/masters/selection_rects1.png")
+  image.xray("tests/fonts/masters/selection_rects1.png")
 
 block:
   var font1 = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -724,14 +724,14 @@ block:
 
   image.fillText(arrangement)
 
-  image.diffVs("tests/fonts/masters/spans2.png")
+  image.xray("tests/fonts/masters/spans2.png")
 
   let ctx = newContext(image)
   ctx.fillStyle = rgba(127, 127, 127, 127)
   for i, rect in arrangement.selectionRects:
     ctx.fillRect(rect)
 
-  image.diffVs("tests/fonts/masters/selection_rects2.png")
+  image.xray("tests/fonts/masters/selection_rects2.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -751,7 +751,7 @@ block:
   for i, rect in arrangement.selectionRects:
     ctx.fillRect(rect)
 
-  image.diffVs("tests/fonts/masters/selection_rects3.png")
+  image.xray("tests/fonts/masters/selection_rects3.png")
 
 block:
   let
@@ -813,7 +813,7 @@ block:
 
   image.fillText(arrangement)
 
-  image.diffVs("tests/fonts/masters/spans4.png")
+  image.xray("tests/fonts/masters/spans4.png")
 
 block:
   let ubuntu = readTypeface("tests/fonts/Ubuntu-Regular_1.ttf")
@@ -847,7 +847,7 @@ block:
 
   image.fillText(arrangement, translate(vec2(20, 20)))
 
-  image.diffVs("tests/fonts/masters/spans5.png")
+  image.xray("tests/fonts/masters/spans5.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -862,7 +862,7 @@ block:
     bounds = vec2(200, 0)
   )
 
-  image.diffVs("tests/fonts/masters/underline1.png")
+  image.xray("tests/fonts/masters/underline1.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -878,7 +878,7 @@ block:
     bounds = vec2(200, 0)
   )
 
-  image.diffVs("tests/fonts/masters/underline2.png")
+  image.xray("tests/fonts/masters/underline2.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -893,7 +893,7 @@ block:
     bounds = vec2(200, 0)
   )
 
-  image.diffVs("tests/fonts/masters/underline3.png")
+  image.xray("tests/fonts/masters/underline3.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -908,7 +908,7 @@ block:
     bounds = vec2(200, 0)
   )
 
-  image.diffVs("tests/fonts/masters/strikethrough1.png")
+  image.xray("tests/fonts/masters/strikethrough1.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -924,7 +924,7 @@ block:
     bounds = vec2(200, 0)
   )
 
-  image.diffVs("tests/fonts/masters/strikethrough2.png")
+  image.xray("tests/fonts/masters/strikethrough2.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -939,7 +939,7 @@ block:
     bounds = vec2(200, 0)
   )
 
-  image.diffVs("tests/fonts/masters/strikethrough3.png")
+  image.xray("tests/fonts/masters/strikethrough3.png")
 
 block:
   let ubuntu = readTypeface("tests/fonts/Ubuntu-Regular_1.ttf")
@@ -986,7 +986,7 @@ block:
 
   image.fillText(arrangement, translate(vec2(20, 20)))
 
-  image.diffVs("tests/fonts/masters/spans6.png")
+  image.xray("tests/fonts/masters/spans6.png")
 
 block:
 
@@ -1023,7 +1023,7 @@ block:
   # Enable this to show how text is drawing directly
   # image.fillText(arrangement, translate(vec2(40, 170)))
 
-  image.diffVs("tests/fonts/masters/spans7.png")
+  image.xray("tests/fonts/masters/spans7.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
@@ -1043,7 +1043,7 @@ block:
     bounds = vec2(200, 0)
   )
 
-  image.diffVs("tests/fonts/masters/paints1.png")
+  image.xray("tests/fonts/masters/paints1.png")
 
 block:
   var typeface = readTypeface("tests/fonts/Roboto-Regular_1.ttf")
@@ -1056,7 +1056,7 @@ block:
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, "Grumpy wizards make toxic brew for the evil Queen and Jack.")
 
-  image.diffVs("tests/fonts/masters/cff.png")
+  image.xray("tests/fonts/masters/cff.png")
 
 block:
   var font = readFont("tests/fonts/NotoSansJP-Regular.ttf")
@@ -1065,7 +1065,7 @@ block:
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, "仰コソ会票カク帰了ノ終準港みせス議徳モチタ提請ルまつ力路お")
 
-  image.diffVs("tests/fonts/masters/cff_jp.png")
+  image.xray("tests/fonts/masters/cff_jp.png")
 
 block:
   var font = readFont("tests/fonts/Inter-Regular.ttf")
@@ -1075,7 +1075,7 @@ block:
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, "Grumpy wizards make toxic brew for the evil Queen and Jack.")
 
-  image.diffVs("tests/fonts/masters/cff_underline.png")
+  image.xray("tests/fonts/masters/cff_underline.png")
 
 block:
   var font = readFont("tests/fonts/Inter-Regular.ttf")
@@ -1085,7 +1085,7 @@ block:
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, "Grumpy wizards make toxic brew for the evil Queen and Jack.")
 
-  image.diffVs("tests/fonts/masters/cff_strikethrough.png")
+  image.xray("tests/fonts/masters/cff_strikethrough.png")
 
 block:
   var font = readFont("tests/fonts/Inter-Regular.ttf")
@@ -1096,7 +1096,7 @@ block:
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, "Grumpy ウィザード make 有毒な醸造 for the 悪い女王 and Jack.")
 
-  image.diffVs("tests/fonts/masters/fallback.png")
+  image.xray("tests/fonts/masters/fallback.png")
 
 block:
   let
@@ -1119,7 +1119,7 @@ block:
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, "Grumpy ウィザード make 有毒な醸造 for the 悪い女王 and Jack.")
 
-  image.diffVs("tests/fonts/masters/fallback2.png")
+  image.xray("tests/fonts/masters/fallback2.png")
 
 block:
   var font = readFont("tests/fonts/Inter-Regular.ttf")
@@ -1129,7 +1129,7 @@ block:
   image.fill(rgba(255, 255, 255, 255))
   image.fillText(font, "This[]Advance!")
 
-  image.diffVs("tests/fonts/masters/tofu_advance.png")
+  image.xray("tests/fonts/masters/tofu_advance.png")
 
 block:
   let image = newImage(200, 200)
@@ -1187,7 +1187,7 @@ block:
       transform = translate(vec2(0, 60))
   )
 
-  image.diffVs("tests/fonts/masters/customlineheight.png")
+  image.xray("tests/fonts/masters/customlineheight.png")
 
 block:
   var font = readTypefaces("tests/fonts/PTSans.ttc")[0].newFont

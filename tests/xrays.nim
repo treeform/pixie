@@ -9,27 +9,18 @@ proc makeDirs*(dirs: string) =
       createDir(path)
     path.add "/"
 
-proc diffVs*(image: Image, masterPath: string) =
+proc xray*(image: Image, masterPath: string) =
   let
-    master = readImage(masterPath)
-    (score, xRay) = diff(image, master)
     imagePath = "tmp/generated/" & masterPath
     xRayPath = "tmp/xray/" & masterPath
   makeDirs(imagePath.splitPath.head)
   makeDirs(xRayPath.splitPath.head)
   image.writeFile(imagePath)
+  let
+    master = readImage(masterPath)
+    (score, xRay) = diff(image, master)
   xRay.writeFile(xRayPath)
   echo &"diff {masterPath} -> {score:0.6f}"
 
-proc diffVs*(mask: Mask, masterPath: string) =
-  let
-    master = readImage(masterPath)
-    image = mask.newImage
-    (score, xRay) = diff(image, master)
-    imagePath = "tmp/generated/" & masterPath
-    xRayPath = "tmp/xray/" & masterPath
-  makeDirs(imagePath.splitPath.head)
-  makeDirs(xRayPath.splitPath.head)
-  image.writeFile(imagePath)
-  xRay.writeFile(xRayPath)
-  echo &"diff {masterPath} -> {score:0.6f}"
+proc xray*(mask: Mask, masterPath: string) =
+  mask.newImage.xray(masterPath)
