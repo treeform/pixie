@@ -1,12 +1,12 @@
-import pixie, strformat
+import pixie, strformat, utils
 
 proc doDiff(rendered: Image, name: string) =
-  rendered.writeFile(&"tests/images/rendered/{name}.png")
+  rendered.diffVs(&"tests/images/rendered/{name}.png")
   let
     master = readImage(&"tests/images/masters/{name}.png")
     (diffScore, diffImage) = diff(master, rendered)
   echo &"{name} score: {diffScore}"
-  diffImage.writeFile(&"tests/images/diffs/{name}.png")
+  diffImage.diffVs(&"tests/images/diffs/{name}.png")
 
 block:
   let
@@ -16,7 +16,7 @@ block:
   b.fill(rgba(0, 255, 0, 255))
 
   a.draw(b, translate(vec2(250, 250)))
-  a.writeFile("tests/images/rotate0.png")
+  a.diffVs("tests/images/rotate0.png")
 
 block:
   let
@@ -26,7 +26,7 @@ block:
   b.fill(rgba(0, 255, 0, 255))
 
   a.draw(b, translate(vec2(250, 250)) * rotate(90 * PI.float32 / 180))
-  a.writeFile("tests/images/rotate90.png")
+  a.diffVs("tests/images/rotate90.png")
 
 block:
   let
@@ -36,7 +36,7 @@ block:
   b.fill(rgba(0, 255, 0, 255))
 
   a.draw(b, translate(vec2(250, 250)) * rotate(180 * PI.float32 / 180))
-  a.writeFile("tests/images/rotate180.png")
+  a.diffVs("tests/images/rotate180.png")
 
 block:
   let
@@ -46,7 +46,7 @@ block:
   b.fill(rgba(0, 255, 0, 255))
 
   a.draw(b, translate(vec2(250, 250)) * rotate(270 * PI.float32 / 180))
-  a.writeFile("tests/images/rotate270.png")
+  a.diffVs("tests/images/rotate270.png")
 
 block:
   let
@@ -56,14 +56,14 @@ block:
   b.fill(rgba(0, 255, 0, 255))
 
   a.draw(b, translate(vec2(250, 250)) * rotate(360 * PI.float32 / 180))
-  a.writeFile("tests/images/rotate360.png")
+  a.diffVs("tests/images/rotate360.png")
 
 block:
   let ctx = newContext(100, 100)
   ctx.fillStyle = rgba(255, 255, 0, 255)
   ctx.image.fill(rgba(0, 255, 255, 255))
   ctx.fillRect(rect(vec2(10, 10), vec2(30, 30)))
-  ctx.image.writeFile("tests/images/drawRect.png")
+  ctx.image.diffVs("tests/images/drawRect.png")
 
 block:
   let ctx = newContext(100, 100)
@@ -71,14 +71,14 @@ block:
   ctx.lineWidth = 10
   ctx.image.fill(rgba(0, 255, 255, 255))
   ctx.strokeRect(rect(vec2(10, 10), vec2(30, 30)))
-  ctx.image.writeFile("tests/images/strokeRect.png")
+  ctx.image.diffVs("tests/images/strokeRect.png")
 
 block:
   let ctx = newContext(100, 100)
   ctx.fillStyle = rgba(255, 255, 0, 255)
   ctx.image.fill(rgba(0, 255, 255, 255))
   ctx.fillRoundedRect(rect(vec2(10, 10), vec2(30, 30)), 10)
-  ctx.image.writeFile("tests/images/drawRoundedRect.png")
+  ctx.image.diffVs("tests/images/drawRoundedRect.png")
 
 block:
   let ctx = newContext(100, 100)
@@ -86,7 +86,7 @@ block:
   ctx.lineWidth = 10
   ctx.image.fill(rgba(0, 255, 255, 255))
   ctx.strokeRoundedRect(rect(vec2(10, 10), vec2(30, 30)), 10)
-  ctx.image.writeFile("tests/images/strokeRoundedRect.png")
+  ctx.image.diffVs("tests/images/strokeRoundedRect.png")
 
 block:
   let ctx = newContext(100, 100)
@@ -94,14 +94,14 @@ block:
   ctx.lineWidth = 10
   ctx.image.fill(rgba(0, 255, 255, 255))
   ctx.strokeSegment(segment(vec2(10, 10), vec2(90, 90)))
-  ctx.image.writeFile("tests/images/drawSegment.png")
+  ctx.image.diffVs("tests/images/drawSegment.png")
 
 block:
   let ctx = newContext(100, 100)
   ctx.fillStyle = rgba(255, 255, 0, 255)
   ctx.image.fill(rgba(0, 255, 255, 255))
   ctx.fillEllipse(vec2(50, 50), 25, 25)
-  ctx.image.writeFile("tests/images/drawEllipse.png")
+  ctx.image.diffVs("tests/images/drawEllipse.png")
 
 block:
   let ctx = newContext(100, 100)
@@ -109,14 +109,14 @@ block:
   ctx.lineWidth = 10
   ctx.image.fill(rgba(0, 255, 255, 255))
   ctx.strokeEllipse(vec2(50, 50), 25, 25)
-  ctx.image.writeFile("tests/images/strokeEllipse.png")
+  ctx.image.diffVs("tests/images/strokeEllipse.png")
 
 block:
   let ctx = newContext(100, 100)
   ctx.fillStyle = rgba(255, 255, 0, 255)
   ctx.image.fill(rgba(0, 255, 255, 255))
   ctx.fillPolygon(vec2(50, 50), 30, 6)
-  ctx.image.writeFile("tests/images/drawPolygon.png")
+  ctx.image.diffVs("tests/images/drawPolygon.png")
 
 block:
   let ctx = newContext(100, 100)
@@ -124,7 +124,7 @@ block:
   ctx.lineWidth = 10
   ctx.image.fill(rgba(0, 255, 255, 255))
   ctx.strokePolygon(vec2(50, 50), 30, 6)
-  ctx.image.writeFile("tests/images/strokePolygon.png")
+  ctx.image.diffVs("tests/images/strokePolygon.png")
 
 block:
   let
@@ -134,7 +134,7 @@ block:
   b.fill(rgba(0, 255, 0, 255))
 
   a.draw(b, translate(vec2(250, 250)) * scale(vec2(0.5, 0.5)))
-  a.writeFile("tests/images/scaleHalf.png")
+  a.diffVs("tests/images/scaleHalf.png")
 
 block:
   let
@@ -286,7 +286,7 @@ block:
   strokeImage.strokePath(pathStr, color(1, 1, 1, 1), strokeWidth = 4)
   image.draw(strokeImage)
 
-  image.writeFile("tests/images/fillOptimization.png")
+  image.diffVs("tests/images/fillOptimization.png")
   doAssert image[10, 10] == rgbx(255, 127, 63, 255)
 
 block:
@@ -314,4 +314,4 @@ block:
 
     a.draw(b, translate(translation))
 
-  a.writeFile("tests/images/fillOptimization2.png")
+  a.diffVs("tests/images/fillOptimization2.png")
