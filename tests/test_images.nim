@@ -1,4 +1,4 @@
-import chroma, pixie, pixie/internal, vmath
+import chroma, pixie, pixie/internal, vmath, utils
 
 block:
   let image = newImage(10, 10)
@@ -45,77 +45,77 @@ block:
 
   a.draw(b)
 
-  a.writeFile("tests/images/flipped1.png")
+  a.diffVs("tests/images/flipped1.png")
   a.flipVertical()
-  a.writeFile("tests/images/flipped2.png")
+  a.diffVs("tests/images/flipped2.png")
   a.flipHorizontal()
-  a.writeFile("tests/images/flipped3.png")
+  a.diffVs("tests/images/flipped3.png")
 
 block:
   let
     a = readImage("tests/images/flipped1.png")
     b = a.superImage(-10, 0, 20, 20)
-  b.writeFile("tests/images/superimage1.png")
+  b.diffVs("tests/images/superimage1.png")
 
 block:
   let
     a = readImage("tests/images/flipped1.png")
     b = a.superImage(-10, -10, 20, 20)
-  b.writeFile("tests/images/superimage2.png")
+  b.diffVs("tests/images/superimage2.png")
 
 block:
   let
     a = readImage("tests/images/flipped1.png")
     b = a.superImage(90, 0, 120, 120)
-  b.writeFile("tests/images/superimage3.png")
+  b.diffVs("tests/images/superimage3.png")
 
 block:
   let
     a = readImage("tests/images/flipped1.png")
     b = a.superImage(90, 90, 120, 120)
-  b.writeFile("tests/images/superimage4.png")
+  b.diffVs("tests/images/superimage4.png")
 
 block:
   let
     a = readImage("tests/images/flipped1.png")
     b = a.superImage(-10, -10, 120, 120)
-  b.writeFile("tests/images/superimage5.png")
+  b.diffVs("tests/images/superimage5.png")
 
 block:
   let
     a = readImage("tests/images/flipped1.png")
     b = a.superImage(45, 45, 20, 20)
-  b.writeFile("tests/images/superimage6.png")
+  b.diffVs("tests/images/superimage6.png")
 
 block:
   let
     a = readImage("tests/images/flipped1.png")
     b = a.minifyBy2()
-  b.writeFile("tests/images/minifiedBy2.png")
+  b.diffVs("tests/images/minifiedBy2.png")
 
 block:
   let
     a = readImage("tests/images/minifiedBy2.png")
     b = a.magnifyBy2()
-  b.writeFile("tests/images/magnifiedBy2.png")
+  b.diffVs("tests/images/magnifiedBy2.png")
 
 block:
   let
     a = readImage("tests/images/flipped1.png")
     b = a.minifyBy2(2)
-  b.writeFile("tests/images/minifiedBy4.png")
+  b.diffVs("tests/images/minifiedBy4.png")
 
 block:
   let
     a = readImage("tests/images/minifiedBy4.png")
     b = a.magnifyBy2(2)
-  b.writeFile("tests/images/magnifiedBy4.png")
+  b.diffVs("tests/images/magnifiedBy4.png")
 
 block:
   let
     a = readImage("tests/fileformats/png/mandrill.png")
     b = a.minifyBy2()
-  b.writeFile("tests/images/minifiedMandrill.png")
+  b.diffVs("tests/images/minifiedMandrill.png")
 
 block:
   let a = newImage(100, 100)
@@ -129,7 +129,7 @@ block:
   ctx.image.fill(rgba(0, 0, 0, 255))
   ctx.fillRect(rect(25, 25, 50, 50), )
   ctx.image.blur(20)
-  ctx.image.writeFile("tests/images/imageblur20.png")
+  ctx.image.diffVs("tests/images/imageblur20.png")
 
 block:
   let ctx = newContext(100, 100)
@@ -137,7 +137,7 @@ block:
   ctx.image.fill(rgba(0, 0, 0, 255))
   ctx.fillRect(rect(25, 25, 50, 50))
   ctx.image.blur(20, rgba(0, 0, 0, 255))
-  ctx.image.writeFile("tests/images/imageblur20oob.png")
+  ctx.image.diffVs("tests/images/imageblur20oob.png")
 
 block: # Test conversion between image and mask
   let
@@ -163,7 +163,7 @@ block:
   let image = newImage(100, 100)
   image.fillPath(p, rgba(255, 0, 0, 255))
 
-  newImage(newMask(image)).writeFile("tests/images/mask2image.png")
+  newImage(newMask(image)).diffVs("tests/images/mask2image.png")
 
 block:
   let image = newImage(100, 100)
