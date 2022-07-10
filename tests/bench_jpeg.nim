@@ -1,14 +1,19 @@
-import benchy, jpegsuite, pixie/fileformats/jpeg, stb_image/read as stbi, strformat
+import benchy, jpegsuite, pixie/fileformats/jpeg, stb_image/read as stbi,
+    strformat, os
 
 for file in jpegSuiteFiles:
   let data = readFile(file)
-  timeIt &"pixie jpeg {(data.len div 1024)}k decode":
+  var name = file.splitPath.tail
+  name.setLen(min(name.len, 22))
+  timeIt &"pixie {name} decode":
     discard decodeJpeg(data)
 
 block:
   for file in jpegSuiteFiles:
     let data = readFile(file)
-    timeIt &"stb_image jpeg {(data.len div 1024)}k decode":
+    var name = file.splitPath.tail
+    name.setLen(min(name.len, 22))
+    timeIt &"stb {name} decode":
       var width, height, channels: int
       discard loadFromMemory(
         cast[seq[byte]](data),
