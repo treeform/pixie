@@ -56,7 +56,6 @@ for (times, file) in jpegFiles:
     for i in 0 ..< times:
       discard decodeJpeg(data)
 
-
 # import stb_image/read as stbi
 # block:
 #   for file in jpegSuiteFiles:
