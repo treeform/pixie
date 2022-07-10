@@ -1,4 +1,4 @@
-import pixie
+import pixie, xrays
 
 block:
   let mask = newMask(100, 100)
@@ -34,13 +34,13 @@ block:
 
   doAssert minified.width == 50 and minified.height == 50
 
-  minified.writeFile("tests/masks/maskMinified.png")
+  minified.xray("tests/masks/maskMinified.png")
 
 block:
   let
     a = readImage("tests/masks/maskMinified.png")
     b = a.magnifyBy2()
-  b.writeFile("tests/masks/maskMagnified.png")
+  b.xray("tests/masks/maskMagnified.png")
 
 block:
   let image = newImage(100, 100)
@@ -53,7 +53,7 @@ block:
   mask.fillPath(path)
 
   image.draw(mask)
-  image.writeFile("tests/masks/circleMask.png")
+  image.xray("tests/masks/circleMask.png")
 
 block:
   let a = newMask(100, 100)
@@ -66,7 +66,7 @@ block:
   b.fillPath(path)
 
   a.draw(b)
-  a.writeFile("tests/masks/maskedMask.png")
+  a.xray("tests/masks/maskedMask.png")
 
 block:
   let a = newMask(100, 100)
@@ -79,7 +79,7 @@ block:
   b.fillPath(path, rgba(0, 0, 0, 255))
 
   a.draw(b)
-  a.writeFile("tests/masks/imageMaskedMask.png")
+  a.xray("tests/masks/imageMaskedMask.png")
 
 block:
   let path = newPath()
@@ -90,7 +90,7 @@ block:
 
   a.spread(10)
 
-  a.writeFile("tests/masks/spread.png")
+  a.xray("tests/masks/spread.png")
 
 block:
   let path = newPath()
@@ -101,7 +101,7 @@ block:
 
   a.spread(-5)
 
-  a.writeFile("tests/masks/negativeSpread.png")
+  a.xray("tests/masks/negativeSpread.png")
 
 block:
   let mask = newMask(100, 100)
@@ -112,7 +112,7 @@ block:
   mask.fillPath(path)
   mask.ceil()
 
-  mask.writeFile("tests/masks/circleMaskSharpened.png")
+  mask.xray("tests/masks/circleMaskSharpened.png")
 
 block:
   let path = newPath()
@@ -120,7 +120,7 @@ block:
 
   let mask = newMask(100, 100)
   mask.fillPath(path)
-  mask.writeFile("tests/masks/drawRect.png")
+  mask.xray("tests/masks/drawRect.png")
 
 block:
   let path = newPath()
@@ -128,7 +128,7 @@ block:
 
   let mask = newMask(100, 100)
   mask.strokePath(path, strokeWidth = 10)
-  mask.writeFile("tests/masks/strokeRect.png")
+  mask.xray("tests/masks/strokeRect.png")
 
 block:
   let path = newPath()
@@ -136,14 +136,14 @@ block:
 
   let mask = newMask(100, 100)
   mask.fillPath(path)
-  mask.writeFile("tests/masks/drawRoundedRect.png")
+  mask.xray("tests/masks/drawRoundedRect.png")
 
 block:
   let path = newPath()
   path.roundedRect(rect(vec2(10, 10), vec2(30, 30)), 10, 10, 10, 10)
   let mask = newMask(100, 100)
   mask.strokePath(path, strokeWidth = 10)
-  mask.writeFile("tests/masks/strokeRoundedRect.png")
+  mask.xray("tests/masks/strokeRoundedRect.png")
 
 block:
   let path = newPath()
@@ -152,7 +152,7 @@ block:
 
   let mask = newMask(100, 100)
   mask.strokePath(path, strokeWidth = 10)
-  mask.writeFile("tests/masks/drawSegment.png")
+  mask.xray("tests/masks/drawSegment.png")
 
 block:
   let path = newPath()
@@ -160,7 +160,7 @@ block:
 
   let mask = newMask(100, 100)
   mask.fillPath(path)
-  mask.writeFile("tests/masks/drawEllipse.png")
+  mask.xray("tests/masks/drawEllipse.png")
 
 block:
   let path = newPath()
@@ -168,7 +168,7 @@ block:
 
   let mask = newMask(100, 100)
   mask.strokePath(path, strokeWidth = 10)
-  mask.writeFile("tests/masks/strokeEllipse.png")
+  mask.xray("tests/masks/strokeEllipse.png")
 
 block:
   let path = newPath()
@@ -176,7 +176,7 @@ block:
 
   let mask = newMask(100, 100)
   mask.fillPath(path)
-  mask.writeFile("tests/masks/drawPolygon.png")
+  mask.xray("tests/masks/drawPolygon.png")
 
 block:
   let path = newPath()
@@ -184,7 +184,7 @@ block:
 
   let mask = newMask(100, 100)
   mask.strokepath(path, strokeWidth = 10)
-  mask.writeFile("tests/masks/strokePolygon.png")
+  mask.xray("tests/masks/strokePolygon.png")
 
 block:
   let path = newPath()
@@ -193,7 +193,7 @@ block:
   let mask = newMask(100, 100)
   mask.fillpath(path)
   mask.blur(20)
-  mask.writeFile("tests/images/maskblur20.png")
+  mask.xray("tests/images/maskblur20.png")
 
 block:
   let path = newPath()
@@ -204,7 +204,7 @@ block:
   mask.blur(25)
 
   let minified = mask.minifyBy2()
-  minified.writeFile("tests/masks/minifiedBlur.png")
+  minified.xray("tests/masks/minifiedBlur.png")
 
 block:
   let path = newPath()
@@ -214,4 +214,4 @@ block:
   mask.fillPath(path)
 
   let magnified = mask.magnifyBy2()
-  magnified.writeFile("tests/masks/drawPolygonMagnified.png")
+  magnified.xray("tests/masks/drawPolygonMagnified.png")

@@ -1,12 +1,4 @@
-import pixie, strformat
-
-proc doDiff(rendered: Image, name: string) =
-  rendered.writeFile(&"tests/images/rendered/{name}.png")
-  let
-    master = readImage(&"tests/images/masters/{name}.png")
-    (diffScore, diffImage) = diff(master, rendered)
-  echo &"{name} score: {diffScore}"
-  diffImage.writeFile(&"tests/images/diffs/{name}.png")
+import pixie, strformat, xrays
 
 block:
   let
@@ -16,7 +8,7 @@ block:
   b.fill(rgba(0, 255, 0, 255))
 
   a.draw(b, translate(vec2(250, 250)))
-  a.writeFile("tests/images/rotate0.png")
+  a.xray("tests/images/rotate0.png")
 
 block:
   let
@@ -26,7 +18,7 @@ block:
   b.fill(rgba(0, 255, 0, 255))
 
   a.draw(b, translate(vec2(250, 250)) * rotate(90 * PI.float32 / 180))
-  a.writeFile("tests/images/rotate90.png")
+  a.xray("tests/images/rotate90.png")
 
 block:
   let
@@ -36,7 +28,7 @@ block:
   b.fill(rgba(0, 255, 0, 255))
 
   a.draw(b, translate(vec2(250, 250)) * rotate(180 * PI.float32 / 180))
-  a.writeFile("tests/images/rotate180.png")
+  a.xray("tests/images/rotate180.png")
 
 block:
   let
@@ -46,7 +38,7 @@ block:
   b.fill(rgba(0, 255, 0, 255))
 
   a.draw(b, translate(vec2(250, 250)) * rotate(270 * PI.float32 / 180))
-  a.writeFile("tests/images/rotate270.png")
+  a.xray("tests/images/rotate270.png")
 
 block:
   let
@@ -56,14 +48,14 @@ block:
   b.fill(rgba(0, 255, 0, 255))
 
   a.draw(b, translate(vec2(250, 250)) * rotate(360 * PI.float32 / 180))
-  a.writeFile("tests/images/rotate360.png")
+  a.xray("tests/images/rotate360.png")
 
 block:
   let ctx = newContext(100, 100)
   ctx.fillStyle = rgba(255, 255, 0, 255)
   ctx.image.fill(rgba(0, 255, 255, 255))
   ctx.fillRect(rect(vec2(10, 10), vec2(30, 30)))
-  ctx.image.writeFile("tests/images/drawRect.png")
+  ctx.image.xray("tests/images/drawRect.png")
 
 block:
   let ctx = newContext(100, 100)
@@ -71,14 +63,14 @@ block:
   ctx.lineWidth = 10
   ctx.image.fill(rgba(0, 255, 255, 255))
   ctx.strokeRect(rect(vec2(10, 10), vec2(30, 30)))
-  ctx.image.writeFile("tests/images/strokeRect.png")
+  ctx.image.xray("tests/images/strokeRect.png")
 
 block:
   let ctx = newContext(100, 100)
   ctx.fillStyle = rgba(255, 255, 0, 255)
   ctx.image.fill(rgba(0, 255, 255, 255))
   ctx.fillRoundedRect(rect(vec2(10, 10), vec2(30, 30)), 10)
-  ctx.image.writeFile("tests/images/drawRoundedRect.png")
+  ctx.image.xray("tests/images/drawRoundedRect.png")
 
 block:
   let ctx = newContext(100, 100)
@@ -86,7 +78,7 @@ block:
   ctx.lineWidth = 10
   ctx.image.fill(rgba(0, 255, 255, 255))
   ctx.strokeRoundedRect(rect(vec2(10, 10), vec2(30, 30)), 10)
-  ctx.image.writeFile("tests/images/strokeRoundedRect.png")
+  ctx.image.xray("tests/images/strokeRoundedRect.png")
 
 block:
   let ctx = newContext(100, 100)
@@ -94,14 +86,14 @@ block:
   ctx.lineWidth = 10
   ctx.image.fill(rgba(0, 255, 255, 255))
   ctx.strokeSegment(segment(vec2(10, 10), vec2(90, 90)))
-  ctx.image.writeFile("tests/images/drawSegment.png")
+  ctx.image.xray("tests/images/drawSegment.png")
 
 block:
   let ctx = newContext(100, 100)
   ctx.fillStyle = rgba(255, 255, 0, 255)
   ctx.image.fill(rgba(0, 255, 255, 255))
   ctx.fillEllipse(vec2(50, 50), 25, 25)
-  ctx.image.writeFile("tests/images/drawEllipse.png")
+  ctx.image.xray("tests/images/drawEllipse.png")
 
 block:
   let ctx = newContext(100, 100)
@@ -109,14 +101,14 @@ block:
   ctx.lineWidth = 10
   ctx.image.fill(rgba(0, 255, 255, 255))
   ctx.strokeEllipse(vec2(50, 50), 25, 25)
-  ctx.image.writeFile("tests/images/strokeEllipse.png")
+  ctx.image.xray("tests/images/strokeEllipse.png")
 
 block:
   let ctx = newContext(100, 100)
   ctx.fillStyle = rgba(255, 255, 0, 255)
   ctx.image.fill(rgba(0, 255, 255, 255))
   ctx.fillPolygon(vec2(50, 50), 30, 6)
-  ctx.image.writeFile("tests/images/drawPolygon.png")
+  ctx.image.xray("tests/images/drawPolygon.png")
 
 block:
   let ctx = newContext(100, 100)
@@ -124,7 +116,7 @@ block:
   ctx.lineWidth = 10
   ctx.image.fill(rgba(0, 255, 255, 255))
   ctx.strokePolygon(vec2(50, 50), 30, 6)
-  ctx.image.writeFile("tests/images/strokePolygon.png")
+  ctx.image.xray("tests/images/strokePolygon.png")
 
 block:
   let
@@ -134,7 +126,7 @@ block:
   b.fill(rgba(0, 255, 0, 255))
 
   a.draw(b, translate(vec2(250, 250)) * scale(vec2(0.5, 0.5)))
-  a.writeFile("tests/images/scaleHalf.png")
+  a.xray("tests/images/scaleHalf.png")
 
 block:
   let
@@ -143,7 +135,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   b.fill(rgbx(0, 0, 0, 255))
   a.draw(b, translate(vec2(0.5, 0.5)))
-  doDiff(a, "smooth1")
+  a.xray("tests/images/masters/smooth1.png")
 
 block:
   let
@@ -152,7 +144,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   b.fill(rgbx(0, 0, 0, 255))
   a.draw(b, translate(vec2(0, 50)) * rotate(45.toRadians))
-  doDiff(a, "smooth2")
+  a.xray("tests/images/masters/smooth2.png")
 
 block:
   let
@@ -161,7 +153,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   b.fill(rgba(0, 0, 0, 255))
   a.draw(b, translate(vec2(25.2, 25)))
-  doDiff(a, "smooth3")
+  a.xray("tests/images/masters/smooth3.png")
 
 block:
   let
@@ -170,7 +162,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   b.fill(rgba(0, 0, 0, 255))
   a.draw(b, translate(vec2(25.2, 25.6)))
-  doDiff(a, "smooth4")
+  a.xray("tests/images/masters/smooth4.png")
 
 block:
   let
@@ -180,7 +172,7 @@ block:
   b.fill(rgbx(255, 0, 0, 255))
   let m = translate(vec2(50, 50)) * rotate(30.toRadians)
   a.draw(b, m)
-  doDiff(a, "smooth5")
+  a.xray("tests/images/masters/smooth5.png")
 
 block:
   let
@@ -189,7 +181,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   let m = translate(vec2(50, 50)) * rotate(30.toRadians)
   a.draw(b, m)
-  doDiff(a, "smooth6")
+  a.xray("tests/images/masters/smooth6.png")
 
 block:
   let
@@ -198,7 +190,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   let m = translate(vec2(50, 50)) * rotate(30.toRadians) * scale(vec2(0.1, 0.1))
   a.draw(b, m)
-  doDiff(a, "smooth7")
+  a.xray("tests/images/masters/smooth7.png")
 
 block:
   let
@@ -207,7 +199,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   let m = scale(vec2(2, 2))
   a.draw(b, m)
-  doDiff(a, "smooth8")
+  a.xray("tests/images/masters/smooth8.png")
 
 block:
   let
@@ -216,7 +208,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   let m = translate(vec2(1, 1)) * scale(vec2(2, 2))
   a.draw(b, m)
-  doDiff(a, "smooth9")
+  a.xray("tests/images/masters/smooth9.png")
 
 block:
   let
@@ -225,7 +217,7 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   let m = translate(vec2(0.5, 0.5)) * scale(vec2(2, 2))
   a.draw(b, m)
-  doDiff(a, "smooth10")
+  a.xray("tests/images/masters/smooth10.png")
 
 block:
   let
@@ -236,7 +228,7 @@ block:
     rotate(-15.toRadians) *
     scale(vec2(263.86/40, 263.86/40))
   a.draw(b, m)
-  doDiff(a, "smooth11")
+  a.xray("tests/images/masters/smooth11.png")
 
 block:
   let
@@ -248,7 +240,7 @@ block:
   a.draw(b, m * translate(vec2(-40, 0)))
   a.draw(b, m * translate(vec2(-40, -40)))
   a.draw(b, m * translate(vec2(0, -40)))
-  doDiff(a, "smooth12")
+  a.xray("tests/images/masters/smooth12.png")
 
 block:
   let
@@ -257,19 +249,19 @@ block:
   a.fill(rgba(255, 255, 255, 255))
   b.fill(rgba(0, 0, 0, 255))
   a.draw(b, scale(vec2(0.5, 0.5)))
-  doDiff(a, "minify_odd")
+  a.xray("tests/images/masters/minify_odd.png")
 
 block:
   let
     rock = readImage("tests/images/rock.png")
     minified = rock.minifyBy2()
-  doDiff(minified, "rock_minified")
+  minified.xray("tests/images/masters/rock_minified.png")
 
 block:
   let
     rock = readImage("tests/images/rock.png")
     minified = rock.minifyBy2(2)
-  doDiff(minified, "rock_minified2")
+  minified.xray("tests/images/masters/rock_minified2.png")
 
 block:
   let pathStr = """
@@ -286,7 +278,7 @@ block:
   strokeImage.strokePath(pathStr, color(1, 1, 1, 1), strokeWidth = 4)
   image.draw(strokeImage)
 
-  image.writeFile("tests/images/fillOptimization.png")
+  image.xray("tests/images/fillOptimization.png")
   doAssert image[10, 10] == rgbx(255, 127, 63, 255)
 
 block:
@@ -314,4 +306,4 @@ block:
 
     a.draw(b, translate(translation))
 
-  a.writeFile("tests/images/fillOptimization2.png")
+  a.xray("tests/images/fillOptimization2.png")

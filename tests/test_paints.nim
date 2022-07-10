@@ -1,4 +1,4 @@
-import chroma, pixie, vmath
+import chroma, pixie, vmath, xrays
 
 const heartShape = """
     M 10,30
@@ -14,7 +14,7 @@ block:
     heartShape,
     rgba(255, 0, 0, 255)
   )
-  image.writeFile("tests/paths/paintSolid.png")
+  image.xray("tests/paths/paintSolid.png")
 
 block:
   let paint = newPaint(ImagePaint)
@@ -23,7 +23,7 @@ block:
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/paths/paintImage.png")
+  image.xray("tests/paths/paintImage.png")
 
 block:
   let paint = newPaint(ImagePaint)
@@ -33,7 +33,7 @@ block:
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/paths/paintImageOpacity.png")
+  image.xray("tests/paths/paintImageOpacity.png")
 
 block:
   let paint = newPaint(TiledImagePaint)
@@ -42,7 +42,7 @@ block:
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/paths/paintImageTiled.png")
+  image.xray("tests/paths/paintImageTiled.png")
 
 block:
   let paint = newPaint(TiledImagePaint)
@@ -52,7 +52,7 @@ block:
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/paths/paintImageTiledOpacity.png")
+  image.xray("tests/paths/paintImageTiledOpacity.png")
 
 block:
   let paint = newPaint(LinearGradientPaint)
@@ -67,7 +67,7 @@ block:
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/paths/gradientLinear.png")
+  image.xray("tests/paths/gradientLinear.png")
 
 block:
   let paint = newPaint(LinearGradientPaint)
@@ -82,7 +82,7 @@ block:
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/paths/gradientLinear2.png")
+  image.xray("tests/paths/gradientLinear2.png")
 
 block:
   let paint = newPaint(RadialGradientPaint)
@@ -98,7 +98,7 @@ block:
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/paths/gradientRadial.png")
+  image.xray("tests/paths/gradientRadial.png")
 
 block:
   let paint = newPaint(AngularGradientPaint)
@@ -114,7 +114,7 @@ block:
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/paths/gradientAngular.png")
+  image.xray("tests/paths/gradientAngular.png")
 
 block:
   let paint = newPaint(AngularGradientPaint)
@@ -131,4 +131,4 @@ block:
 
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
-  image.writeFile("tests/paths/gradientAngularOpacity.png")
+  image.xray("tests/paths/gradientAngularOpacity.png")
