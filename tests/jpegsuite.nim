@@ -1,4 +1,3 @@
-
 const jpegSuiteFiles* = [
   "tests/fileformats/jpeg/masters/red.jpg",
   "tests/fileformats/jpeg/masters/green.jpg",
