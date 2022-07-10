@@ -29,6 +29,8 @@ timeIt "GradientLinear horizontal":
 # timeIt "GradientLinear radial":
 #   discard
 
+let image100 = newImage(100, 100)
+
 timeIt "GradientLinear angular":
   let paint = newPaint(AngularGradientPaint)
   paint.gradientHandlePositions = @[
@@ -40,4 +42,4 @@ timeIt "GradientLinear angular":
     ColorStop(color: color(1, 0, 0, 1), position: 0),
     ColorStop(color: color(1, 0, 0, 0.15625), position: 1.0),
   ]
-  image.fillGradient(paint)
+  image100.fillGradient(paint)
