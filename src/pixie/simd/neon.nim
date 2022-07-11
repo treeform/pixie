@@ -132,8 +132,8 @@ proc newImageNeon*(mask: Mask): Image {.simd.} =
     template doLane(lane: int) =
       let packed = vgetq_lane_u32(cast[uint32x4](alphas), lane)
       var unpacked = cast[uint8x16](vmovq_n_u32(packed))
-      unpacked = vzip1q_u8(vmovq_n_u8(0), unpacked)
-      unpacked = vzip1q_u8(vmovq_n_u8(0), unpacked)
+      unpacked = vzip1q_u8(unpacked, unpacked)
+      unpacked = vzip1q_u8(unpacked, unpacked)
       vst1q_u8(result.data[i + lane * 4].addr, unpacked)
     doLane(0)
     doLane(1)
