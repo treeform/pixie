@@ -84,3 +84,9 @@ proc snapToPixels*(rect: Rect): Rect {.raises: [].} =
   result.w = ceil(xMax) - result.x
   result.y = floor(yMin)
   result.h = ceil(yMax) - result.y
+
+converter toColor*(colorText: string): Color {.inline.} =
+  try:
+    result = parseHtmlColor(colorText)
+  except:
+    raise newException(PixieError, "Unable to parse color " & colorText)
