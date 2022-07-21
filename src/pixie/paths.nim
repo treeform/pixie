@@ -21,14 +21,9 @@ type
     Move, Line, HLine, VLine, Cubic, SCubic, Quad, TQuad, Arc,
     RMove, RLine, RHLine, RVLine, RCubic, RSCubic, RQuad, RTQuad, RArc
 
-  PathCommand = object
-    ## Binary version of an SVG command.
-    kind: PathCommandKind
-    numbers: seq[float32]
-
   Path* = ref object
     ## Used to hold paths and create paths.
-    commands: seq[PathCommand]
+    commands: seq[float32]
     start, at: Vec2 # Maintained by moveTo, lineTo, etc. Used by arcTo.
 
   SomePath* = Path | string
@@ -81,8 +76,11 @@ proc parameterCount(kind: PathCommandKind): int =
 
 proc `$`*(path: Path): string {.raises: [].} =
   ## Turn path int into a string.
-  for i, command in path.commands:
-    case command.kind
+  var i: int
+  while i < path.commands.len:
+    let kind = path.commands[i].PathCommandKind
+    inc i
+    case kind
     of Move: result.add "M"
     of Line: result.add "L"
     of HLine: result.add "H"
@@ -102,13 +100,15 @@ proc `$`*(path: Path): string {.raises: [].} =
     of RTQuad: result.add "t"
     of RArc: result.add "a"
     of Close: result.add "Z"
-    for j, number in command.numbers:
+    for _ in 0 ..< kind.parameterCount():
+      let number = path.commands[i]
       if floor(number) == number:
         result.add $number.int
       else:
         result.add $number
-      if i != path.commands.len - 1 or j != command.numbers.len - 1:
+      if i != path.commands.len - 1:
         result.add " "
+      inc i
 
 proc parsePath*(path: string): Path {.raises: [PixieError].} =
   ## Converts a SVG style path string into seq of commands.
@@ -140,7 +140,7 @@ proc parsePath*(path: string): Path {.raises: [PixieError].} =
       if paramCount == 0:
         if numbers.len != 0:
           raise newException(PixieError, "Invalid path, unexpected parameters")
-        result.commands.add(PathCommand(kind: kind))
+        result.commands.add(kind.float32)
       else:
         if numbers.len mod paramCount != 0:
           raise newException(
@@ -153,10 +153,9 @@ proc parsePath*(path: string): Path {.raises: [PixieError].} =
               kind = Line
             elif kind == RMove:
               kind = RLine
-          result.commands.add(PathCommand(
-            kind: kind,
-            numbers: numbers[batch * paramCount ..< (batch + 1) * paramCount]
-          ))
+          result.commands.add(kind.float32)
+          for i in 0 ..< paramCount:
+            result.commands.add(numbers[batch * paramCount + i])
         numbers.setLen(0)
 
     armed = true
@@ -261,65 +260,72 @@ proc transform*(path: Path, mat: Mat3) {.raises: [].} =
   if mat == mat3():
     return
 
-  if path.commands.len > 0 and path.commands[0].kind == RMove:
-    path.commands[0].kind = Move
+  if path.commands.len > 0 and path.commands[0] == RMove.float32:
+    path.commands[0] = Move.float32
 
-  for command in path.commands.mitems:
+  var i: int
+  # for command in path.commands.mitems:
+  while i < path.commands.len:
+    let kind = path.commands[i].PathCommandKind
+    inc i
+
     var mat = mat
-    if command.kind.isRelative():
+    if kind.isRelative():
       mat.pos = vec2(0)
 
-    case command.kind:
+    case kind:
     of Close:
       discard
     of Move, Line, RMove, RLine, TQuad, RTQuad:
-      var pos = vec2(command.numbers[0], command.numbers[1])
+      var pos = vec2(path.commands[i + 0], path.commands[i + 1])
       pos = mat * pos
-      command.numbers[0] = pos.x
-      command.numbers[1] = pos.y
+      path.commands[i + 0] = pos.x
+      path.commands[i + 1] = pos.y
     of HLine, RHLine:
-      var pos = vec2(command.numbers[0], 0)
+      var pos = vec2(path.commands[i + 0], 0)
       pos = mat * pos
-      command.numbers[0] = pos.x
+      path.commands[i + 0] = pos.x
     of VLine, RVLine:
-      var pos = vec2(0, command.numbers[0])
+      var pos = vec2(0, path.commands[i + 0])
       pos = mat * pos
-      command.numbers[0] = pos.y
+      path.commands[i + 0] = pos.y
     of Cubic, RCubic:
       var
-        ctrl1 = vec2(command.numbers[0], command.numbers[1])
-        ctrl2 = vec2(command.numbers[2], command.numbers[3])
-        to = vec2(command.numbers[4], command.numbers[5])
+        ctrl1 = vec2(path.commands[i + 0], path.commands[i + 1])
+        ctrl2 = vec2(path.commands[i + 2], path.commands[i + 3])
+        to = vec2(path.commands[i + 4], path.commands[i + 5])
       ctrl1 = mat * ctrl1
       ctrl2 = mat * ctrl2
       to = mat * to
-      command.numbers[0] = ctrl1.x
-      command.numbers[1] = ctrl1.y
-      command.numbers[2] = ctrl2.x
-      command.numbers[3] = ctrl2.y
-      command.numbers[4] = to.x
-      command.numbers[5] = to.y
+      path.commands[i + 0] = ctrl1.x
+      path.commands[i + 1] = ctrl1.y
+      path.commands[i + 2] = ctrl2.x
+      path.commands[i + 3] = ctrl2.y
+      path.commands[i + 4] = to.x
+      path.commands[i + 5] = to.y
     of SCubic, RSCubic, Quad, RQuad:
       var
-        ctrl = vec2(command.numbers[0], command.numbers[1])
-        to = vec2(command.numbers[2], command.numbers[3])
+        ctrl = vec2(path.commands[i + 0], path.commands[i + 1])
+        to = vec2(path.commands[i + 2], path.commands[i + 3])
       ctrl = mat * ctrl
       to = mat * to
-      command.numbers[0] = ctrl.x
-      command.numbers[1] = ctrl.y
-      command.numbers[2] = to.x
-      command.numbers[3] = to.y
+      path.commands[i + 0] = ctrl.x
+      path.commands[i + 1] = ctrl.y
+      path.commands[i + 2] = to.x
+      path.commands[i + 3] = to.y
     of Arc, RArc:
       var
-        radii = vec2(command.numbers[0], command.numbers[1])
-        to = vec2(command.numbers[5], command.numbers[6])
+        radii = vec2(path.commands[i + 0], path.commands[i + 1])
+        to = vec2(path.commands[i + 5], path.commands[i + 6])
       # Extract the scale from the matrix and only apply that to the radii
       radii = scale(vec2(mat[0, 0], mat[1, 1])) * radii
       to = mat * to
-      command.numbers[0] = radii.x
-      command.numbers[1] = radii.y
-      command.numbers[5] = to.x
-      command.numbers[6] = to.y
+      path.commands[i + 0] = radii.x
+      path.commands[i + 1] = radii.y
+      path.commands[i + 5] = to.x
+      path.commands[i + 6] = to.y
+
+    i += kind.parameterCount()
 
 proc addPath*(path: Path, other: Path) {.raises: [].} =
   ## Adds a path to the current path.
@@ -329,12 +335,12 @@ proc closePath*(path: Path) {.raises: [].} =
   ## Attempts to add a straight line from the current point to the start of
   ## the current sub-path. If the shape has already been closed or has only
   ## one point, this function does nothing.
-  path.commands.add(PathCommand(kind: Close))
+  path.commands.add(Close.float32)
   path.at = path.start
 
 proc moveTo*(path: Path, x, y: float32) {.raises: [].} =
   ## Begins a new sub-path at the point (x, y).
-  path.commands.add(PathCommand(kind: Move, numbers: @[x, y]))
+  path.commands.add(@[Move.float32, x, y])
   path.start = vec2(x, y)
   path.at = path.start
 
@@ -345,7 +351,7 @@ proc moveTo*(path: Path, v: Vec2) {.inline, raises: [].} =
 proc lineTo*(path: Path, x, y: float32) {.raises: [].} =
   ## Adds a straight line to the current sub-path by connecting the sub-path's
   ## last point to the specified (x, y) coordinates.
-  path.commands.add(PathCommand(kind: Line, numbers: @[x, y]))
+  path.commands.add(@[Line.float32, x, y])
   path.at = vec2(x, y)
 
 proc lineTo*(path: Path, v: Vec2) {.inline, raises: [].} =
@@ -358,10 +364,7 @@ proc bezierCurveTo*(path: Path, x1, y1, x2, y2, x3, y3: float32) {.raises: [].} 
   ## points: the first two are control points and the third one is the end
   ## point. The starting point is the latest point in the current path,
   ## which can be changed using moveTo() before creating the Bézier curve.
-  path.commands.add(PathCommand(
-    kind: Cubic,
-    numbers: @[x1, y1, x2, y2, x3, y3]
-  ))
+  path.commands.add(@[Cubic.float32, x1, y1, x2, y2, x3, y3])
   path.at = vec2(x3, y3)
 
 proc bezierCurveTo*(path: Path, ctrl1, ctrl2, to: Vec2) {.inline, raises: [].} =
@@ -377,10 +380,7 @@ proc quadraticCurveTo*(path: Path, x1, y1, x2, y2: float32) {.raises: [].} =
   ## point. The starting point is the latest point in the current path,
   ## which can be changed using moveTo() before creating the quadratic
   ## Bézier curve.
-  path.commands.add(PathCommand(
-    kind: Quad,
-    numbers: @[x1, y1, x2, y2]
-  ))
+  path.commands.add(@[Quad.float32, x1, y1, x2, y2])
   path.at = vec2(x2, y2)
 
 proc quadraticCurveTo*(path: Path, ctrl, to: Vec2) {.inline, raises: [].} =
@@ -400,12 +400,12 @@ proc ellipticalArcTo*(
 ) {.raises: [].} =
   ## Adds an elliptical arc to the current sub-path, using the given radius
   ## ratios, sweep flags, and end position.
-  path.commands.add(PathCommand(
-    kind: Arc,
-    numbers: @[
-      rx, ry, xAxisRotation, largeArcFlag.float32, sweepFlag.float32, x, y
-    ]
-  ))
+  path.commands.add(@[
+    Arc.float32,
+    rx, ry,
+    xAxisRotation, largeArcFlag.float32, sweepFlag.float32,
+    x, y
+  ])
   path.at = vec2(x, y)
 
 proc arc*(
@@ -878,49 +878,50 @@ proc commandsToShapes(
         t += step
         step = min(step * 2, 1 - t) # Optimistically attempt larger steps
 
-  for command in path.commands:
-    if command.numbers.len != command.kind.parameterCount():
-      raise newException(PixieError, "Invalid path")
+  var i: int
+  while i < path.commands.len:
+    let kind = path.commands[i].PathCommandKind
+    inc i
 
-    case command.kind:
+    case kind:
     of Move:
       if shape.len > 0:
         if closeSubpaths:
           shape.addSegment(at, start)
         result.add(shape)
         shape = newSeq[Vec2]()
-      at.x = command.numbers[0]
-      at.y = command.numbers[1]
+      at.x = path.commands[i + 0]
+      at.y = path.commands[i + 1]
       start = at
 
     of Line:
-      let to = vec2(command.numbers[0], command.numbers[1])
+      let to = vec2(path.commands[i + 0], path.commands[i + 1])
       shape.addSegment(at, to)
       at = to
 
     of HLine:
-      let to = vec2(command.numbers[0], at.y)
+      let to = vec2(path.commands[i + 0], at.y)
       shape.addSegment(at, to)
       at = to
 
     of VLine:
-      let to = vec2(at.x, command.numbers[0])
+      let to = vec2(at.x, path.commands[i + 0])
       shape.addSegment(at, to)
       at = to
 
     of Cubic:
       let
-        ctrl1 = vec2(command.numbers[0], command.numbers[1])
-        ctrl2 = vec2(command.numbers[2], command.numbers[3])
-        to = vec2(command.numbers[4], command.numbers[5])
+        ctrl1 = vec2(path.commands[i + 0], path.commands[i + 1])
+        ctrl2 = vec2(path.commands[i + 2], path.commands[i + 3])
+        to = vec2(path.commands[i + 4], path.commands[i + 5])
       shape.addCubic(at, ctrl1, ctrl2, to)
       at = to
       prevCtrl2 = ctrl2
 
     of SCubic:
       let
-        ctrl2 = vec2(command.numbers[0], command.numbers[1])
-        to = vec2(command.numbers[2], command.numbers[3])
+        ctrl2 = vec2(path.commands[i + 0], path.commands[i + 1])
+        to = vec2(path.commands[i + 2], path.commands[i + 3])
       if prevCommandKind in {Cubic, SCubic, RCubic, RSCubic}:
         let ctrl1 = at * 2 - prevCtrl2
         shape.addCubic(at, ctrl1, ctrl2, to)
@@ -931,15 +932,15 @@ proc commandsToShapes(
 
     of Quad:
       let
-        ctrl = vec2(command.numbers[0], command.numbers[1])
-        to = vec2(command.numbers[2], command.numbers[3])
+        ctrl = vec2(path.commands[i + 0], path.commands[i + 1])
+        to = vec2(path.commands[i + 2], path.commands[i + 3])
       shape.addQuadratic(at, ctrl, to)
       at = to
       prevCtrl = ctrl
 
     of TQuad:
       let
-        to = vec2(command.numbers[0], command.numbers[1])
+        to = vec2(path.commands[i + 0], path.commands[i + 1])
         ctrl =
           if prevCommandKind in {Quad, TQuad, RQuad, RTQuad}:
             at * 2 - prevCtrl
@@ -951,11 +952,11 @@ proc commandsToShapes(
 
     of Arc:
       let
-        radii = vec2(command.numbers[0], command.numbers[1])
-        rotation = command.numbers[2]
-        large = command.numbers[3] == 1
-        sweep = command.numbers[4] == 1
-        to = vec2(command.numbers[5], command.numbers[6])
+        radii = vec2(path.commands[i + 0], path.commands[i + 1])
+        rotation = path.commands[i + 2]
+        large = path.commands[i + 3] == 1
+        sweep = path.commands[i + 4] == 1
+        to = vec2(path.commands[i + 5], path.commands[i + 6])
       shape.addArc(at, radii, rotation, large, sweep, to)
       at = to
 
@@ -963,38 +964,38 @@ proc commandsToShapes(
       if shape.len > 0:
         result.add(shape)
         shape = newSeq[Vec2]()
-      at.x += command.numbers[0]
-      at.y += command.numbers[1]
+      at.x += path.commands[i + 0]
+      at.y += path.commands[i + 1]
       start = at
 
     of RLine:
-      let to = vec2(at.x + command.numbers[0], at.y + command.numbers[1])
+      let to = vec2(at.x + path.commands[i + 0], at.y + path.commands[i + 1])
       shape.addSegment(at, to)
       at = to
 
     of RHLine:
-      let to = vec2(at.x + command.numbers[0], at.y)
+      let to = vec2(at.x + path.commands[i + 0], at.y)
       shape.addSegment(at, to)
       at = to
 
     of RVLine:
-      let to = vec2(at.x, at.y + command.numbers[0])
+      let to = vec2(at.x, at.y + path.commands[i + 0])
       shape.addSegment(at, to)
       at = to
 
     of RCubic:
       let
-        ctrl1 = vec2(at.x + command.numbers[0], at.y + command.numbers[1])
-        ctrl2 = vec2(at.x + command.numbers[2], at.y + command.numbers[3])
-        to = vec2(at.x + command.numbers[4], at.y + command.numbers[5])
+        ctrl1 = vec2(at.x + path.commands[i + 0], at.y + path.commands[i + 1])
+        ctrl2 = vec2(at.x + path.commands[i + 2], at.y + path.commands[i + 3])
+        to = vec2(at.x + path.commands[i + 4], at.y + path.commands[i + 5])
       shape.addCubic(at, ctrl1, ctrl2, to)
       at = to
       prevCtrl2 = ctrl2
 
     of RSCubic:
       let
-        ctrl2 = vec2(at.x + command.numbers[0], at.y + command.numbers[1])
-        to = vec2(at.x + command.numbers[2], at.y + command.numbers[3])
+        ctrl2 = vec2(at.x + path.commands[i + 0], at.y + path.commands[i + 1])
+        to = vec2(at.x + path.commands[i + 2], at.y + path.commands[i + 3])
         ctrl1 =
           if prevCommandKind in {Cubic, SCubic, RCubic, RSCubic}:
             at * 2 - prevCtrl2
@@ -1006,15 +1007,15 @@ proc commandsToShapes(
 
     of RQuad:
       let
-        ctrl = vec2(at.x + command.numbers[0], at.y + command.numbers[1])
-        to = vec2(at.x + command.numbers[2], at.y + command.numbers[3])
+        ctrl = vec2(at.x + path.commands[i + 0], at.y + path.commands[i + 1])
+        to = vec2(at.x + path.commands[i + 2], at.y + path.commands[i + 3])
       shape.addQuadratic(at, ctrl, to)
       at = to
       prevCtrl = ctrl
 
     of RTQuad:
       let
-        to = vec2(at.x + command.numbers[0], at.y + command.numbers[1])
+        to = vec2(at.x + path.commands[i + 0], at.y + path.commands[i + 1])
         ctrl =
           if prevCommandKind in {Quad, TQuad, RQuad, RTQuad}:
             at * 2 - prevCtrl
@@ -1026,11 +1027,11 @@ proc commandsToShapes(
 
     of RArc:
       let
-        radii = vec2(command.numbers[0], command.numbers[1])
-        rotation = command.numbers[2]
-        large = command.numbers[3] == 1
-        sweep = command.numbers[4] == 1
-        to = vec2(at.x + command.numbers[5], at.y + command.numbers[6])
+        radii = vec2(path.commands[i + 0], path.commands[i + 1])
+        rotation = path.commands[i + 2]
+        large = path.commands[i + 3] == 1
+        sweep = path.commands[i + 4] == 1
+        to = vec2(at.x + path.commands[i + 5], at.y + path.commands[i + 6])
       shape.addArc(at, radii, rotation, large, sweep, to)
       at = to
 
@@ -1042,7 +1043,8 @@ proc commandsToShapes(
         result.add(shape)
         shape = newSeq[Vec2]()
 
-    prevCommandKind = command.kind
+    i += kind.parameterCount()
+    prevCommandKind = kind
 
   if shape.len > 0:
     if closeSubpaths:
