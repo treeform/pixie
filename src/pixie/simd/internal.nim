@@ -46,6 +46,7 @@ macro hasSimd*(procedure: untyped) =
   let
     name = procedure.procName()
     originalBody = procedure[6]
+    nameNeon = name & "Neon"
     nameSse2 = name & "Sse2"
     nameAvx = name & "Avx"
     nameAvx2 = name & "Avx2"
@@ -54,7 +55,7 @@ macro hasSimd*(procedure: untyped) =
 
   var body = newStmtList()
 
-  when not defined(pixieNoAvx):
+  when defined(amd64) and not defined(pixieNoAvx):
     if nameAvx2 in simdProcs:
       body.add quote do:
         if cpuHasAvx2:
@@ -69,6 +70,10 @@ macro hasSimd*(procedure: untyped) =
     let bodySse2 = simdProcs[nameSse2][6]
     body.add quote do:
       `bodySse2`
+  elif nameNeon in simdProcs:
+    let bodyNeon = simdProcs[nameNeon][6]
+    body.add quote do:
+      `bodyNeon`
   else:
     body.add quote do:
       `originalBody`
