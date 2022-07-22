@@ -156,7 +156,7 @@ proc magnifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
         resultIdx = result.dataIndex(x * scale, y * scale)
       for i in 0 ..< scale:
         result.data[resultIdx + i] = value
-    # Copy that row of pixels into (scale - 1) more rows
+    # Copy that row of values into (scale - 1) more rows
     let rowStart = result.dataIndex(0, y * scale)
     for i in 1 ..< scale:
       copyMem(
