@@ -116,10 +116,8 @@ proc toPremultipliedAlphaAvx2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
       let
         tmpEven = mm256_add_epi16(colorsEven, vec128)
         tmpOdd = mm256_add_epi16(colorsOdd, vec128)
-      colorsEven = tmpEven
-      colorsOdd = tmpOdd
-      colorsEven = mm256_srli_epi16(colorsEven, 8)
-      colorsOdd = mm256_srli_epi16(colorsOdd, 8)
+      colorsEven = mm256_srli_epi16(tmpEven, 8)
+      colorsOdd = mm256_srli_epi16(tmpOdd, 8)
       colorsEven = mm256_add_epi16(colorsEven, tmpEven)
       colorsOdd = mm256_add_epi16(colorsOdd, tmpOdd)
       colorsEven = mm256_srli_epi16(colorsEven, 8)

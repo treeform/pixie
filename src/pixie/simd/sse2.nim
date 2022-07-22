@@ -190,10 +190,8 @@ proc toPremultipliedAlphaSse2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
       let
         tmpEven = mm_add_epi16(colorsEven, vec128)
         tmpOdd = mm_add_epi16(colorsOdd, vec128)
-      colorsEven = tmpEven
-      colorsOdd = tmpOdd
-      colorsEven = mm_srli_epi16(colorsEven, 8)
-      colorsOdd = mm_srli_epi16(colorsOdd, 8)
+      colorsEven = mm_srli_epi16(tmpEven, 8)
+      colorsOdd = mm_srli_epi16(tmpOdd, 8)
       colorsEven = mm_add_epi16(colorsEven, tmpEven)
       colorsOdd = mm_add_epi16(colorsOdd, tmpOdd)
       colorsEven = mm_srli_epi16(colorsEven, 8)

@@ -553,16 +553,11 @@ when defined(amd64) and allowSimd:
     var
       backdropEven = mm_slli_epi16(backdrop, 8)
       backdropOdd = mm_and_si128(backdrop, oddMask)
-
-    # backdrop * k
     backdropEven = mm_mulhi_epu16(backdropEven, evenK)
     backdropOdd = mm_mulhi_epu16(backdropOdd, oddK)
-
-    # div 255
     backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
     backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
 
-    # Shift from high to low bits
     sourceEven = mm_srli_epi16(sourceEven, 8)
     sourceOdd = mm_srli_epi16(sourceOdd, 8)
 
@@ -582,12 +577,8 @@ when defined(amd64) and allowSimd:
     var
       backdropEven = mm_slli_epi16(backdrop, 8)
       backdropOdd = mm_and_si128(backdrop, oddMask)
-
-    # backdrop * source
     backdropEven = mm_mulhi_epu16(backdropEven, sourceEven)
     backdropOdd = mm_mulhi_epu16(backdropOdd, sourceOdd)
-
-    # div 255
     backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
     backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
 
