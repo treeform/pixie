@@ -152,18 +152,17 @@ proc magnifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
           x += 16
     for x in x ..< mask.width:
       let
-        value = mask.unsafe[x, y div scale]
-        scaledX = x * scale
-        idx = result.dataIndex(scaledX, y)
+        value = mask.unsafe[x, y]
+        resultIdx = result.dataIndex(x * scale, y * scale)
       for i in 0 ..< scale:
-        result.data[idx + i] = value
-    # Copy that row of values into (scale - 1) more rows
+        result.data[resultIdx + i] = value
+    # Copy that row of pixels into (scale - 1) more rows
     let rowStart = result.dataIndex(0, y * scale)
     for i in 1 ..< scale:
       copyMem(
         result.data[rowStart + result.width * i].addr,
         result.data[rowStart].addr,
-        result.width * 4
+        result.width
       )
 
 proc applyOpacity*(target: Mask, opacity: float32) {.hasSimd, raises: [].} =
