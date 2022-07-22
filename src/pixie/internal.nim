@@ -104,9 +104,9 @@ proc toPremultipliedAlpha*(
   for i in 0 ..< data.len:
     var c = data[i]
     if c.a != 255:
-      c.r = ((c.r.uint32 * c.a) div 255).uint8
-      c.g = ((c.g.uint32 * c.a) div 255).uint8
-      c.b = ((c.b.uint32 * c.a) div 255).uint8
+      c.r = ((c.r.uint32 * c.a + 127) div 255).uint8
+      c.g = ((c.g.uint32 * c.a + 127) div 255).uint8
+      c.b = ((c.b.uint32 * c.a + 127) div 255).uint8
       data[i] = c
 
 proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool {.hasSimd.} =

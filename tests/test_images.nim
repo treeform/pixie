@@ -121,7 +121,7 @@ block:
   let a = newImage(100, 100)
   a.fill(rgbx(50, 100, 150, 200))
   a.invert()
-  doAssert a[0, 0] == rgbx(44, 33, 22, 55)
+  doAssert a[0, 0] == rgbx(44, 33, 23, 55)
 
 block:
   let ctx = newContext(100, 100)
@@ -226,3 +226,29 @@ block:
       292.0, 45.0, 1.0
     )
   )
+
+block:
+  var
+    colors: seq[ColorRGBA]
+    premultiplied: seq[ColorRGBX]
+  for a in 0.uint8 .. 255:
+    for r in 0.uint8 .. 255:
+      let
+        rgba = rgba(r, 0, 0, a)
+        floats = rgba.color()
+        premul = color(floats.r * floats.a, 0, 0, floats.a)
+        rgbx = rgbx(
+          round(premul.r * 255).uint8,
+          0,
+          0,
+          round(premul.a * 255).uint8
+        )
+      colors.add(rgba)
+      premultiplied.add(rgbx)
+
+  var converted = cast[seq[ColorRGBX]](colors)
+  toPremultipliedAlpha(converted)
+
+  for i in 0 ..< premultiplied.len:
+    doAssert premultiplied[i] == converted[i]
+    doAssert colors[i].rgbx == converted[i]

@@ -123,6 +123,43 @@ proc isOpaqueNeon*(data: var seq[ColorRGBX], start, len: int): bool {.simd.} =
     if data[i].a != 255:
       return false
 
+proc toPremultipliedAlphaNeon*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
+  var
+    i: int
+    p = cast[uint](data[0].addr)
+  # Align to 16 bytes
+  while i < data.len and (p and 15) != 0:
+    var c = data[i]
+    if c.a != 255:
+      c.r = ((c.r.uint32 * c.a + 127) div 255).uint8
+      c.g = ((c.g.uint32 * c.a + 127) div 255).uint8
+      c.b = ((c.b.uint32 * c.a + 127) div 255).uint8
+      data[i] = c
+    inc i
+    p += 4
+
+  proc premultiply(c, a: uint8x8): uint8x8 {.inline.} =
+    let ca = vmull_u8(c, a)
+    vraddhn_u16(ca, vrshrq_n_u16(ca, 8))
+
+  let iterations = (data.len - i) div 8
+  for _ in 0 ..< iterations:
+    var channels = vld4_u8(cast[pointer](p))
+    channels.val[0] = premultiply(channels.val[0], channels.val[3])
+    channels.val[1] = premultiply(channels.val[1], channels.val[3])
+    channels.val[2] = premultiply(channels.val[2], channels.val[3])
+    vst4_u8(cast[pointer](p), channels)
+    p += 32
+    i += 8
+
+  for i in i ..< data.len:
+    var c = data[i]
+    if c.a != 255:
+      c.r = ((c.r.uint32 * c.a + 127) div 255).uint8
+      c.g = ((c.g.uint32 * c.a + 127) div 255).uint8
+      c.b = ((c.b.uint32 * c.a + 127) div 255).uint8
+      data[i] = c
+
 proc newImageNeon*(mask: Mask): Image {.simd.} =
   result = newImage(mask.width, mask.height)
 

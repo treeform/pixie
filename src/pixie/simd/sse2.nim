@@ -170,7 +170,8 @@ proc toPremultipliedAlphaSse2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
   let
     alphaMask = mm_set1_epi32(cast[int32](0xff000000))
     oddMask = mm_set1_epi16(0xff00)
-    div255 = mm_set1_epi16(0x8081)
+    vec128 = mm_set1_epi16(128)
+    hiMask = mm_set1_epi16(255 shl 8)
     iterations = data.len div 4
   for _ in 0 ..< iterations:
     let
@@ -186,20 +187,26 @@ proc toPremultipliedAlphaSse2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
         colorsOdd = mm_and_si128(values, oddMask)
       colorsEven = mm_mulhi_epu16(colorsEven, evenMultiplier)
       colorsOdd = mm_mulhi_epu16(colorsOdd, oddMultiplier)
-      colorsEven = mm_srli_epi16(mm_mulhi_epu16(colorsEven, div255), 7)
-      colorsOdd = mm_srli_epi16(mm_mulhi_epu16(colorsOdd, div255), 7)
-      mm_storeu_si128(
-        data[i].addr,
-        mm_or_si128(colorsEven, mm_slli_epi16(colorsOdd, 8))
-      )
+      let
+        tmpEven = mm_add_epi16(colorsEven, vec128)
+        tmpOdd = mm_add_epi16(colorsOdd, vec128)
+      colorsEven = tmpEven
+      colorsOdd = tmpOdd
+      colorsEven = mm_srli_epi16(colorsEven, 8)
+      colorsOdd = mm_srli_epi16(colorsOdd, 8)
+      colorsEven = mm_add_epi16(colorsEven, tmpEven)
+      colorsOdd = mm_add_epi16(colorsOdd, tmpOdd)
+      colorsEven = mm_srli_epi16(colorsEven, 8)
+      colorsOdd = mm_and_si128(colorsOdd, hiMask)
+      mm_storeu_si128(data[i].addr, mm_or_si128(colorsEven, colorsOdd))
     i += 4
 
   for i in i ..< data.len:
     var c = data[i]
     if c.a != 255:
-      c.r = ((c.r.uint32 * c.a) div 255).uint8
-      c.g = ((c.g.uint32 * c.a) div 255).uint8
-      c.b = ((c.b.uint32 * c.a) div 255).uint8
+      c.r = ((c.r.uint32 * c.a + 127) div 255).uint8
+      c.g = ((c.g.uint32 * c.a + 127) div 255).uint8
+      c.b = ((c.b.uint32 * c.a + 127) div 255).uint8
       data[i] = c
 
 proc newImageSse2*(mask: Mask): Image {.simd.} =
