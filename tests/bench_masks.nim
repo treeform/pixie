@@ -1,4 +1,4 @@
-import benchy, chroma, pixie
+import benchy, pixie
 
 let mask = newMask(2560, 1440)
 
@@ -25,6 +25,7 @@ timeIt "invert":
 reset()
 
 timeIt "applyOpacity":
+  reset()
   mask.applyOpacity(0.5)
 
 reset()

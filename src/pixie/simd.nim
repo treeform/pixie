@@ -20,6 +20,7 @@ when allowSimd:
 
   elif defined(arm64):
     import simd/neon
+    export neon
 
     import nimsimd/neon as nimsimdneon
     export nimsimdneon
