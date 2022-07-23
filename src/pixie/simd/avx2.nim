@@ -133,5 +133,42 @@ proc toPremultipliedAlphaAvx2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
       c.b = ((c.b.uint32 * c.a + 127) div 255).uint8
       data[i] = c
 
+proc invertAvx2*(image: Image) {.simd.} =
+  var
+    i: int
+    p = cast[uint](image.data[0].addr)
+  # Align to 32 bytes
+  while i < image.data.len and (p and 31) != 0:
+    var rgbx = image.data[i]
+    rgbx.r = 255 - rgbx.r
+    rgbx.g = 255 - rgbx.g
+    rgbx.b = 255 - rgbx.b
+    rgbx.a = 255 - rgbx.a
+    image.data[i] = rgbx
+    inc i
+    p += 4
+
+  let
+    vec255 = mm256_set1_epi8(255)
+    iterations = image.data.len div 16
+  for _ in 0 ..< iterations:
+    let
+      a = mm256_load_si256(cast[pointer](p))
+      b = mm256_load_si256(cast[pointer](p + 32))
+    mm256_store_si256(cast[pointer](p), mm256_sub_epi8(vec255, a))
+    mm256_store_si256(cast[pointer](p + 32), mm256_sub_epi8(vec255, b))
+    p += 64
+  i += 16 * iterations
+
+  for i in i ..< image.data.len:
+    var rgbx = image.data[i]
+    rgbx.r = 255 - rgbx.r
+    rgbx.g = 255 - rgbx.g
+    rgbx.b = 255 - rgbx.b
+    rgbx.a = 255 - rgbx.a
+    image.data[i] = rgbx
+
+  toPremultipliedAlphaAvx2(image.data)
+
 when defined(release):
   {.pop.}

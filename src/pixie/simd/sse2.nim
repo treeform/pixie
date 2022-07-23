@@ -262,7 +262,6 @@ proc invertSse2*(image: Image) {.simd.} =
   let
     vec255 = mm_set1_epi8(255)
     iterations = image.data.len div 16
-
   for _ in 0 ..< iterations:
     let
       a = mm_load_si128(cast[pointer](p))
@@ -299,7 +298,6 @@ proc invertSse2*(mask: Mask) {.simd.} =
   let
     vec255 = mm_set1_epi8(255)
     iterations = mask.data.len div 64
-
   for _ in 0 ..< iterations:
     let
       a = mm_load_si128(cast[pointer](p))
