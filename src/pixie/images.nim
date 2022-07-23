@@ -320,38 +320,38 @@ proc magnifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
         result.width * 4
       )
 
-proc applyOpacity*(target: Image, opacity: float32) {.hasSimd, raises: [].} =
+proc applyOpacity*(image: Image, opacity: float32) {.hasSimd, raises: [].} =
   ## Multiplies alpha of the image by opacity.
   let opacity = round(255 * opacity).uint16
   if opacity == 255:
     return
 
   if opacity == 0:
-    target.fill(rgbx(0, 0, 0, 0))
+    image.fill(rgbx(0, 0, 0, 0))
     return
 
-  for i in 0 ..< target.data.len:
-    var rgbx = target.data[i]
+  for i in 0 ..< image.data.len:
+    var rgbx = image.data[i]
     rgbx.r = ((rgbx.r * opacity) div 255).uint8
     rgbx.g = ((rgbx.g * opacity) div 255).uint8
     rgbx.b = ((rgbx.b * opacity) div 255).uint8
     rgbx.a = ((rgbx.a * opacity) div 255).uint8
-    target.data[i] = rgbx
+    image.data[i] = rgbx
 
-proc invert*(target: Image) {.hasSimd, raises: [].} =
+proc invert*(image: Image) {.hasSimd, raises: [].} =
   ## Inverts all of the colors and alpha.
-  for i in 0 ..< target.data.len:
-    var rgbx = target.data[i]
+  for i in 0 ..< image.data.len:
+    var rgbx = image.data[i]
     rgbx.r = 255 - rgbx.r
     rgbx.g = 255 - rgbx.g
     rgbx.b = 255 - rgbx.b
     rgbx.a = 255 - rgbx.a
-    target.data[i] = rgbx
+    image.data[i] = rgbx
 
   # Inverting rgbx(50, 100, 150, 200) becomes rgbx(205, 155, 105, 55). This
   # is not a valid premultiplied alpha color.
   # We need to convert back to premultiplied alpha after inverting.
-  target.data.toPremultipliedAlpha()
+  image.data.toPremultipliedAlpha()
 
 proc blur*(
   image: Image, radius: float32, outOfBounds: SomeColor = color(0, 0, 0, 0)

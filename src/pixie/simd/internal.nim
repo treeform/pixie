@@ -3,7 +3,7 @@ import std/macros, std/tables
 var simdProcs* {.compiletime.}: Table[string, NimNode]
 
 proc procName(procedure: NimNode): string =
-  ## Given a procedure signature returns only name string.
+  ## Given a procedure this returns the name as a string.
   let nameNode = procedure[0]
   if nameNode.kind == nnkPostfix:
     nameNode[1].strVal
@@ -11,15 +11,29 @@ proc procName(procedure: NimNode): string =
     nameNode.strVal
 
 proc procArguments(procedure: NimNode): seq[NimNode] =
-  ## Given a procedure signature gets the arguments as a list.
+  ## Given a procedure this gets the arguments as a list.
   for i, arg in procedure[3]:
     if i > 0:
       for j in 0 ..< arg.len - 2:
         result.add(arg[j])
 
 proc procReturnType(procedure: NimNode): NimNode =
-  ## Given a procedure signature gets the return type.
+  ## Given a procedure this gets the return type.
   procedure[3][0]
+
+proc procSignature(procName: string, procedure: NimNode): string =
+  ## Given a procedure this returns the signature as a string.
+  result = procName & "("
+
+  for i, arg in procedure[3]:
+    if i > 0:
+      for j in 0 ..< arg.len - 2:
+        result &= arg[^2].repr & ", "
+
+  if procedure[3].len > 1:
+    result = result[0 ..^ 3]
+
+  result &= ")"
 
 proc callAndReturn(name: NimNode, procedure: NimNode): NimNode =
   ## Produces a procedure call with arguments.
@@ -38,8 +52,8 @@ proc callAndReturn(name: NimNode, procedure: NimNode): NimNode =
       return `call`
 
 macro simd*(procedure: untyped) =
-  let name = procedure.procName()
-  simdProcs[name] = procedure.copy()
+  let signature = procSignature(procedure.procName(), procedure)
+  simdProcs[signature] = procedure.copy()
   return procedure
 
 macro hasSimd*(procedure: untyped) =
@@ -53,25 +67,31 @@ macro hasSimd*(procedure: untyped) =
     callAvx = callAndReturn(ident(nameAvx), procedure)
     callAvx2 = callAndReturn(ident(nameAvx2), procedure)
 
-  var body = newStmtList()
+  var
+    foundSimd: bool
+    body = newStmtList()
 
   when defined(amd64) and not defined(pixieNoAvx):
-    if nameAvx2 in simdProcs:
+    if procSignature(nameAvx2, procedure) in simdProcs:
+      foundSimd = true
       body.add quote do:
         if cpuHasAvx2:
           `callAvx2`
 
-    if nameAvx in simdProcs:
+    if procSignature(nameAvx, procedure) in simdProcs:
+      foundSimd = true
       body.add quote do:
         if cpuHasAvx2:
           `callAvx`
 
-  if nameSse2 in simdProcs:
-    let bodySse2 = simdProcs[nameSse2][6]
+  if procSignature(nameSse2, procedure) in simdProcs:
+    foundSimd = true
+    let bodySse2 = simdProcs[procSignature(nameSse2, procedure)][6]
     body.add quote do:
       `bodySse2`
-  elif nameNeon in simdProcs:
-    let bodyNeon = simdProcs[nameNeon][6]
+  elif procSignature(nameNeon, procedure) in simdProcs:
+    foundSimd = true
+    let bodyNeon = simdProcs[procSignature(nameNeon, procedure)][6]
     body.add quote do:
       `bodyNeon`
   else:
@@ -79,5 +99,8 @@ macro hasSimd*(procedure: untyped) =
       `originalBody`
 
   procedure[6] = body
+
+  if not foundSimd:
+    echo "No SIMD found for " & procSignature(name, procedure)
 
   return procedure
