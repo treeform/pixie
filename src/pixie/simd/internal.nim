@@ -100,7 +100,8 @@ macro hasSimd*(procedure: untyped) =
 
   procedure[6] = body
 
-  if not foundSimd:
-    echo "No SIMD found for " & procSignature(name, procedure)
+  when not defined(pixieNoSimd):
+    if not foundSimd:
+      echo "No SIMD found for " & procSignature(name, procedure)
 
   return procedure
