@@ -1,8 +1,8 @@
 import benchy, chroma, pixie/blends, pixie/images, vmath
 
 let
-  backdrop = newImage(512, 512)
-  source = newImage(512, 512)
+  backdrop = newImage(256, 256)
+  source = newImage(256, 256)
 source.fill(rgba(100, 100, 100, 100))
 
 template reset() =
