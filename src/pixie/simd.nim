@@ -1,6 +1,6 @@
-import simd/internal
+import simd/internal, system/memory
 
-export internal
+export internal, memory
 
 const allowSimd* = not defined(pixieNoSimd) and not defined(tcc)
 
@@ -20,6 +20,7 @@ when allowSimd:
 
   elif defined(arm64):
     import simd/neon
+    export neon
 
     import nimsimd/neon as nimsimdneon
     export nimsimdneon

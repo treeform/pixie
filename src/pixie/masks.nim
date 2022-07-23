@@ -165,18 +165,18 @@ proc magnifyBy2*(mask: Mask, power = 1): Mask {.raises: [PixieError].} =
         result.width
       )
 
-proc applyOpacity*(target: Mask, opacity: float32) {.hasSimd, raises: [].} =
+proc applyOpacity*(mask: Mask, opacity: float32) {.hasSimd, raises: [].} =
   ## Multiplies alpha of the image by opacity.
   let opacity = round(255 * opacity).uint16
   if opacity == 255:
     return
 
   if opacity == 0:
-    target.fill(0)
+    mask.fill(0)
     return
 
-  for i in 0 ..< target.data.len:
-    target.data[i] = ((target.data[i] * opacity) div 255).uint8
+  for i in 0 ..< mask.data.len:
+    mask.data[i] = ((mask.data[i] * opacity) div 255).uint8
 
 proc getValueSmooth*(mask: Mask, x, y: float32): uint8 {.raises: [].} =
   ## Gets a interpolated value with float point coordinates.
@@ -206,10 +206,10 @@ proc getValueSmooth*(mask: Mask, x, y: float32): uint8 {.raises: [].} =
   else:
     topMix
 
-proc invert*(target: Mask) {.hasSimd, raises: [].} =
+proc invert*(mask: Mask) {.hasSimd, raises: [].} =
   ## Inverts all of the values - creates a negative of the mask.
-  for i in 0 ..< target.data.len:
-    target.data[i] = 255 - target.data[i]
+  for i in 0 ..< mask.data.len:
+    mask.data[i] = 255 - mask.data[i]
 
 proc spread*(mask: Mask, spread: float32) {.raises: [PixieError].} =
   ## Grows the mask by spread.

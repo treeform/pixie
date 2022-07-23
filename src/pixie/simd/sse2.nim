@@ -1,4 +1,4 @@
-import chroma, internal, nimsimd/sse2, pixie/common, vmath
+import chroma, internal, nimsimd/sse2, pixie/common, system/memory, vmath
 
 when defined(release):
   {.push checks: off.}
@@ -244,33 +244,24 @@ proc newMaskSse2*(image: Image): Mask {.simd.} =
   for i in i ..< image.data.len:
     result.data[i] = image.data[i].a
 
-proc invertSse2*(target: Image | Mask) {.simd.} =
+proc invertSse2*(image: Image) {.simd.} =
   var
     i: int
-    p = cast[uint](target.data[0].addr)
+    p = cast[uint](image.data[0].addr)
   # Align to 16 bytes
-  while i < target.data.len and (p and 15) != 0:
-    when target is Image:
-      var rgbx = target.data[i]
-      rgbx.r = 255 - rgbx.r
-      rgbx.g = 255 - rgbx.g
-      rgbx.b = 255 - rgbx.b
-      rgbx.a = 255 - rgbx.a
-      target.data[i] = rgbx
-      inc i
-      p += 4
-    else:
-      target.data[i] = 255 - target.data[i]
-      inc i
-      inc p
+  while i < image.data.len and (p and 15) != 0:
+    var rgbx = image.data[i]
+    rgbx.r = 255 - rgbx.r
+    rgbx.g = 255 - rgbx.g
+    rgbx.b = 255 - rgbx.b
+    rgbx.a = 255 - rgbx.a
+    image.data[i] = rgbx
+    inc i
+    p += 4
 
-  let vec255 = mm_set1_epi8(255)
-
-  when target is Image:
-    let iterations = target.data.len div 16
-  else:
-    let iterations = target.data.len div 64
-
+  let
+    vec255 = mm_set1_epi8(255)
+    iterations = image.data.len div 16
   for _ in 0 ..< iterations:
     let
       a = mm_load_si128(cast[pointer](p))
@@ -282,24 +273,46 @@ proc invertSse2*(target: Image | Mask) {.simd.} =
     mm_store_si128(cast[pointer](p + 32), mm_sub_epi8(vec255, c))
     mm_store_si128(cast[pointer](p + 48), mm_sub_epi8(vec255, d))
     p += 64
+  i += 16 * iterations
 
-  when target is Image:
-    i += 16 * iterations
+  for i in i ..< image.data.len:
+    var rgbx = image.data[i]
+    rgbx.r = 255 - rgbx.r
+    rgbx.g = 255 - rgbx.g
+    rgbx.b = 255 - rgbx.b
+    rgbx.a = 255 - rgbx.a
+    image.data[i] = rgbx
 
-    for i in i ..< target.data.len:
-      var rgbx = target.data[i]
-      rgbx.r = 255 - rgbx.r
-      rgbx.g = 255 - rgbx.g
-      rgbx.b = 255 - rgbx.b
-      rgbx.a = 255 - rgbx.a
-      target.data[i] = rgbx
+  toPremultipliedAlphaSse2(image.data)
 
-    toPremultipliedAlphaSse2(target.data)
-  else:
-    i += 64 * iterations
+proc invertSse2*(mask: Mask) {.simd.} =
+  var
+    i: int
+    p = cast[uint](mask.data[0].addr)
+  # Align to 16 bytes
+  while i < mask.data.len and (p and 15) != 0:
+    mask.data[i] = 255 - mask.data[i]
+    inc i
+    inc p
 
-    for i in i ..< target.data.len:
-      target.data[i] = 255 - target.data[i]
+  let
+    vec255 = mm_set1_epi8(255)
+    iterations = mask.data.len div 64
+  for _ in 0 ..< iterations:
+    let
+      a = mm_load_si128(cast[pointer](p))
+      b = mm_load_si128(cast[pointer](p + 16))
+      c = mm_load_si128(cast[pointer](p + 32))
+      d = mm_load_si128(cast[pointer](p + 48))
+    mm_store_si128(cast[pointer](p), mm_sub_epi8(vec255, a))
+    mm_store_si128(cast[pointer](p + 16), mm_sub_epi8(vec255, b))
+    mm_store_si128(cast[pointer](p + 32), mm_sub_epi8(vec255, c))
+    mm_store_si128(cast[pointer](p + 48), mm_sub_epi8(vec255, d))
+    p += 64
+  i += 64 * iterations
+
+  for i in i ..< mask.data.len:
+    mask.data[i] = 255 - mask.data[i]
 
 proc ceilSse2*(mask: Mask) {.simd.} =
   var
@@ -322,34 +335,69 @@ proc ceilSse2*(mask: Mask) {.simd.} =
     if mask.data[i] != 0:
       mask.data[i] = 255
 
-proc applyOpacitySse2*(target: Image | Mask, opacity: float32) {.simd.} =
+proc applyOpacitySse2*(image: Image, opacity: float32) {.simd.} =
   let opacity = round(255 * opacity).uint16
   if opacity == 255:
     return
 
   if opacity == 0:
-    when target is Image:
-      target.fill(rgbx(0, 0, 0, 0))
-    else:
-      target.fill(0)
+    fillUnsafeSse2(image.data, rgbx(0, 0, 0, 0), 0, image.data.len)
     return
 
   var
     i: int
-    p = cast[uint](target.data[0].addr)
-    len =
-      when target is Image:
-        target.data.len * 4
-      else:
-        target.data.len
+    p = cast[uint](image.data[0].addr)
 
   let
     oddMask = mm_set1_epi16(0xff00)
     div255 = mm_set1_epi16(0x8081)
     zeroVec = mm_setzero_si128()
     opacityVec = mm_slli_epi16(mm_set1_epi16(opacity), 8)
-    iterations = len div 16
-  for _ in 0 ..< len div 16:
+    iterations = image.data.len div 4
+  for _ in 0 ..< iterations:
+    let values = mm_loadu_si128(cast[pointer](p))
+    if mm_movemask_epi8(mm_cmpeq_epi16(values, zeroVec)) != 0xffff:
+      var
+        valuesEven = mm_slli_epi16(values, 8)
+        valuesOdd = mm_and_si128(values, oddMask)
+      valuesEven = mm_mulhi_epu16(valuesEven, opacityVec)
+      valuesOdd = mm_mulhi_epu16(valuesOdd, opacityVec)
+      valuesEven = mm_srli_epi16(mm_mulhi_epu16(valuesEven, div255), 7)
+      valuesOdd = mm_srli_epi16(mm_mulhi_epu16(valuesOdd, div255), 7)
+      mm_storeu_si128(
+        cast[pointer](p),
+        mm_or_si128(valuesEven, mm_slli_epi16(valuesOdd, 8))
+      )
+    p += 16
+  i += 4 * iterations
+
+  for i in i ..< image.data.len:
+    var rgbx = image.data[i]
+    rgbx.r = ((rgbx.r * opacity) div 255).uint8
+    rgbx.g = ((rgbx.g * opacity) div 255).uint8
+    rgbx.b = ((rgbx.b * opacity) div 255).uint8
+    rgbx.a = ((rgbx.a * opacity) div 255).uint8
+    image.data[i] = rgbx
+
+proc applyOpacitySse2*(mask: Mask, opacity: float32) {.simd.} =
+  let opacity = round(255 * opacity).uint16
+  if opacity == 255:
+    return
+
+  if opacity == 0:
+    nimSetMem(mask.data[0].addr, 0.cint, mask.data.len)
+
+  var
+    i: int
+    p = cast[uint](mask.data[0].addr)
+
+  let
+    oddMask = mm_set1_epi16(0xff00)
+    div255 = mm_set1_epi16(0x8081)
+    zeroVec = mm_setzero_si128()
+    opacityVec = mm_slli_epi16(mm_set1_epi16(opacity), 8)
+    iterations = mask.data.len div 16
+  for _ in 0 ..< iterations:
     let values = mm_loadu_si128(cast[pointer](p))
     if mm_movemask_epi8(mm_cmpeq_epi16(values, zeroVec)) != 0xffff:
       var
@@ -366,17 +414,8 @@ proc applyOpacitySse2*(target: Image | Mask, opacity: float32) {.simd.} =
     p += 16
   i += 16 * iterations
 
-  when target is Image:
-    for i in i div 4 ..< target.data.len:
-      var rgbx = target.data[i]
-      rgbx.r = ((rgbx.r * opacity) div 255).uint8
-      rgbx.g = ((rgbx.g * opacity) div 255).uint8
-      rgbx.b = ((rgbx.b * opacity) div 255).uint8
-      rgbx.a = ((rgbx.a * opacity) div 255).uint8
-      target.data[i] = rgbx
-  else:
-    for i in i ..< target.data.len:
-      target.data[i] = ((target.data[i] * opacity) div 255).uint8
+  for i in i ..< mask.data.len:
+    mask.data[i] = ((mask.data[i] * opacity) div 255).uint8
 
 when defined(release):
   {.pop.}
