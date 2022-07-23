@@ -74,6 +74,7 @@ timeIt "invert":
 reset()
 
 timeIt "applyOpacity":
+  reset()
   image.applyOpacity(0.5)
 
 reset()

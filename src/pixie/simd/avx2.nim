@@ -1,4 +1,4 @@
-import chroma, internal, nimsimd/avx2, pixie/common
+import avx, chroma, internal, nimsimd/avx2, pixie/common, vmath
 
 when defined(gcc) or defined(clang):
   {.localPassc: "-mavx2".}
@@ -169,6 +169,52 @@ proc invertAvx2*(image: Image) {.simd.} =
     image.data[i] = rgbx
 
   toPremultipliedAlphaAvx2(image.data)
+
+proc applyOpacityAvx2*(image: Image, opacity: float32) {.simd.} =
+  let opacity = round(255 * opacity).uint16
+  if opacity == 255:
+    return
+
+  if opacity == 0:
+    fillUnsafeAvx(image.data, rgbx(0, 0, 0, 0), 0, image.data.len)
+    return
+
+  var
+    i: int
+    p = cast[uint](image.data[0].addr)
+
+  let
+    oddMask = mm256_set1_epi16(0xff00)
+    div255 = mm256_set1_epi16(0x8081)
+    zeroVec = mm256_setzero_si256()
+    opacityVec = mm256_slli_epi16(mm256_set1_epi16(opacity), 8)
+    iterations = image.data.len div 8
+  for _ in 0 ..< iterations:
+    let
+      values = mm256_loadu_si256(cast[pointer](p))
+      eqZero = mm256_cmpeq_epi16(values, zeroVec)
+    if mm256_movemask_epi8(eqZero) != cast[int32](0xffffffff):
+      var
+        valuesEven = mm256_slli_epi16(values, 8)
+        valuesOdd = mm256_and_si256(values, oddMask)
+      valuesEven = mm256_mulhi_epu16(valuesEven, opacityVec)
+      valuesOdd = mm256_mulhi_epu16(valuesOdd, opacityVec)
+      valuesEven = mm256_srli_epi16(mm256_mulhi_epu16(valuesEven, div255), 7)
+      valuesOdd = mm256_srli_epi16(mm256_mulhi_epu16(valuesOdd, div255), 7)
+      mm256_storeu_si256(
+        cast[pointer](p),
+        mm256_or_si256(valuesEven, mm256_slli_epi16(valuesOdd, 8))
+      )
+    p += 32
+  i += 8 * iterations
+
+  for i in i ..< image.data.len:
+    var rgbx = image.data[i]
+    rgbx.r = ((rgbx.r * opacity) div 255).uint8
+    rgbx.g = ((rgbx.g * opacity) div 255).uint8
+    rgbx.b = ((rgbx.b * opacity) div 255).uint8
+    rgbx.a = ((rgbx.a * opacity) div 255).uint8
+    image.data[i] = rgbx
 
 when defined(release):
   {.pop.}
