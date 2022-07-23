@@ -1,4 +1,4 @@
-import common, internal, simd, system/memory, vmath
+import common, internal, simd, vmath
 
 export Mask, newMask
 

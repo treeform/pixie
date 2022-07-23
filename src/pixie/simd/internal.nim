@@ -21,9 +21,9 @@ proc procReturnType(procedure: NimNode): NimNode =
   ## Given a procedure this gets the return type.
   procedure[3][0]
 
-proc procSignature(procName: string, procedure: NimNode): string =
+proc procSignature(procedure: NimNode): string =
   ## Given a procedure this returns the signature as a string.
-  result = procName & "("
+  result = "("
 
   for i, arg in procedure[3]:
     if i > 0:
@@ -34,6 +34,10 @@ proc procSignature(procName: string, procedure: NimNode): string =
     result = result[0 ..^ 3]
 
   result &= ")"
+
+  let ret = procedure.procReturnType()
+  if ret.kind != nnkEmpty:
+    result &= ": " & ret.repr
 
 proc callAndReturn(name: NimNode, procedure: NimNode): NimNode =
   ## Produces a procedure call with arguments.
@@ -52,7 +56,7 @@ proc callAndReturn(name: NimNode, procedure: NimNode): NimNode =
       return `call`
 
 macro simd*(procedure: untyped) =
-  let signature = procSignature(procedure.procName(), procedure)
+  let signature = procedure.procName() & procSignature(procedure)
   simdProcs[signature] = procedure.copy()
   return procedure
 
@@ -72,26 +76,26 @@ macro hasSimd*(procedure: untyped) =
     body = newStmtList()
 
   when defined(amd64) and not defined(pixieNoAvx):
-    if procSignature(nameAvx2, procedure) in simdProcs:
+    if nameAvx2 & procSignature(procedure) in simdProcs:
       foundSimd = true
       body.add quote do:
         if cpuHasAvx2:
           `callAvx2`
 
-    if procSignature(nameAvx, procedure) in simdProcs:
+    if nameAvx & procSignature(procedure) in simdProcs:
       foundSimd = true
       body.add quote do:
         if cpuHasAvx2:
           `callAvx`
 
-  if procSignature(nameSse2, procedure) in simdProcs:
+  if nameSse2 & procSignature(procedure) in simdProcs:
     foundSimd = true
-    let bodySse2 = simdProcs[procSignature(nameSse2, procedure)][6]
+    let bodySse2 = simdProcs[nameSse2 & procSignature(procedure)][6]
     body.add quote do:
       `bodySse2`
-  elif procSignature(nameNeon, procedure) in simdProcs:
+  elif nameNeon & procSignature(procedure) in simdProcs:
     foundSimd = true
-    let bodyNeon = simdProcs[procSignature(nameNeon, procedure)][6]
+    let bodyNeon = simdProcs[nameNeon & procSignature(procedure)][6]
     body.add quote do:
       `bodyNeon`
   else:
@@ -102,6 +106,6 @@ macro hasSimd*(procedure: untyped) =
 
   when not defined(pixieNoSimd):
     if not foundSimd:
-      echo "No SIMD found for " & procSignature(name, procedure)
+      echo "No SIMD found for " & name & procSignature(procedure)
 
   return procedure
