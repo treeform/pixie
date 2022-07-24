@@ -116,8 +116,12 @@ block:
 
   reset()
 
-timeIt "blur":
-  image.blur(40)
+block:
+  let image = newImage(200, 200)
+  image.fill(rgbx(255, 0, 0, 255))
+
+  timeIt "blur":
+    image.blur(20)
 
 reset()
 
