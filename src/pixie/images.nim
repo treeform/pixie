@@ -511,7 +511,6 @@ proc drawCorrect(
 ) {.raises: [PixieError].} =
   ## Draws one image onto another using matrix with color blending.
 
-
   var
     inverseTransform = transform.inverse()
     # Compute movement vectors
