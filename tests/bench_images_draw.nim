@@ -3,28 +3,6 @@ import benchy, chroma, pixie, random, vmath
 block:
   let
     a = newImage(1000, 1000)
-    b = newImage(50, 50)
-  a.fill(rgba(255, 0, 0, 255))
-  b.fill(rgba(0, 255, 0, 255))
-
-  timeIt "small-on-big NormalBlend":
-    a.draw(b, translate(vec2(25, 25)), NormalBlend)
-    keep(b)
-
-block:
-  let
-    a = newImage(1000, 1000)
-    b = newImage(50, 50)
-  a.fill(rgba(255, 0, 0, 255))
-  b.fill(rgba(0, 255, 0, 255))
-
-  timeIt "small-on-big Smooth NormalBlend":
-    a.draw(b, translate(vec2(25.2, 25.2)), NormalBlend)
-    keep(b)
-
-block:
-  let
-    a = newImage(1000, 1000)
     b = newImage(500, 500)
   a.fill(rgba(255, 0, 0, 255))
   b.fill(rgba(0, 255, 0, 255))
