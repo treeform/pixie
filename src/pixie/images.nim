@@ -21,9 +21,11 @@ proc newMask*(image: Image): Mask {.hasSimd, raises: [PixieError].} =
   for i in 0 ..< image.data.len:
     result.data[i] = image.data[i].a
 
-proc copy*(image: Image): Image {.raises: [PixieError].} =
+proc copy*(image: Image): Image {.raises: [].} =
   ## Copies the image data into a new image.
-  result = newImage(image.width, image.height)
+  result = Image()
+  result.width = image.width
+  result.height = image.height
   result.data = image.data
 
 proc `$`*(image: Image): string {.raises: [].} =

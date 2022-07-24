@@ -213,6 +213,17 @@ proc newFont*(typeface: Typeface): Font {.raises: [].} =
   result.paint = newPaint(SolidPaint)
   result.paint.color = color(0, 0, 0, 1)
 
+proc copy*(font: Font): Font {.raises: [].} =
+  result = Font()
+  result.typeface = font.typeface
+  result.size = font.size
+  result.lineHeight = font.lineHeight
+  result.paints = font.paints
+  result.textCase = font.textCase
+  result.underline = font.underline
+  result.strikethrough = font.strikethrough
+  result.noKerningAdjustments = font.noKerningAdjustments
+
 proc newSpan*(text: string, font: Font): Span {.raises: [].} =
   ## Creates a span, associating a font with the text.
   result = Span()

@@ -34,7 +34,7 @@ proc newPaint*(kind: PaintKind): Paint {.raises: [].} =
   ## Create a new Paint.
   result = Paint(kind: kind, opacity: 1, imageMat: mat3())
 
-proc newPaint*(paint: Paint): Paint {.raises: [].} =
+proc copy*(paint: Paint): Paint {.raises: [].} =
   ## Create a new Paint with the same properties.
   result = newPaint(paint.kind)
   result.blendMode = paint.blendMode

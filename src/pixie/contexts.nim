@@ -88,13 +88,12 @@ proc state(ctx: Context): ContextState =
   result.mat = ctx.mat
   result.mask = if ctx.mask != nil: ctx.mask.copy() else: nil
 
-proc save*(ctx: Context) {.inline, raises: [PixieError].} =
+proc save*(ctx: Context) {.inline, raises: [].} =
   ## Saves the entire state of the context by pushing the current state onto
   ## a stack.
   ctx.stateStack.add(ctx.state())
-
-  ctx.fillStyle = newPaint(ctx.fillStyle)
-  ctx.strokeStyle = newPaint(ctx.strokeStyle)
+  ctx.fillStyle = ctx.fillStyle.copy()
+  ctx.strokeStyle = ctx.strokeStyle.copy()
 
 proc saveLayer*(ctx: Context) {.raises: [PixieError].} =
   ## Saves the entire state of the context by pushing the current state onto
