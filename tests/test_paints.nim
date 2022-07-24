@@ -132,3 +132,25 @@ block:
   let image = newImage(100, 100)
   image.fillPath(heartShape, paint)
   image.xray("tests/paths/gradientAngularOpacity.png")
+
+block:
+  let paint = newPaint(ImagePaint)
+  paint.image = readImage("tests/fileformats/png/mandrill.png")
+  paint.imageMat = scale(vec2(0.2, 0.2))
+  paint.opacity = 0.5
+
+  let image = newImage(128, 128)
+  image.fill(rgbx(0, 255, 0, 255))
+  image.fill(paint)
+  image.xray("tests/paths/fillImagePaint.png")
+
+block:
+  let paint = newPaint(TiledImagePaint)
+  paint.image = readImage("tests/fileformats/png/mandrill.png")
+  paint.imageMat = scale(vec2(0.1, 0.1))
+  paint.opacity = 0.5
+
+  let image = newImage(128, 128)
+  image.fill(rgbx(0, 255, 0, 255))
+  image.fill(paint)
+  image.xray("tests/paths/fillTiledImagePaint.png")

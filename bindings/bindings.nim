@@ -116,6 +116,7 @@ exportRefObject Image:
     getColor
     setColor
     fill(Image, Color)
+    fill(Image, Paint)
     flipHorizontal
     flipVertical
     subImage
