@@ -1,4 +1,4 @@
-import chroma, common, images, simd, vmath
+import chroma, common, images, internal, simd, vmath
 
 type
   PaintKind* = enum

@@ -252,3 +252,8 @@ block:
   for i in 0 ..< premultiplied.len:
     doAssert premultiplied[i] == converted[i]
     doAssert colors[i].rgbx == converted[i]
+
+block:
+  let image = newImage(100, 100)
+  image.fill("white")
+  doAssert image[10, 10] == rgba(255, 255, 255, 255)

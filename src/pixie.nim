@@ -1,7 +1,7 @@
 import bumpy, chroma, flatty/binny, os, pixie/common, pixie/contexts,
     pixie/fileformats/bmp, pixie/fileformats/gif, pixie/fileformats/jpeg,
     pixie/fileformats/png, pixie/fileformats/ppm, pixie/fileformats/qoi,
-    pixie/fileformats/svg, pixie/fonts, pixie/images, pixie/masks, pixie/paints,
+    pixie/fileformats/svg, pixie/fonts, pixie/images, pixie/internal, pixie/masks, pixie/paints,
     pixie/paths, strutils, vmath
 
 export bumpy, chroma, common, contexts, fonts, images, masks, paints, paths, vmath
@@ -142,3 +142,16 @@ proc writeFile*(mask: Mask, filePath: string) {.raises: [PixieError].} =
     writeFile(filePath, mask.encodeMask(fileFormat))
   except IOError as e:
     raise newException(PixieError, e.msg, e)
+
+proc fill*(image: Image, paint: Paint) {.raises: [PixieError].} =
+  ## Fills the image with the paint.
+  case paint.kind:
+  of SolidPaint:
+    fillUnsafe(image.data, paint.color, 0, image.data.len)
+  of ImagePaint, TiledImagePaint:
+    fillUnsafe(image.data, rgbx(0, 0, 0, 0), 0, image.data.len)
+    let path = newPath()
+    path.rect(0, 0, image.width.float32, image.height.float32)
+    image.fillPath(path, paint)
+  of LinearGradientPaint, RadialGradientPaint, AngularGradientPaint:
+    image.fillGradient(paint)
