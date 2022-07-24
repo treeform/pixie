@@ -417,5 +417,50 @@ proc applyOpacitySse2*(mask: Mask, opacity: float32) {.simd.} =
   for i in i ..< mask.data.len:
     mask.data[i] = ((mask.data[i] * opacity) div 255).uint8
 
+proc blitLineNormalSse2*(a, b: ptr UncheckedArray[ColorRGBX], len: int) {.simd.} =
+
+  # TODO align to 16
+
+  var i = 0
+  while i < len - 4:
+
+    let
+      source = mm_loadu_si128(b[i].addr)
+      backdrop = mm_loadu_si128(a[i].addr)
+      alphaMask = mm_set1_epi32(cast[int32](0xff000000))
+      oddMask = mm_set1_epi16(cast[int16](0xff00))
+      div255 = mm_set1_epi16(cast[int16](0x8081))
+
+    var
+      sourceAlpha = mm_and_si128(source, alphaMask)
+      backdropEven = mm_slli_epi16(backdrop, 8)
+      backdropOdd = mm_and_si128(backdrop, oddMask)
+
+    sourceAlpha = mm_or_si128(sourceAlpha, mm_srli_epi32(sourceAlpha, 16))
+
+    let k = mm_sub_epi32(
+      mm_set1_epi32(cast[int32]([0.uint8, 255, 0, 255])),
+      sourceAlpha
+    )
+
+    backdropEven = mm_mulhi_epu16(backdropEven, k)
+    backdropOdd = mm_mulhi_epu16(backdropOdd, k)
+
+    backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
+    backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
+
+    let done = mm_add_epi8(
+      source,
+      mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
+    )
+
+    mm_storeu_si128(a[i].addr, done)
+
+    i += 4
+
+  # TODO last 1-3 pixels
+  # for i in i ..< len:
+  #   a[i] = blendNormal(a[i], b[i])
+
 when defined(release):
   {.pop.}

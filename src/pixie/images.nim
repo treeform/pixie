@@ -454,15 +454,62 @@ proc getRgbaSmooth*(
   else:
     topMix
 
+proc blitLine(a, b: ptr UncheckedArray[ColorRGBX], len: int, blender: Blender) =
+  for i in 0 ..< len:
+    a[i] = blender(a[i], b[i])
+
+proc blitLineNormal(a, b: ptr UncheckedArray[ColorRGBX], len: int) {.hasSimd.} =
+  for i in 0 ..< len:
+    a[i] = blendNormal(a[i], b[i])
+
+proc blitLineOverwrite(a, b: ptr UncheckedArray[ColorRGBX], len: int) =
+  copyMem(a[0].addr, b[0].addr, len * 4)
+
+template getUncheckedArray(a: Image, x, y: int): ptr UncheckedArray[ColorRGBX] =
+  cast[ptr UncheckedArray[ColorRGBX]](a.data[a.dataIndex(x, y)].addr)
+
+proc blitRect(
+  a, b: Image, pos = ivec2(0, 0), blendMode = NormalBlend
+) =
+  ## Blits one image onto another using integer position with color blending.
+  let
+    px = pos.x.int
+    py = pos.y.int
+    xStart = max(-px, 0)
+    yStart = max(-py, 0)
+    xEnd = min(b.width, a.width - px)
+    yEnd = min(b.height, a.height - py)
+
+  case blendMode:
+  of NormalBlend:
+    for y in yStart ..< yEnd:
+      blitLineNormal(
+        a.getUncheckedArray(xStart + px, y + py),
+        b.getUncheckedArray(xStart, y),
+        xEnd - xStart
+      )
+  of OverwriteBlend:
+    {.linearScanEnd.}
+    for y in yStart ..< yEnd:
+      blitLineOverwrite(
+        a.getUncheckedArray(xStart + px, y + py),
+        b.getUncheckedArray(xStart, y),
+        xEnd - xStart
+      )
+  else:
+    let blender = blendMode.blender()
+    for y in yStart ..< yEnd:
+      blitLine(
+        a.getUncheckedArray(xStart + px, y + py),
+        b.getUncheckedArray(xStart, y),
+        xEnd - xStart,
+        blender
+      )
+
 proc drawCorrect(
   a, b: Image | Mask, transform = mat3(), blendMode = NormalBlend, tiled = false
 ) {.raises: [PixieError].} =
   ## Draws one image onto another using matrix with color blending.
-
-  when type(a) is Image:
-    let blender = blendMode.blender()
-  else: # a is a Mask
-    let masker = blendMode.masker()
 
   var
     inverseTransform = transform.inverse()
@@ -488,6 +535,25 @@ proc drawCorrect(
     dy *= 2
     filterBy2 *= 2
     inverseTransform = scale(vec2(2, 2)) * inverseTransform
+
+  let
+    hasRotationOrScaling = not(dx == vec2(1, 0) and dy == vec2(0, 1))
+    smooth = not(
+      dx.length == 1.0 and
+      dy.length == 1.0 and
+      transform[2, 0].fractional == 0.0 and
+      transform[2, 1].fractional == 0.0
+    )
+
+  when type(a) is Image and type(b) is Image:
+    if not hasRotationOrScaling and not smooth and not tiled:
+      blitRect(a, b, ivec2(transform[2, 0].int32, transform[2, 1].int32), blendMode)
+      return
+
+  when type(a) is Image:
+    let blender = blendMode.blender()
+  else: # a is a Mask
+    let masker = blendMode.masker()
 
   for y in 0 ..< a.height:
     for x in 0 ..< a.width:

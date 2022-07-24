@@ -134,9 +134,9 @@ timeIt "mix integers":
     doAssert z > 0
 
 timeIt "mix floats":
-  for i in 0 ..< 100000:
-    let c = image[0, 0]
+  for i in 0 ..< 1000:
+    let c = image[0, 0].color
     var z: int
     for t in 0 .. 100:
-      z += mix(c.color, c.color, t.float32 / 100).rgba().a.int
+      z += mix(c, c, t.float32 / 100).rgba().a.int
     doAssert z > 0
