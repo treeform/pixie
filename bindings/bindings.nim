@@ -182,12 +182,13 @@ exportRefObject Paint:
   constructor:
     newPaint(PaintKind)
   procs:
-    newPaint(Paint)
+    copy(Paint)
 
 exportRefObject Path:
   constructor:
     newPath
   procs:
+    copy(Path)
     transform(Path, Mat3)
     addPath(Path, Path)
     closePath(Path)
@@ -233,6 +234,7 @@ exportRefObject Font:
     strikethrough
     noKerningAdjustments
   procs:
+    copy(Font)
     scale(Font)
     defaultLineHeight
     typeset(Font, string, Vec2, HorizontalAlignment, VerticalAlignment, bool)

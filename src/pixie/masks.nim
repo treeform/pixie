@@ -7,9 +7,11 @@ type UnsafeMask = distinct Mask
 when defined(release):
   {.push checks: off.}
 
-proc copy*(mask: Mask): Mask {.raises: [PixieError].} =
+proc copy*(mask: Mask): Mask {.raises: [].} =
   ## Copies the image data into a new image.
-  result = newMask(mask.width, mask.height)
+  result = Mask()
+  result.width = mask.width
+  result.height = mask.height
   result.data = mask.data
 
 proc `$`*(mask: Mask): string {.raises: [].} =

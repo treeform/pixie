@@ -581,7 +581,7 @@ proc newImage*(svg: Svg): Image {.raises: [PixieError].} =
         blendMode = NormalBlend # Switch to normal when compositing multiple paths
 
         if props.stroke != rgbx(0, 0, 0, 0) and props.strokeWidth > 0:
-          let paint = newPaint(props.stroke)
+          let paint = props.stroke.copy()
           paint.color.a *= (props.opacity * props.strokeOpacity)
           result.strokePath(
             path,

@@ -52,6 +52,12 @@ proc newPath*(): Path {.raises: [].} =
   ## Create a new Path.
   Path()
 
+proc copy*(path: Path): Path {.raises: [].} =
+  result = Path()
+  result.commands = path.commands
+  result.start = path.start
+  result.at = path.at
+
 proc pixelScale(transform: Mat3): float32 =
   ## What is the largest scale factor of this transform?
   max(
