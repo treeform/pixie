@@ -355,6 +355,16 @@ proc invert*(image: Image) {.hasSimd, raises: [].} =
   # We need to convert back to premultiplied alpha after inverting.
   image.data.toPremultipliedAlpha()
 
+proc ceil*(image: Image) {.hasSimd, raises: [].} =
+  ## A value of 0 stays 0. Anything else turns into 255.
+  for i in 0 ..< image.data.len:
+    var rgbx = image.data[i]
+    rgbx.r = if rgbx.r == 0: 0 else: 255
+    rgbx.g = if rgbx.g == 0: 0 else: 255
+    rgbx.b = if rgbx.b == 0: 0 else: 255
+    rgbx.a = if rgbx.a == 0: 0 else: 255
+    image.data[i] = rgbx
+
 proc blur*(
   image: Image, radius: float32, outOfBounds: SomeColor = color(0, 0, 0, 0)
 ) {.raises: [PixieError].} =
