@@ -10,20 +10,6 @@ proc applyOpacity*(color: M128, opacity: float32): ColorRGBX {.inline.} =
   finalColor = mm_packus_epi16(finalColor, mm_setzero_si128())
   cast[ColorRGBX](mm_cvtsi128_si32(finalColor))
 
-proc packAlphaValues(v: M128i): M128i {.inline.} =
-  ## Shuffle the alpha values for these 4 colors to the first 4 bytes.
-  result = mm_srli_epi32(v, 24)
-  result = mm_packus_epi16(result, mm_setzero_si128())
-  result = mm_packus_epi16(result, mm_setzero_si128())
-
-proc pack4xAlphaValues*(i, j, k, l: M128i): M128i {.inline.} =
-  let
-    i = packAlphaValues(i)
-    j = mm_slli_si128(packAlphaValues(j), 4)
-    k = mm_slli_si128(packAlphaValues(k), 8)
-    l = mm_slli_si128(packAlphaValues(l), 12)
-  mm_or_si128(mm_or_si128(i, j), mm_or_si128(k, l))
-
 proc unpackAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
   ## Unpack the first 32 bits into 4 rgba(0, 0, 0, value).
   result = mm_unpacklo_epi8(mm_setzero_si128(), v)
@@ -167,6 +153,8 @@ proc isOpaqueSse2*(data: var seq[ColorRGBX], start, len: int): bool {.simd.} =
 proc toPremultipliedAlphaSse2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
   var i: int
 
+  # Not worth aligning
+
   let
     alphaMask = mm_set1_epi32(cast[int32](0xff000000))
     oddMask = mm_set1_epi16(0xff00)
@@ -200,12 +188,12 @@ proc toPremultipliedAlphaSse2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
     i += 4
 
   for i in i ..< data.len:
-    var c = data[i]
-    if c.a != 255:
-      c.r = ((c.r.uint32 * c.a + 127) div 255).uint8
-      c.g = ((c.g.uint32 * c.a + 127) div 255).uint8
-      c.b = ((c.b.uint32 * c.a + 127) div 255).uint8
-      data[i] = c
+    var rgbx = data[i]
+    if rgbx.a != 255:
+      rgbx.r = ((rgbx.r.uint32 * rgbx.a + 127) div 255).uint8
+      rgbx.g = ((rgbx.g.uint32 * rgbx.a + 127) div 255).uint8
+      rgbx.b = ((rgbx.b.uint32 * rgbx.a + 127) div 255).uint8
+      data[i] = rgbx
 
 proc invertSse2*(image: Image) {.simd.} =
   var
@@ -260,6 +248,16 @@ proc applyOpacitySse2*(image: Image, opacity: float32) {.simd.} =
   var
     i: int
     p = cast[uint](image.data[0].addr)
+  # Align to 16 bytes
+  while i < image.data.len and (p and 15) != 0:
+    var rgbx = image.data[i]
+    rgbx.r = ((rgbx.r * opacity) div 255).uint8
+    rgbx.g = ((rgbx.g * opacity) div 255).uint8
+    rgbx.b = ((rgbx.b * opacity) div 255).uint8
+    rgbx.a = ((rgbx.a * opacity) div 255).uint8
+    image.data[i] = rgbx
+    inc i
+    p += 4
 
   let
     oddMask = mm_set1_epi16(0xff00)
@@ -290,6 +288,46 @@ proc applyOpacitySse2*(image: Image, opacity: float32) {.simd.} =
     rgbx.g = ((rgbx.g * opacity) div 255).uint8
     rgbx.b = ((rgbx.b * opacity) div 255).uint8
     rgbx.a = ((rgbx.a * opacity) div 255).uint8
+    image.data[i] = rgbx
+
+proc ceilSse2*(image: Image) {.simd.} =
+  var
+    i: int
+    p = cast[uint](image.data[0].addr)
+  # Align to 16 bytes
+  while i < image.data.len and (p and 15) != 0:
+    var rgbx = image.data[i]
+    rgbx.r = if rgbx.r == 0: 0 else: 255
+    rgbx.g = if rgbx.g == 0: 0 else: 255
+    rgbx.b = if rgbx.b == 0: 0 else: 255
+    rgbx.a = if rgbx.a == 0: 0 else: 255
+    image.data[i] = rgbx
+    inc i
+    p += 4
+
+  let
+    vecZero = mm_setzero_si128()
+    vec255 = mm_set1_epi8(255)
+    iterations = image.data.len div 8
+  for _ in 0 ..< iterations:
+    var
+      values0 = mm_loadu_si128(cast[pointer](p))
+      values1 = mm_loadu_si128(cast[pointer](p + 16))
+    values0 = mm_cmpeq_epi8(values0, vecZero)
+    values1 = mm_cmpeq_epi8(values1, vecZero)
+    values0 = mm_andnot_si128(values0, vec255)
+    values1 = mm_andnot_si128(values1, vec255)
+    mm_storeu_si128(cast[pointer](p), values0)
+    mm_storeu_si128(cast[pointer](p + 16), values1)
+    p += 32
+  i += 8 * iterations
+
+  for i in i ..< image.data.len:
+    var rgbx = image.data[i]
+    rgbx.r = if rgbx.r == 0: 0 else: 255
+    rgbx.g = if rgbx.g == 0: 0 else: 255
+    rgbx.b = if rgbx.b == 0: 0 else: 255
+    rgbx.a = if rgbx.a == 0: 0 else: 255
     image.data[i] = rgbx
 
 proc blitLineNormalSse2*(

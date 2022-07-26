@@ -91,7 +91,19 @@ proc isOpaqueAvx2*(data: var seq[ColorRGBX], start, len: int): bool {.simd.} =
       return false
 
 proc toPremultipliedAlphaAvx2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
-  var i: int
+  var
+    i: int
+    p = cast[uint](data[0].addr)
+  # Align to 32 bytes
+  while i < data.len and (p and 31) != 0:
+    var rgbx = data[i]
+    if rgbx.a != 255:
+      rgbx.r = ((rgbx.r.uint32 * rgbx.a + 127) div 255).uint8
+      rgbx.g = ((rgbx.g.uint32 * rgbx.a + 127) div 255).uint8
+      rgbx.b = ((rgbx.b.uint32 * rgbx.a + 127) div 255).uint8
+      data[i] = rgbx
+    inc i
+    p += 4
 
   let
     alphaMask = mm256_set1_epi32(cast[int32](0xff000000))
@@ -101,7 +113,7 @@ proc toPremultipliedAlphaAvx2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
     iterations = data.len div 8
   for _ in 0 ..< iterations:
     let
-      values = mm256_loadu_si256(data[i].addr)
+      values = mm256_load_si256(cast[pointer](p))
       alpha = mm256_and_si256(values, alphaMask)
       eq = mm256_cmpeq_epi8(values, alphaMask)
     if (mm256_movemask_epi8(eq) and 0x88888888) != 0x88888888:
@@ -122,16 +134,17 @@ proc toPremultipliedAlphaAvx2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
       colorsOdd = mm256_add_epi16(colorsOdd, tmpOdd)
       colorsEven = mm256_srli_epi16(colorsEven, 8)
       colorsOdd = mm256_and_si256(colorsOdd, hiMask)
-      mm256_storeu_si256(data[i].addr, mm256_or_si256(colorsEven, colorsOdd))
-    i += 8
+      mm256_store_si256(cast[pointer](p), mm256_or_si256(colorsEven, colorsOdd))
+    p += 32
+  i += 8 * iterations
 
   for i in i ..< data.len:
-    var c = data[i]
-    if c.a != 255:
-      c.r = ((c.r.uint32 * c.a + 127) div 255).uint8
-      c.g = ((c.g.uint32 * c.a + 127) div 255).uint8
-      c.b = ((c.b.uint32 * c.a + 127) div 255).uint8
-      data[i] = c
+    var rgbx = data[i]
+    if rgbx.a != 255:
+      rgbx.r = ((rgbx.r.uint32 * rgbx.a + 127) div 255).uint8
+      rgbx.g = ((rgbx.g.uint32 * rgbx.a + 127) div 255).uint8
+      rgbx.b = ((rgbx.b.uint32 * rgbx.a + 127) div 255).uint8
+      data[i] = rgbx
 
 proc invertAvx2*(image: Image) {.simd.} =
   var
@@ -182,6 +195,16 @@ proc applyOpacityAvx2*(image: Image, opacity: float32) {.simd.} =
   var
     i: int
     p = cast[uint](image.data[0].addr)
+  # Align to 32 bytes
+  while i < image.data.len and (p and 31) != 0:
+    var rgbx = image.data[i]
+    rgbx.r = ((rgbx.r * opacity) div 255).uint8
+    rgbx.g = ((rgbx.g * opacity) div 255).uint8
+    rgbx.b = ((rgbx.b * opacity) div 255).uint8
+    rgbx.a = ((rgbx.a * opacity) div 255).uint8
+    image.data[i] = rgbx
+    inc i
+    p += 4
 
   let
     oddMask = mm256_set1_epi16(0xff00)
@@ -191,7 +214,7 @@ proc applyOpacityAvx2*(image: Image, opacity: float32) {.simd.} =
     iterations = image.data.len div 8
   for _ in 0 ..< iterations:
     let
-      values = mm256_loadu_si256(cast[pointer](p))
+      values = mm256_load_si256(cast[pointer](p))
       eqZero = mm256_cmpeq_epi16(values, zeroVec)
     if mm256_movemask_epi8(eqZero) != cast[int32](0xffffffff):
       var
@@ -201,7 +224,7 @@ proc applyOpacityAvx2*(image: Image, opacity: float32) {.simd.} =
       valuesOdd = mm256_mulhi_epu16(valuesOdd, opacityVec)
       valuesEven = mm256_srli_epi16(mm256_mulhi_epu16(valuesEven, div255), 7)
       valuesOdd = mm256_srli_epi16(mm256_mulhi_epu16(valuesOdd, div255), 7)
-      mm256_storeu_si256(
+      mm256_store_si256(
         cast[pointer](p),
         mm256_or_si256(valuesEven, mm256_slli_epi16(valuesOdd, 8))
       )
@@ -214,6 +237,41 @@ proc applyOpacityAvx2*(image: Image, opacity: float32) {.simd.} =
     rgbx.g = ((rgbx.g * opacity) div 255).uint8
     rgbx.b = ((rgbx.b * opacity) div 255).uint8
     rgbx.a = ((rgbx.a * opacity) div 255).uint8
+    image.data[i] = rgbx
+
+proc ceilAvx2*(image: Image) {.simd.} =
+  var
+    i: int
+    p = cast[uint](image.data[0].addr)
+  # Align to 32 bytes
+  while i < image.data.len and (p and 31) != 0:
+    var rgbx = image.data[i]
+    rgbx.r = if rgbx.r == 0: 0 else: 255
+    rgbx.g = if rgbx.g == 0: 0 else: 255
+    rgbx.b = if rgbx.b == 0: 0 else: 255
+    rgbx.a = if rgbx.a == 0: 0 else: 255
+    image.data[i] = rgbx
+    inc i
+    p += 4
+
+  let
+    vecZero = mm256_setzero_si256()
+    vec255 = mm256_set1_epi8(255)
+    iterations = image.data.len div 8
+  for _ in 0 ..< iterations:
+    var values = mm256_load_si256(cast[pointer](p))
+    values = mm256_cmpeq_epi8(values, vecZero)
+    values = mm256_andnot_si256(values, vec255)
+    mm256_store_si256(cast[pointer](p), values)
+    p += 32
+  i += 8 * iterations
+
+  for i in i ..< image.data.len:
+    var rgbx = image.data[i]
+    rgbx.r = if rgbx.r == 0: 0 else: 255
+    rgbx.g = if rgbx.g == 0: 0 else: 255
+    rgbx.b = if rgbx.b == 0: 0 else: 255
+    rgbx.a = if rgbx.a == 0: 0 else: 255
     image.data[i] = rgbx
 
 when defined(release):
