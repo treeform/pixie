@@ -853,7 +853,7 @@ proc spread(image: Image, spread: float32) {.raises: [PixieError].} =
             maxValue = value
           if maxValue == 255:
             break
-        spreadX.unsafe[y, x] = rgbx(0, 0, 0, maxValue)
+        spreadX.unsafe[y, x].a = maxValue
 
     # Spread in the Y direction and modify mask.
     for y in 0 ..< image.height:
