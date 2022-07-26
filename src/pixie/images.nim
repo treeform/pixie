@@ -1,6 +1,6 @@
 import blends, bumpy, chroma, common, internal, simd, vmath
 
-export Image, newImage
+export Image, newImage, copy, dataIndex
 
 const h = 0.5.float32
 
@@ -9,13 +9,6 @@ type UnsafeImage = distinct Image
 when defined(release):
   {.push checks: off.}
 
-proc copy*(image: Image): Image {.raises: [].} =
-  ## Copies the image data into a new image.
-  result = Image()
-  result.width = image.width
-  result.height = image.height
-  result.data = image.data
-
 proc `$`*(image: Image): string {.raises: [].} =
   ## Prints the image size.
   "<Image " & $image.width & "x" & $image.height & ">"
@@ -23,9 +16,6 @@ proc `$`*(image: Image): string {.raises: [].} =
 proc inside*(image: Image, x, y: int): bool {.inline, raises: [].} =
   ## Returns true if (x, y) is inside the image.
   x >= 0 and x < image.width and y >= 0 and y < image.height
-
-proc dataIndex*(image: Image, x, y: int): int {.inline, raises: [].} =
-  image.width * y + x
 
 template unsafe*(src: Image): UnsafeImage =
   cast[UnsafeImage](src)
@@ -167,7 +157,9 @@ proc diff*(master, image: Image): (float32, Image) {.raises: [PixieError].} =
 
   (100 * diffScore.float32 / diffTotal.float32, diffImage)
 
-proc minifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
+proc minifyBy2*(
+  image: Image, power = 1
+): Image {.hasSimd, raises: [PixieError].} =
   ## Scales the image down by an integer scale.
   if power < 0:
     raise newException(PixieError, "Cannot minifyBy2 with negative power")
@@ -188,90 +180,50 @@ proc minifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
       if srcHeightIsOdd: resultEvenHeight + 1 else: resultEvenHeight
     )
     for y in 0 ..< resultEvenHeight:
-      var x: int
-      when defined(amd64) and allowSimd:
+      let
+        topRowStart = src.dataIndex(0, y * 2)
+        bottomRowStart = src.dataIndex(0, y * 2 + 1)
+      for x in 0 ..< resultEvenWidth:
         let
-          oddMask = mm_set1_epi16(cast[int16](0xff00))
-          mergedMask = mm_set_epi32(0, uint32.high, 0, uint32.high)
-        for _ in countup(0, resultEvenWidth - 4, 2):
-          let
-            top = mm_loadu_si128(src.data[src.dataIndex(x * 2, y * 2 + 0)].addr)
-            btm = mm_loadu_si128(src.data[src.dataIndex(x * 2, y * 2 + 1)].addr)
-            topShifted = mm_srli_si128(top, 4)
-            btmShifted = mm_srli_si128(btm, 4)
-
-            topEven = mm_andnot_si128(oddMask, top)
-            topOdd = mm_srli_epi16(top, 8)
-            btmEven = mm_andnot_si128(oddMask, btm)
-            btmOdd = mm_srli_epi16(btm, 8)
-
-            topShiftedEven = mm_andnot_si128(oddMask, topShifted)
-            topShiftedOdd = mm_srli_epi16(topShifted, 8)
-            btmShiftedEven = mm_andnot_si128(oddMask, btmShifted)
-            btmShiftedOdd = mm_srli_epi16(btmShifted, 8)
-
-            topAddedEven = mm_add_epi16(topEven, topShiftedEven)
-            btmAddedEven = mm_add_epi16(btmEven, btmShiftedEven)
-            topAddedOdd = mm_add_epi16(topOdd, topShiftedOdd)
-            btmAddedOdd = mm_add_epi16(btmOdd, btmShiftedOdd)
-
-            addedEven = mm_add_epi16(topAddedEven, btmAddedEven)
-            addedOdd = mm_add_epi16(topAddedOdd, btmAddedOdd)
-
-            addedEvenDiv4 = mm_srli_epi16(addedEven, 2)
-            addedOddDiv4 = mm_srli_epi16(addedOdd, 2)
-
-            merged = mm_or_si128(addedEvenDiv4, mm_slli_epi16(addedOddDiv4, 8))
-            # Merged has the correct values for the next two pixels at
-            # index 0 and 2 so mask the others out and shift 0 and 2 into
-            # position and store
-            masked = mm_and_si128(merged, mergedMask)
-
-          mm_storeu_si128(
-            result.data[result.dataIndex(x, y)].addr,
-            mm_shuffle_epi32(masked, MM_SHUFFLE(0, 0, 2, 0))
-          )
-          x += 2
-
-      for x in x ..< resultEvenWidth:
-        let
-          a = src.unsafe[x * 2 + 0, y * 2 + 0]
-          b = src.unsafe[x * 2 + 1, y * 2 + 0]
-          c = src.unsafe[x * 2 + 1, y * 2 + 1]
-          d = src.unsafe[x * 2 + 0, y * 2 + 1]
+          a = src.data[topRowStart + x * 2]
+          b = src.data[topRowStart + x * 2 + 1]
+          c = src.data[bottomRowStart + x * 2 + 1]
+          d = src.data[bottomRowStart + x * 2]
           mixed = rgbx(
             ((a.r.uint32 + b.r + c.r + d.r) div 4).uint8,
             ((a.g.uint32 + b.g + c.g + d.g) div 4).uint8,
             ((a.b.uint32 + b.b + c.b + d.b) div 4).uint8,
             ((a.a.uint32 + b.a + c.a + d.a) div 4).uint8
           )
-        result.unsafe[x, y] = mixed
+        result.data[result.dataIndex(x, y)] = mixed
 
       if srcWidthIsOdd:
         let rgbx = mix(
-          src.unsafe[src.width - 1, y * 2 + 0],
-          src.unsafe[src.width - 1, y * 2 + 1],
+          src.data[src.dataIndex(src.width - 1, y * 2 + 0)],
+          src.data[src.dataIndex(src.width - 1, y * 2 + 1)],
           0.5
         ) * 0.5
-        result.unsafe[result.width - 1, y] = rgbx
+        result.data[result.dataIndex(result.width - 1, y)] = rgbx
 
     if srcHeightIsOdd:
       for x in 0 ..< resultEvenWidth:
         let rgbx = mix(
-          src.unsafe[x * 2 + 0, src.height - 1],
-          src.unsafe[x * 2 + 1, src.height - 1],
+          src.data[src.dataIndex(x * 2 + 0, src.height - 1)],
+          src.data[src.dataIndex(x * 2 + 1, src.height - 1)],
           0.5
         ) * 0.5
-        result.unsafe[x, result.height - 1] = rgbx
+        result.data[result.dataIndex(x, result.height - 1)] = rgbx
 
       if srcWidthIsOdd:
-        result.unsafe[result.width - 1, result.height - 1] =
-          src.unsafe[src.width - 1, src.height - 1] * 0.25
+        result.data[result.dataIndex(result.width - 1, result.height - 1)] =
+          src.data[src.dataIndex(src.width - 1, src.height - 1)] * 0.25
 
     # Set src as this result for if we do another power
     src = result
 
-proc magnifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
+proc magnifyBy2*(
+  image: Image, power = 1
+): Image {.hasSimd, raises: [PixieError].} =
   ## Scales image up by 2 ^ power.
   if power < 0:
     raise newException(PixieError, "Cannot magnifyBy2 with negative power")
@@ -281,32 +233,20 @@ proc magnifyBy2*(image: Image, power = 1): Image {.raises: [PixieError].} =
 
   for y in 0 ..< image.height:
     # Write one row of pixels duplicated by scale
-    var x: int
-    when defined(amd64) and allowSimd:
-      if scale == 2:
-        while x <= image.width - 4:
-          let values = mm_loadu_si128(image.data[image.dataIndex(x, y)].addr)
-          mm_storeu_si128(
-            result.data[result.dataIndex(x * scale + 0, y * scale)].addr,
-            mm_unpacklo_epi32(values, values)
-          )
-          mm_storeu_si128(
-            result.data[result.dataIndex(x * scale + 4, y * scale)].addr,
-            mm_unpackhi_epi32(values, values)
-          )
-          x += 4
-    for x in x ..< image.width:
+    let
+      sourceRowStart = image.dataIndex(0, y)
+      resultRowStart = result.dataIndex(0, y * scale)
+    for x in 0 ..< image.width:
       let
-        rgbx = image.unsafe[x, y]
-        resultIdx = result.dataIndex(x * scale, y * scale)
+        rgbx = image.data[sourceRowStart + x]
+        resultIdx = resultRowStart + x * scale
       for i in 0 ..< scale:
         result.data[resultIdx + i] = rgbx
     # Copy that row of pixels into (scale - 1) more rows
-    let rowStart = result.dataIndex(0, y * scale)
     for i in 1 ..< scale:
       copyMem(
-        result.data[rowStart + result.width * i].addr,
-        result.data[rowStart].addr,
+        result.data[resultRowStart + result.width * i].addr,
+        result.data[resultRowStart].addr,
         result.width * 4
       )
 

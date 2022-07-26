@@ -33,18 +33,6 @@ proc gaussianKernel*(radius: int): seq[uint16] {.raises: [].} =
   for i, f in floats:
     result[i] = round(f * 255 * 256).uint16
 
-proc `*`*(color: ColorRGBX, opacity: float32): ColorRGBX {.raises: [].} =
-  if opacity == 0:
-    rgbx(0, 0, 0, 0)
-  else:
-    let
-      x = round(opacity * 255).uint32
-      r = ((color.r * x) div 255).uint8
-      g = ((color.g * x) div 255).uint8
-      b = ((color.b * x) div 255).uint8
-      a = ((color.a * x) div 255).uint8
-    rgbx(r, g, b, a)
-
 proc intersectsInside*(a, b: Segment, at: var Vec2): bool {.inline.} =
   ## Checks if the a segment intersects b segment (excluding endpoints).
   ## If it returns true, at will have point of intersection

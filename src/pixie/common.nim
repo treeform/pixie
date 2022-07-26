@@ -46,6 +46,16 @@ proc newImage*(width, height: int): Image {.raises: [PixieError].} =
   result.height = height
   result.data = newSeq[ColorRGBX](width * height)
 
+proc copy*(image: Image): Image {.raises: [].} =
+  ## Copies the image data into a new image.
+  result = Image()
+  result.width = image.width
+  result.height = image.height
+  result.data = image.data
+
+template dataIndex*(image: Image, x, y: int): int =
+  image.width * y + x
+
 proc mix*(a, b: uint8, t: float32): uint8 {.inline, raises: [].} =
   ## Linearly interpolate between a and b using t.
   let t = round(t * 255).uint32
@@ -58,6 +68,18 @@ proc mix*(a, b: ColorRGBX, t: float32): ColorRGBX {.inline, raises: [].} =
   result.g = ((a.g.uint32 * (255 - x) + b.g.uint32 * x) div 255).uint8
   result.b = ((a.b.uint32 * (255 - x) + b.b.uint32 * x) div 255).uint8
   result.a = ((a.a.uint32 * (255 - x) + b.a.uint32 * x) div 255).uint8
+
+proc `*`*(color: ColorRGBX, opacity: float32): ColorRGBX {.raises: [].} =
+  if opacity == 0:
+    rgbx(0, 0, 0, 0)
+  else:
+    let
+      x = round(opacity * 255).uint32
+      r = ((color.r * x) div 255).uint8
+      g = ((color.g * x) div 255).uint8
+      b = ((color.b * x) div 255).uint8
+      a = ((color.a * x) div 255).uint8
+    rgbx(r, g, b, a)
 
 proc snapToPixels*(rect: Rect): Rect {.raises: [].} =
   let
