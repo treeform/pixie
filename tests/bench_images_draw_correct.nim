@@ -1,5 +1,4 @@
-import pixie, strformat, xrays
-import pixie/images {.all.}
+import benchy, pixie, pixie/images {.all.}, strformat, xrays
 
 block:
   let
@@ -11,8 +10,6 @@ block:
   a.drawCorrect(b, translate(vec2(250, 250)), blendMode = OverwriteBlend)
   a.writeFile("tests/images/rotate0.png")
 
-import benchy
-
 block:
   let
     a = newImage(1000, 1000)
@@ -23,7 +20,6 @@ block:
     b.fill(rgba(0, 255, 0, 255))
 
     a.drawCorrect(b, translate(vec2(250, 250)), blendMode = OverwriteBlend)
-
 
 block:
   let

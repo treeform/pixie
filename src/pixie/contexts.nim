@@ -1,5 +1,5 @@
-import bumpy, chroma, pixie/common, pixie/fonts, pixie/images, pixie/masks,
-    pixie/paints, pixie/paths, tables, vmath
+import bumpy, chroma, pixie/common, pixie/fonts, pixie/images, pixie/paints,
+    pixie/paths, tables, vmath
 
 ## This file provides a Nim version of the Canvas 2D API commonly used on the
 ## web. The goal is to make picking up Pixie easy for developers familiar with
@@ -30,8 +30,7 @@ type
     lineDash: seq[float32]
     path: Path
     mat: Mat3
-    mask: Mask
-    layer: Image
+    mask, layer: Image
     stateStack: seq[ContextState]
     typefaces: Table[string, Typeface]
 
@@ -47,8 +46,7 @@ type
     textAlign: HorizontalAlignment
     lineDash: seq[float32]
     mat: Mat3
-    mask: Mask
-    layer: Image
+    mask, layer: Image
 
   TextMetrics* = object
     width*: float32
@@ -391,10 +389,13 @@ proc clip*(
   ## region, if any, is intersected with the current or given path to create
   ## the new clipping region.
   if ctx.mask == nil:
-    ctx.mask = newMask(ctx.image.width, ctx.image.height)
-    ctx.mask.fillPath(path, windingRule = windingRule)
+    ctx.mask = newImage(ctx.image.width, ctx.image.height)
+    ctx.mask.fillPath(path, color(1, 1, 1, 1), windingRule = windingRule)
   else:
-    ctx.mask.fillPath(path, windingRule = windingRule, blendMode = MaskBlend)
+    let maskPaint = newPaint(SolidPaint)
+    maskPaint.color = color(1, 1, 1, 1)
+    maskPaint.blendMode = MaskBlend
+    ctx.mask.fillPath(path, maskPaint, windingRule = windingRule)
 
 proc clip*(
   ctx: Context, windingRule = NonZero

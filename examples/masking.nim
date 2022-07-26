@@ -3,7 +3,7 @@ import pixie
 let
   image = newImage(200, 200)
   lines = newImage(200, 200)
-  mask = newMask(200, 200)
+  mask = newImage(200, 200)
 
 lines.fill(parseHtmlColor("#FC427B").rgba)
 image.fill(rgba(255, 255, 255, 255))
@@ -23,9 +23,10 @@ mask.fillPath(
     Q 180 120 100 180
     Q 20 120 20 60
     z
-  """
+  """,
+  color(1, 1, 1, 1)
 )
-lines.draw(mask)
+lines.draw(mask, blendMode = MaskBlend)
 image.draw(lines)
 
 image.writeFile("examples/masking.png")

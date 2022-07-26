@@ -90,33 +90,6 @@ timeIt "toStraightAlpha":
 reset()
 
 block:
-  let path = newPath()
-  path.ellipse(image.width / 2, image.height / 2, 300, 300)
-
-  let mask = newMask(image.width, image.height)
-  mask.fillPath(path)
-
-  timeIt "mask":
-    image.draw(mask)
-
-reset()
-
-timeIt "newMask(image)":
-  let mask = image.newMask()
-  doAssert mask[0, 0] == image[0, 0].a
-
-reset()
-
-block:
-  let mask = image.newMask()
-
-  timeIt "newImage(mask)":
-    let image = newImage(mask)
-    doAssert mask[0, 0] == image[0, 0].a
-
-  reset()
-
-block:
   let image = newImage(200, 200)
   image.fill(rgbx(255, 0, 0, 255))
 

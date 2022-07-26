@@ -1,4 +1,4 @@
-import chroma, internal, nimsimd/neon, pixie/common, system/memory, vmath
+import chroma, internal, nimsimd/neon, pixie/common, vmath
 
 when defined(release):
   {.push checks: off.}
@@ -160,40 +160,6 @@ proc toPremultipliedAlphaNeon*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
       c.b = ((c.b.uint32 * c.a + 127) div 255).uint8
       data[i] = c
 
-proc newImageNeon*(mask: Mask): Image {.simd.} =
-  result = newImage(mask.width, mask.height)
-
-  var i: int
-  for _ in 0 ..< mask.data.len div 16:
-    let alphas = vld1q_u8(mask.data[i].addr)
-    template doLane(lane: int) =
-      let packed = vgetq_lane_u32(cast[uint32x4](alphas), lane)
-      var unpacked = cast[uint8x16](vmovq_n_u32(packed))
-      unpacked = vzip1q_u8(unpacked, unpacked)
-      unpacked = vzip1q_u8(unpacked, unpacked)
-      vst1q_u8(result.data[i + lane * 4].addr, unpacked)
-    doLane(0)
-    doLane(1)
-    doLane(2)
-    doLane(3)
-    i += 16
-
-  for i in i ..< mask.data.len:
-    let v = mask.data[i]
-    result.data[i] = rgbx(v, v, v, v)
-
-proc newMaskNeon*(image: Image): Mask {.simd.} =
-  result = newMask(image.width, image.height)
-
-  var i: int
-  for _ in 0 ..< image.data.len div 16:
-    let alphas = vld4q_u8(image.data[i].addr).val[3]
-    vst1q_u8(result.data[i].addr, alphas)
-    i += 16
-
-  for i in i ..< image.data.len:
-    result.data[i] = image.data[i].a
-
 proc invertNeon*(image: Image) {.simd.} =
   var
     i: int
@@ -232,49 +198,6 @@ proc invertNeon*(image: Image) {.simd.} =
 
   toPremultipliedAlphaNeon(image.data)
 
-proc invertNeon*(mask: Mask) {.simd.} =
-  var
-    i: int
-    p = cast[uint](mask.data[0].addr)
-  # Align to 16 bytes
-  while i < mask.data.len and (p and 15) != 0:
-    mask.data[i] = 255 - mask.data[i]
-    inc i
-    inc p
-
-  let
-    vec255 = vmovq_n_u8(255)
-    iterations = mask.data.len div 16
-  for _ in 0 ..< iterations:
-    let values = vld1q_u8(cast[pointer](p))
-    vst1q_u8(cast[pointer](p), vsubq_u8(vec255, values))
-    p += 16
-  i += 16 * iterations
-
-  for i in i ..< mask.data.len:
-    mask.data[i] = 255 - mask.data[i]
-
-proc ceilNeon*(mask: Mask) {.simd.} =
-  var
-    i: int
-    p = cast[uint](mask.data[0].addr)
-
-  let
-    zeroVec = vmovq_n_u8(0)
-    vec255 = vmovq_n_u8(255)
-    iterations = mask.data.len div 16
-  for _ in 0 ..< iterations:
-    var values = vld1q_u8(cast[pointer](p))
-    values = vceqq_u8(values, zeroVec)
-    values = vbicq_u8(vec255, values)
-    vst1q_u8(cast[pointer](p), values)
-    p += 16
-  i += 16 * iterations
-
-  for i in i ..< mask.data.len:
-    if mask.data[i] != 0:
-      mask.data[i] = 255
-
 proc applyOpacityNeon*(image: Image, opacity: float32) {.simd.} =
   let opacity = round(255 * opacity).uint8
   if opacity == 255:
@@ -312,33 +235,6 @@ proc applyOpacityNeon*(image: Image, opacity: float32) {.simd.} =
     rgbx.b = ((rgbx.b * opacity) div 255).uint8
     rgbx.a = ((rgbx.a * opacity) div 255).uint8
     image.data[i] = rgbx
-
-proc applyOpacityNeon*(mask: Mask, opacity: float32) {.simd.} =
-  let opacity = round(255 * opacity).uint8
-  if opacity == 255:
-    return
-
-  if opacity == 0:
-    nimSetMem(mask.data[0].addr, 0.cint, mask.data.len)
-
-  var
-    i: int
-    p = cast[uint](mask.data[0].addr)
-
-  let
-    opacityVec = vmov_n_u8(opacity)
-    iterations = mask.data.len div 8
-  for _ in 0 ..< iterations:
-    let
-      values = vld1_u8(cast[pointer](p))
-      multiplied = vmull_u8(values, opacityVec)
-      rounded = vraddhn_u16(multiplied, vrshrq_n_u16(multiplied, 8))
-    vst1_u8(cast[pointer](p), rounded)
-    p += 8
-  i += 8 * iterations
-
-  for i in i ..< mask.data.len:
-    mask.data[i] = ((mask.data[i] * opacity) div 255).uint8
 
 when defined(release):
   {.pop.}

@@ -1,4 +1,4 @@
-import pixie, strformat, os, strutils
+import os, pixie, strformat, strutils
 
 proc xray*(image: Image, masterPath: string) =
   let
@@ -12,6 +12,3 @@ proc xray*(image: Image, masterPath: string) =
     (score, xRay) = diff(image, master)
   xRay.writeFile(xrayPath)
   echo &"xray {masterPath} -> {score:0.6f}"
-
-proc xray*(mask: Mask, masterPath: string) =
-  mask.newImage.xray(masterPath)

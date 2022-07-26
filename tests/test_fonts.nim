@@ -1,4 +1,4 @@
-import os, pixie, pixie/fileformats/png, strformat, unicode, xrays
+import os, pixie, strformat, unicode, xrays
 
 proc wh(image: Image): Vec2 =
   ## Return with and height as a size vector.
@@ -37,57 +37,41 @@ block:
   image.xray("tests/fonts/masters/image_stroke.png")
 
 block:
-  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
-  font.size = 64
-  let mask = newMask(200, 100)
-  mask.fillText(font, "fill")
-
-  mask.xray("tests/fonts/masters/mask_fill.png")
-
-block:
-  var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
-  font.size = 64
-  let mask = newMask(200, 100)
-  mask.strokeText(font, "stroke")
-
-  mask.xray("tests/fonts/masters/mask_stroke.png")
-
-block:
   # SVG Fonts have no masters
   block:
     var font = readFont("tests/fonts/Changa-Bold.svg")
     font.size = 48
-    let mask = newMask(200, 100)
-    mask.fillText(font, "Changa")
-    mask.xray("tests/fonts/svg_changa.png")
+    let image = newImage(200, 100)
+    image.fillText(font, "Changa")
+    image.xray("tests/fonts/svg_changa.png")
 
   block:
     var font = readFont("tests/fonts/DejaVuSans.svg")
     font.size = 48
-    let mask = newMask(200, 100)
-    mask.fillText(font, "Deja vu ")
-    mask.xray("tests/fonts/svg_dejavu.png")
+    let image = newImage(200, 100)
+    image.fillText(font, "Deja vu ")
+    image.xray("tests/fonts/svg_dejavu.png")
 
   block:
     var font = readFont("tests/fonts/IBMPlexSans-Regular.svg")
     font.size = 48
-    let mask = newMask(200, 100)
-    mask.fillText(font, "IBM ")
-    mask.xray("tests/fonts/svg_ibm.png")
+    let image = newImage(200, 100)
+    image.fillText(font, "IBM ")
+    image.xray("tests/fonts/svg_ibm.png")
 
   block:
     var font = readFont("tests/fonts/Moon-Bold.svg")
     font.size = 48
-    let mask = newMask(200, 100)
-    mask.fillText(font, "Moon ")
-    mask.xray("tests/fonts/svg_moon.png")
+    let image = newImage(200, 100)
+    image.fillText(font, "Moon ")
+    image.xray("tests/fonts/svg_moon.png")
 
   block:
     var font = readFont("tests/fonts/Ubuntu.svg")
     font.size = 48
-    let mask = newMask(200, 100)
-    mask.fillText(font, "Ubuntu ")
-    mask.xray("tests/fonts/svg_ubuntu.png")
+    let image = newImage(200, 100)
+    image.fillText(font, "Ubuntu ")
+    image.xray("tests/fonts/svg_ubuntu.png")
 
 block:
   var font = readFont("tests/fonts/Roboto-Regular_1.ttf")

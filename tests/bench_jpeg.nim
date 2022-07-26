@@ -1,4 +1,4 @@
-import benchy, pixie/fileformats/jpeg, os
+import benchy, os, pixie/fileformats/jpeg
 
 const
   jpegFiles* = [

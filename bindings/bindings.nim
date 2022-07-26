@@ -125,12 +125,10 @@ exportRefObject Image:
     applyOpacity(Image, float32)
     invert(Image)
     blur(Image, float32, Color)
-    newMask(Image)
     resize(Image, int, int)
     shadow(Image, Vec2, float32, float32, Color)
     superImage
     draw(Image, Image, Mat3, BlendMode)
-    draw(Image, Mask, Mat3, BlendMode)
     fillGradient
     fillText(Image, Font, string, Mat3, Vec2, HorizontalAlignment, VerticalAlignment)
     fillText(Image, Arrangement, Mat3)
@@ -139,36 +137,6 @@ exportRefObject Image:
     fillPath(Image, Path, Paint, Mat3, WindingRule)
     strokePath(Image, Path, Paint, Mat3, float32, LineCap, LineJoin, float32, seq[float32])
     newContext(Image)
-
-exportRefObject Mask:
-  fields:
-    width
-    height
-  constructor:
-    newMask(int, int)
-  procs:
-    writeFile(Mask, string)
-    copy(Mask)
-    getValue
-    setValue
-    fill(Mask, uint8)
-    minifyBy2(Mask, int)
-    magnifyBy2(Mask, int)
-    spread
-    ceil(Mask)
-    newImage(Mask)
-    applyOpacity(Mask, float32)
-    invert(Mask)
-    blur(Mask, float32, uint8)
-    resize(Mask, int, int)
-    draw(Mask, Mask, Mat3, BlendMode)
-    draw(Mask, Image, Mat3, BlendMode)
-    fillText(Mask, Font, string, Mat3, Vec2, HorizontalAlignment, VerticalAlignment)
-    fillText(Mask, Arrangement, Mat3)
-    strokeText(Mask, Font, string, Mat3, float32, Vec2, HorizontalAlignment, VerticalAlignment, LineCap, LineJoin, float32, seq[float32])
-    strokeText(Mask, Arrangement, Mat3, float32, LineCap, LineJoin, float32, seq[float32])
-    fillPath(Mask, Path, Mat3, WindingRule)
-    strokePath(Mask, Path, Mat3, float32, LineCap, LineJoin, float32, seq[float32])
 
 exportRefObject Paint:
   fields:
@@ -320,7 +288,6 @@ exportProcs:
   decodeImageDimensions
   readImage
   readImageDimensions
-  readmask
   readTypeface
   readFont
   parsePath

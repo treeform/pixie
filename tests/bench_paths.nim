@@ -31,90 +31,50 @@ let roundedRect = newPath()
 roundedRect.roundedRect(10.5, 10.5, 479, 279, radius, radius, radius, radius)
 # roundedRect.roundedRect(10, 10, 480, 280, radius, radius, radius, radius)
 
-block:
-  let image = newImage(width, height)
+let image = newImage(width, height)
 
-  timeIt "rect Image OverwriteBlend":
-    paint.blendMode = OverwriteBlend
-    image.fillPath(rect, paint)
+timeIt "rectOverwriteBlend":
+  paint.blendMode = OverwriteBlend
+  image.fillPath(rect, paint)
 
-  timeIt "rect Image NormalBlend":
-    paint.blendMode = NormalBlend
-    image.fillPath(rect, paint)
+timeIt "rect NormalBlend":
+  paint.blendMode = NormalBlend
+  image.fillPath(rect, paint)
 
-  timeIt "rect Image MaskBlend":
-    paint.blendMode = MaskBlend
-    image.fill(rgbx(255, 255, 255, 255))
-    image.fillPath(rect, paint)
+timeIt "rect MaskBlend":
+  paint.blendMode = MaskBlend
+  image.fill(rgbx(255, 255, 255, 255))
+  image.fillPath(rect, paint)
 
-  timeIt "rect Image SubtractMaskBlend":
-    paint.blendMode = SubtractMaskBlend
-    image.fill(rgbx(255, 255, 255, 255))
-    image.fillPath(rect, paint)
+timeIt "rect SubtractMaskBlend":
+  paint.blendMode = SubtractMaskBlend
+  image.fill(rgbx(255, 255, 255, 255))
+  image.fillPath(rect, paint)
 
-  timeIt "rect Image ExcludeMaskBlend":
-    paint.blendMode = ExcludeMaskBlend
-    image.fill(rgbx(255, 255, 255, 255))
-    image.fillPath(rect, paint)
+timeIt "rect ExcludeMaskBlend":
+  paint.blendMode = ExcludeMaskBlend
+  image.fill(rgbx(255, 255, 255, 255))
+  image.fillPath(rect, paint)
 
-  timeIt "roundedRect Image OverwriteBlend":
-    paint.blendMode = OverwriteBlend
-    image.fillPath(roundedRect, paint)
+timeIt "roundedRect OverwriteBlend":
+  paint.blendMode = OverwriteBlend
+  image.fillPath(roundedRect, paint)
 
-  timeIt "roundedRect Image NormalBlend":
-    paint.blendMode = NormalBlend
-    image.fillPath(roundedRect, paint)
+timeIt "roundedRect NormalBlend":
+  paint.blendMode = NormalBlend
+  image.fillPath(roundedRect, paint)
 
-  timeIt "roundedRect Image MaskBlend":
-    paint.blendMode = MaskBlend
-    image.fill(rgbx(255, 255, 255, 255))
-    image.fillPath(roundedRect, paint)
+timeIt "roundedRect MaskBlend":
+  paint.blendMode = MaskBlend
+  image.fill(rgbx(255, 255, 255, 255))
+  image.fillPath(roundedRect, paint)
 
-  timeIt "roundedRect Image SubtractMaskBlend":
-    paint.blendMode = SubtractMaskBlend
-    image.fill(rgbx(255, 255, 255, 255))
-    image.fillPath(roundedRect, paint)
+timeIt "roundedRect SubtractMaskBlend":
+  paint.blendMode = SubtractMaskBlend
+  image.fill(rgbx(255, 255, 255, 255))
+  image.fillPath(roundedRect, paint)
 
-  timeIt "roundedRect Image ExcludeMaskBlend":
-    paint.blendMode = ExcludeMaskBlend
-    image.fill(rgbx(255, 255, 255, 255))
-    image.fillPath(roundedRect, paint)
-
-block:
-  let mask = newMask(width, height)
-
-  timeIt "rect Mask OverwriteBlend":
-    mask.fillPath(rect, blendMode = OverwriteBlend)
-
-  timeIt "rect Mask NormalBlend":
-    mask.fillPath(rect, blendMode = NormalBlend)
-
-  timeIt "rect Mask MaskBlend":
-    mask.fill(255)
-    mask.fillPath(rect, blendMode = MaskBlend)
-
-  timeIt "rect Mask SubtractMaskBlend":
-    mask.fill(255)
-    mask.fillPath(rect, blendMode = SubtractMaskBlend)
-
-  timeIt "rect Mask ExcludeMaskBlend":
-    mask.fill(255)
-    mask.fillPath(rect, blendMode = ExcludeMaskBlend)
-
-  timeIt "roundedRect Mask OverwriteBlend":
-    mask.fillPath(roundedRect, blendMode = OverwriteBlend)
-
-  timeIt "roundedRect Mask NormalBlend":
-    mask.fillPath(roundedRect, blendMode = NormalBlend)
-
-  timeIt "roundedRect Mask MaskBlend":
-    mask.fill(255)
-    mask.fillPath(roundedRect, blendMode = MaskBlend)
-
-  timeIt "roundedRect Mask SubtractMaskBlend":
-    mask.fill(255)
-    mask.fillPath(roundedRect, blendMode = SubtractMaskBlend)
-
-  timeIt "roundedRect Mask ExcludeMaskBlend":
-    mask.fill(255)
-    mask.fillPath(roundedRect, blendMode = ExcludeMaskBlend)
+timeIt "roundedRect ExcludeMaskBlend":
+  paint.blendMode = ExcludeMaskBlend
+  image.fill(rgbx(255, 255, 255, 255))
+  image.fillPath(roundedRect, paint)

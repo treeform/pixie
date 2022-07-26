@@ -1,6 +1,6 @@
-import simd/internal, system/memory
+import simd/internal
 
-export internal, memory
+export internal
 
 const allowSimd* = not defined(pixieNoSimd) and not defined(tcc)
 

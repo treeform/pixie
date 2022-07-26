@@ -8,8 +8,6 @@ import chroma, common, simd, std/math
 type
   Blender* = proc(backdrop, source: ColorRGBX): ColorRGBX {.gcsafe, raises: [].}
     ## Function signature returned by blender.
-  MaskBlender* = proc(backdrop, source: uint8): uint8 {.gcsafe, raises: [].}
-    ## Function signature returned by maskBlender.
 
 when defined(release):
   {.push checks: off.}
@@ -414,54 +412,10 @@ proc blender*(blendMode: BlendMode): Blender {.raises: [].} =
   of SubtractMaskBlend: subtractMaskBlender
   of ExcludeMaskBlend: excludeMaskBlender
 
-proc maskBlendNormal*(backdrop, source: uint8): uint8 {.inline.} =
-  ## Normal blend masks
-  blendAlpha(backdrop, source)
-
-proc maskBlendMask*(backdrop, source: uint8): uint8 {.inline.} =
-  ## Mask blend masks
-  ((backdrop.uint32 * source) div 255).uint8
-
-proc maskBlendSubtract*(backdrop, source: uint8): uint8 {.inline.} =
-  ## Subtract blend masks
-  ((backdrop.uint32 * (255 - source)) div 255).uint8
-
-proc maskBlendExclude*(backdrop, source: uint8): uint8 {.inline.} =
-  ## Exclude blend masks
-  max(backdrop, source) - min(backdrop, source)
-
-proc maskBlendNormalMaskBlender(backdrop, source: uint8): uint8 =
-  maskBlendNormal(backdrop, source)
-
-proc maskBlendMaskMaskBlender(backdrop, source: uint8): uint8 =
-  maskBlendMask(backdrop, source)
-
-proc maskBlendSubtractMaskBlender(backdrop, source: uint8): uint8 =
-  maskBlendSubtract(backdrop, source)
-
-proc maskBlendExcludeMaskBlender(backdrop, source: uint8): uint8 =
-  maskBlendExclude(backdrop, source)
-
-proc maskBlendOverwriteMaskBlender(backdrop, source: uint8): uint8 =
-  source
-
-proc maskBlender*(blendMode: BlendMode): MaskBlender {.raises: [PixieError].} =
-  ## Returns a blend masking function for a given blend masking mode.
-  case blendMode:
-  of NormalBlend: maskBlendNormalMaskBlender
-  of MaskBlend: maskBlendMaskMaskBlender
-  of OverwriteBlend: maskBlendOverwriteMaskBlender
-  of SubtractMaskBlend: maskBlendSubtractMaskBlender
-  of ExcludeMaskBlend: maskBlendExcludeMaskBlender
-  else:
-    raise newException(PixieError, "No masker for " & $blendMode)
-
 when defined(amd64) and allowSimd:
   type
     BlenderSimd* = proc(blackdrop, source: M128i): M128i {.gcsafe, raises: [].}
       ## Function signature returned by blenderSimd.
-    MaskerSimd* = proc(blackdrop, source: M128i): M128i {.gcsafe, raises: [].}
-      ## Function signature returned by maskerSimd.
 
   proc blendNormalSimd*(backdrop, source: M128i): M128i {.inline.} =
     let
@@ -534,113 +488,6 @@ when defined(amd64) and allowSimd:
   proc hasSimdBlender*(blendMode: BlendMode): bool {.inline, raises: [].} =
     ## Is there a blend function for a given blend mode with SIMD support?
     blendMode in {NormalBlend, MaskBlend, OverwriteBlend}
-
-  proc maskBlendNormalSimd*(backdrop, source: M128i): M128i {.inline.} =
-    ## Blending masks
-    let
-      oddMask = mm_set1_epi16(cast[int16](0xff00))
-      v255high = mm_set1_epi16(cast[int16](255.uint16 shl 8))
-      div255 = mm_set1_epi16(cast[int16](0x8081))
-
-    var
-      sourceEven = mm_slli_epi16(source, 8)
-      sourceOdd = mm_and_si128(source, oddMask)
-
-    let
-      evenK = mm_sub_epi16(v255high, sourceEven)
-      oddK = mm_sub_epi16(v255high, sourceOdd)
-
-    var
-      backdropEven = mm_slli_epi16(backdrop, 8)
-      backdropOdd = mm_and_si128(backdrop, oddMask)
-    backdropEven = mm_mulhi_epu16(backdropEven, evenK)
-    backdropOdd = mm_mulhi_epu16(backdropOdd, oddK)
-    backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
-    backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
-
-    sourceEven = mm_srli_epi16(sourceEven, 8)
-    sourceOdd = mm_srli_epi16(sourceOdd, 8)
-
-    let
-      blendedEven = mm_add_epi16(sourceEven, backdropEven)
-      blendedOdd = mm_add_epi16(sourceOdd, backdropOdd)
-
-    mm_or_si128(blendedEven, mm_slli_epi16(blendedOdd, 8))
-
-  proc maskBlendMaskSimd*(backdrop, source: M128i): M128i =
-    let
-      oddMask = mm_set1_epi16(cast[int16](0xff00))
-      div255 = mm_set1_epi16(cast[int16](0x8081))
-      sourceEven = mm_slli_epi16(source, 8)
-      sourceOdd = mm_and_si128(source, oddMask)
-
-    var
-      backdropEven = mm_slli_epi16(backdrop, 8)
-      backdropOdd = mm_and_si128(backdrop, oddMask)
-    backdropEven = mm_mulhi_epu16(backdropEven, sourceEven)
-    backdropOdd = mm_mulhi_epu16(backdropOdd, sourceOdd)
-    backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
-    backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
-
-    mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
-
-  proc maskBlendSubtractSimd*(backdrop, source: M128i): M128i {.inline.} =
-    let
-      oddMask = mm_set1_epi16(cast[int16](0xff00))
-      vec255 = mm_set1_epi8(255)
-      div255 = mm_set1_epi16(cast[int16](0x8081))
-
-    let sourceMinus255 = mm_sub_epi8(vec255, source)
-
-    var
-      multiplierEven = mm_slli_epi16(sourceMinus255, 8)
-      multiplierOdd = mm_and_si128(sourceMinus255, oddMask)
-      backdropEven = mm_slli_epi16(backdrop, 8)
-      backdropOdd = mm_and_si128(backdrop, oddMask)
-
-    backdropEven = mm_mulhi_epu16(backdropEven, multiplierEven)
-    backdropOdd = mm_mulhi_epu16(backdropOdd, multiplierOdd)
-
-    backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
-    backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
-
-    mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
-
-  proc maskBlendExcludeSimd*(backdrop, source: M128i): M128i {.inline.} =
-    mm_sub_epi8(mm_max_epu8(backdrop, source), mm_min_epu8(backdrop, source))
-
-  proc maskBlendNormalSimdMaskBlender(backdrop, source: M128i): M128i =
-    maskBlendNormalSimd(backdrop, source)
-
-  proc maskBlendMaskSimdMaskBlender(backdrop, source: M128i): M128i =
-    maskBlendMaskSimd(backdrop, source)
-
-  proc maskBlendExcludeSimdMaskBlender(backdrop, source: M128i): M128i =
-    maskBlendExcludeSimd(backdrop, source)
-
-  proc maskBlendSubtractSimdMaskBlender(backdrop, source: M128i): M128i =
-    maskBlendSubtractSimd(backdrop, source)
-
-  proc maskBlenderSimd*(blendMode: BlendMode): MaskerSimd {.raises: [PixieError].} =
-    ## Returns a blend masking function with SIMD support.
-    case blendMode:
-    of NormalBlend: maskBlendNormalSimdMaskBlender
-    of MaskBlend: maskBlendMaskSimdMaskBlender
-    of OverwriteBlend: overwriteSimdBlender
-    of SubtractMaskBlend: maskBlendSubtractSimdMaskBlender
-    of ExcludeMaskBlend: maskBlendExcludeSimdMaskBlender
-    else:
-      raise newException(PixieError, "No SIMD masker for " & $blendMode)
-
-  proc hasSimdMaskBlender*(blendMode: BlendMode): bool {.inline, raises: [].} =
-    ## Is there a blend masking function with SIMD support?
-    blendMode in {
-      NormalBlend,
-      MaskBlend,
-      OverwriteBlend,
-      SubtractMaskBlend,
-      ExcludeMaskBlend
-    }
 
 when defined(release):
   {.pop.}

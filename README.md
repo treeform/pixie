@@ -223,9 +223,10 @@ mask.fillPath(
     Q 180 120 100 180
     Q 20 120 20 60
     z
-  """
+  """,
+  color(1, 1, 1, 1)
 )
-lines.draw(mask)
+lines.draw(mask, blendMode = MaskBlend)
 image.draw(lines)
 ```
 ![example output](examples/masking.png)
@@ -303,8 +304,8 @@ nim c -r [examples/blur.nim](examples/blur.nim)
 let path = newPath()
 path.polygon(vec2(100, 100), 70, sides = 6)
 
-let mask = newMask(200, 200)
-mask.fillPath(path)
+let mask = newImage(200, 200)
+mask.fillPath(path, color(1, 1, 1, 1))
 
 blur.blur(20)
 blur.draw(mask, blendMode = MaskBlend)

@@ -60,13 +60,6 @@ proc intersectsInside*(a, b: Segment, at: var Vec2): bool {.inline.} =
     return true
 
 proc fillUnsafe*(
-  data: var seq[uint8], value: uint8, start, len: int
-) {.inline, raises: [].} =
-  ## Fills the mask data with the value starting at index start and
-  ## continuing for len indices.
-  nimSetMem(data[start].addr, value.cint, len)
-
-proc fillUnsafe*(
   data: var seq[ColorRGBX], color: SomeColor, start, len: int
 ) {.hasSimd, raises: [].} =
   ## Fills the image data with the color starting at index start and
@@ -77,7 +70,7 @@ proc fillUnsafe*(
     nimSetMem(data[start].addr, rgbx.r.cint, len * 4)
   else:
     for i in start ..< start + len:
-          data[i] = rgbx
+      data[i] = rgbx
 
 const straightAlphaTable = block:
   var table: array[256, array[256, uint8]]
