@@ -33,7 +33,7 @@ roundedRect.roundedRect(10.5, 10.5, 479, 279, radius, radius, radius, radius)
 
 let image = newImage(width, height)
 
-timeIt "rectOverwriteBlend":
+timeIt "rect OverwriteBlend":
   paint.blendMode = OverwriteBlend
   image.fillPath(rect, paint)
 

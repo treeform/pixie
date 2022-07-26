@@ -1622,7 +1622,8 @@ proc fillHits(
   hits: seq[(Fixed32, int16)],
   numHits: int,
   windingRule: WindingRule,
-  blendMode: BlendMode
+  blendMode: BlendMode,
+  maskClears = true
 ) =
   template simdBlob(image: Image, x: var int, len: int, blendProc: untyped) =
     when allowSimd:
@@ -1660,7 +1661,7 @@ proc fillHits(
 
     var filledTo = startX
     for (start, len) in hits.walkInteger(numHits, windingRule, y, image.width):
-      block: # Clear any gap between this fill and the previous fill
+      if maskClears: # Clear any gap between this fill and the previous fill
         let gapBetween = start - filledTo
         if gapBetween > 0:
           fillUnsafe(
@@ -1669,7 +1670,6 @@ proc fillHits(
             image.dataIndex(filledTo, y),
             gapBetween
           )
-        filledTo = start + len
       block: # Handle this fill
         if rgbx.a != 255:
           var x = start
@@ -1678,9 +1678,11 @@ proc fillHits(
           for _ in x ..< start + len:
             let backdrop = image.data[dataIndex]
             image.data[dataIndex] = blendMask(backdrop, rgbx)
+        filledTo = start + len
 
-    image.clearUnsafe(0, y, startX, y)
-    image.clearUnsafe(filledTo, y, image.width, y)
+    if maskClears:
+      image.clearUnsafe(0, y, startX, y)
+      image.clearUnsafe(filledTo, y, image.width, y)
 
   of SubtractMaskBlend:
     for (start, len) in hits.walkInteger(numHits, windingRule, y, image.width):
@@ -1864,9 +1866,7 @@ proc fillShapes(
           i += 2
 
         if onlySimpleFillPairs:
-          numHits = 0
-
-          var i: int
+          var i, filledTo: int
           while i < numEntryIndices:
             let
               left = partition.entries[entryIndices[i]]
@@ -1971,13 +1971,24 @@ proc fillShapes(
             let
               fillBegin = leftCoverEnd.clamp(0, image.width)
               fillEnd = rightCoverBegin.clamp(0, image.width)
-            hits[numHits] = (fixed32(fillBegin.float32), 1.int16)
-            hits[numHits + 1] = (fixed32(fillEnd.float32), -1.int16)
-            numHits += 2
+            hits[0] = (fixed32(fillBegin.float32), 1.int16)
+            hits[1] = (fixed32(fillEnd.float32), -1.int16)
+            image.fillHits(rgbx, 0, y, hits, 2, NonZero, blendMode, false)
+
+            if blendMode == MaskBlend:
+              let clearTo = min(trapLeft.at.x, trapLeft.to.x).int
+              image.clearUnsafe(
+                min(filledTo, image.width),
+                y,
+                min(clearTo, image.width),
+                y
+              )
+
+            filledTo = max(trapRight.at.x, trapRight.to.x).ceil.int
             i += 2
 
-          if numHits > 0:
-            image.fillHits(rgbx, 0, y, hits, numHits, NonZero, blendMode)
+          if blendMode == MaskBlend:
+            image.clearUnsafe(min(filledTo, image.width), y, image.width, y)
 
           inc y
           continue
