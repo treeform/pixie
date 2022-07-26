@@ -2021,6 +2021,8 @@ proc fillShapes(
           i += 2
 
         if onlySimpleFillPairs:
+          numHits = 0
+
           var i: int
           while i < numEntryIndices:
             let
@@ -2126,12 +2128,13 @@ proc fillShapes(
             let
               fillBegin = leftCoverEnd.clamp(0, image.width)
               fillEnd = rightCoverBegin.clamp(0, image.width)
-            if fillEnd - fillBegin > 0:
-              hits[0] = (fixed32(fillBegin.float32), 1.int16)
-              hits[1] = (fixed32(fillEnd.float32), -1.int16)
-              image.fillHits(rgbx, 0, y, hits, 2, NonZero, blendMode)
-
+            hits[numHits] = (fixed32(fillBegin.float32), 1.int16)
+            hits[numHits + 1] = (fixed32(fillEnd.float32), -1.int16)
+            numHits += 2
             i += 2
+
+          if numHits > 0:
+            image.fillHits(rgbx, 0, y, hits, numHits, NonZero, blendMode)
 
           inc y
           continue
