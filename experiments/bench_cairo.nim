@@ -174,7 +174,7 @@ block: # Tiger
           props.strokeDashArray,
           props.transform.pixelScale
         )
-        let paint = newPaint(props.stroke)
+        let paint = props.stroke.copy()
         paint.color.a *= (props.opacity * props.strokeOpacity)
         fills.add(Fill(
           shapes: strokeShapes,

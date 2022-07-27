@@ -89,6 +89,10 @@ timeIt "toStraightAlpha":
 
 reset()
 
+timeIt "ceil":
+  reset()
+  image.ceil()
+
 block:
   let image = newImage(200, 200)
   image.fill(rgbx(255, 0, 0, 255))

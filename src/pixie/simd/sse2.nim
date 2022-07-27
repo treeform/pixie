@@ -10,20 +10,6 @@ proc applyOpacity*(color: M128, opacity: float32): ColorRGBX {.inline.} =
   finalColor = mm_packus_epi16(finalColor, mm_setzero_si128())
   cast[ColorRGBX](mm_cvtsi128_si32(finalColor))
 
-proc packAlphaValues(v: M128i): M128i {.inline.} =
-  ## Shuffle the alpha values for these 4 colors to the first 4 bytes.
-  result = mm_srli_epi32(v, 24)
-  result = mm_packus_epi16(result, mm_setzero_si128())
-  result = mm_packus_epi16(result, mm_setzero_si128())
-
-proc pack4xAlphaValues*(i, j, k, l: M128i): M128i {.inline.} =
-  let
-    i = packAlphaValues(i)
-    j = mm_slli_si128(packAlphaValues(j), 4)
-    k = mm_slli_si128(packAlphaValues(k), 8)
-    l = mm_slli_si128(packAlphaValues(l), 12)
-  mm_or_si128(mm_or_si128(i, j), mm_or_si128(k, l))
-
 proc unpackAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
   ## Unpack the first 32 bits into 4 rgba(0, 0, 0, value).
   result = mm_unpacklo_epi8(mm_setzero_si128(), v)
@@ -167,6 +153,8 @@ proc isOpaqueSse2*(data: var seq[ColorRGBX], start, len: int): bool {.simd.} =
 proc toPremultipliedAlphaSse2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
   var i: int
 
+  # Not worth aligning
+
   let
     alphaMask = mm_set1_epi32(cast[int32](0xff000000))
     oddMask = mm_set1_epi16(0xff00)
@@ -200,12 +188,12 @@ proc toPremultipliedAlphaSse2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
     i += 4
 
   for i in i ..< data.len:
-    var c = data[i]
-    if c.a != 255:
-      c.r = ((c.r.uint32 * c.a + 127) div 255).uint8
-      c.g = ((c.g.uint32 * c.a + 127) div 255).uint8
-      c.b = ((c.b.uint32 * c.a + 127) div 255).uint8
-      data[i] = c
+    var rgbx = data[i]
+    if rgbx.a != 255:
+      rgbx.r = ((rgbx.r.uint32 * rgbx.a + 127) div 255).uint8
+      rgbx.g = ((rgbx.g.uint32 * rgbx.a + 127) div 255).uint8
+      rgbx.b = ((rgbx.b.uint32 * rgbx.a + 127) div 255).uint8
+      data[i] = rgbx
 
 proc invertSse2*(image: Image) {.simd.} =
   var
@@ -260,6 +248,16 @@ proc applyOpacitySse2*(image: Image, opacity: float32) {.simd.} =
   var
     i: int
     p = cast[uint](image.data[0].addr)
+  # Align to 16 bytes
+  while i < image.data.len and (p and 15) != 0:
+    var rgbx = image.data[i]
+    rgbx.r = ((rgbx.r * opacity) div 255).uint8
+    rgbx.g = ((rgbx.g * opacity) div 255).uint8
+    rgbx.b = ((rgbx.b * opacity) div 255).uint8
+    rgbx.a = ((rgbx.a * opacity) div 255).uint8
+    image.data[i] = rgbx
+    inc i
+    p += 4
 
   let
     oddMask = mm_set1_epi16(0xff00)
@@ -291,6 +289,186 @@ proc applyOpacitySse2*(image: Image, opacity: float32) {.simd.} =
     rgbx.b = ((rgbx.b * opacity) div 255).uint8
     rgbx.a = ((rgbx.a * opacity) div 255).uint8
     image.data[i] = rgbx
+
+proc ceilSse2*(image: Image) {.simd.} =
+  var
+    i: int
+    p = cast[uint](image.data[0].addr)
+  # Align to 16 bytes
+  while i < image.data.len and (p and 15) != 0:
+    var rgbx = image.data[i]
+    rgbx.r = if rgbx.r == 0: 0 else: 255
+    rgbx.g = if rgbx.g == 0: 0 else: 255
+    rgbx.b = if rgbx.b == 0: 0 else: 255
+    rgbx.a = if rgbx.a == 0: 0 else: 255
+    image.data[i] = rgbx
+    inc i
+    p += 4
+
+  let
+    vecZero = mm_setzero_si128()
+    vec255 = mm_set1_epi8(255)
+    iterations = image.data.len div 8
+  for _ in 0 ..< iterations:
+    var
+      values0 = mm_loadu_si128(cast[pointer](p))
+      values1 = mm_loadu_si128(cast[pointer](p + 16))
+    values0 = mm_cmpeq_epi8(values0, vecZero)
+    values1 = mm_cmpeq_epi8(values1, vecZero)
+    values0 = mm_andnot_si128(values0, vec255)
+    values1 = mm_andnot_si128(values1, vec255)
+    mm_storeu_si128(cast[pointer](p), values0)
+    mm_storeu_si128(cast[pointer](p + 16), values1)
+    p += 32
+  i += 8 * iterations
+
+  for i in i ..< image.data.len:
+    var rgbx = image.data[i]
+    rgbx.r = if rgbx.r == 0: 0 else: 255
+    rgbx.g = if rgbx.g == 0: 0 else: 255
+    rgbx.b = if rgbx.b == 0: 0 else: 255
+    rgbx.a = if rgbx.a == 0: 0 else: 255
+    image.data[i] = rgbx
+
+proc minifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
+  ## Scales the image down by an integer scale.
+  if power < 0:
+    raise newException(PixieError, "Cannot minifyBy2 with negative power")
+  if power == 0:
+    return image.copy()
+
+  var src = image
+  for _ in 1 .. power:
+    # When minifying an image of odd size, round the result image size up
+    # so a 99 x 99 src image returns a 50 x 50 image.
+    let
+      srcWidthIsOdd = (src.width mod 2) != 0
+      srcHeightIsOdd = (src.height mod 2) != 0
+      resultEvenWidth = src.width div 2
+      resultEvenHeight = src.height div 2
+    result = newImage(
+      if srcWidthIsOdd: resultEvenWidth + 1 else: resultEvenWidth,
+      if srcHeightIsOdd: resultEvenHeight + 1 else: resultEvenHeight
+    )
+    let
+      oddMask = mm_set1_epi16(0xff00)
+      mergedMask = mm_set_epi32(0, uint32.high, 0, uint32.high)
+    for y in 0 ..< resultEvenHeight:
+      let
+        topRowStart = src.dataIndex(0, y * 2)
+        bottomRowStart = src.dataIndex(0, y * 2 + 1)
+
+      var x: int
+      while x <= resultEvenWidth - 4:
+        let
+          top = mm_loadu_si128(src.data[topRowStart + x * 2].addr)
+          bottom = mm_loadu_si128(src.data[bottomRowStart + x * 2].addr)
+          topShifted = mm_srli_si128(top, 4)
+          bottomShifted = mm_srli_si128(bottom, 4)
+          topEven = mm_andnot_si128(oddMask, top)
+          topOdd = mm_srli_epi16(top, 8)
+          bottomEven = mm_andnot_si128(oddMask, bottom)
+          bottomOdd = mm_srli_epi16(bottom, 8)
+          topShiftedEven = mm_andnot_si128(oddMask, topShifted)
+          topShiftedOdd = mm_srli_epi16(topShifted, 8)
+          bottomShiftedEven = mm_andnot_si128(oddMask, bottomShifted)
+          bottomShiftedOdd = mm_srli_epi16(bottomShifted, 8)
+          topAddedEven = mm_add_epi16(topEven, topShiftedEven)
+          bottomAddedEven = mm_add_epi16(bottomEven, bottomShiftedEven)
+          topAddedOdd = mm_add_epi16(topOdd, topShiftedOdd)
+          bottomAddedOdd = mm_add_epi16(bottomOdd, bottomShiftedOdd)
+          addedEven = mm_add_epi16(topAddedEven, bottomAddedEven)
+          addedOdd = mm_add_epi16(topAddedOdd, bottomAddedOdd)
+          addedEvenDiv4 = mm_srli_epi16(addedEven, 2)
+          addedOddDiv4 = mm_srli_epi16(addedOdd, 2)
+          merged = mm_or_si128(addedEvenDiv4, mm_slli_epi16(addedOddDiv4, 8))
+          # Merged has the correct values for the next two pixels at
+          # index 0 and 2 so mask the others out and shift 0 and 2 into
+          # position and store
+          masked = mm_and_si128(merged, mergedMask)
+        mm_storeu_si128(
+          result.data[result.dataIndex(x, y)].addr,
+          mm_shuffle_epi32(masked, MM_SHUFFLE(3, 3, 2, 0))
+        )
+        x += 2
+
+      for x in x ..< resultEvenWidth:
+        let
+          a = src.data[topRowStart + x * 2]
+          b = src.data[topRowStart + x * 2 + 1]
+          c = src.data[bottomRowStart + x * 2 + 1]
+          d = src.data[bottomRowStart + x * 2]
+          mixed = rgbx(
+            ((a.r.uint32 + b.r + c.r + d.r) div 4).uint8,
+            ((a.g.uint32 + b.g + c.g + d.g) div 4).uint8,
+            ((a.b.uint32 + b.b + c.b + d.b) div 4).uint8,
+            ((a.a.uint32 + b.a + c.a + d.a) div 4).uint8
+          )
+        result.data[result.dataIndex(x, y)] = mixed
+
+      if srcWidthIsOdd:
+        let rgbx = mix(
+          src.data[src.dataIndex(src.width - 1, y * 2 + 0)],
+          src.data[src.dataIndex(src.width - 1, y * 2 + 1)],
+          0.5
+        ) * 0.5
+        result.data[result.dataIndex(result.width - 1, y)] = rgbx
+
+    if srcHeightIsOdd:
+      for x in 0 ..< resultEvenWidth:
+        let rgbx = mix(
+          src.data[src.dataIndex(x * 2 + 0, src.height - 1)],
+          src.data[src.dataIndex(x * 2 + 1, src.height - 1)],
+          0.5
+        ) * 0.5
+        result.data[result.dataIndex(x, result.height - 1)] = rgbx
+
+      if srcWidthIsOdd:
+        result.data[result.dataIndex(result.width - 1, result.height - 1)] =
+          src.data[src.dataIndex(src.width - 1, src.height - 1)] * 0.25
+
+    # Set src as this result for if we do another power
+    src = result
+
+proc magnifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
+  ## Scales image up by 2 ^ power.
+  if power < 0:
+    raise newException(PixieError, "Cannot magnifyBy2 with negative power")
+
+  let scale = 2 ^ power
+  result = newImage(image.width * scale, image.height * scale)
+
+  for y in 0 ..< image.height:
+    # Write one row of pixels duplicated by scale
+    let
+      sourceRowStart = image.dataIndex(0, y)
+      resultRowStart = result.dataIndex(0, y * scale)
+    var x: int
+    if scale == 2:
+      while x <= image.width - 4:
+        let values = mm_loadu_si128(image.data[sourceRowStart + x].addr)
+        mm_storeu_si128(
+          result.data[resultRowStart + x * scale].addr,
+          mm_unpacklo_epi32(values, values)
+        )
+        mm_storeu_si128(
+          result.data[resultRowStart + x * scale + 4].addr,
+          mm_unpackhi_epi32(values, values)
+        )
+        x += 4
+    for x in x ..< image.width:
+      let
+        rgbx = image.data[sourceRowStart + x]
+        resultIdx = resultRowStart + x * scale
+      for i in 0 ..< scale:
+        result.data[resultIdx + i] = rgbx
+    # Copy that row of pixels into (scale - 1) more rows
+    for i in 1 ..< scale:
+      copyMem(
+        result.data[resultRowStart + result.width * i].addr,
+        result.data[resultRowStart].addr,
+        result.width * 4
+      )
 
 proc blitLineNormalSse2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int

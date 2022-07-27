@@ -91,7 +91,19 @@ proc isOpaqueAvx2*(data: var seq[ColorRGBX], start, len: int): bool {.simd.} =
       return false
 
 proc toPremultipliedAlphaAvx2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
-  var i: int
+  var
+    i: int
+    p = cast[uint](data[0].addr)
+  # Align to 32 bytes
+  while i < data.len and (p and 31) != 0:
+    var rgbx = data[i]
+    if rgbx.a != 255:
+      rgbx.r = ((rgbx.r.uint32 * rgbx.a + 127) div 255).uint8
+      rgbx.g = ((rgbx.g.uint32 * rgbx.a + 127) div 255).uint8
+      rgbx.b = ((rgbx.b.uint32 * rgbx.a + 127) div 255).uint8
+      data[i] = rgbx
+    inc i
+    p += 4
 
   let
     alphaMask = mm256_set1_epi32(cast[int32](0xff000000))
@@ -101,7 +113,7 @@ proc toPremultipliedAlphaAvx2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
     iterations = data.len div 8
   for _ in 0 ..< iterations:
     let
-      values = mm256_loadu_si256(data[i].addr)
+      values = mm256_load_si256(cast[pointer](p))
       alpha = mm256_and_si256(values, alphaMask)
       eq = mm256_cmpeq_epi8(values, alphaMask)
     if (mm256_movemask_epi8(eq) and 0x88888888) != 0x88888888:
@@ -122,16 +134,17 @@ proc toPremultipliedAlphaAvx2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
       colorsOdd = mm256_add_epi16(colorsOdd, tmpOdd)
       colorsEven = mm256_srli_epi16(colorsEven, 8)
       colorsOdd = mm256_and_si256(colorsOdd, hiMask)
-      mm256_storeu_si256(data[i].addr, mm256_or_si256(colorsEven, colorsOdd))
-    i += 8
+      mm256_store_si256(cast[pointer](p), mm256_or_si256(colorsEven, colorsOdd))
+    p += 32
+  i += 8 * iterations
 
   for i in i ..< data.len:
-    var c = data[i]
-    if c.a != 255:
-      c.r = ((c.r.uint32 * c.a + 127) div 255).uint8
-      c.g = ((c.g.uint32 * c.a + 127) div 255).uint8
-      c.b = ((c.b.uint32 * c.a + 127) div 255).uint8
-      data[i] = c
+    var rgbx = data[i]
+    if rgbx.a != 255:
+      rgbx.r = ((rgbx.r.uint32 * rgbx.a + 127) div 255).uint8
+      rgbx.g = ((rgbx.g.uint32 * rgbx.a + 127) div 255).uint8
+      rgbx.b = ((rgbx.b.uint32 * rgbx.a + 127) div 255).uint8
+      data[i] = rgbx
 
 proc invertAvx2*(image: Image) {.simd.} =
   var
@@ -182,6 +195,16 @@ proc applyOpacityAvx2*(image: Image, opacity: float32) {.simd.} =
   var
     i: int
     p = cast[uint](image.data[0].addr)
+  # Align to 32 bytes
+  while i < image.data.len and (p and 31) != 0:
+    var rgbx = image.data[i]
+    rgbx.r = ((rgbx.r * opacity) div 255).uint8
+    rgbx.g = ((rgbx.g * opacity) div 255).uint8
+    rgbx.b = ((rgbx.b * opacity) div 255).uint8
+    rgbx.a = ((rgbx.a * opacity) div 255).uint8
+    image.data[i] = rgbx
+    inc i
+    p += 4
 
   let
     oddMask = mm256_set1_epi16(0xff00)
@@ -191,7 +214,7 @@ proc applyOpacityAvx2*(image: Image, opacity: float32) {.simd.} =
     iterations = image.data.len div 8
   for _ in 0 ..< iterations:
     let
-      values = mm256_loadu_si256(cast[pointer](p))
+      values = mm256_load_si256(cast[pointer](p))
       eqZero = mm256_cmpeq_epi16(values, zeroVec)
     if mm256_movemask_epi8(eqZero) != cast[int32](0xffffffff):
       var
@@ -201,7 +224,7 @@ proc applyOpacityAvx2*(image: Image, opacity: float32) {.simd.} =
       valuesOdd = mm256_mulhi_epu16(valuesOdd, opacityVec)
       valuesEven = mm256_srli_epi16(mm256_mulhi_epu16(valuesEven, div255), 7)
       valuesOdd = mm256_srli_epi16(mm256_mulhi_epu16(valuesOdd, div255), 7)
-      mm256_storeu_si256(
+      mm256_store_si256(
         cast[pointer](p),
         mm256_or_si256(valuesEven, mm256_slli_epi16(valuesOdd, 8))
       )
@@ -215,6 +238,144 @@ proc applyOpacityAvx2*(image: Image, opacity: float32) {.simd.} =
     rgbx.b = ((rgbx.b * opacity) div 255).uint8
     rgbx.a = ((rgbx.a * opacity) div 255).uint8
     image.data[i] = rgbx
+
+proc ceilAvx2*(image: Image) {.simd.} =
+  var
+    i: int
+    p = cast[uint](image.data[0].addr)
+  # Align to 32 bytes
+  while i < image.data.len and (p and 31) != 0:
+    var rgbx = image.data[i]
+    rgbx.r = if rgbx.r == 0: 0 else: 255
+    rgbx.g = if rgbx.g == 0: 0 else: 255
+    rgbx.b = if rgbx.b == 0: 0 else: 255
+    rgbx.a = if rgbx.a == 0: 0 else: 255
+    image.data[i] = rgbx
+    inc i
+    p += 4
+
+  let
+    vecZero = mm256_setzero_si256()
+    vec255 = mm256_set1_epi8(255)
+    iterations = image.data.len div 8
+  for _ in 0 ..< iterations:
+    var values = mm256_load_si256(cast[pointer](p))
+    values = mm256_cmpeq_epi8(values, vecZero)
+    values = mm256_andnot_si256(values, vec255)
+    mm256_store_si256(cast[pointer](p), values)
+    p += 32
+  i += 8 * iterations
+
+  for i in i ..< image.data.len:
+    var rgbx = image.data[i]
+    rgbx.r = if rgbx.r == 0: 0 else: 255
+    rgbx.g = if rgbx.g == 0: 0 else: 255
+    rgbx.b = if rgbx.b == 0: 0 else: 255
+    rgbx.a = if rgbx.a == 0: 0 else: 255
+    image.data[i] = rgbx
+
+proc minifyBy2Avx2*(image: Image, power = 1): Image {.simd.} =
+  ## Scales the image down by an integer scale.
+  if power < 0:
+    raise newException(PixieError, "Cannot minifyBy2 with negative power")
+  if power == 0:
+    return image.copy()
+
+  var src = image
+  for _ in 1 .. power:
+    # When minifying an image of odd size, round the result image size up
+    # so a 99 x 99 src image returns a 50 x 50 image.
+    let
+      srcWidthIsOdd = (src.width mod 2) != 0
+      srcHeightIsOdd = (src.height mod 2) != 0
+      resultEvenWidth = src.width div 2
+      resultEvenHeight = src.height div 2
+    result = newImage(
+      if srcWidthIsOdd: resultEvenWidth + 1 else: resultEvenWidth,
+      if srcHeightIsOdd: resultEvenHeight + 1 else: resultEvenHeight
+    )
+    let
+      oddMask = mm256_set1_epi16(0xff00)
+      mergedMask = mm256_set_epi32(
+        0, uint32.high, 0, uint32.high, 0, uint32.high, 0, uint32.high
+      )
+      permuteControl = mm256_set_epi32(7, 7, 7, 7, 6, 4, 2, 0)
+    for y in 0 ..< resultEvenHeight:
+      let
+        topRowStart = src.dataIndex(0, y * 2)
+        bottomRowStart = src.dataIndex(0, y * 2 + 1)
+
+      var x: int
+      while x <= resultEvenWidth - 8:
+        let
+          top = mm256_loadu_si256(src.data[topRowStart + x * 2].addr)
+          bottom = mm256_loadu_si256(src.data[bottomRowStart + x * 2].addr)
+          topShifted = mm256_srli_si256(top, 4)
+          bottomShifted = mm256_srli_si256(bottom, 4)
+          topEven = mm256_andnot_si256(oddMask, top)
+          topOdd = mm256_srli_epi16(top, 8)
+          bottomEven = mm256_andnot_si256(oddMask, bottom)
+          bottomOdd = mm256_srli_epi16(bottom, 8)
+          topShiftedEven = mm256_andnot_si256(oddMask, topShifted)
+          topShiftedOdd = mm256_srli_epi16(topShifted, 8)
+          bottomShiftedEven = mm256_andnot_si256(oddMask, bottomShifted)
+          bottomShiftedOdd = mm256_srli_epi16(bottomShifted, 8)
+          topAddedEven = mm256_add_epi16(topEven, topShiftedEven)
+          bottomAddedEven = mm256_add_epi16(bottomEven, bottomShiftedEven)
+          topAddedOdd = mm256_add_epi16(topOdd, topShiftedOdd)
+          bottomAddedOdd = mm256_add_epi16(bottomOdd, bottomShiftedOdd)
+          addedEven = mm256_add_epi16(topAddedEven, bottomAddedEven)
+          addedOdd = mm256_add_epi16(topAddedOdd, bottomAddedOdd)
+          addedEvenDiv4 = mm256_srli_epi16(addedEven, 2)
+          addedOddDiv4 = mm256_srli_epi16(addedOdd, 2)
+          merged = mm256_or_si256(addedEvenDiv4, mm256_slli_epi16(addedOddDiv4, 8))
+          # Merged has the correct values for the next two pixels at
+          # index 0, 2, 4, 6 so mask the others out and permute into position
+          masked = mm256_and_si256(merged, mergedMask)
+          permuted = mm_256_permutevar8x32_epi32(masked, permuteControl)
+        mm_storeu_si128(
+          result.data[result.dataIndex(x, y)].addr,
+          mm256_castsi256_si128(permuted)
+        )
+        x += 4
+
+      for x in x ..< resultEvenWidth:
+        let
+          a = src.data[topRowStart + x * 2]
+          b = src.data[topRowStart + x * 2 + 1]
+          c = src.data[bottomRowStart + x * 2 + 1]
+          d = src.data[bottomRowStart + x * 2]
+          mixed = rgbx(
+            ((a.r.uint32 + b.r + c.r + d.r) div 4).uint8,
+            ((a.g.uint32 + b.g + c.g + d.g) div 4).uint8,
+            ((a.b.uint32 + b.b + c.b + d.b) div 4).uint8,
+            ((a.a.uint32 + b.a + c.a + d.a) div 4).uint8
+          )
+        result.data[result.dataIndex(x, y)] = mixed
+
+      if srcWidthIsOdd:
+        let rgbx = mix(
+          src.data[src.dataIndex(src.width - 1, y * 2 + 0)],
+          src.data[src.dataIndex(src.width - 1, y * 2 + 1)],
+          0.5
+        ) * 0.5
+        result.data[result.dataIndex(result.width - 1, y)] = rgbx
+
+    if srcHeightIsOdd:
+      for x in 0 ..< resultEvenWidth:
+        let rgbx = mix(
+          src.data[src.dataIndex(x * 2 + 0, src.height - 1)],
+          src.data[src.dataIndex(x * 2 + 1, src.height - 1)],
+          0.5
+        ) * 0.5
+        result.data[result.dataIndex(x, result.height - 1)] = rgbx
+
+      if srcWidthIsOdd:
+        result.data[result.dataIndex(result.width - 1, result.height - 1)] =
+          src.data[src.dataIndex(src.width - 1, src.height - 1)] * 0.25
+
+    # Set src as this result for if we do another power
+    src = result
 
 when defined(release):
   {.pop.}
