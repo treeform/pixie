@@ -110,7 +110,7 @@ proc toPremultipliedAlphaAvx2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
     oddMask = mm256_set1_epi16(0xff00)
     vec128 = mm256_set1_epi16(128)
     hiMask = mm256_set1_epi16(255 shl 8)
-    iterations = data.len div 8
+    iterations = (data.len - i) div 8
   for _ in 0 ..< iterations:
     let
       values = mm256_load_si256(cast[pointer](p))
@@ -163,7 +163,7 @@ proc invertAvx2*(image: Image) {.simd.} =
 
   let
     vec255 = mm256_set1_epi8(255)
-    iterations = image.data.len div 16
+    iterations = (image.data.len - i) div 16
   for _ in 0 ..< iterations:
     let
       a = mm256_load_si256(cast[pointer](p))
@@ -211,7 +211,7 @@ proc applyOpacityAvx2*(image: Image, opacity: float32) {.simd.} =
     div255 = mm256_set1_epi16(0x8081)
     zeroVec = mm256_setzero_si256()
     opacityVec = mm256_slli_epi16(mm256_set1_epi16(opacity), 8)
-    iterations = image.data.len div 8
+    iterations = (image.data.len - i) div 8
   for _ in 0 ..< iterations:
     let
       values = mm256_load_si256(cast[pointer](p))
@@ -257,7 +257,7 @@ proc ceilAvx2*(image: Image) {.simd.} =
   let
     vecZero = mm256_setzero_si256()
     vec255 = mm256_set1_epi8(255)
-    iterations = image.data.len div 8
+    iterations = (image.data.len - i) div 8
   for _ in 0 ..< iterations:
     var values = mm256_load_si256(cast[pointer](p))
     values = mm256_cmpeq_epi8(values, vecZero)

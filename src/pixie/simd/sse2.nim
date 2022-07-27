@@ -212,7 +212,7 @@ proc invertSse2*(image: Image) {.simd.} =
 
   let
     vec255 = mm_set1_epi8(255)
-    iterations = image.data.len div 16
+    iterations = (image.data.len - i) div 16
   for _ in 0 ..< iterations:
     let
       a = mm_load_si128(cast[pointer](p))
@@ -264,7 +264,7 @@ proc applyOpacitySse2*(image: Image, opacity: float32) {.simd.} =
     div255 = mm_set1_epi16(0x8081)
     zeroVec = mm_setzero_si128()
     opacityVec = mm_slli_epi16(mm_set1_epi16(opacity), 8)
-    iterations = image.data.len div 4
+    iterations = (image.data.len - i) div 4
   for _ in 0 ..< iterations:
     let values = mm_loadu_si128(cast[pointer](p))
     if mm_movemask_epi8(mm_cmpeq_epi16(values, zeroVec)) != 0xffff:
@@ -308,7 +308,7 @@ proc ceilSse2*(image: Image) {.simd.} =
   let
     vecZero = mm_setzero_si128()
     vec255 = mm_set1_epi8(255)
-    iterations = image.data.len div 8
+    iterations = (image.data.len - i) div 8
   for _ in 0 ..< iterations:
     var
       values0 = mm_loadu_si128(cast[pointer](p))
