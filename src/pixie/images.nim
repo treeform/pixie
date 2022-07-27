@@ -77,23 +77,25 @@ proc isOpaque*(image: Image): bool {.raises: [].} =
 
 proc flipHorizontal*(image: Image) {.raises: [].} =
   ## Flips the image around the Y axis.
-  let w = image.width div 2
+  let halfWidth = image.width div 2
   for y in 0 ..< image.height:
-    for x in 0 ..< w:
-      swap(
-        image.data[image.dataIndex(x, y)],
-        image.data[image.dataIndex(image.width - x - 1, y)]
-      )
+    var
+      left = image.dataIndex(0, y)
+      right = left + image.width - 1
+    for x in 0 ..< halfWidth:
+      swap(image.data[left], image.data[right])
+      inc left
+      dec right
 
 proc flipVertical*(image: Image) {.raises: [].} =
   ## Flips the image around the X axis.
-  let h = image.height div 2
-  for y in 0 ..< h:
+  let halfHeight = image.height div 2
+  for y in 0 ..< halfHeight:
+    let
+      topStart = image.dataIndex(0, y)
+      bottomStart = image.dataIndex(0, image.height - y - 1)
     for x in 0 ..< image.width:
-      swap(
-        image.data[image.dataIndex(x, y)],
-        image.data[image.dataIndex(x, image.height - y - 1)]
-      )
+      swap(image.data[topStart + x], image.data[bottomStart + x])
 
 proc rotate90*(image: Image) {.raises: [PixieError].} =
   ## Rotates the image 90 degrees clockwise.
