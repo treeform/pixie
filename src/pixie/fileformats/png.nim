@@ -616,14 +616,5 @@ proc encodePng*(image: Image): string {.raises: [PixieError].} =
   copy.toStraightAlpha()
   encodePng(image.width, image.height, 4, copy[0].addr, copy.len * 4)
 
-proc encodePng*(mask: Mask): string {.raises: [PixieError].} =
-  ## Encodes the mask data into the PNG file format.
-  if mask.data.len == 0:
-    raise newException(
-      PixieError,
-      "Mask has no data (are height and width 0?)"
-    )
-  encodePng(mask.width, mask.height, 1, mask.data[0].addr, mask.data.len)
-
 when defined(release):
   {.pop.}

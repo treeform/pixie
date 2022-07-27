@@ -1,5 +1,5 @@
-import blends, bumpy, chroma, common, images, internal, masks, paints, simd,
-    std/fenv, std/strutils, vmath
+import blends, bumpy, chroma, common, images, internal, paints, simd, std/fenv,
+    std/strutils, vmath
 
 type
   WindingRule* = enum
@@ -1132,7 +1132,7 @@ proc initPartitionEntry(segment: Segment, winding: int16): PartitionEntry =
     result.m = (segment.at.y - segment.to.y) / d
     result.b = segment.at.y - result.m * segment.at.x
 
-proc solveX(entry: PartitionEntry, y: float32): float32 {.inline.}  =
+proc solveX(entry: PartitionEntry, y: float32): float32 {.inline.} =
   if entry.m == 0:
     entry.b
   else:
@@ -1420,17 +1420,14 @@ proc computeCoverage(
           for j in i ..< fillStart + fillLen:
             coverages[j - startX] += sampleCoverage
 
-proc clearUnsafe(target: Image | Mask, startX, startY, toX, toY: int) =
+proc clearUnsafe(image: Image, startX, startY, toX, toY: int) =
   ## Clears data from [start, to).
-  if startX == target.width or startY == target.height:
+  if startX == image.width or startY == image.height:
     return
   let
-    start = target.dataIndex(startX, startY)
-    len = target.dataIndex(toX, toY) - start
-  when type(target) is Image:
-    fillUnsafe(target.data, rgbx(0, 0, 0, 0), start, len)
-  else: # target is Mask
-    fillUnsafe(target.data, 0, start, len)
+    start = image.dataIndex(startX, startY)
+    len = image.dataIndex(toX, toY) - start
+  fillUnsafe(image.data, rgbx(0, 0, 0, 0), start, len)
 
 proc fillCoverage(
   image: Image,
@@ -1618,98 +1615,6 @@ proc fillCoverage(
         image.data[dataIndex] = blender(backdrop, source(rgbx, coverage))
       inc dataIndex
 
-proc fillCoverage(
-  mask: Mask,
-  startX, y: int,
-  coverages: seq[uint8],
-  blendMode: BlendMode
-) =
-  var
-    x = startX
-    dataIndex = mask.dataIndex(x, y)
-
-  template simdBlob(blendProc: untyped) =
-    when allowSimd:
-      when defined(amd64):
-        for _ in 0 ..< coverages.len div 16:
-          let
-            coveragesVec = mm_loadu_si128(coverages[x - startX].unsafeAddr)
-            eqZero = mm_cmpeq_epi8(coveragesVec, mm_setzero_si128())
-            allZeroes = mm_movemask_epi8(eqZero) == 0xffff
-          if not allZeroes:
-            let backdrop = mm_loadu_si128(mask.data[dataIndex].addr)
-            mm_storeu_si128(
-              mask.data[dataIndex].addr,
-              blendProc(backdrop, coveragesVec)
-            )
-          x += 16
-          dataIndex += 16
-
-  template blendBlob(blendProc: untyped) =
-    for x in x ..< startX + coverages.len:
-      let coverage = coverages[x - startX]
-      if coverage != 0:
-        let backdrop = mask.data[dataIndex]
-        mask.data[dataIndex] = blendProc(backdrop, coverage)
-      inc dataIndex
-
-  case blendMode:
-  of OverwriteBlend:
-    copyMem(
-      mask.unsafe[startX, y].addr,
-      coverages[0].unsafeAddr,
-      coverages.len
-    )
-
-  of NormalBlend:
-    simdBlob(maskBlendNormalSimd)
-    blendBlob(maskBlendNormal)
-
-  of MaskBlend:
-    {.linearScanEnd.}
-
-    when allowSimd:
-      when defined(amd64):
-        for _ in 0 ..< coverages.len div 16:
-          let
-            coveragesVec = mm_loadu_si128(coverages[x - startX].unsafeAddr)
-            eqZero = mm_cmpeq_epi8(coveragesVec, mm_setzero_si128())
-            allZeroes = mm_movemask_epi8(eqZero) == 0xffff
-          if not allZeroes:
-            let backdrop = mm_loadu_si128(mask.data[dataIndex].addr)
-            mm_storeu_si128(
-              mask.data[dataIndex].addr,
-              maskBlendMaskSimd(backdrop, coveragesVec)
-            )
-          else:
-            mm_storeu_si128(mask.data[dataIndex].addr, mm_setzero_si128())
-          x += 16
-          dataIndex += 16
-
-    for x in x ..< startX + coverages.len:
-      let coverage = coverages[x - startX]
-      if coverage != 0:
-        let backdrop = mask.data[dataIndex]
-        mask.data[dataIndex] = maskBlendMask(backdrop, coverage)
-      else:
-        mask.data[dataIndex] = 0
-      inc dataIndex
-
-    mask.clearUnsafe(0, y, startX, y)
-    mask.clearUnsafe(startX + coverages.len, y, mask.width, y)
-
-  of SubtractMaskBlend:
-    simdBlob(maskBlendSubtractSimd)
-    blendBlob(maskBlendSubtract)
-
-  of ExcludeMaskBlend:
-    simdBlob(maskBlendExcludeSimd)
-    blendBlob(maskBlendExclude)
-
-  else:
-    let maskBlender = blendMode.maskBlender()
-    blendBlob(maskBlender)
-
 proc fillHits(
   image: Image,
   rgbx: ColorRGBX,
@@ -1717,7 +1622,8 @@ proc fillHits(
   hits: seq[(Fixed32, int16)],
   numHits: int,
   windingRule: WindingRule,
-  blendMode: BlendMode
+  blendMode: BlendMode,
+  maskClears = true
 ) =
   template simdBlob(image: Image, x: var int, len: int, blendProc: untyped) =
     when allowSimd:
@@ -1755,7 +1661,7 @@ proc fillHits(
 
     var filledTo = startX
     for (start, len) in hits.walkInteger(numHits, windingRule, y, image.width):
-      block: # Clear any gap between this fill and the previous fill
+      if maskClears: # Clear any gap between this fill and the previous fill
         let gapBetween = start - filledTo
         if gapBetween > 0:
           fillUnsafe(
@@ -1764,7 +1670,6 @@ proc fillHits(
             image.dataIndex(filledTo, y),
             gapBetween
           )
-        filledTo = start + len
       block: # Handle this fill
         if rgbx.a != 255:
           var x = start
@@ -1773,9 +1678,11 @@ proc fillHits(
           for _ in x ..< start + len:
             let backdrop = image.data[dataIndex]
             image.data[dataIndex] = blendMask(backdrop, rgbx)
+        filledTo = start + len
 
-    image.clearUnsafe(0, y, startX, y)
-    image.clearUnsafe(filledTo, y, image.width, y)
+    if maskClears:
+      image.clearUnsafe(0, y, startX, y)
+      image.clearUnsafe(filledTo, y, image.width, y)
 
   of SubtractMaskBlend:
     for (start, len) in hits.walkInteger(numHits, windingRule, y, image.width):
@@ -1804,68 +1711,6 @@ proc fillHits(
         let backdrop = image.data[dataIndex]
         image.data[dataIndex] = blender(backdrop, rgbx)
         inc dataIndex
-
-proc fillHits(
-  mask: Mask,
-  startX, y: int,
-  hits: seq[(Fixed32, int16)],
-  numHits: int,
-  windingRule: WindingRule,
-  blendMode: BlendMode
-) =
-  template simdBlob(mask: Mask, x: var int, len: int, blendProc: untyped) =
-    when allowSimd:
-      when defined(amd64):
-        var p = cast[uint](mask.data[mask.dataIndex(x, y)].addr)
-        let
-          iterations = len div 16
-          vec255 = mm_set1_epi8(255)
-        for _ in 0 ..< iterations:
-          let backdrop = mm_loadu_si128(cast[pointer](p))
-          mm_storeu_si128(cast[pointer](p), blendProc(backdrop, vec255))
-          p += 16
-        x += iterations * 16
-
-  case blendMode:
-  of NormalBlend, OverwriteBlend:
-    for (start, len) in hits.walkInteger(numHits, windingRule, y, mask.width):
-      fillUnsafe(mask.data, 255, mask.dataIndex(start, y), len)
-
-  of MaskBlend:
-    {.linearScanEnd.}
-
-    var filledTo = startX
-    for (start, len) in hits.walkInteger(numHits, windingRule, y, mask.width):
-      let gapBetween = start - filledTo
-      if gapBetween > 0:
-        fillUnsafe(mask.data, 0, mask.dataIndex(filledTo, y), gapBetween)
-      filledTo = start + len
-
-    mask.clearUnsafe(0, y, startX, y)
-    mask.clearUnsafe(filledTo, y, mask.width, y)
-
-  of SubtractMaskBlend:
-    for (start, len) in hits.walkInteger(numHits, windingRule, y, mask.width):
-      var x = start
-      simdBlob(mask, x, len, maskBlendSubtractSimd)
-      var dataIndex = mask.dataIndex(x, y)
-      for _ in x ..< start + len:
-        let backdrop = mask.data[dataIndex]
-        mask.data[dataIndex] = maskBlendSubtract(backdrop, 255)
-        inc dataIndex
-
-  of ExcludeMaskBlend:
-    for (start, len) in hits.walkInteger(numHits, windingRule, y, mask.width):
-      var x = start
-      simdBlob(mask, x, len, maskBlendExcludeSimd)
-      var dataIndex = mask.dataIndex(x, y)
-      for _ in x ..< start + len:
-        let backdrop = mask.data[dataIndex]
-        mask.data[dataIndex] = maskBlendExclude(backdrop, 255)
-        inc dataIndex
-
-  else:
-    failUnsupportedBlendMode(blendMode)
 
 proc fillShapes(
   image: Image,
@@ -2021,9 +1866,7 @@ proc fillShapes(
           i += 2
 
         if onlySimpleFillPairs:
-          numHits = 0
-
-          var i: int
+          var i, filledTo: int
           while i < numEntryIndices:
             let
               left = partition.entries[entryIndices[i]]
@@ -2128,13 +1971,24 @@ proc fillShapes(
             let
               fillBegin = leftCoverEnd.clamp(0, image.width)
               fillEnd = rightCoverBegin.clamp(0, image.width)
-            hits[numHits] = (fixed32(fillBegin.float32), 1.int16)
-            hits[numHits + 1] = (fixed32(fillEnd.float32), -1.int16)
-            numHits += 2
+            hits[0] = (fixed32(fillBegin.float32), 1.int16)
+            hits[1] = (fixed32(fillEnd.float32), -1.int16)
+            image.fillHits(rgbx, 0, y, hits, 2, NonZero, blendMode, false)
+
+            if blendMode == MaskBlend:
+              let clearTo = min(trapLeft.at.x, trapLeft.to.x).int
+              image.clearUnsafe(
+                min(filledTo, image.width),
+                y,
+                min(clearTo, image.width),
+                y
+              )
+
+            filledTo = max(trapRight.at.x, trapRight.to.x).ceil.int
             i += 2
 
-          if numHits > 0:
-            image.fillHits(rgbx, 0, y, hits, numHits, NonZero, blendMode)
+          if blendMode == MaskBlend:
+            image.clearUnsafe(min(filledTo, image.width), y, image.width, y)
 
           inc y
           continue
@@ -2178,93 +2032,6 @@ proc fillShapes(
   if blendMode == MaskBlend:
     image.clearUnsafe(0, 0, 0, startY)
     image.clearUnsafe(0, pathHeight, 0, image.height)
-
-proc fillShapes(
-  mask: Mask,
-  shapes: seq[Polygon],
-  windingRule: WindingRule,
-  blendMode: BlendMode
-) =
-  # Figure out the total bounds of all the shapes,
-  # rasterize only within the total bounds
-  let
-    segments = shapes.shapesToSegments()
-    bounds = computeBounds(segments).snapToPixels()
-    startX = max(0, bounds.x.int)
-    startY = max(0, bounds.y.int)
-    pathWidth =
-      if startX < mask.width:
-        min(bounds.w.int, mask.width - startX)
-      else:
-        0
-    pathHeight = min(mask.height, (bounds.y + bounds.h).int)
-
-  if pathWidth == 0:
-    return
-
-  if pathWidth < 0:
-    raise newException(PixieError, "Path int overflow detected")
-
-  var
-    partitions = partitionSegments(segments, startY, pathHeight)
-    partitionIndex: int
-    entryIndices = newSeq[int](partitions.maxEntryCount)
-    numEntryIndices: int
-    coverages = newSeq[uint8](pathWidth)
-    hits = newSeq[(Fixed32, int16)](partitions.maxEntryCount)
-    numHits: int
-
-  for y in startY ..< pathHeight:
-    if y >= partitions[partitionIndex].bottom:
-      inc partitionIndex
-
-    let
-      partition = partitions[partitionIndex].addr
-      partitionTop = partition.top
-      partitionBottom = partition.bottom
-      partitionHeight = partitionBottom - partitionTop
-    if partitionHeight == 0:
-      continue
-
-    let
-      scanTop = y.float32
-      scanBottom = (y + 1).float32
-
-    numEntryIndices = 0
-    if partition.twoNonintersectingSpanningSegments:
-      numEntryIndices = 2
-      entryIndices[0] = 0
-      entryIndices[1] = 1
-    else:
-      for i in 0 ..< partition.entries.len:
-        if partition.entries[i].segment.to.y < scanTop or
-          partition.entries[i].segment.at.y >= scanBottom:
-          continue
-        entryIndices[numEntryIndices] = i
-        inc numEntryIndices
-
-    computeCoverage(
-      cast[ptr UncheckedArray[uint8]](coverages[0].addr),
-      hits,
-      numHits,
-      mask.width,
-      y,
-      startX,
-      partitions,
-      partitionIndex,
-      entryIndices,
-      numEntryIndices,
-      windingRule
-    )
-    if partitions[partitionIndex].requiresAntiAliasing:
-      mask.fillCoverage(startX, y, coverages, blendMode)
-      zeroMem(coverages[0].addr, coverages.len)
-    else:
-      mask.fillHits(startX, y, hits, numHits, windingRule, blendMode)
-
-  if blendMode == MaskBlend:
-    mask.clearUnsafe(0, 0, 0, startY)
-    mask.clearUnsafe(0, pathHeight, 0, mask.height)
 
 proc miterLimitToAngle*(limit: float32): float32 {.inline.} =
   ## Converts miter-limit-ratio to miter-limit-angle.
@@ -2446,18 +2213,6 @@ proc parseSomePath(
     path.commandsToShapes(closeSubpaths, pixelScale)
 
 proc fillPath*(
-  mask: Mask,
-  path: SomePath,
-  transform = mat3(),
-  windingRule = NonZero,
-  blendMode = NormalBlend
-) {.raises: [PixieError].} =
-  ## Fills a path.
-  var shapes = parseSomePath(path, true, transform.pixelScale())
-  shapes.transform(transform)
-  mask.fillShapes(shapes, windingRule, blendMode)
-
-proc fillPath*(
   image: Image,
   path: SomePath,
   paint: Paint,
@@ -2480,10 +2235,10 @@ proc fillPath*(
     return
 
   let
-    mask = newMask(image.width, image.height)
+    mask = newImage(image.width, image.height)
     fill = newImage(image.width, image.height)
 
-  mask.fillPath(path, transform, windingRule)
+  mask.fillPath(path, color(1, 1, 1, 1), transform, windingRule)
 
   # Draw the image (maybe tiled) or gradients. Do this with opaque paint and
   # and then apply the paint's opacity to the mask.
@@ -2505,33 +2260,8 @@ proc fillPath*(
   if paint.opacity != 1:
     mask.applyOpacity(paint.opacity)
 
-  fill.draw(mask)
+  fill.draw(mask, blendMode = MaskBlend)
   image.draw(fill, blendMode = paint.blendMode)
-
-proc strokePath*(
-  mask: Mask,
-  path: SomePath,
-  transform = mat3(),
-  strokeWidth: float32 = 1.0,
-  lineCap = ButtCap,
-  lineJoin = MiterJoin,
-  miterLimit = defaultMiterLimit,
-  dashes: seq[float32] = @[],
-  blendMode = NormalBlend
-) {.raises: [PixieError].} =
-  ## Strokes a path.
-  let pixelScale = transform.pixelScale()
-  var strokeShapes = strokeShapes(
-    parseSomePath(path, false, pixelScale),
-    strokeWidth,
-    lineCap,
-    lineJoin,
-    miterLimit,
-    dashes,
-    pixelScale
-  )
-  strokeShapes.transform(transform)
-  mask.fillShapes(strokeShapes, NonZero, blendMode)
 
 proc strokePath*(
   image: Image,
@@ -2568,11 +2298,12 @@ proc strokePath*(
     return
 
   let
-    mask = newMask(image.width, image.height)
+    mask = newImage(image.width, image.height)
     fill = newImage(image.width, image.height)
 
   mask.strokePath(
     path,
+    color(1, 1, 1, 1),
     transform,
     strokeWidth,
     lineCap,
@@ -2601,7 +2332,7 @@ proc strokePath*(
   if paint.opacity != 1:
     mask.applyOpacity(paint.opacity)
 
-  fill.draw(mask)
+  fill.draw(mask, blendMode = MaskBlend)
   image.draw(fill, blendMode = paint.blendMode)
 
 proc overlaps(

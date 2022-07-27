@@ -79,17 +79,6 @@ block:
 
 block:
   let
-    a = newImage(1000, 1000)
-    b = newMask(500, 500)
-  a.fill(rgba(255, 0, 0, 255))
-  b.fill(rand(255).uint8)
-
-  timeIt "mask smooth rotate 45 deg":
-    a.draw(b, translate(vec2(0, 500)) * rotate(toRadians(45)), NormalBlend)
-    keep(b)
-
-block:
-  let
     a = newImage(100, 100)
     b = newImage(50, 50)
 

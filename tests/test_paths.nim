@@ -173,30 +173,6 @@ block:
 #   image.xray("tests/paths/pathRoundRect.png")
 
 block:
-  let
-    mask = newMask(100, 100)
-    pathStr = "M 10 10 H 90 V 90 H 10 L 10 10"
-  mask.fillPath(pathStr)
-  mask.xray("tests/paths/pathRectangleMask.png")
-
-# block:
-#   let
-#     mask = newMask(100, 100)
-#     r = 10.0
-#     x = 10.0
-#     y = 10.0
-#     h = 80.0
-#     w = 80.0
-#   let path = newPath()
-#   path.moveTo(x + r, y)
-#   path.arcTo(x + w, y, x + w, y + h, r)
-#   path.arcTo(x + w, y + h, x, y + h, r)
-#   path.arcTo(x, y + h, x, y, r)
-#   path.arcTo(x, y, x + w, y, r)
-#   mask.fillPath(path)
-#   writeFile("tests/paths/pathRoundRectMask.png", mask.encodePng())
-
-block:
   let image = newImage(200, 200)
   image.fill(rgba(255, 255, 255, 255))
 
@@ -470,43 +446,6 @@ block:
   image.xray("tests/paths/rectMaskStroke.png")
 
 block:
-  let mask = newMask(100, 100)
-  mask.fillPath("M 10 10 H 60 V 60 H 10 z")
-  mask.fillPath("M 30 30 H 80 V 80 H 30 z", blendMode = ExcludeMaskBlend)
-  mask.xray("tests/paths/maskRectExcludeMask.png")
-
-block:
-  let mask = newMask(100, 100)
-  mask.fillPath("M 10.1 10.1 H 60.1 V 60.1 H 10.1 z")
-  mask.fillPath(
-    "M 30.1 30.1 H 80.1 V 80.1 H 30.1 z",
-    blendMode = ExcludeMaskBlend
-  )
-  mask.xray("tests/paths/maskRectExcludeMaskAA.png")
-
-block:
-  let mask = newMask(100, 100)
-  mask.fillPath("M 10 10 H 60 V 60 H 10 z")
-  mask.fillPath("M 30 30 H 80 V 80 H 30 z", blendMode = MaskBlend)
-  mask.xray("tests/paths/maskRectMask.png")
-
-block:
-  let mask = newMask(100, 100)
-  mask.fillPath("M 10.1 10.1 H 60.1 V 60.1 H 10.1 z")
-  mask.fillPath("M 30.1 30.1 H 80.1 V 80.1 H 30.1 z", blendMode = MaskBlend)
-  mask.xray("tests/paths/maskRectMaskAA.png")
-
-block:
-  let mask = newMask(100, 100)
-  mask.fillPath("M 10 10 H 60 V 60 H 10 z")
-  mask.strokePath(
-    "M 30 30 H 50 V 50 H 30 z",
-    strokeWidth = 10,
-    blendMode = MaskBlend
-  )
-  mask.xray("tests/paths/maskStrokeRectMask.png")
-
-block:
   var
     surface = newImage(256, 256)
     ctx = newContext(surface)
@@ -676,13 +615,6 @@ block:
 
 block:
   let
-    image = newMask(100, 100)
-    pathStr = "M0 0 L200 200"
-  image.strokePath(pathStr, strokeWidth = 10)
-  image.xray("tests/paths/pathStroke1BigMask.png")
-
-block:
-  let
     image = newImage(100, 100)
     pathStr = "M99 99 L999 99 L999 100 L99 100 Z"
     color = rgba(255, 0, 0, 255)
@@ -716,20 +648,13 @@ block:
   image.fillPath(pathStr, color)
 
 block:
-  # Test zero width mask fill.
-  let
-    mask = newMask(100, 100)
-    pathStr = "M0 0 L0 1 L0 0 Z"
-  mask.fillPath(pathStr)
-
-block:
   # Test different polygons.
   for i in 3 .. 8:
     let path = newPath()
     path.polygon(vec2(50, 50), 30, i)
-    let mask = newMask(100, 100)
-    mask.fillPath(path)
-    mask.xray(&"tests/paths/polygon{i}.png")
+    let image = newImage(100, 100)
+    image.fillPath(path, color(1, 1, 1, 1))
+    image.xray(&"tests/paths/polygon{i}.png")
 
 block:
   let image = newImage(200, 200)

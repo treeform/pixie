@@ -1,6 +1,6 @@
 import bumpy, chroma, common, os, pixie/fontformats/opentype,
-    pixie/fontformats/svgfont, pixie/images, pixie/masks, pixie/paints,
-    pixie/paths, strutils, unicode, vmath
+    pixie/fontformats/svgfont, pixie/images, pixie/paints, pixie/paths,
+    strutils, unicode, vmath
 
 const
   autoLineHeight*: float32 = -1 ## Use default line height for the font size
@@ -561,7 +561,7 @@ proc computePaths(arrangement: Arrangement): seq[Path] =
     result.add(spanPath)
 
 proc textUber(
-  target: Image | Mask,
+  target: Image,
   arrangement: Arrangement,
   transform = mat3(),
   strokeWidth: float32 = 1.0,
@@ -575,22 +575,11 @@ proc textUber(
   for spanIndex in 0 ..< arrangement.spans.len:
     let path = spanPaths[spanIndex]
     when stroke:
-      when type(target) is Image:
-        let font = arrangement.fonts[spanIndex]
-        for paint in font.paints:
-          target.strokePath(
-            path,
-            paint,
-            transform,
-            strokeWidth,
-            lineCap,
-            lineJoin,
-            miterLimit,
-            dashes
-          )
-      else: # target is Mask
+      let font = arrangement.fonts[spanIndex]
+      for paint in font.paints:
         target.strokePath(
           path,
+          paint,
           transform,
           strokeWidth,
           lineCap,
@@ -599,12 +588,9 @@ proc textUber(
           dashes
         )
     else:
-      when type(target) is Image:
-        let font = arrangement.fonts[spanIndex]
-        for paint in font.paints:
-          target.fillPath(path, paint, transform)
-      else: # target is Mask
-        target.fillPath(path, transform)
+      let font = arrangement.fonts[spanIndex]
+      for paint in font.paints:
+        target.fillPath(path, paint, transform)
 
 proc computeBounds*(
   arrangement: Arrangement,
@@ -617,7 +603,7 @@ proc computeBounds*(
   fullPath.computeBounds()
 
 proc fillText*(
-  target: Image | Mask,
+  target: Image,
   arrangement: Arrangement,
   transform = mat3()
 ) {.inline, raises: [PixieError].} =
@@ -629,7 +615,7 @@ proc fillText*(
   )
 
 proc fillText*(
-  target: Image | Mask,
+  target: Image,
   font: Font,
   text: string,
   transform = mat3(),
@@ -645,7 +631,7 @@ proc fillText*(
   fillText(target, font.typeset(text, bounds, hAlign, vAlign), transform)
 
 proc strokeText*(
-  target: Image | Mask,
+  target: Image,
   arrangement: Arrangement,
   transform = mat3(),
   strokeWidth: float32 = 1.0,
@@ -668,7 +654,7 @@ proc strokeText*(
   )
 
 proc strokeText*(
-  target: Image | Mask,
+  target: Image,
   font: Font,
   text: string,
   transform = mat3(),

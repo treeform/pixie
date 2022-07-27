@@ -6,7 +6,6 @@ import
   test_images,
   test_images_draw,
   test_jpeg,
-  test_masks,
   test_paints,
   test_paths,
   test_png,

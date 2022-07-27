@@ -1,5 +1,5 @@
 import chroma, flatty/binny, pixie/common, pixie/images, pixie/internal,
-    pixie/masks, pixie/simd, std/decls, std/sequtils, std/strutils
+    pixie/simd, std/decls, std/sequtils, std/strutils
 
 # This JPEG decoder is loosely based on stb_image which is public domain.
 
@@ -59,7 +59,7 @@ type
     widthCoeff, heightCoeff: int
     coeff, lineBuf: seq[uint8]
     blocks: seq[seq[array[64, int16]]]
-    channel: Mask
+    channel: seq[uint8]
 
   DecoderState = object
     buffer: ptr UncheckedArray[uint8]
@@ -321,7 +321,8 @@ proc decodeSOF0(state: var DecoderState) =
 
     component.widthStride = state.numMcuWide * component.yScale * 8
     component.heightStride = state.numMcuHigh * component.xScale * 8
-    component.channel = newMask(component.widthStride, component.heightStride)
+    component.channel =
+      newSeq[uint8](component.widthStride * component.heightStride)
 
     if state.progressive:
       component.widthCoeff = component.widthStride div 8
@@ -812,14 +813,14 @@ proc idctBlock(component: var Component, offset: int, data: array[64, int16]) =
     x2 += 65536 + (128 shl 17)
     x3 += 65536 + (128 shl 17)
 
-    component.channel.data[outPos + 0] = clampByte((x0 + t3) shr 17)
-    component.channel.data[outPos + 7] = clampByte((x0 - t3) shr 17)
-    component.channel.data[outPos + 1] = clampByte((x1 + t2) shr 17)
-    component.channel.data[outPos + 6] = clampByte((x1 - t2) shr 17)
-    component.channel.data[outPos + 2] = clampByte((x2 + t1) shr 17)
-    component.channel.data[outPos + 5] = clampByte((x2 - t1) shr 17)
-    component.channel.data[outPos + 3] = clampByte((x3 + t0) shr 17)
-    component.channel.data[outPos + 4] = clampByte((x3 - t0) shr 17)
+    component.channel[outPos + 0] = clampByte((x0 + t3) shr 17)
+    component.channel[outPos + 7] = clampByte((x0 - t3) shr 17)
+    component.channel[outPos + 1] = clampByte((x1 + t2) shr 17)
+    component.channel[outPos + 6] = clampByte((x1 - t2) shr 17)
+    component.channel[outPos + 2] = clampByte((x2 + t1) shr 17)
+    component.channel[outPos + 5] = clampByte((x2 - t1) shr 17)
+    component.channel[outPos + 3] = clampByte((x3 + t0) shr 17)
+    component.channel[outPos + 4] = clampByte((x3 - t0) shr 17)
 
 {.pop.}
 
@@ -901,45 +902,59 @@ proc quantizationAndIDCTPass(state: var DecoderState) =
           data
         )
 
-proc magnifyXBy2(mask: Mask): Mask =
-  ## Smooth magnify by power of 2 only in the X direction.
-  result = newMask(mask.width * 2, mask.height)
-  for y in 0 ..< mask.height:
-    for x in 0 ..< mask.width:
-      let n = 3 * mask.unsafe[x, y].uint16
-      if x == 0:
-        result.unsafe[x * 2 + 0, y] = mask.unsafe[x, y]
-        result.unsafe[x * 2 + 1, y] =
-          ((n + mask.unsafe[x + 1, y].uint16 + 2) div 4).uint8
-      elif x == mask.width - 1:
-        result.unsafe[x * 2 + 0, y] =
-          ((n + mask.unsafe[x - 1, y].uint16 + 2) div 4).uint8
-        result.unsafe[x * 2 + 1, y] = mask.unsafe[x, y]
-      else:
-        result.unsafe[x * 2 + 0, y] =
-          ((n + mask.unsafe[x - 1, y].uint16) div 4).uint8
-        result.unsafe[x * 2 + 1, y] =
-          ((n + mask.unsafe[x + 1, y].uint16) div 4).uint8
+template dataIndex(component: var Component, x, y: int): int =
+  component.widthStride * y + x
 
-proc magnifyYBy2(mask: Mask): Mask =
-  ## Smooth magnify by power of 2 only in the Y direction.
-  result = newMask(mask.width, mask.height * 2)
-  for y in 0 ..< mask.height:
-    for x in 0 ..< mask.width:
-      let n = 3 * mask.unsafe[x, y].uint16
-      if y == 0:
-        result.unsafe[x, y * 2 + 0] = mask.unsafe[x, y]
-        result.unsafe[x, y * 2 + 1] =
-          ((n + mask.unsafe[x, y + 1].uint16 + 2) div 4).uint8
-      elif y == mask.height - 1:
-        result.unsafe[x, y * 2 + 0] =
-          ((n + mask.unsafe[x, y - 1].uint16 + 2) div 4).uint8
-        result.unsafe[x, y * 2 + 1] = mask.unsafe[x, y]
+template `[]`*(component: Component, x, y: int): uint8 =
+  component.channel[component.dataIndex(x, y)]
+
+proc magnifyXBy2(component: var Component) =
+  ## Smooth magnify by power of 2 only in the X direction.
+  var magnified =
+    newSeq[uint8](component.widthStride * 2 * component.heightStride)
+  for y in 0 ..< component.heightStride:
+    for x in 0 ..< component.widthStride:
+      let n = 3 * component[x, y].uint16
+      if x == 0:
+        magnified[component.dataIndex(x * 2 + 0, y)] = component[x, y]
+        magnified[component.dataIndex(x * 2 + 1, y)] =
+          ((n + component[x + 1, y].uint16 + 2) div 4).uint8
+      elif x == component.widthStride - 1:
+        magnified[component.dataIndex(x * 2 + 0, y)] =
+          ((n + component[x - 1, y].uint16 + 2) div 4).uint8
+        magnified[component.dataIndex(x * 2 + 1, y)] = component[x, y]
       else:
-        result.unsafe[x, y * 2 + 0] =
-          ((n + mask.unsafe[x, y - 1].uint16) div 4).uint8
-        result.unsafe[x, y * 2 + 1] =
-          ((n + mask.unsafe[x, y + 1].uint16) div 4).uint8
+        magnified[component.dataIndex(x * 2 + 0, y)] =
+          ((n + component[x - 1, y].uint16) div 4).uint8
+        magnified[component.dataIndex(x * 2 + 1, y)] =
+          ((n + component[x + 1, y].uint16) div 4).uint8
+
+  component.channel = move magnified
+  component.widthStride *= 2
+
+proc magnifyYBy2(component: var Component) =
+  ## Smooth magnify by power of 2 only in the Y direction.
+  var magnified =
+    newSeq[uint8](component.widthStride * component.heightStride * 2)
+  for y in 0 ..< component.heightStride:
+    for x in 0 ..< component.widthStride:
+      let n = 3 * component[x, y].uint16
+      if y == 0:
+        magnified[component.dataIndex(x, y * 2 + 0)] = component[x, y]
+        magnified[component.dataIndex(x, y * 2 + 1)] =
+          ((n + component[x, y + 1].uint16 + 2) div 4).uint8
+      elif y == component.heightStride - 1:
+        magnified[component.dataIndex(x, y * 2 + 0)] =
+          ((n + component[x, y - 1].uint16 + 2) div 4).uint8
+        magnified[component.dataIndex(x, y * 2 + 1)] = component[x, y]
+      else:
+        magnified[component.dataIndex(x, y * 2 + 0)] =
+          ((n + component[x, y - 1].uint16) div 4).uint8
+        magnified[component.dataIndex(x, y * 2 + 1)] =
+          ((n + component[x, y + 1].uint16) div 4).uint8
+
+  component.channel = move magnified
+  component.heightStride *= 2
 
 proc yCbCrToRgbx(py, pcb, pcr: uint8): ColorRGBX =
   ## Takes a 3 component yCbCr outputs and populates image.
@@ -974,33 +989,29 @@ proc buildImage(state: var DecoderState): Image =
   of 3:
     for component in state.components.mitems:
       while component.yScale < state.maxYScale:
-        component.channel = component.channel.magnifyXBy2()
+        component.magnifyXBy2()
         component.yScale *= 2
 
       while component.xScale < state.maxXScale:
-        component.channel = component.channel.magnifyYBy2()
+        component.magnifyYBy2()
         component.xScale *= 2
 
-    let
-      cy = state.components[0].channel
-      cb = state.components[1].channel
-      cr = state.components[2].channel
     for y in 0 ..< state.imageHeight:
-      var channelIndex = cy.dataIndex(0, y)
+      var channelIndex = state.components[0].dataIndex(0, y)
       for x in 0 ..< state.imageWidth:
         result.unsafe[x, y] = yCbCrToRgbx(
-          cy.data[channelIndex],
-          cb.data[channelIndex],
-          cr.data[channelIndex],
+          state.components[0].channel[channelIndex], # cy
+          state.components[1].channel[channelIndex], # cb
+          state.components[2].channel[channelIndex], # cr
         )
         inc channelIndex
 
   of 1:
-    let cy = state.components[0].channel
     for y in 0 ..< state.imageHeight:
-      var channelIndex = cy.dataIndex(0, y)
+      var channelIndex = state.components[0].dataIndex(0, y)
       for x in 0 ..< state.imageWidth:
-        result.unsafe[x, y] = grayScaleToRgbx(cy.data[channelIndex])
+        result.unsafe[x, y] =
+          grayScaleToRgbx(state.components[0].channel[channelIndex]) # cy
         inc channelIndex
 
   else:

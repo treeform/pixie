@@ -1,4 +1,4 @@
-import chroma, internal, nimsimd/sse2, pixie/common, system/memory, vmath
+import chroma, internal, nimsimd/sse2, pixie/common, vmath
 
 when defined(release):
   {.push checks: off.}
@@ -207,43 +207,6 @@ proc toPremultipliedAlphaSse2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
       c.b = ((c.b.uint32 * c.a + 127) div 255).uint8
       data[i] = c
 
-proc newImageSse2*(mask: Mask): Image {.simd.} =
-  result = newImage(mask.width, mask.height)
-
-  var i: int
-  for _ in 0 ..< mask.data.len div 16:
-    var alphas = mm_loadu_si128(mask.data[i].addr)
-    for j in 0 ..< 4:
-      var unpacked = unpackAlphaValues(alphas)
-      unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 8))
-      unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
-      mm_storeu_si128(result.data[i + j * 4].addr, unpacked)
-      alphas = mm_srli_si128(alphas, 4)
-    i += 16
-
-  for i in i ..< mask.data.len:
-    let v = mask.data[i]
-    result.data[i] = rgbx(v, v, v, v)
-
-proc newMaskSse2*(image: Image): Mask {.simd.} =
-  result = newMask(image.width, image.height)
-
-  var i: int
-  for _ in 0 ..< image.data.len div 16:
-    let
-      a = mm_loadu_si128(image.data[i + 0].addr)
-      b = mm_loadu_si128(image.data[i + 4].addr)
-      c = mm_loadu_si128(image.data[i + 8].addr)
-      d = mm_loadu_si128(image.data[i + 12].addr)
-    mm_storeu_si128(
-      result.data[i].addr,
-      pack4xAlphaValues(a, b, c, d)
-    )
-    i += 16
-
-  for i in i ..< image.data.len:
-    result.data[i] = image.data[i].a
-
 proc invertSse2*(image: Image) {.simd.} =
   var
     i: int
@@ -284,56 +247,6 @@ proc invertSse2*(image: Image) {.simd.} =
     image.data[i] = rgbx
 
   toPremultipliedAlphaSse2(image.data)
-
-proc invertSse2*(mask: Mask) {.simd.} =
-  var
-    i: int
-    p = cast[uint](mask.data[0].addr)
-  # Align to 16 bytes
-  while i < mask.data.len and (p and 15) != 0:
-    mask.data[i] = 255 - mask.data[i]
-    inc i
-    inc p
-
-  let
-    vec255 = mm_set1_epi8(255)
-    iterations = mask.data.len div 64
-  for _ in 0 ..< iterations:
-    let
-      a = mm_load_si128(cast[pointer](p))
-      b = mm_load_si128(cast[pointer](p + 16))
-      c = mm_load_si128(cast[pointer](p + 32))
-      d = mm_load_si128(cast[pointer](p + 48))
-    mm_store_si128(cast[pointer](p), mm_sub_epi8(vec255, a))
-    mm_store_si128(cast[pointer](p + 16), mm_sub_epi8(vec255, b))
-    mm_store_si128(cast[pointer](p + 32), mm_sub_epi8(vec255, c))
-    mm_store_si128(cast[pointer](p + 48), mm_sub_epi8(vec255, d))
-    p += 64
-  i += 64 * iterations
-
-  for i in i ..< mask.data.len:
-    mask.data[i] = 255 - mask.data[i]
-
-proc ceilSse2*(mask: Mask) {.simd.} =
-  var
-    i: int
-    p = cast[uint](mask.data[0].addr)
-
-  let
-    zeroVec = mm_setzero_si128()
-    vec255 = mm_set1_epi8(255)
-    iterations = mask.data.len div 16
-  for _ in 0 ..< iterations:
-    var values = mm_loadu_si128(cast[pointer](p))
-    values = mm_cmpeq_epi8(values, zeroVec)
-    values = mm_andnot_si128(values, vec255)
-    mm_storeu_si128(cast[pointer](p), values)
-    p += 16
-  i += 16 * iterations
-
-  for i in i ..< mask.data.len:
-    if mask.data[i] != 0:
-      mask.data[i] = 255
 
 proc applyOpacitySse2*(image: Image, opacity: float32) {.simd.} =
   let opacity = round(255 * opacity).uint16
@@ -379,45 +292,9 @@ proc applyOpacitySse2*(image: Image, opacity: float32) {.simd.} =
     rgbx.a = ((rgbx.a * opacity) div 255).uint8
     image.data[i] = rgbx
 
-proc applyOpacitySse2*(mask: Mask, opacity: float32) {.simd.} =
-  let opacity = round(255 * opacity).uint16
-  if opacity == 255:
-    return
-
-  if opacity == 0:
-    nimSetMem(mask.data[0].addr, 0.cint, mask.data.len)
-
-  var
-    i: int
-    p = cast[uint](mask.data[0].addr)
-
-  let
-    oddMask = mm_set1_epi16(0xff00)
-    div255 = mm_set1_epi16(0x8081)
-    zeroVec = mm_setzero_si128()
-    opacityVec = mm_slli_epi16(mm_set1_epi16(opacity), 8)
-    iterations = mask.data.len div 16
-  for _ in 0 ..< iterations:
-    let values = mm_loadu_si128(cast[pointer](p))
-    if mm_movemask_epi8(mm_cmpeq_epi16(values, zeroVec)) != 0xffff:
-      var
-        valuesEven = mm_slli_epi16(values, 8)
-        valuesOdd = mm_and_si128(values, oddMask)
-      valuesEven = mm_mulhi_epu16(valuesEven, opacityVec)
-      valuesOdd = mm_mulhi_epu16(valuesOdd, opacityVec)
-      valuesEven = mm_srli_epi16(mm_mulhi_epu16(valuesEven, div255), 7)
-      valuesOdd = mm_srli_epi16(mm_mulhi_epu16(valuesOdd, div255), 7)
-      mm_storeu_si128(
-        cast[pointer](p),
-        mm_or_si128(valuesEven, mm_slli_epi16(valuesOdd, 8))
-      )
-    p += 16
-  i += 16 * iterations
-
-  for i in i ..< mask.data.len:
-    mask.data[i] = ((mask.data[i] * opacity) div 255).uint8
-
-proc blitLineNormalSse2*(a, b: ptr UncheckedArray[ColorRGBX], len: int) {.simd.} =
+proc blitLineNormalSse2*(
+  a, b: ptr UncheckedArray[ColorRGBX], len: int
+) {.simd.} =
 
   # TODO align to 16
 
