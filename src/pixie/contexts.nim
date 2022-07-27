@@ -131,7 +131,7 @@ proc restore*(ctx: Context) {.raises: [PixieError].} =
 
   if poppedLayer != nil: # If there is a layer being popped
     if poppedMask != nil: # If there is a mask, apply it
-      poppedLayer.draw(poppedMask)
+      poppedLayer.draw(poppedMask, blendMode = MaskBlend)
     if ctx.layer != nil: # If we popped to another layer, draw to it
       ctx.layer.draw(poppedLayer)
     else: # Otherwise draw to the root image
@@ -390,7 +390,10 @@ proc clip*(
   ## the new clipping region.
   if ctx.mask == nil:
     ctx.mask = newImage(ctx.image.width, ctx.image.height)
-    ctx.mask.fillPath(path, color(1, 1, 1, 1), windingRule = windingRule)
+    let maskPaint = newPaint(SolidPaint)
+    maskPaint.color = color(1, 1, 1, 1)
+    maskPaint.blendMode = OverwriteBlend
+    ctx.mask.fillPath(path, maskPaint, windingRule = windingRule)
   else:
     let maskPaint = newPaint(SolidPaint)
     maskPaint.color = color(1, 1, 1, 1)
