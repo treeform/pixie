@@ -110,7 +110,7 @@ proc toPremultipliedAlphaAvx2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
     oddMask = mm256_set1_epi16(0xff00)
     vec128 = mm256_set1_epi16(128)
     hiMask = mm256_set1_epi16(255 shl 8)
-    iterations = data.len div 8
+    iterations = (data.len - i) div 8
   for _ in 0 ..< iterations:
     let
       values = mm256_load_si256(cast[pointer](p))
@@ -163,7 +163,7 @@ proc invertAvx2*(image: Image) {.simd.} =
 
   let
     vec255 = mm256_set1_epi8(255)
-    iterations = image.data.len div 16
+    iterations = (image.data.len - i) div 16
   for _ in 0 ..< iterations:
     let
       a = mm256_load_si256(cast[pointer](p))
@@ -211,7 +211,7 @@ proc applyOpacityAvx2*(image: Image, opacity: float32) {.simd.} =
     div255 = mm256_set1_epi16(0x8081)
     zeroVec = mm256_setzero_si256()
     opacityVec = mm256_slli_epi16(mm256_set1_epi16(opacity), 8)
-    iterations = image.data.len div 8
+    iterations = (image.data.len - i) div 8
   for _ in 0 ..< iterations:
     let
       values = mm256_load_si256(cast[pointer](p))
@@ -257,7 +257,7 @@ proc ceilAvx2*(image: Image) {.simd.} =
   let
     vecZero = mm256_setzero_si256()
     vec255 = mm256_set1_epi8(255)
-    iterations = image.data.len div 8
+    iterations = (image.data.len - i) div 8
   for _ in 0 ..< iterations:
     var values = mm256_load_si256(cast[pointer](p))
     values = mm256_cmpeq_epi8(values, vecZero)
@@ -330,9 +330,8 @@ proc minifyBy2Avx2*(image: Image, power = 1): Image {.simd.} =
           addedOddDiv4 = mm256_srli_epi16(addedOdd, 2)
           merged = mm256_or_si256(addedEvenDiv4, mm256_slli_epi16(addedOddDiv4, 8))
           # Merged has the correct values for the next two pixels at
-          # index 0, 2, 4, 6 so mask the others out and permute into position
-          masked = mm256_and_si256(merged, mergedMask)
-          permuted = mm_256_permutevar8x32_epi32(masked, permuteControl)
+          # index 0, 2, 4, 6 so permute into position and store
+          permuted = mm_256_permutevar8x32_epi32(merged, permuteControl)
         mm_storeu_si128(
           result.data[result.dataIndex(x, y)].addr,
           mm256_castsi256_si128(permuted)

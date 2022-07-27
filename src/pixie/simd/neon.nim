@@ -236,5 +236,30 @@ proc applyOpacityNeon*(image: Image, opacity: float32) {.simd.} =
     rgbx.a = ((rgbx.a * opacity) div 255).uint8
     image.data[i] = rgbx
 
+proc ceilNeon*(image: Image) {.simd.} =
+  var
+    i: int
+    p = cast[uint](image.data[0].addr)
+
+  let
+    zeroVec = vmovq_n_u8(0)
+    vec255 = vmovq_n_u8(255)
+    iterations = image.data.len div 4
+  for _ in 0 ..< iterations:
+    var values = vld1q_u8(cast[pointer](p))
+    values = vceqq_u8(values, zeroVec)
+    values = vbicq_u8(vec255, values)
+    vst1q_u8(cast[pointer](p), values)
+    p += 16
+  i += 4 * iterations
+
+  for i in i ..< image.data.len:
+    var rgbx = image.data[i]
+    rgbx.r = if rgbx.r == 0: 0 else: 255
+    rgbx.g = if rgbx.g == 0: 0 else: 255
+    rgbx.b = if rgbx.b == 0: 0 else: 255
+    rgbx.a = if rgbx.a == 0: 0 else: 255
+    image.data[i] = rgbx
+
 when defined(release):
   {.pop.}

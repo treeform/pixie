@@ -212,7 +212,7 @@ proc invertSse2*(image: Image) {.simd.} =
 
   let
     vec255 = mm_set1_epi8(255)
-    iterations = image.data.len div 16
+    iterations = (image.data.len - i) div 16
   for _ in 0 ..< iterations:
     let
       a = mm_load_si128(cast[pointer](p))
@@ -264,7 +264,7 @@ proc applyOpacitySse2*(image: Image, opacity: float32) {.simd.} =
     div255 = mm_set1_epi16(0x8081)
     zeroVec = mm_setzero_si128()
     opacityVec = mm_slli_epi16(mm_set1_epi16(opacity), 8)
-    iterations = image.data.len div 4
+    iterations = (image.data.len - i) div 4
   for _ in 0 ..< iterations:
     let values = mm_loadu_si128(cast[pointer](p))
     if mm_movemask_epi8(mm_cmpeq_epi16(values, zeroVec)) != 0xffff:
@@ -308,7 +308,7 @@ proc ceilSse2*(image: Image) {.simd.} =
   let
     vecZero = mm_setzero_si128()
     vec255 = mm_set1_epi8(255)
-    iterations = image.data.len div 8
+    iterations = (image.data.len - i) div 8
   for _ in 0 ..< iterations:
     var
       values0 = mm_loadu_si128(cast[pointer](p))
@@ -383,13 +383,10 @@ proc minifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
           addedOddDiv4 = mm_srli_epi16(addedOdd, 2)
           merged = mm_or_si128(addedEvenDiv4, mm_slli_epi16(addedOddDiv4, 8))
           # Merged has the correct values for the next two pixels at
-          # index 0 and 2 so mask the others out and shift 0 and 2 into
-          # position and store
-          masked = mm_and_si128(merged, mergedMask)
-        mm_storeu_si128(
-          result.data[result.dataIndex(x, y)].addr,
-          mm_shuffle_epi32(masked, MM_SHUFFLE(3, 3, 2, 0))
-        )
+          # index 0 and 2 so shift 0 and 2 into position and store
+          shuffled = mm_shuffle_epi32(merged, MM_SHUFFLE(3, 3, 2, 0))
+          lower = mm_cvtsi128_si64(shuffled)
+        copyMem(result.data[result.dataIndex(x, y)].addr, lower.unsafeAddr, 8)
         x += 2
 
       for x in x ..< resultEvenWidth:
