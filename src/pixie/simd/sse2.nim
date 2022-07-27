@@ -386,10 +386,9 @@ proc minifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
           # index 0 and 2 so mask the others out and shift 0 and 2 into
           # position and store
           masked = mm_and_si128(merged, mergedMask)
-        mm_storeu_si128(
-          result.data[result.dataIndex(x, y)].addr,
-          mm_shuffle_epi32(masked, MM_SHUFFLE(3, 3, 2, 0))
-        )
+          shuffled = mm_shuffle_epi32(masked, MM_SHUFFLE(3, 3, 2, 0))
+          lower = mm_cvtsi128_si64(shuffled)
+        copyMem(result.data[result.dataIndex(x, y)].addr, lower.unsafeAddr, 8)
         x += 2
 
       for x in x ..< resultEvenWidth:
