@@ -383,10 +383,8 @@ proc minifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
           addedOddDiv4 = mm_srli_epi16(addedOdd, 2)
           merged = mm_or_si128(addedEvenDiv4, mm_slli_epi16(addedOddDiv4, 8))
           # Merged has the correct values for the next two pixels at
-          # index 0 and 2 so mask the others out and shift 0 and 2 into
-          # position and store
-          masked = mm_and_si128(merged, mergedMask)
-          shuffled = mm_shuffle_epi32(masked, MM_SHUFFLE(3, 3, 2, 0))
+          # index 0 and 2 so shift 0 and 2 into position and store
+          shuffled = mm_shuffle_epi32(merged, MM_SHUFFLE(3, 3, 2, 0))
           lower = mm_cvtsi128_si64(shuffled)
         copyMem(result.data[result.dataIndex(x, y)].addr, lower.unsafeAddr, 8)
         x += 2
