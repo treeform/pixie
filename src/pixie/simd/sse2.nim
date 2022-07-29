@@ -354,6 +354,7 @@ proc minifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
       oddMask = mm_set1_epi16(0xff00)
       loMask = mm_set_epi32(0, 0, uint32.high, uint32.high)
       hiMask = mm_set_epi32(uint32.high, uint32.high, 0, 0)
+      vec2 = mm_set1_epi16(2)
     for y in 0 ..< resultEvenHeight:
       let
         topRowStart = src.dataIndex(0, y * 2)
@@ -390,8 +391,10 @@ proc minifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
           bottomAddedOdd = mm_add_epi16(bottomOdd, bottomShiftedOdd)
           addedEven = mm_add_epi16(topAddedEven, bottomAddedEven)
           addedOdd = mm_add_epi16(topAddedOdd, bottomAddedOdd)
-          addedEvenDiv4 = mm_srli_epi16(addedEven, 2)
-          addedOddDiv4 = mm_srli_epi16(addedOdd, 2)
+          addedEvenRounding = mm_add_epi16(addedEven, vec2)
+          addedOddRounding = mm_add_epi16(addedOdd, vec2)
+          addedEvenDiv4 = mm_srli_epi16(addedEvenRounding, 2)
+          addedOddDiv4 = mm_srli_epi16(addedOddRounding, 2)
           merged = mm_or_si128(addedEvenDiv4, mm_slli_epi16(addedOddDiv4, 8))
         mm_storeu_si128(result.data[result.dataIndex(x, y)].addr, merged)
         x += 4
@@ -403,10 +406,10 @@ proc minifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
           c = src.data[bottomRowStart + x * 2 + 1]
           d = src.data[bottomRowStart + x * 2]
           mixed = rgbx(
-            ((a.r.uint32 + b.r + c.r + d.r) div 4).uint8,
-            ((a.g.uint32 + b.g + c.g + d.g) div 4).uint8,
-            ((a.b.uint32 + b.b + c.b + d.b) div 4).uint8,
-            ((a.a.uint32 + b.a + c.a + d.a) div 4).uint8
+            ((a.r.uint32 + b.r + c.r + d.r + 2) div 4).uint8,
+            ((a.g.uint32 + b.g + c.g + d.g + 2) div 4).uint8,
+            ((a.b.uint32 + b.b + c.b + d.b + 2) div 4).uint8,
+            ((a.a.uint32 + b.a + c.a + d.a + 2) div 4).uint8
           )
         result.data[result.dataIndex(x, y)] = mixed
 

@@ -56,18 +56,13 @@ proc copy*(image: Image): Image {.raises: [].} =
 template dataIndex*(image: Image, x, y: int): int =
   image.width * y + x
 
-proc mix*(a, b: uint8, t: float32): uint8 {.inline, raises: [].} =
-  ## Linearly interpolate between a and b using t.
-  let t = round(t * 255).uint32
-  ((a * (255 - t) + b * t) div 255).uint8
-
 proc mix*(a, b: ColorRGBX, t: float32): ColorRGBX {.inline, raises: [].} =
   ## Linearly interpolate between a and b using t.
   let x = round(t * 255).uint32
-  result.r = ((a.r.uint32 * (255 - x) + b.r.uint32 * x) div 255).uint8
-  result.g = ((a.g.uint32 * (255 - x) + b.g.uint32 * x) div 255).uint8
-  result.b = ((a.b.uint32 * (255 - x) + b.b.uint32 * x) div 255).uint8
-  result.a = ((a.a.uint32 * (255 - x) + b.a.uint32 * x) div 255).uint8
+  result.r = ((a.r.uint32 * (255 - x) + b.r.uint32 * x + 127) div 255).uint8
+  result.g = ((a.g.uint32 * (255 - x) + b.g.uint32 * x + 127) div 255).uint8
+  result.b = ((a.b.uint32 * (255 - x) + b.b.uint32 * x + 127) div 255).uint8
+  result.a = ((a.a.uint32 * (255 - x) + b.a.uint32 * x + 127) div 255).uint8
 
 proc `*`*(color: ColorRGBX, opacity: float32): ColorRGBX {.raises: [].} =
   if opacity == 0:
@@ -75,10 +70,10 @@ proc `*`*(color: ColorRGBX, opacity: float32): ColorRGBX {.raises: [].} =
   else:
     let
       x = round(opacity * 255).uint32
-      r = ((color.r * x) div 255).uint8
-      g = ((color.g * x) div 255).uint8
-      b = ((color.b * x) div 255).uint8
-      a = ((color.a * x) div 255).uint8
+      r = ((color.r * x + 127) div 255).uint8
+      g = ((color.g * x + 127) div 255).uint8
+      b = ((color.b * x + 127) div 255).uint8
+      a = ((color.a * x + 127) div 255).uint8
     rgbx(r, g, b, a)
 
 proc snapToPixels*(rect: Rect): Rect {.raises: [].} =
