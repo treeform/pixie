@@ -296,6 +296,7 @@ proc minifyBy2Avx2*(image: Image, power = 1): Image {.simd.} =
     )
     let
       oddMask = mm256_set1_epi16(0xff00)
+      vec2 = mm256_set1_epi16(2)
       permuteControl = mm256_set_epi32(7, 7, 7, 7, 6, 4, 2, 0)
     for y in 0 ..< resultEvenHeight:
       let
@@ -323,8 +324,10 @@ proc minifyBy2Avx2*(image: Image, power = 1): Image {.simd.} =
           bottomAddedOdd = mm256_add_epi16(bottomOdd, bottomShiftedOdd)
           addedEven = mm256_add_epi16(topAddedEven, bottomAddedEven)
           addedOdd = mm256_add_epi16(topAddedOdd, bottomAddedOdd)
-          addedEvenDiv4 = mm256_srli_epi16(addedEven, 2)
-          addedOddDiv4 = mm256_srli_epi16(addedOdd, 2)
+          addedEvenRounding = mm256_add_epi16(addedEven, vec2)
+          addedOddRounding = mm256_add_epi16(addedOdd, vec2)
+          addedEvenDiv4 = mm256_srli_epi16(addedEvenRounding, 2)
+          addedOddDiv4 = mm256_srli_epi16(addedOddRounding, 2)
           merged = mm256_or_si256(addedEvenDiv4, mm256_slli_epi16(addedOddDiv4, 8))
           # Merged has the correct values for the next two pixels at
           # index 0, 2, 4, 6 so permute into position and store
@@ -342,10 +345,10 @@ proc minifyBy2Avx2*(image: Image, power = 1): Image {.simd.} =
           c = src.data[bottomRowStart + x * 2 + 1]
           d = src.data[bottomRowStart + x * 2]
           mixed = rgbx(
-            ((a.r.uint32 + b.r + c.r + d.r) div 4).uint8,
-            ((a.g.uint32 + b.g + c.g + d.g) div 4).uint8,
-            ((a.b.uint32 + b.b + c.b + d.b) div 4).uint8,
-            ((a.a.uint32 + b.a + c.a + d.a) div 4).uint8
+            ((a.r.uint32 + b.r + c.r + d.r + 2) div 4).uint8,
+            ((a.g.uint32 + b.g + c.g + d.g + 2) div 4).uint8,
+            ((a.b.uint32 + b.b + c.b + d.b + 2) div 4).uint8,
+            ((a.a.uint32 + b.a + c.a + d.a + 2) div 4).uint8
           )
         result.data[result.dataIndex(x, y)] = mixed
 

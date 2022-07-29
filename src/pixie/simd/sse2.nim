@@ -350,19 +350,33 @@ proc minifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
       if srcWidthIsOdd: resultEvenWidth + 1 else: resultEvenWidth,
       if srcHeightIsOdd: resultEvenHeight + 1 else: resultEvenHeight
     )
-    let oddMask = mm_set1_epi16(0xff00)
+    let
+      oddMask = mm_set1_epi16(0xff00)
+      loMask = mm_set_epi32(0, 0, uint32.high, uint32.high)
+      hiMask = mm_set_epi32(uint32.high, uint32.high, 0, 0)
+      vec2 = mm_set1_epi16(2)
     for y in 0 ..< resultEvenHeight:
       let
         topRowStart = src.dataIndex(0, y * 2)
         bottomRowStart = src.dataIndex(0, y * 2 + 1)
 
+      template loadEven(src: Image, idx: int): M128i =
+        var
+          a = mm_loadu_si128(src.data[idx].addr)
+          b = mm_loadu_si128(src.data[idx + 4].addr)
+        a = mm_shuffle_epi32(a, MM_SHUFFLE(3, 3, 2, 0))
+        b = mm_shuffle_epi32(b, MM_SHUFFLE(2, 0, 3, 3))
+        a = mm_and_si128(a, loMask)
+        b = mm_and_si128(b, hiMask)
+        mm_or_si128(a, b)
+
       var x: int
-      while x <= resultEvenWidth - 4:
+      while x <= resultEvenWidth - 9:
         let
-          top = mm_loadu_si128(src.data[topRowStart + x * 2].addr)
-          bottom = mm_loadu_si128(src.data[bottomRowStart + x * 2].addr)
-          topShifted = mm_srli_si128(top, 4)
-          bottomShifted = mm_srli_si128(bottom, 4)
+          top = loadEven(src, topRowStart + x * 2)
+          bottom = loadEven(src, bottomRowStart + x * 2)
+          topShifted = loadEven(src, topRowStart + x * 2 + 1)
+          bottomShifted = loadEven(src, bottomRowStart + x * 2 + 1)
           topEven = mm_andnot_si128(oddMask, top)
           topOdd = mm_srli_epi16(top, 8)
           bottomEven = mm_andnot_si128(oddMask, bottom)
@@ -377,15 +391,13 @@ proc minifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
           bottomAddedOdd = mm_add_epi16(bottomOdd, bottomShiftedOdd)
           addedEven = mm_add_epi16(topAddedEven, bottomAddedEven)
           addedOdd = mm_add_epi16(topAddedOdd, bottomAddedOdd)
-          addedEvenDiv4 = mm_srli_epi16(addedEven, 2)
-          addedOddDiv4 = mm_srli_epi16(addedOdd, 2)
+          addedEvenRounding = mm_add_epi16(addedEven, vec2)
+          addedOddRounding = mm_add_epi16(addedOdd, vec2)
+          addedEvenDiv4 = mm_srli_epi16(addedEvenRounding, 2)
+          addedOddDiv4 = mm_srli_epi16(addedOddRounding, 2)
           merged = mm_or_si128(addedEvenDiv4, mm_slli_epi16(addedOddDiv4, 8))
-          # Merged has the correct values for the next two pixels at
-          # index 0 and 2 so shift 0 and 2 into position and store
-          shuffled = mm_shuffle_epi32(merged, MM_SHUFFLE(3, 3, 2, 0))
-          lower = mm_cvtsi128_si64(shuffled)
-        copyMem(result.data[result.dataIndex(x, y)].addr, lower.unsafeAddr, 8)
-        x += 2
+        mm_storeu_si128(result.data[result.dataIndex(x, y)].addr, merged)
+        x += 4
 
       for x in x ..< resultEvenWidth:
         let
@@ -394,10 +406,10 @@ proc minifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
           c = src.data[bottomRowStart + x * 2 + 1]
           d = src.data[bottomRowStart + x * 2]
           mixed = rgbx(
-            ((a.r.uint32 + b.r + c.r + d.r) div 4).uint8,
-            ((a.g.uint32 + b.g + c.g + d.g) div 4).uint8,
-            ((a.b.uint32 + b.b + c.b + d.b) div 4).uint8,
-            ((a.a.uint32 + b.a + c.a + d.a) div 4).uint8
+            ((a.r.uint32 + b.r + c.r + d.r + 2) div 4).uint8,
+            ((a.g.uint32 + b.g + c.g + d.g + 2) div 4).uint8,
+            ((a.b.uint32 + b.b + c.b + d.b + 2) div 4).uint8,
+            ((a.a.uint32 + b.a + c.a + d.a + 2) div 4).uint8
           )
         result.data[result.dataIndex(x, y)] = mixed
 
