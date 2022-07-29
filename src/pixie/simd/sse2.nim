@@ -350,9 +350,7 @@ proc minifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
       if srcWidthIsOdd: resultEvenWidth + 1 else: resultEvenWidth,
       if srcHeightIsOdd: resultEvenHeight + 1 else: resultEvenHeight
     )
-    let
-      oddMask = mm_set1_epi16(0xff00)
-      mergedMask = mm_set_epi32(0, uint32.high, 0, uint32.high)
+    let oddMask = mm_set1_epi16(0xff00)
     for y in 0 ..< resultEvenHeight:
       let
         topRowStart = src.dataIndex(0, y * 2)
