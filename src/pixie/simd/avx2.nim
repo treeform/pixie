@@ -296,9 +296,6 @@ proc minifyBy2Avx2*(image: Image, power = 1): Image {.simd.} =
     )
     let
       oddMask = mm256_set1_epi16(0xff00)
-      mergedMask = mm256_set_epi32(
-        0, uint32.high, 0, uint32.high, 0, uint32.high, 0, uint32.high
-      )
       permuteControl = mm256_set_epi32(7, 7, 7, 7, 6, 4, 2, 0)
     for y in 0 ..< resultEvenHeight:
       let

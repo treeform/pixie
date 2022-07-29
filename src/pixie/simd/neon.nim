@@ -261,5 +261,144 @@ proc ceilNeon*(image: Image) {.simd.} =
     rgbx.a = if rgbx.a == 0: 0 else: 255
     image.data[i] = rgbx
 
+proc minifyBy2Neon*(image: Image, power = 1): Image {.simd.} =
+  ## Scales the image down by an integer scale.
+  if power < 0:
+    raise newException(PixieError, "Cannot minifyBy2 with negative power")
+  if power == 0:
+    return image.copy()
+
+  var src = image
+  for _ in 1 .. power:
+    # When minifying an image of odd size, round the result image size up
+    # so a 99 x 99 src image returns a 50 x 50 image.
+    let
+      srcWidthIsOdd = (src.width mod 2) != 0
+      srcHeightIsOdd = (src.height mod 2) != 0
+      resultEvenWidth = src.width div 2
+      resultEvenHeight = src.height div 2
+    result = newImage(
+      if srcWidthIsOdd: resultEvenWidth + 1 else: resultEvenWidth,
+      if srcHeightIsOdd: resultEvenHeight + 1 else: resultEvenHeight
+    )
+    let
+      evenLanes = [0.uint8, 2, 4, 6, 255, 255, 255, 255]
+      tblIdx = vld1_u8(evenLanes.unsafeAddr)
+    for y in 0 ..< resultEvenHeight:
+      let
+        topRowStart = src.dataIndex(0, y * 2)
+        bottomRowStart = src.dataIndex(0, y * 2 + 1)
+
+      var x: int
+      while x <= resultEvenWidth - 9:
+        let
+          top = vld4_u8(src.data[topRowStart + x * 2].addr)
+          topNext = vld4_u8(src.data[topRowStart + x * 2 + 1].addr)
+          bottom = vld4_u8(src.data[bottomRowStart + x * 2].addr)
+          bottomNext = vld4_u8(src.data[bottomRowStart + x * 2 + 1].addr)
+          r = vrshrn_n_u16(vaddq_u16(
+            vaddl_u8(top.val[0], topNext.val[0]),
+            vaddl_u8(bottom.val[0], bottomNext.val[0])
+          ), 2)
+          g = vrshrn_n_u16(vaddq_u16(
+            vaddl_u8(top.val[1], topNext.val[1]),
+            vaddl_u8(bottom.val[1], bottomNext.val[1])
+          ), 2)
+          b = vrshrn_n_u16(vaddq_u16(
+            vaddl_u8(top.val[2], topNext.val[2]),
+            vaddl_u8(bottom.val[2], bottomNext.val[2])
+          ), 2)
+          a = vrshrn_n_u16(vaddq_u16(
+            vaddl_u8(top.val[3], topNext.val[3]),
+            vaddl_u8(bottom.val[3], bottomNext.val[3])
+          ), 2)
+        # The correct values are in the even lanes 0, 2, 4, 6
+        var correct: uint8x8x4
+        correct.val[0] = vtbl1_u8(r, tblIdx)
+        correct.val[1] = vtbl1_u8(g, tblIdx)
+        correct.val[2] = vtbl1_u8(b, tblIdx)
+        correct.val[3] = vtbl1_u8(a, tblIdx)
+        vst4_u8(result.data[result.dataIndex(x, y)].addr, correct)
+        x += 4
+
+      for x in x ..< resultEvenWidth:
+        let
+          a = src.data[topRowStart + x * 2]
+          b = src.data[topRowStart + x * 2 + 1]
+          c = src.data[bottomRowStart + x * 2 + 1]
+          d = src.data[bottomRowStart + x * 2]
+          mixed = rgbx(
+            ((a.r.uint32 + b.r + c.r + d.r) div 4).uint8,
+            ((a.g.uint32 + b.g + c.g + d.g) div 4).uint8,
+            ((a.b.uint32 + b.b + c.b + d.b) div 4).uint8,
+            ((a.a.uint32 + b.a + c.a + d.a) div 4).uint8
+          )
+        result.data[result.dataIndex(x, y)] = mixed
+
+      if srcWidthIsOdd:
+        let rgbx = mix(
+          src.data[src.dataIndex(src.width - 1, y * 2 + 0)],
+          src.data[src.dataIndex(src.width - 1, y * 2 + 1)],
+          0.5
+        ) * 0.5
+        result.data[result.dataIndex(result.width - 1, y)] = rgbx
+
+    if srcHeightIsOdd:
+      for x in 0 ..< resultEvenWidth:
+        let rgbx = mix(
+          src.data[src.dataIndex(x * 2 + 0, src.height - 1)],
+          src.data[src.dataIndex(x * 2 + 1, src.height - 1)],
+          0.5
+        ) * 0.5
+        result.data[result.dataIndex(x, result.height - 1)] = rgbx
+
+      if srcWidthIsOdd:
+        result.data[result.dataIndex(result.width - 1, result.height - 1)] =
+          src.data[src.dataIndex(src.width - 1, src.height - 1)] * 0.25
+
+    # Set src as this result for if we do another power
+    src = result
+
+proc magnifyBy2Neon*(image: Image, power = 1): Image {.simd.} =
+  ## Scales image up by 2 ^ power.
+  if power < 0:
+    raise newException(PixieError, "Cannot magnifyBy2 with negative power")
+
+  let scale = 2 ^ power
+  result = newImage(image.width * scale, image.height * scale)
+
+  for y in 0 ..< image.height:
+    # Write one row of pixels duplicated by scale
+    let
+      sourceRowStart = image.dataIndex(0, y)
+      resultRowStart = result.dataIndex(0, y * scale)
+    var x: int
+    if scale == 2:
+      template duplicate(vec: uint8x8): uint8x16 =
+        let duplicated = vzip_u8(vec, vec)
+        vcombine_u8(duplicated.val[0], duplicated.val[1])
+      while x <= image.width - 8:
+        let values = vld4_u8(image.data[sourceRowStart + x].addr)
+        var duplicated: uint8x16x4
+        duplicated.val[0] = duplicate(values.val[0])
+        duplicated.val[1] = duplicate(values.val[1])
+        duplicated.val[2] = duplicate(values.val[2])
+        duplicated.val[3] = duplicate(values.val[3])
+        vst4q_u8(result.data[resultRowStart + x * scale].addr, duplicated)
+        x += 8
+    for x in x ..< image.width:
+      let
+        rgbx = image.data[sourceRowStart + x]
+        resultIdx = resultRowStart + x * scale
+      for i in 0 ..< scale:
+        result.data[resultIdx + i] = rgbx
+    # Copy that row of pixels into (scale - 1) more rows
+    for i in 1 ..< scale:
+      copyMem(
+        result.data[resultRowStart + result.width * i].addr,
+        result.data[resultRowStart].addr,
+        result.width * 4
+      )
+
 when defined(release):
   {.pop.}
