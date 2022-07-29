@@ -261,5 +261,46 @@ proc ceilNeon*(image: Image) {.simd.} =
     rgbx.a = if rgbx.a == 0: 0 else: 255
     image.data[i] = rgbx
 
+proc magnifyBy2Neon*(image: Image, power = 1): Image {.simd.} =
+  ## Scales image up by 2 ^ power.
+  if power < 0:
+    raise newException(PixieError, "Cannot magnifyBy2 with negative power")
+
+  let scale = 2 ^ power
+  result = newImage(image.width * scale, image.height * scale)
+
+  for y in 0 ..< image.height:
+    # Write one row of pixels duplicated by scale
+    let
+      sourceRowStart = image.dataIndex(0, y)
+      resultRowStart = result.dataIndex(0, y * scale)
+    var x: int
+    if scale == 2:
+      template duplicate(vec: uint8x8): uint8x16 =
+        let duplicated = vzip_u8(vec, vec)
+        vcombine_u8(duplicated.val[0], duplicated.val[1])
+      while x <= image.width - 8:
+        let values = vld4_u8(image.data[sourceRowStart + x].addr)
+        var duplicated: uint8x16x4
+        duplicated.val[0] = duplicate(values.val[0])
+        duplicated.val[1] = duplicate(values.val[1])
+        duplicated.val[2] = duplicate(values.val[2])
+        duplicated.val[3] = duplicate(values.val[3])
+        vst4q_u8(result.data[resultRowStart + x * scale].addr, duplicated)
+        x += 8
+    for x in x ..< image.width:
+      let
+        rgbx = image.data[sourceRowStart + x]
+        resultIdx = resultRowStart + x * scale
+      for i in 0 ..< scale:
+        result.data[resultIdx + i] = rgbx
+    # Copy that row of pixels into (scale - 1) more rows
+    for i in 1 ..< scale:
+      copyMem(
+        result.data[resultRowStart + result.width * i].addr,
+        result.data[resultRowStart].addr,
+        result.width * 4
+      )
+
 when defined(release):
   {.pop.}
