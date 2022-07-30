@@ -394,63 +394,11 @@ proc getRgbaSmooth*(
   else:
     topMix
 
-proc blitLine(a, b: ptr UncheckedArray[ColorRGBX], len: int, blender: Blender) =
-  for i in 0 ..< len:
-    a[i] = blender(a[i], b[i])
-
-proc blitLineNormal(a, b: ptr UncheckedArray[ColorRGBX], len: int) {.hasSimd.} =
-  for i in 0 ..< len:
-    a[i] = blendNormal(a[i], b[i])
-
-proc blitLineOverwrite(a, b: ptr UncheckedArray[ColorRGBX], len: int) =
-  copyMem(a[0].addr, b[0].addr, len * 4)
-
-template getUncheckedArray(a: Image, x, y: int): ptr UncheckedArray[ColorRGBX] =
-  cast[ptr UncheckedArray[ColorRGBX]](a.data[a.dataIndex(x, y)].addr)
-
-proc blitRect(
-  a, b: Image, pos = ivec2(0, 0), blendMode = NormalBlend
-) =
-  ## Blits one image onto another using integer position with color blending.
-  let
-    px = pos.x.int
-    py = pos.y.int
-    xStart = max(-px, 0)
-    yStart = max(-py, 0)
-    xEnd = min(b.width, a.width - px)
-    yEnd = min(b.height, a.height - py)
-
-  case blendMode:
-  of NormalBlend:
-    for y in yStart ..< yEnd:
-      blitLineNormal(
-        a.getUncheckedArray(xStart + px, y + py),
-        b.getUncheckedArray(xStart, y),
-        xEnd - xStart
-      )
-  of OverwriteBlend:
-    {.linearScanEnd.}
-    for y in yStart ..< yEnd:
-      blitLineOverwrite(
-        a.getUncheckedArray(xStart + px, y + py),
-        b.getUncheckedArray(xStart, y),
-        xEnd - xStart
-      )
-  else:
-    let blender = blendMode.blender()
-    for y in yStart ..< yEnd:
-      blitLine(
-        a.getUncheckedArray(xStart + px, y + py),
-        b.getUncheckedArray(xStart, y),
-        xEnd - xStart,
-        blender
-      )
-
 proc drawCorrect(
-  a, b: Image, transform = mat3(), blendMode = NormalBlend, tiled = false
-) {.raises: [PixieError].} =
-  ## Draws one image onto another using matrix with color blending.
-
+  a, b: Image, transform = mat3(), blendMode: BlendMode, tiled: bool
+) =
+  ## Draws one image onto another using a matrix transform and color blending.
+  ## This proc is not about performance, it should be as simple as possible.
   var
     inverseTransform = transform.inverse()
     # Compute movement vectors
@@ -466,7 +414,131 @@ proc drawCorrect(
     dx /= 2
     dy /= 2
     filterBy2 /= 2
-    inverseTransform = scale(vec2(1/2, 1/2)) * inverseTransform
+    inverseTransform = scale(vec2(0.5, 0.5)) * inverseTransform
+
+  while filterBy2 <= 0.5:
+    b = b.magnifyBy2()
+    p *= 2
+    dx *= 2
+    dy *= 2
+    filterBy2 *= 2
+    inverseTransform = scale(vec2(2, 2)) * inverseTransform
+
+  let blender = blendMode.blender()
+  for y in 0 ..< a.height:
+    for x in 0 ..< a.width:
+      let
+        samplePos = inverseTransform * vec2(x.float32 + h, y.float32 + h)
+        xFloat = samplePos.x - h
+        yFloat = samplePos.y - h
+        backdrop = a.unsafe[x, y]
+        sample = b.getRgbaSmooth(xFloat, yFloat, tiled)
+        blended = blender(backdrop, sample)
+      a.unsafe[x, y] = blended
+
+template getUncheckedArray(
+  image: Image, x, y: int
+): ptr UncheckedArray[ColorRGBX] =
+  cast[ptr UncheckedArray[ColorRGBX]](image.data[image.dataIndex(x, y)].addr)
+
+proc blitLine(a, b: ptr UncheckedArray[ColorRGBX], len: int, blender: Blender) {.inline.} =
+  for i in 0 ..< len:
+    a[i] = blender(a[i], b[i])
+
+proc blitLineOverwrite(a, b: ptr UncheckedArray[ColorRGBX], len: int) {.inline.} =
+  copyMem(a[0].addr, b[0].addr, len * 4)
+
+proc blitLineNormal(a, b: ptr UncheckedArray[ColorRGBX], len: int) {.hasSimd.} =
+  for i in 0 ..< len:
+    a[i] = blendNormal(a[i], b[i])
+
+proc blitLineMask(a, b: ptr UncheckedArray[ColorRGBX], len: int) {.hasSimd.} =
+  for i in 0 ..< len:
+    a[i] = blendMask(a[i], b[i])
+
+proc blitRect(a, b: Image, pos: Ivec2, blendMode: BlendMode) =
+  let
+    px = pos.x.int
+    py = pos.y.int
+
+  if px >= a.width or px + b.width <= 0 or py >= a.height or py + b.height <= 0:
+    if blendMode == MaskBlend:
+      a.fill(rgbx(0, 0, 0, 0))
+    return
+
+  let
+    xStart = max(-px, 0)
+    yStart = max(-py, 0)
+    xEnd = min(b.width, a.width - px)
+    yEnd = min(b.height, a.height - py)
+
+  case blendMode:
+  of NormalBlend:
+    for y in yStart ..< yEnd:
+      blitLineNormal(
+        a.getUncheckedArray(xStart + px, y + py),
+        b.getUncheckedArray(xStart, y),
+        xEnd - xStart
+      )
+  of OverwriteBlend:
+    for y in yStart ..< yEnd:
+      blitLineOverwrite(
+        a.getUncheckedArray(xStart + px, y + py),
+        b.getUncheckedArray(xStart, y),
+        xEnd - xStart
+      )
+  of MaskBlend:
+    {.linearScanEnd.}
+    if yStart + py > 0:
+      zeroMem(a.data[0].addr, (yStart + py) * a.width * 4)
+    for y in yStart ..< yEnd:
+      if xStart + px > 0:
+        zeroMem(a.data[a.dataIndex(0, y + py)].addr, (xStart + px) * 4)
+      blitLineMask(
+        a.getUncheckedArray(xStart + px, y + py),
+        b.getUncheckedArray(xStart, y),
+        xEnd - xStart
+      )
+      if xEnd + px < a.width:
+        zeroMem(
+          a.data[a.dataIndex(xEnd + px, y + py)].addr,
+          (a.width - (xEnd + px)) * 4
+        )
+    if yEnd + py < a.height:
+      zeroMem(
+        a.data[a.dataIndex(0, yEnd + py)].addr,
+        (a.height - (yEnd + py)) * a.width * 4
+      )
+  else:
+    let blender = blendMode.blender()
+    for y in yStart ..< yEnd:
+      blitLine(
+        a.getUncheckedArray(xStart + px, y + py),
+        b.getUncheckedArray(xStart, y),
+        xEnd - xStart,
+        blender
+      )
+
+proc draw*(
+  a, b: Image, transform = mat3(), blendMode = NormalBlend
+) {.raises: [PixieError].} =
+  ## Draws one image onto another using a matrix transform and color blending.
+  var
+    inverseTransform = transform.inverse()
+    # Compute movement vectors
+    p = inverseTransform * vec2(0 + h, 0 + h)
+    dx = inverseTransform * vec2(1 + h, 0 + h) - p
+    dy = inverseTransform * vec2(0 + h, 1 + h) - p
+    filterBy2 = max(dx.length, dy.length)
+    b = b
+
+  while filterBy2 >= 2.0:
+    b = b.minifyBy2()
+    p /= 2
+    dx /= 2
+    dy /= 2
+    filterBy2 /= 2
+    inverseTransform = scale(vec2(0.5, 0.5)) * inverseTransform
 
   while filterBy2 <= 0.5:
     b = b.magnifyBy2()
@@ -485,277 +557,10 @@ proc drawCorrect(
       transform[2, 1].fractional == 0.0
     )
 
-  if not hasRotationOrScaling and not smooth and not tiled:
-    blitRect(a, b, ivec2(transform[2, 0].int32, transform[2, 1].int32), blendMode)
-    return
-
-  let blender = blendMode.blender()
-  for y in 0 ..< a.height:
-    for x in 0 ..< a.width:
-      let
-        samplePos = inverseTransform * vec2(x.float32 + h, y.float32 + h)
-        xFloat = samplePos.x - h
-        yFloat = samplePos.y - h
-        backdrop = a.unsafe[x, y]
-        sample = b.getRgbaSmooth(xFloat, yFloat, tiled)
-        blended = blender(backdrop, sample)
-      a.unsafe[x, y] = blended
-
-proc drawUber(
-  a, b: Image, transform = mat3(), blendMode: BlendMode
-) {.raises: [PixieError].} =
-  let
-    corners = [
-      transform * vec2(0, 0),
-      transform * vec2(b.width.float32, 0),
-      transform * vec2(b.width.float32, b.height.float32),
-      transform * vec2(0, b.height.float32)
-    ]
-    perimeter = [
-      segment(corners[0], corners[1]),
-      segment(corners[1], corners[2]),
-      segment(corners[2], corners[3]),
-      segment(corners[3], corners[0])
-    ]
-
-  var
-    inverseTransform = transform.inverse()
-    # Compute movement vectors
-    p = inverseTransform * vec2(0 + h, 0 + h)
-    dx = inverseTransform * vec2(1 + h, 0 + h) - p
-    dy = inverseTransform * vec2(0 + h, 1 + h) - p
-    filterBy2 = max(dx.length, dy.length)
-    b = b
-
-  while filterBy2 >= 2.0:
-    b = b.minifyBy2()
-    p /= 2
-    dx /= 2
-    dy /= 2
-    filterBy2 /= 2
-
-  while filterBy2 <= 0.5:
-    b = b.magnifyBy2()
-    p *= 2
-    dx *= 2
-    dy *= 2
-    filterBy2 *= 2
-
-  let
-    hasRotationOrScaling = not(dx == vec2(1, 0) and dy == vec2(0, 1))
-    smooth = not(
-      dx.length == 1.0 and
-      dy.length == 1.0 and
-      transform[2, 0].fractional == 0.0 and
-      transform[2, 1].fractional == 0.0
-    )
-
-  # Determine where we should start and stop drawing in the y dimension
-  var
-    yMin = a.height
-    yMax = 0
-  for segment in perimeter:
-    yMin = min(yMin, segment.at.y.floor.int)
-    yMax = max(yMax, segment.at.y.ceil.int)
-  yMin = yMin.clamp(0, a.height)
-  yMax = yMax.clamp(0, a.height)
-
-  let blender = blendMode.blender()
-
-  if blendMode == MaskBlend:
-    if yMin > 0:
-      zeroMem(a.data[0].addr, 4 * yMin * a.width)
-
-  for y in yMin ..< yMax:
-    # Determine where we should start and stop drawing in the x dimension
-    var
-      xMin = a.width.float32
-      xMax = 0.float32
-    for yOffset in [0.float32, 1]:
-      let scanLine = Line(
-        a: vec2(-1000, y.float32 + yOffset),
-        b: vec2(1000, y.float32 + yOffset)
-      )
-      for segment in perimeter:
-        var at: Vec2
-        if scanline.intersects(segment, at) and segment.to != at:
-          xMin = min(xMin, at.x)
-          xMax = max(xMax, at.x)
-
-    var xStart, xStop: int
-    if hasRotationOrScaling or smooth:
-      xStart = xMin.floor.int
-      xStop = xMax.ceil.int
-    else:
-      # Rotation of 360 degrees can cause knife-edge issues with floor and ceil
-      xStart = xMin.round().int
-      xStop = xMax.round().int
-    xStart = xStart.clamp(0, a.width)
-    xStop = xStop.clamp(0, a.width)
-
-    # Skip this row if there is nothing in-bounds to draw
-    if xStart == a.width or xStop == 0:
-      continue
-
-    if blendMode == MaskBlend:
-      if xStart > 0:
-        zeroMem(a.data[a.dataIndex(0, y)].addr, 4 * xStart)
-
-    if smooth:
-      var srcPos = p + dx * xStart.float32 + dy * y.float32
-      srcPos = vec2(srcPos.x - h, srcPos.y - h)
-      for x in xStart ..< xStop:
-        let
-          backdrop = a.unsafe[x, y]
-          sample = b.getRgbaSmooth(srcPos.x, srcPos.y)
-          blended = blender(backdrop, sample)
-        a.unsafe[x, y] = blended
-        srcPos += dx
-
-    else:
-      var x = xStart
-      if not hasRotationOrScaling:
-        let
-          srcPos = p + dx * x.float32 + dy * y.float32
-          sy = srcPos.y.int
-        var sx = srcPos.x.int
-
-        if blendMode in {NormalBlend, OverwriteBlend} and
-          isOpaque(b.data, b.dataIndex(sx, sy), xStop - xStart):
-          copyMem(
-            a.data[a.dataIndex(x, y)].addr,
-            b.data[b.dataIndex(sx, sy)].addr,
-            (xStop - xStart) * 4
-          )
-          continue
-
-        when defined(amd64) and allowSimd:
-          case blendMode:
-          of OverwriteBlend:
-            for _ in 0 ..< (xStop - xStart) div 16:
-              for q in [0, 4, 8, 12]:
-                let sourceVec = mm_loadu_si128(b.data[b.dataIndex(sx + q, sy)].addr)
-                mm_storeu_si128(a.data[a.dataIndex(x + q, y)].addr, sourceVec)
-              x += 16
-              sx += 16
-          of NormalBlend:
-            let vec255 = mm_set1_epi32(cast[int32](uint32.high))
-            for _ in 0 ..< (xStop - xStart) div 16:
-              for q in [0, 4, 8, 12]:
-                let
-                  sourceVec = mm_loadu_si128(b.data[b.dataIndex(sx + q, sy)].addr)
-                  eqZer0 = mm_cmpeq_epi8(sourceVec, mm_setzero_si128())
-                if mm_movemask_epi8(eqZer0) != 0xffff:
-                  let eq255 = mm_cmpeq_epi8(sourceVec, vec255)
-                  if (mm_movemask_epi8(eq255) and 0x8888) == 0x8888:
-                    mm_storeu_si128(a.data[a.dataIndex(x + q, y)].addr, sourceVec)
-                  else:
-                    let
-                      backdropIdx = a.dataIndex(x + q, y)
-                      backdropVec = mm_loadu_si128(a.data[backdropIdx].addr)
-                    mm_storeu_si128(
-                      a.data[backdropIdx].addr,
-                      blendNormalSimd(backdropVec, sourceVec)
-                    )
-              x += 16
-              sx += 16
-          of MaskBlend:
-            let vec255 = mm_set1_epi32(cast[int32](uint32.high))
-            for _ in 0 ..< (xStop - xStart) div 16:
-              for q in [0, 4, 8, 12]:
-                let
-                  sourceVec = mm_loadu_si128(b.data[b.dataIndex(sx + q, sy)].addr)
-                  eqZer0 = mm_cmpeq_epi8(sourceVec, mm_setzero_si128())
-                if mm_movemask_epi8(eqZer0) == 0xffff:
-                  mm_storeu_si128(
-                    a.data[a.dataIndex(x + q, y)].addr,
-                    mm_setzero_si128()
-                  )
-                elif mm_movemask_epi8(mm_cmpeq_epi8(sourceVec, vec255)) != 0xffff:
-                  let backdropVec = mm_loadu_si128(a.data[a.dataIndex(x + q, y)].addr)
-                  mm_storeu_si128(
-                    a.data[a.dataIndex(x + q, y)].addr,
-                    blendMaskSimd(backdropVec, sourceVec)
-                  )
-              x += 16
-              sx += 16
-          else:
-            when type(a) is Image:
-              if blendMode.hasSimdBlender():
-                let blenderSimd = blendMode.blenderSimd()
-                for _ in 0 ..< (xStop - xStart) div 16:
-                  for q in [0, 4, 8, 12]:
-                    let
-                      backdrop = mm_loadu_si128(a.data[a.dataIndex(x + q, y)].addr)
-                      source = mm_loadu_si128(b.data[b.dataIndex(sx + q, sy)].addr)
-                    mm_storeu_si128(
-                      a.data[a.dataIndex(x + q, y)].addr,
-                      blenderSimd(backdrop, source)
-                    )
-                  x += 16
-                  sx += 16
-
-      var srcPos = p + dx * x.float32 + dy * y.float32
-      srcPos = vec2(
-        clamp(srcPos.x, 0, b.width.float32),
-        clamp(srcPos.y, 0, b.height.float32)
-      )
-
-      case blendMode:
-      of OverwriteBlend:
-        for x in x ..< xStop:
-          let
-            samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
-            source = b.unsafe[samplePos.x, samplePos.y]
-          if source.a > 0:
-            a.unsafe[x, y] = source
-          srcPos += dx
-      of NormalBlend:
-        for x in x ..< xStop:
-          let
-            samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
-            source = b.unsafe[samplePos.x, samplePos.y]
-          if source.a > 0:
-            if source.a == 255:
-              a.unsafe[x, y] = source
-            else:
-              let backdrop = a.unsafe[x, y]
-              a.unsafe[x, y] = blendNormal(backdrop, source)
-          srcPos += dx
-      of MaskBlend:
-        for x in x ..< xStop:
-          let
-            samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
-            source = b.unsafe[samplePos.x, samplePos.y]
-          if source.a == 0:
-            a.unsafe[x, y] = rgbx(0, 0, 0, 0)
-          elif source.a != 255:
-            let backdrop = a.unsafe[x, y]
-            a.unsafe[x, y] = blendMask(backdrop, source)
-          srcPos += dx
-      else:
-        for x in x ..< xStop:
-          let
-            samplePos = ivec2((srcPos.x - h).int32, (srcPos.y - h).int32)
-            backdrop = a.unsafe[x, y]
-            sample = b.unsafe[samplePos.x, samplePos.y]
-            blended = blender(backdrop, sample)
-          a.unsafe[x, y] = blended
-          srcPos += dx
-
-    if blendMode == MaskBlend:
-      if a.width - xStop > 0:
-        zeroMem(a.data[a.dataIndex(xStop, y)].addr, 4 * (a.width - xStop))
-
-  if blendMode == MaskBlend:
-    if a.height - yMax > 0:
-      zeroMem(a.data[a.dataIndex(0, yMax)].addr, 4 * a.width * (a.height - yMax))
-
-proc draw*(
-  a, b: Image, transform = mat3(), blendMode = NormalBlend
-) {.inline, raises: [PixieError].} =
-  ## Draws one image onto another using matrix with color blending.
-  a.drawUber(b, transform, blendMode)
+  if hasRotationOrScaling or smooth:
+    a.drawCorrect(b, inverseTransform.inverse(), blendMode, false)
+  else:
+    a.blitRect(b, ivec2(transform[2, 0].int32, transform[2, 1].int32), blendMode)
 
 proc drawTiled*(
   dst, src: Image, mat: Mat3, blendMode = NormalBlend

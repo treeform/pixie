@@ -1,4 +1,4 @@
-import benchy, cairo, pixie, pixie/blends, pixie/internal
+import benchy, cairo, pixie
 
 block:
   let
@@ -8,12 +8,6 @@ block:
     ctx = tmp.create()
 
   timeIt "cairo draw normal":
-    # ctx.setSourceRgba(0.5, 0.5, 0.5, 1)
-    # let operator = ctx.getOperator()
-    # ctx.setOperator(OperatorSource)
-    # ctx.paint()
-    # ctx.setOperator(operator)
-
     ctx.setSource(backdrop, 0, 0)
     ctx.paint()
     ctx.setSource(source, 0, 0)
@@ -29,7 +23,6 @@ block:
     tmp = newImage(1568, 940)
 
   timeIt "pixie draw normal":
-    # tmp.fill(rgbx(127, 127, 127, 255))
     tmp.draw(backdrop)
     tmp.draw(source)
 
@@ -42,7 +35,6 @@ block:
     tmp = newImage(1568, 940)
 
   timeIt "pixie draw overwrite":
-    # tmp.fill(rgbx(127, 127, 127, 255))
     tmp.draw(backdrop, blendMode = OverwriteBlend)
     tmp.draw(source)
 
@@ -56,17 +48,11 @@ block:
     ctx = tmp.create()
 
   timeIt "cairo draw mask":
-    ctx.setSourceRgba(1, 1, 1, 1)
-    let operator = ctx.getOperator()
-    ctx.setOperator(OperatorSource)
-    ctx.paint()
-    ctx.setOperator(operator)
-
     ctx.setSource(backdrop, 0, 0)
     ctx.mask(source, 0, 0)
     tmp.flush()
 
-  # echo tmp.writeToPng("tmp_masked.png")
+  # tmp.writeToPng("tmp_masked.png")
 
 block:
   let
