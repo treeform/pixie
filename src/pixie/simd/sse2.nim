@@ -535,6 +535,7 @@ proc blitLineNormalSse2*(
     oddMask = mm_set1_epi16(cast[int16](0xff00))
     div255 = mm_set1_epi16(cast[int16](0x8081))
     vec255 = mm_set1_epi8(255)
+    vecAlpha255 = mm_set1_epi32(cast[int32]([0.uint8, 255, 0, 255]))
 
   var i: int
   while i < len - 4:
@@ -553,10 +554,7 @@ proc blitLineNormalSse2*(
 
       sourceAlpha = mm_or_si128(sourceAlpha, mm_srli_epi32(sourceAlpha, 16))
 
-      let multiplier = mm_sub_epi32(
-        mm_set1_epi32(cast[int32]([0.uint8, 255, 0, 255])),
-        sourceAlpha
-      )
+      let multiplier = mm_sub_epi32(vecAlpha255, sourceAlpha)
 
       backdropEven = mm_mulhi_epu16(backdropEven, multiplier)
       backdropOdd = mm_mulhi_epu16(backdropOdd, multiplier)
