@@ -146,19 +146,25 @@ proc toPremultipliedAlphaNeon*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
     inc i
     p += 4
 
-  template premultiply(c, a: uint8x8): uint8x8 =
+  template multiply(c, a: uint8x8): uint8x8 =
     let ca = vmull_u8(c, a)
     vraddhn_u16(ca, vrshrq_n_u16(ca, 8))
 
-  let iterations = (data.len - i) div 8
+  template multiply(c, a: uint8x16): uint8x16 =
+    vcombine_u8(
+      multiply(vget_low_u8(c), vget_low_u8(a)),
+      multiply(vget_high_u8(c), vget_high_u8(a))
+    )
+
+  let iterations = (data.len - i) div 16
   for _ in 0 ..< iterations:
-    var channels = vld4_u8(cast[pointer](p))
-    channels.val[0] = premultiply(channels.val[0], channels.val[3])
-    channels.val[1] = premultiply(channels.val[1], channels.val[3])
-    channels.val[2] = premultiply(channels.val[2], channels.val[3])
-    vst4_u8(cast[pointer](p), channels)
-    p += 32
-  i += 8 * iterations
+    var channels = vld4q_u8(cast[pointer](p))
+    channels.val[0] = multiply(channels.val[0], channels.val[3])
+    channels.val[1] = multiply(channels.val[1], channels.val[3])
+    channels.val[2] = multiply(channels.val[2], channels.val[3])
+    vst4q_u8(cast[pointer](p), channels)
+    p += 64
+  i += 16 * iterations
 
   for i in i ..< data.len:
     var c = data[i]
