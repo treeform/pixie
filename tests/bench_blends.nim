@@ -133,17 +133,3 @@ reset()
 timeIt "blendExcludeMask":
   for i in 0 ..< backdrop.data.len:
     backdrop.data[i] = blendExcludeMask(backdrop.data[i], source.data[i])
-
-when defined(amd64) and not defined(pixieNoSimd):
-  import nimsimd/sse2
-
-  reset()
-
-  timeIt "blendNormal [simd]":
-    var i: int
-    while i < backdrop.data.len - 4:
-      let
-        b = mm_loadu_si128(backdrop.data[i].addr)
-        s = mm_loadu_si128(source.data[i].addr)
-      mm_storeu_si128(backdrop.data[i].addr, blendNormalSimd(b, s))
-      i += 4
