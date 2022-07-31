@@ -1,4 +1,4 @@
-import chroma, internal, nimsimd/sse2, pixie/common, vmath
+import chroma, internal, nimsimd/sse2, pixie/blends, pixie/common, vmath
 
 when defined(release):
   {.push checks: off.}
@@ -14,6 +14,56 @@ proc unpackAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
   ## Unpack the first 32 bits into 4 rgba(0, 0, 0, value).
   result = mm_unpacklo_epi8(mm_setzero_si128(), v)
   result = mm_unpacklo_epi8(mm_setzero_si128(), result)
+
+proc blendNormalSimd*(backdrop, source: M128i): M128i {.inline.} =
+  let
+    alphaMask = mm_set1_epi32(cast[int32](0xff000000))
+    oddMask = mm_set1_epi16(cast[int16](0xff00))
+    div255 = mm_set1_epi16(cast[int16](0x8081))
+
+  var
+    sourceAlpha = mm_and_si128(source, alphaMask)
+    backdropEven = mm_slli_epi16(backdrop, 8)
+    backdropOdd = mm_and_si128(backdrop, oddMask)
+
+  sourceAlpha = mm_or_si128(sourceAlpha, mm_srli_epi32(sourceAlpha, 16))
+
+  let k = mm_sub_epi32(
+    mm_set1_epi32(cast[int32]([0.uint8, 255, 0, 255])),
+    sourceAlpha
+  )
+
+  backdropEven = mm_mulhi_epu16(backdropEven, k)
+  backdropOdd = mm_mulhi_epu16(backdropOdd, k)
+
+  backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
+  backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
+
+  mm_add_epi8(
+    source,
+    mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
+  )
+
+proc blendMaskSimd*(backdrop, source: M128i): M128i {.inline.} =
+  let
+    alphaMask = mm_set1_epi32(cast[int32](0xff000000))
+    oddMask = mm_set1_epi16(cast[int16](0xff00))
+    div255 = mm_set1_epi16(cast[int16](0x8081))
+
+  var
+    sourceAlpha = mm_and_si128(source, alphaMask)
+    backdropEven = mm_slli_epi16(backdrop, 8)
+    backdropOdd = mm_and_si128(backdrop, oddMask)
+
+  sourceAlpha = mm_or_si128(sourceAlpha, mm_srli_epi32(sourceAlpha, 16))
+
+  backdropEven = mm_mulhi_epu16(backdropEven, sourceAlpha)
+  backdropOdd = mm_mulhi_epu16(backdropOdd, sourceAlpha)
+
+  backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
+  backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
+
+  mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
 
 proc fillUnsafeSse2*(
   data: var seq[ColorRGBX],
@@ -480,49 +530,89 @@ proc magnifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
 proc blitLineNormalSse2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
+  let
+    alphaMask = mm_set1_epi32(cast[int32](0xff000000))
+    oddMask = mm_set1_epi16(cast[int16](0xff00))
+    div255 = mm_set1_epi16(cast[int16](0x8081))
+    vec255 = mm_set1_epi8(255)
+    vecAlpha255 = mm_set1_epi32(cast[int32]([0.uint8, 255, 0, 255]))
 
-  # TODO align to 16
-
-  var i = 0
+  var i: int
   while i < len - 4:
-
     let
       source = mm_loadu_si128(b[i].addr)
-      backdrop = mm_loadu_si128(a[i].addr)
-      alphaMask = mm_set1_epi32(cast[int32](0xff000000))
-      oddMask = mm_set1_epi16(cast[int16](0xff00))
-      div255 = mm_set1_epi16(cast[int16](0x8081))
+      eq255 = mm_cmpeq_epi8(source, vec255)
+    if (mm_movemask_epi8(eq255) and 0x00008888) == 0x00008888: # Opaque source
+      mm_storeu_si128(a[i].addr, source)
+    else:
+      let backdrop = mm_loadu_si128(a[i].addr)
 
-    var
-      sourceAlpha = mm_and_si128(source, alphaMask)
-      backdropEven = mm_slli_epi16(backdrop, 8)
-      backdropOdd = mm_and_si128(backdrop, oddMask)
+      var
+        sourceAlpha = mm_and_si128(source, alphaMask)
+        backdropEven = mm_slli_epi16(backdrop, 8)
+        backdropOdd = mm_and_si128(backdrop, oddMask)
 
-    sourceAlpha = mm_or_si128(sourceAlpha, mm_srli_epi32(sourceAlpha, 16))
+      sourceAlpha = mm_or_si128(sourceAlpha, mm_srli_epi32(sourceAlpha, 16))
 
-    let k = mm_sub_epi32(
-      mm_set1_epi32(cast[int32]([0.uint8, 255, 0, 255])),
-      sourceAlpha
-    )
+      let multiplier = mm_sub_epi32(vecAlpha255, sourceAlpha)
 
-    backdropEven = mm_mulhi_epu16(backdropEven, k)
-    backdropOdd = mm_mulhi_epu16(backdropOdd, k)
+      backdropEven = mm_mulhi_epu16(backdropEven, multiplier)
+      backdropOdd = mm_mulhi_epu16(backdropOdd, multiplier)
+      backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
+      backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
 
-    backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
-    backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
+      let added = mm_add_epi8(
+        source,
+        mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
+      )
 
-    let done = mm_add_epi8(
-      source,
-      mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
-    )
-
-    mm_storeu_si128(a[i].addr, done)
+      mm_storeu_si128(a[i].addr, added)
 
     i += 4
 
-  # TODO last 1-3 pixels
-  # for i in i ..< len:
-  #   a[i] = blendNormal(a[i], b[i])
+  for i in i ..< len:
+    a[i] = blendNormal(a[i], b[i])
+
+proc blitLineMaskSse2*(
+  a, b: ptr UncheckedArray[ColorRGBX], len: int
+) {.simd.} =
+  let
+    alphaMask = mm_set1_epi32(cast[int32](0xff000000))
+    oddMask = mm_set1_epi16(cast[int16](0xff00))
+    div255 = mm_set1_epi16(cast[int16](0x8081))
+    vec255 = mm_set1_epi8(255)
+
+  var i: int
+  while i < len - 4:
+    let
+      source = mm_loadu_si128(b[i].addr)
+      eq255 = mm_cmpeq_epi8(source, vec255)
+    if (mm_movemask_epi8(eq255) and 0x00008888) == 0x00008888: # Opaque source
+      discard
+    else:
+      let backdrop = mm_loadu_si128(a[i].addr)
+
+      var
+        sourceAlpha = mm_and_si128(source, alphaMask)
+        backdropEven = mm_slli_epi16(backdrop, 8)
+        backdropOdd = mm_and_si128(backdrop, oddMask)
+
+      sourceAlpha = mm_or_si128(sourceAlpha, mm_srli_epi32(sourceAlpha, 16))
+
+      backdropEven = mm_mulhi_epu16(backdropEven, sourceAlpha)
+      backdropOdd = mm_mulhi_epu16(backdropOdd, sourceAlpha)
+      backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
+      backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
+
+      mm_storeu_si128(
+        a[i].addr,
+        mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
+      )
+
+    i += 4
+
+  for i in i ..< len:
+    a[i] = blendMask(a[i], b[i])
 
 when defined(release):
   {.pop.}

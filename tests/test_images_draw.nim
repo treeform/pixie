@@ -307,3 +307,54 @@ block:
     a.draw(b, translate(translation))
 
   a.xray("tests/images/fillOptimization2.png")
+
+block:
+  let transforms = [
+    translate(vec2(0, 0)),
+    translate(vec2(50, -50)),
+    translate(vec2(50, 50)),
+    translate(vec2(-50, 50)),
+    translate(vec2(-50, -50))
+  ]
+
+  let path = newPath()
+  path.rect(10, 10, 80, 80)
+
+  let mask = newImage(100, 100)
+  mask.fillPath(path, color(1, 1, 1, 1))
+
+  let a = newImage(100, 100)
+
+  for i, transform in transforms:
+    a.fill(color(0, 0, 1, 1))
+    a.draw(mask, transform, blendMode = MaskBlend)
+    a.xray("tests/images/maskClearsOnDraw" & $i & ".png")
+
+block:
+  let transforms = [
+    translate(vec2(100, 100)),
+    translate(vec2(100, -100)),
+    translate(vec2(-100, 100)),
+    translate(vec2(-100, -100)),
+    translate(vec2(0, 1000)),
+    translate(vec2(0, -1000)),
+    translate(vec2(1000, 0)),
+    translate(vec2(-1000, 0)),
+    translate(vec2(1000, 1000)),
+    translate(vec2(1000, -1000)),
+    translate(vec2(-1000, 1000)),
+    translate(vec2(-1000, -1000)),
+  ]
+
+  let path = newPath()
+  path.rect(10, 10, 80, 80)
+
+  let mask = newImage(100, 100)
+  mask.fillPath(path, color(1, 1, 1, 1))
+
+  let a = newImage(100, 100)
+
+  for i, transform in transforms:
+    a.fill(color(0, 0, 1, 1))
+    a.draw(mask, transform, blendMode = MaskBlend)
+    doAssert a.isTransparent()

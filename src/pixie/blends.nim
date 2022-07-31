@@ -1,6 +1,6 @@
 ## Blending modes.
 
-import chroma, common, simd, std/math
+import chroma, common, std/math
 
 # See https://www.w3.org/TR/compositing-1/
 # See https://www.khronos.org/registry/OpenGL/extensions/KHR/KHR_blend_equation_advanced.txt
@@ -411,83 +411,6 @@ proc blender*(blendMode: BlendMode): Blender {.raises: [].} =
   of OverwriteBlend: overwriteBlender
   of SubtractMaskBlend: subtractMaskBlender
   of ExcludeMaskBlend: excludeMaskBlender
-
-when defined(amd64) and allowSimd:
-  type
-    BlenderSimd* = proc(blackdrop, source: M128i): M128i {.gcsafe, raises: [].}
-      ## Function signature returned by blenderSimd.
-
-  proc blendNormalSimd*(backdrop, source: M128i): M128i {.inline.} =
-    let
-      alphaMask = mm_set1_epi32(cast[int32](0xff000000))
-      oddMask = mm_set1_epi16(cast[int16](0xff00))
-      div255 = mm_set1_epi16(cast[int16](0x8081))
-
-    var
-      sourceAlpha = mm_and_si128(source, alphaMask)
-      backdropEven = mm_slli_epi16(backdrop, 8)
-      backdropOdd = mm_and_si128(backdrop, oddMask)
-
-    sourceAlpha = mm_or_si128(sourceAlpha, mm_srli_epi32(sourceAlpha, 16))
-
-    let k = mm_sub_epi32(
-      mm_set1_epi32(cast[int32]([0.uint8, 255, 0, 255])),
-      sourceAlpha
-    )
-
-    backdropEven = mm_mulhi_epu16(backdropEven, k)
-    backdropOdd = mm_mulhi_epu16(backdropOdd, k)
-
-    backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
-    backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
-
-    mm_add_epi8(
-      source,
-      mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
-    )
-
-  proc blendMaskSimd*(backdrop, source: M128i): M128i {.inline.} =
-    let
-      alphaMask = mm_set1_epi32(cast[int32](0xff000000))
-      oddMask = mm_set1_epi16(cast[int16](0xff00))
-      div255 = mm_set1_epi16(cast[int16](0x8081))
-
-    var
-      sourceAlpha = mm_and_si128(source, alphaMask)
-      backdropEven = mm_slli_epi16(backdrop, 8)
-      backdropOdd = mm_and_si128(backdrop, oddMask)
-
-    sourceAlpha = mm_or_si128(sourceAlpha, mm_srli_epi32(sourceAlpha, 16))
-
-    backdropEven = mm_mulhi_epu16(backdropEven, sourceAlpha)
-    backdropOdd = mm_mulhi_epu16(backdropOdd, sourceAlpha)
-
-    backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
-    backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
-
-    mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
-
-  proc normalSimdBlender(backdrop, source: M128i): M128i =
-    blendNormalSimd(backdrop, source)
-
-  proc maskSimdBlender(backdrop, source: M128i): M128i =
-    blendMaskSimd(backdrop, source)
-
-  proc overwriteSimdBlender(backdrop, source: M128i): M128i =
-    source
-
-  proc blenderSimd*(blendMode: BlendMode): BlenderSimd {.raises: [PixieError].} =
-    ## Returns a blend function for a given blend mode with SIMD support.
-    case blendMode:
-    of NormalBlend: normalSimdBlender
-    of MaskBlend: maskSimdBlender
-    of OverwriteBlend: overwriteSimdBlender
-    else:
-      raise newException(PixieError, "No SIMD blender for " & $blendMode)
-
-  proc hasSimdBlender*(blendMode: BlendMode): bool {.inline, raises: [].} =
-    ## Is there a blend function for a given blend mode with SIMD support?
-    blendMode in {NormalBlend, MaskBlend, OverwriteBlend}
 
 when defined(release):
   {.pop.}

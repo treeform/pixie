@@ -32,12 +32,12 @@ timeIt "isOpaque":
 reset()
 
 timeIt "subImage":
-  keep image.subImage(0, 0, 256, 256)
+  discard image.subImage(0, 0, 256, 256)
 
 reset()
 
 timeIt "superImage":
-  keep image.superImage(-10, -10, 2580, 1460)
+  discard image.superImage(-10, -10, 2580, 1460)
 
 reset()
 
