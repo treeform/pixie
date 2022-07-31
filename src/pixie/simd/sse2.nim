@@ -544,12 +544,15 @@ proc blendLineCoverageOverwriteSse2*(
       line[i] = rgbx * coverage
     inc i
 
-  let rgbxVec = mm_set1_epi32(cast[uint32](rgbx))
+  let
+    rgbxVec = mm_set1_epi32(cast[uint32](rgbx))
+    vecZero = mm_setzero_si128()
+    vec255 = mm_set1_epi8(255)
   while i < len - 16:
     let
       coverage = mm_loadu_si128(coverages[i].addr)
-      eqZero = mm_cmpeq_epi8(coverage, mm_setzero_si128())
-      eq255 = mm_cmpeq_epi8(coverage, mm_set1_epi8(255))
+      eqZero = mm_cmpeq_epi8(coverage, vecZero)
+      eq255 = mm_cmpeq_epi8(coverage, vec255)
     if mm_movemask_epi8(eqZero) == 0xffff:
       i += 16
     elif mm_movemask_epi8(eq255) == 0xffff:
@@ -637,6 +640,8 @@ proc blendLineCoverageNormalSse2*(
 
   let
     rgbxVec = mm_set1_epi32(cast[uint32](rgbx))
+    vecZero = mm_setzero_si128()
+    vec255 = mm_set1_epi8(255)
     alphaMask = mm_set1_epi32(cast[int32](0xff000000))
     oddMask = mm_set1_epi16(cast[int16](0xff00))
     div255 = mm_set1_epi16(cast[int16](0x8081))
@@ -644,8 +649,8 @@ proc blendLineCoverageNormalSse2*(
   while i < len - 16:
     let
       coverage = mm_loadu_si128(coverages[i].addr)
-      eqZero = mm_cmpeq_epi8(coverage, mm_setzero_si128())
-      eq255 = mm_cmpeq_epi8(coverage, mm_set1_epi8(255))
+      eqZero = mm_cmpeq_epi8(coverage, vecZero)
+      eq255 = mm_cmpeq_epi8(coverage, vec255)
     if mm_movemask_epi8(eqZero) == 0xffff:
       i += 16
     elif mm_movemask_epi8(eq255) == 0xffff and rgbx.a == 255:
@@ -738,17 +743,19 @@ proc blendLineCoverageMaskSse2*(
 
   let
     rgbxVec = mm_set1_epi32(cast[uint32](rgbx))
+    vecZero = mm_setzero_si128()
+    vec255 = mm_set1_epi8(255)
     alphaMask = mm_set1_epi32(cast[int32](0xff000000))
     oddMask = mm_set1_epi16(cast[int16](0xff00))
     div255 = mm_set1_epi16(cast[int16](0x8081))
   while i < len - 16:
     let
       coverage = mm_loadu_si128(coverages[i].addr)
-      eqZero = mm_cmpeq_epi8(coverage, mm_setzero_si128())
-      eq255 = mm_cmpeq_epi8(coverage, mm_set1_epi8(255))
+      eqZero = mm_cmpeq_epi8(coverage, vecZero)
+      eq255 = mm_cmpeq_epi8(coverage, vec255)
     if mm_movemask_epi8(eqZero) == 0xffff:
       for _ in 0 ..< 4:
-        mm_store_si128(line[i].addr, mm_setzero_si128())
+        mm_store_si128(line[i].addr, vecZero)
         i += 4
     elif mm_movemask_epi8(eq255) == 0xffff and rgbx.a == 255:
       i += 16
