@@ -305,7 +305,7 @@ proc applyOpacitySse2*(image: Image, opacity: float32) {.simd.} =
       valuesOdd = mm_mulhi_epu16(valuesOdd, opacityVec)
       valuesEven = mm_srli_epi16(mm_mulhi_epu16(valuesEven, div255), 7)
       valuesOdd = mm_srli_epi16(mm_mulhi_epu16(valuesOdd, div255), 7)
-      mm_storeu_si128(
+      mm_store_si128(
         cast[pointer](p),
         mm_or_si128(valuesEven, mm_slli_epi16(valuesOdd, 8))
       )
@@ -347,8 +347,8 @@ proc ceilSse2*(image: Image) {.simd.} =
     values1 = mm_cmpeq_epi8(values1, vecZero)
     values0 = mm_andnot_si128(values0, vec255)
     values1 = mm_andnot_si128(values1, vec255)
-    mm_storeu_si128(cast[pointer](p), values0)
-    mm_storeu_si128(cast[pointer](p + 16), values1)
+    mm_store_si128(cast[pointer](p), values0)
+    mm_store_si128(cast[pointer](p + 16), values1)
     p += 32
   i += 8 * iterations
 
@@ -562,7 +562,7 @@ proc blendLineCoverageOverwriteSse2*(
     else:
       var coverage = coverage
       for _ in 0 ..< 4:
-        mm_storeu_si128(line[i].addr, rgbxVec.applyCoverage(coverage))
+        mm_store_si128(line[i].addr, rgbxVec.applyCoverage(coverage))
         coverage = mm_srli_si128(coverage, 4)
         i += 4
 
@@ -612,7 +612,7 @@ proc blendLineNormalSse2*(
       source = mm_loadu_si128(b[i].addr)
       eq255 = mm_cmpeq_epi8(source, vec255)
     if (mm_movemask_epi8(eq255) and 0x00008888) == 0x00008888: # Opaque source
-      mm_storeu_si128(a[i].addr, source)
+      mm_store_si128(a[i].addr, source)
     else:
       let backdrop = mm_load_si128(a[i].addr)
       mm_store_si128(a[i].addr, blendNormalSimd(backdrop, source))
@@ -663,7 +663,7 @@ proc blendLineCoverageNormalSse2*(
         let
           backdrop = mm_loadu_si128(line[i].addr)
           source = rgbxVec.applyCoverage(coverage)
-        mm_storeu_si128(line[i].addr, blendNormalSimd(backdrop, source))
+        mm_store_si128(line[i].addr, blendNormalSimd(backdrop, source))
         coverage = mm_srli_si128(coverage, 4)
         i += 4
 
@@ -765,7 +765,7 @@ proc blendLineCoverageMaskSse2*(
         let
           backdrop = mm_loadu_si128(line[i].addr)
           source = rgbxVec.applyCoverage(coverage)
-        mm_storeu_si128(line[i].addr, blendMaskSimd(backdrop, source))
+        mm_store_si128(line[i].addr, blendMaskSimd(backdrop, source))
         coverage = mm_srli_si128(coverage, 4)
         i += 4
 

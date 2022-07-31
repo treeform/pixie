@@ -464,7 +464,7 @@ proc blendLineNormalAvx2*(
       source = mm256_loadu_si256(b[i].addr)
       eq255 = mm256_cmpeq_epi8(source, vec255)
     if (mm256_movemask_epi8(eq255) and 0x88888888) == 0x88888888: # Opaque source
-      mm256_storeu_si256(a[i].addr, source)
+      mm256_store_si256(a[i].addr, source)
     else:
       let backdrop = mm256_load_si256(a[i].addr)
       mm256_store_si256(a[i].addr, blendNormalSimd(backdrop, source))
