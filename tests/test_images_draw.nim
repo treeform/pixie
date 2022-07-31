@@ -328,7 +328,7 @@ block:
   for i, transform in transforms:
     a.fill(color(0, 0, 1, 1))
     a.draw(mask, transform, blendMode = MaskBlend)
-    a.writeFile("tests/images/maskClearsOnDraw" & $i & ".png")
+    a.xray("tests/images/maskClearsOnDraw" & $i & ".png")
 
 block:
   let transforms = [
