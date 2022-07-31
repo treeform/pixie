@@ -568,7 +568,7 @@ proc blendLineNormalSse2*(
   for i in i ..< len:
     line[i] = blendNormal(line[i], rgbx)
 
-proc blitLineNormalSse2*(
+proc blendLineNormalSse2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
   var i: int
@@ -653,7 +653,7 @@ proc blendLineMaskSse2*(
   for i in i ..< len:
     line[i] = blendMask(line[i], rgbx)
 
-proc blitLineMaskSse2*(
+proc blendLineMaskSse2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
   var i: int
