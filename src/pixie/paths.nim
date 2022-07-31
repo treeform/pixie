@@ -1588,24 +1588,6 @@ proc fillCoverage(
     image.clearUnsafe(0, y, startX, y)
     image.clearUnsafe(startX + coverages.len, y, image.width, y)
 
-  of SubtractMaskBlend:
-    for x in x ..< startX + coverages.len:
-      let coverage = coverages[x - startX]
-      if coverage == 255 and rgbx.a == 255:
-        image.data[dataIndex] = rgbx(0, 0, 0, 0)
-      elif coverage != 0:
-        let backdrop = image.data[dataIndex]
-        image.data[dataIndex] = blendSubtractMask(backdrop, source(rgbx, coverage))
-      inc dataIndex
-
-  of ExcludeMaskBlend:
-    for x in x ..< startX + coverages.len:
-      let
-        coverage = coverages[x - startX]
-        backdrop = image.data[dataIndex]
-      image.data[dataIndex] = blendExcludeMask(backdrop, source(rgbx, coverage))
-      inc dataIndex
-
   else:
     let blender = blendMode.blender()
     for x in x ..< startX + coverages.len:
@@ -1658,7 +1640,6 @@ proc fillHits(
 
   of MaskBlend:
     {.linearScanEnd.}
-
     var filledTo = startX
     for (start, len) in hits.walkInteger(numHits, windingRule, y, image.width):
       if maskClears: # Clear any gap between this fill and the previous fill
@@ -1683,25 +1664,6 @@ proc fillHits(
     if maskClears:
       image.clearUnsafe(0, y, startX, y)
       image.clearUnsafe(filledTo, y, image.width, y)
-
-  of SubtractMaskBlend:
-    for (start, len) in hits.walkInteger(numHits, windingRule, y, image.width):
-      var dataIndex = image.dataIndex(start, y)
-      for _ in 0 ..< len:
-        if rgbx.a == 255:
-          image.data[dataIndex] = rgbx(0, 0, 0, 0)
-        else:
-          let backdrop = image.data[dataIndex]
-          image.data[dataIndex] = blendSubtractMask(backdrop, rgbx)
-        inc dataIndex
-
-  of ExcludeMaskBlend:
-    for (start, len) in hits.walkInteger(numHits, windingRule, y, image.width):
-      var dataIndex = image.dataIndex(start, y)
-      for _ in 0 ..< len:
-        let backdrop = image.data[dataIndex]
-        image.data[dataIndex] = blendExcludeMask(backdrop, rgbx)
-        inc dataIndex
 
   else:
     let blender = blendMode.blender()
