@@ -6,6 +6,41 @@ when defined(gcc) or defined(clang):
 when defined(release):
   {.push checks: off.}
 
+template blendNormalSimd(backdrop, source: M256i): M256i =
+  var
+    sourceAlpha = mm256_and_si256(source, alphaMask)
+    backdropEven = mm256_slli_epi16(backdrop, 8)
+    backdropOdd = mm256_and_si256(backdrop, oddMask)
+
+  sourceAlpha = mm256_shuffle_epi8(sourceAlpha, shuffleControl)
+
+  let multiplier = mm256_sub_epi32(vecAlpha255, sourceAlpha)
+
+  backdropEven = mm256_mulhi_epu16(backdropEven, multiplier)
+  backdropOdd = mm256_mulhi_epu16(backdropOdd, multiplier)
+  backdropEven = mm256_srli_epi16(mm256_mulhi_epu16(backdropEven, div255), 7)
+  backdropOdd = mm256_srli_epi16(mm256_mulhi_epu16(backdropOdd, div255), 7)
+
+  mm256_add_epi8(
+    source,
+    mm256_or_si256(backdropEven, mm256_slli_epi16(backdropOdd, 8))
+  )
+
+template blendMaskSimd(backdrop, source: M256i): M256i =
+  var
+    sourceAlpha = mm256_and_si256(source, alphaMask)
+    backdropEven = mm256_slli_epi16(backdrop, 8)
+    backdropOdd = mm256_and_si256(backdrop, oddMask)
+
+  sourceAlpha = mm256_shuffle_epi8(sourceAlpha, shuffleControl)
+
+  backdropEven = mm256_mulhi_epu16(backdropEven, sourceAlpha)
+  backdropOdd = mm256_mulhi_epu16(backdropOdd, sourceAlpha)
+  backdropEven = mm256_srli_epi16(mm256_mulhi_epu16(backdropEven, div255), 7)
+  backdropOdd = mm256_srli_epi16(mm256_mulhi_epu16(backdropOdd, div255), 7)
+
+  mm256_or_si256(backdropEven, mm256_slli_epi16(backdropOdd, 8))
+
 proc isOneColorAvx2*(image: Image): bool {.simd.} =
   result = true
 
@@ -400,26 +435,7 @@ proc blendLineNormalAvx2*(
     )
   while i < len - 8:
     let backdrop = mm256_load_si256(line[i].addr)
-    var
-      sourceAlpha = mm256_and_si256(source, alphaMask)
-      backdropEven = mm256_slli_epi16(backdrop, 8)
-      backdropOdd = mm256_and_si256(backdrop, oddMask)
-
-    sourceAlpha = mm256_shuffle_epi8(sourceAlpha, shuffleControl)
-
-    let multiplier = mm256_sub_epi32(vecAlpha255, sourceAlpha)
-
-    backdropEven = mm256_mulhi_epu16(backdropEven, multiplier)
-    backdropOdd = mm256_mulhi_epu16(backdropOdd, multiplier)
-    backdropEven = mm256_srli_epi16(mm256_mulhi_epu16(backdropEven, div255), 7)
-    backdropOdd = mm256_srli_epi16(mm256_mulhi_epu16(backdropOdd, div255), 7)
-
-    let added = mm256_add_epi8(
-      source,
-      mm256_or_si256(backdropEven, mm256_slli_epi16(backdropOdd, 8))
-    )
-
-    mm256_store_si256(line[i].addr, added)
+    mm256_store_si256(line[i].addr, blendNormalSimd(backdrop, source))
     i += 8
 
   for i in i ..< len:
@@ -451,27 +467,7 @@ proc blendLineNormalAvx2*(
       mm256_storeu_si256(a[i].addr, source)
     else:
       let backdrop = mm256_load_si256(a[i].addr)
-      var
-        sourceAlpha = mm256_and_si256(source, alphaMask)
-        backdropEven = mm256_slli_epi16(backdrop, 8)
-        backdropOdd = mm256_and_si256(backdrop, oddMask)
-
-      sourceAlpha = mm256_shuffle_epi8(sourceAlpha, shuffleControl)
-
-      let multiplier = mm256_sub_epi32(vecAlpha255, sourceAlpha)
-
-      backdropEven = mm256_mulhi_epu16(backdropEven, multiplier)
-      backdropOdd = mm256_mulhi_epu16(backdropOdd, multiplier)
-      backdropEven = mm256_srli_epi16(mm256_mulhi_epu16(backdropEven, div255), 7)
-      backdropOdd = mm256_srli_epi16(mm256_mulhi_epu16(backdropOdd, div255), 7)
-
-      let added = mm256_add_epi8(
-        source,
-        mm256_or_si256(backdropEven, mm256_slli_epi16(backdropOdd, 8))
-      )
-
-      mm256_store_si256(a[i].addr, added)
-
+      mm256_store_si256(a[i].addr, blendNormalSimd(backdrop, source))
     i += 8
 
   for i in i ..< len:
@@ -496,22 +492,7 @@ proc blendLineMaskAvx2*(
     )
   while i < len - 8:
     let backdrop = mm256_load_si256(line[i].addr)
-    var
-      sourceAlpha = mm256_and_si256(source, alphaMask)
-      backdropEven = mm256_slli_epi16(backdrop, 8)
-      backdropOdd = mm256_and_si256(backdrop, oddMask)
-
-    sourceAlpha = mm256_shuffle_epi8(sourceAlpha, shuffleControl)
-
-    backdropEven = mm256_mulhi_epu16(backdropEven, sourceAlpha)
-    backdropOdd = mm256_mulhi_epu16(backdropOdd, sourceAlpha)
-    backdropEven = mm256_srli_epi16(mm256_mulhi_epu16(backdropEven, div255), 7)
-    backdropOdd = mm256_srli_epi16(mm256_mulhi_epu16(backdropOdd, div255), 7)
-
-    mm256_store_si256(
-      line[i].addr,
-      mm256_or_si256(backdropEven, mm256_slli_epi16(backdropOdd, 8))
-    )
+    mm256_store_si256(line[i].addr, blendMaskSimd(backdrop, source))
     i += 8
 
   for i in i ..< len:
@@ -542,23 +523,7 @@ proc blendLineMaskAvx2*(
       discard
     else:
       let backdrop = mm256_load_si256(a[i].addr)
-      var
-        sourceAlpha = mm256_and_si256(source, alphaMask)
-        backdropEven = mm256_slli_epi16(backdrop, 8)
-        backdropOdd = mm256_and_si256(backdrop, oddMask)
-
-      sourceAlpha = mm256_shuffle_epi8(sourceAlpha, shuffleControl)
-
-      backdropEven = mm256_mulhi_epu16(backdropEven, sourceAlpha)
-      backdropOdd = mm256_mulhi_epu16(backdropOdd, sourceAlpha)
-      backdropEven = mm256_srli_epi16(mm256_mulhi_epu16(backdropEven, div255), 7)
-      backdropOdd = mm256_srli_epi16(mm256_mulhi_epu16(backdropOdd, div255), 7)
-
-      mm256_store_si256(
-        a[i].addr,
-        mm256_or_si256(backdropEven, mm256_slli_epi16(backdropOdd, 8))
-      )
-
+      mm256_store_si256(a[i].addr, blendMaskSimd(backdrop, source))
     i += 8
 
   for i in i ..< len:
