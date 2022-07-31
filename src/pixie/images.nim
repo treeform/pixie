@@ -436,11 +436,6 @@ proc drawCorrect(
         blended = blender(backdrop, sample)
       a.unsafe[x, y] = blended
 
-template getUncheckedArray(
-  image: Image, x, y: int
-): ptr UncheckedArray[ColorRGBX] =
-  cast[ptr UncheckedArray[ColorRGBX]](image.data[image.dataIndex(x, y)].addr)
-
 proc blitLine(
   a, b: ptr UncheckedArray[ColorRGBX], len: int, blender: Blender
 ) {.inline.} =

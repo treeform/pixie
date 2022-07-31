@@ -1597,6 +1597,18 @@ proc fillCoverage(
         image.data[dataIndex] = blender(backdrop, source(rgbx, coverage))
       inc dataIndex
 
+proc blendLineNormal(
+  line: ptr UncheckedArray[ColorRGBX], rgbx: ColorRGBX, len: int
+) {.hasSimd.} =
+  for i in 0 ..< len:
+    line[i] = blendNormal(line[i], rgbx)
+
+proc blendLineMask(
+  line: ptr UncheckedArray[ColorRGBX], rgbx: ColorRGBX, len: int
+) {.hasSimd.} =
+  for i in 0 ..< len:
+    line[i] = blendMask(line[i], rgbx)
+
 proc fillHits(
   image: Image,
   rgbx: ColorRGBX,
@@ -1607,19 +1619,6 @@ proc fillHits(
   blendMode: BlendMode,
   maskClears = true
 ) =
-  template simdBlob(image: Image, x: var int, len: int, blendProc: untyped) =
-    when allowSimd:
-      when defined(amd64):
-        var p = cast[uint](image.data[image.dataIndex(x, y)].addr)
-        let
-          iterations = len div 4
-          colorVec = mm_set1_epi32(cast[int32](rgbx))
-        for _ in 0 ..< iterations:
-          let backdrop = mm_loadu_si128(cast[pointer](p))
-          mm_storeu_si128(cast[pointer](p), blendProc(backdrop, colorVec))
-          p += 16
-        x += iterations * 4
-
   case blendMode:
   of OverwriteBlend:
     for (start, len) in hits.walkInteger(numHits, windingRule, y, image.width):
@@ -1630,13 +1629,7 @@ proc fillHits(
       if rgbx.a == 255:
         fillUnsafe(image.data, rgbx, image.dataIndex(start, y), len)
       else:
-        var x = start
-        simdBlob(image, x, len, blendNormalSimd)
-        var dataIndex = image.dataIndex(x, y)
-        for _ in x ..< start + len:
-          let backdrop = image.data[dataIndex]
-          image.data[dataIndex] = blendNormal(backdrop, rgbx)
-          inc dataIndex
+        blendLineNormal(image.getUncheckedArray(start, y), rgbx, len)
 
   of MaskBlend:
     {.linearScanEnd.}
@@ -1653,12 +1646,7 @@ proc fillHits(
           )
       block: # Handle this fill
         if rgbx.a != 255:
-          var x = start
-          simdBlob(image, x, len, blendMaskSimd)
-          var dataIndex = image.dataIndex(x, y)
-          for _ in x ..< start + len:
-            let backdrop = image.data[dataIndex]
-            image.data[dataIndex] = blendMask(backdrop, rgbx)
+          blendLineMask(image.getUncheckedArray(start, y), rgbx, len)
         filledTo = start + len
 
     if maskClears:

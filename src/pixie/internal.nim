@@ -47,6 +47,11 @@ proc intersectsInside*(a, b: Segment, at: var Vec2): bool {.inline.} =
     at = a.at + (t * s1)
     return true
 
+template getUncheckedArray*(
+  image: Image, x, y: int
+): ptr UncheckedArray[ColorRGBX] =
+  cast[ptr UncheckedArray[ColorRGBX]](image.data[image.dataIndex(x, y)].addr)
+
 proc fillUnsafe*(
   data: var seq[ColorRGBX], color: SomeColor, start, len: int
 ) {.hasSimd, raises: [].} =
