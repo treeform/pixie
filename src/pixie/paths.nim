@@ -1550,7 +1550,6 @@ proc fillCoverage(
 
   of MaskBlend:
     {.linearScanEnd.}
-
     when allowSimd:
       when defined(amd64):
         for (coverageVec, allZeroes, all255) in simd(coverages, x, startX):
