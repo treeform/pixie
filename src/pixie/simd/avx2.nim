@@ -425,7 +425,7 @@ proc blendLineNormalAvx2*(
   for i in i ..< len:
     line[i] = blendNormal(line[i], rgbx)
 
-proc blitLineNormalAvx2*(
+proc blendLineNormalAvx2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
   var i: int
@@ -517,7 +517,7 @@ proc blendLineMaskAvx2*(
   for i in i ..< len:
     line[i] = blendMask(line[i], rgbx)
 
-proc blitLineMaskAvx2*(
+proc blendLineMaskAvx2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
   var i: int
