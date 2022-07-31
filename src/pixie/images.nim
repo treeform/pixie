@@ -1,6 +1,6 @@
 import blends, bumpy, chroma, common, internal, simd, vmath
 
-export Image, newImage, copy, dataIndex
+export Image, copy, dataIndex, newImage
 
 const h = 0.5.float32
 
@@ -441,11 +441,15 @@ template getUncheckedArray(
 ): ptr UncheckedArray[ColorRGBX] =
   cast[ptr UncheckedArray[ColorRGBX]](image.data[image.dataIndex(x, y)].addr)
 
-proc blitLine(a, b: ptr UncheckedArray[ColorRGBX], len: int, blender: Blender) {.inline.} =
+proc blitLine(
+  a, b: ptr UncheckedArray[ColorRGBX], len: int, blender: Blender
+) {.inline.} =
   for i in 0 ..< len:
     a[i] = blender(a[i], b[i])
 
-proc blitLineOverwrite(a, b: ptr UncheckedArray[ColorRGBX], len: int) {.inline.} =
+proc blitLineOverwrite(
+  a, b: ptr UncheckedArray[ColorRGBX], len: int
+) {.inline.} =
   copyMem(a[0].addr, b[0].addr, len * 4)
 
 proc blitLineNormal(a, b: ptr UncheckedArray[ColorRGBX], len: int) {.hasSimd.} =
