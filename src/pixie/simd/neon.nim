@@ -416,34 +416,43 @@ proc blitLineNormalNeon*(
     a[i] = blendNormal(a[i], b[i])
     inc i
 
-  let vec255 = vmov_n_u8(255)
-  while i < len - 8:
+  let vec255 = vmovq_n_u8(255)
+  while i < len - 16:
     let
-      source = vld4_u8(b[i].addr)
-      eq255 = vceq_u8(source.val[3], vec255)
-    if vget_lane_u64(cast[uint64x1](eq255), 0) == uint64.high:
-      vst4_u8(a[i].addr, source)
+      source = vld4q_u8(b[i].addr)
+      eq255 = vceqq_u8(source.val[3], vec255)
+      mask = vget_lane_u64(cast[uint64x1](
+        vand_u8(vget_low_u8(eq255), vget_high_u8(eq255)
+      )), 0)
+    if mask == uint64.high:
+      vst4q_u8(a[i].addr, source)
     else:
       template multiply(c, a: uint8x8): uint8x8 =
         let ca = vmull_u8(c, a)
         vraddhn_u16(ca, vrshrq_n_u16(ca, 8))
 
-      let
-        backdrop = vld4_u8(a[i].addr)
-        multiplier = vsub_u8(vec255, source.val[3])
+      template multiply(c, a: uint8x16): uint8x16 =
+        vcombine_u8(
+          multiply(vget_low_u8(c), vget_low_u8(a)),
+          multiply(vget_high_u8(c), vget_high_u8(a))
+        )
 
-      var blended: uint8x8x4
+      let
+        backdrop = vld4q_u8(a[i].addr)
+        multiplier = vsubq_u8(vec255, source.val[3])
+
+      var blended: uint8x16x4
       blended.val[0] = multiply(backdrop.val[0], multiplier)
       blended.val[1] = multiply(backdrop.val[1], multiplier)
       blended.val[2] = multiply(backdrop.val[2], multiplier)
       blended.val[3] = multiply(backdrop.val[3], multiplier)
-      blended.val[0] = vadd_u8(blended.val[0], source.val[0])
-      blended.val[1] = vadd_u8(blended.val[1], source.val[1])
-      blended.val[2] = vadd_u8(blended.val[2], source.val[2])
-      blended.val[3] = vadd_u8(blended.val[3], source.val[3])
-      vst4_u8(a[i].addr, blended)
+      blended.val[0] = vaddq_u8(blended.val[0], source.val[0])
+      blended.val[1] = vaddq_u8(blended.val[1], source.val[1])
+      blended.val[2] = vaddq_u8(blended.val[2], source.val[2])
+      blended.val[3] = vaddq_u8(blended.val[3], source.val[3])
+      vst4q_u8(a[i].addr, blended)
 
-    i += 8
+    i += 16
 
   for i in i ..< len:
     a[i] = blendNormal(a[i], b[i])
@@ -456,27 +465,36 @@ proc blitLineMaskNeon*(
     a[i] = blendMask(a[i], b[i])
     inc i
 
-  let vec255 = vmov_n_u8(255)
-  while i < len - 8:
+  let vec255 = vmovq_n_u8(255)
+  while i < len - 16:
     let
-      source = vld4_u8(b[i].addr)
-      eq255 = vceq_u8(source.val[3], vec255)
-    if vget_lane_u64(cast[uint64x1](eq255), 0) == uint64.high:
+      source = vld4q_u8(b[i].addr)
+      eq255 = vceqq_u8(source.val[3], vec255)
+      mask = vget_lane_u64(cast[uint64x1](
+        vand_u8(vget_low_u8(eq255), vget_high_u8(eq255)
+      )), 0)
+    if mask == uint64.high:
       discard
     else:
       template multiply(c, a: uint8x8): uint8x8 =
         let ca = vmull_u8(c, a)
         vraddhn_u16(ca, vrshrq_n_u16(ca, 8))
 
-      let backdrop = vld4_u8(a[i].addr)
-      var blended: uint8x8x4
+      template multiply(c, a: uint8x16): uint8x16 =
+        vcombine_u8(
+          multiply(vget_low_u8(c), vget_low_u8(a)),
+          multiply(vget_high_u8(c), vget_high_u8(a))
+        )
+
+      let backdrop = vld4q_u8(a[i].addr)
+      var blended: uint8x16x4
       blended.val[0] = multiply(backdrop.val[0], source.val[3])
       blended.val[1] = multiply(backdrop.val[1], source.val[3])
       blended.val[2] = multiply(backdrop.val[2], source.val[3])
       blended.val[3] = multiply(backdrop.val[3], source.val[3])
-      vst4_u8(a[i].addr, blended)
+      vst4q_u8(a[i].addr, blended)
 
-    i += 8
+    i += 16
 
   for i in i ..< len:
     a[i] = blendMask(a[i], b[i])
