@@ -225,19 +225,19 @@ proc applyOpacityNeon*(image: Image, opacity: float32) {.simd.} =
     i: int
     p = cast[uint](image.data[0].addr)
 
-  proc apply(c, o: uint8x8): uint8x8 {.inline.} =
-    let co = vmull_u8(c, o)
-    vraddhn_u16(co, vrshrq_n_u16(co, 8))
+  template multiply(c, a: uint8x8): uint8x8 =
+    let ca = vmull_u8(c, a)
+    vraddhn_u16(ca, vrshrq_n_u16(ca, 8))
 
   let
     opacityVec = vmov_n_u8(opacity)
     iterations = image.data.len div 8
   for _ in 0 ..< iterations:
     var channels = vld4_u8(cast[pointer](p))
-    channels.val[0] = apply(channels.val[0], opacityVec)
-    channels.val[1] = apply(channels.val[1], opacityVec)
-    channels.val[2] = apply(channels.val[2], opacityVec)
-    channels.val[3] = apply(channels.val[3], opacityVec)
+    channels.val[0] = multiply(channels.val[0], opacityVec)
+    channels.val[1] = multiply(channels.val[1], opacityVec)
+    channels.val[2] = multiply(channels.val[2], opacityVec)
+    channels.val[3] = multiply(channels.val[3], opacityVec)
     vst4_u8(cast[pointer](p), channels)
     p += 32
   i += 8 * iterations
