@@ -538,7 +538,7 @@ proc blendLineCoverageOverwriteSse2*(
   len: int
  ) {.simd.} =
   var i: int
-  while (cast[uint](line[i].addr) and 15) != 0:
+  while i < len and (cast[uint](line[i].addr) and 15) != 0:
     let coverage = coverages[i]
     if coverage != 0:
       line[i] = rgbx * coverage
@@ -575,7 +575,7 @@ proc blendLineNormalSse2*(
   line: ptr UncheckedArray[ColorRGBX], rgbx: ColorRGBX, len: int
 ) {.simd.} =
   var i: int
-  while (cast[uint](line[i].addr) and 15) != 0:
+  while i < len and (cast[uint](line[i].addr) and 15) != 0:
     line[i] = blendNormal(line[i], rgbx)
     inc i
 
@@ -597,7 +597,7 @@ proc blendLineNormalSse2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
   var i: int
-  while (cast[uint](a[i].addr) and 15) != 0:
+  while i < len and (cast[uint](a[i].addr) and 15) != 0:
     a[i] = blendNormal(a[i], b[i])
     inc i
 
@@ -628,11 +628,9 @@ proc blendLineCoverageNormalSse2*(
   len: int
 ) {.simd.} =
   var i: int
-  while (cast[uint](line[i].addr) and 15) != 0:
+  while i < len and (cast[uint](line[i].addr) and 15) != 0:
     let coverage = coverages[i]
-    if coverage == 255 and rgbx.a == 255:
-      line[i] = rgbx
-    elif coverage == 0:
+    if coverage == 0:
       discard
     else:
       line[i] = blendNormal(line[i], rgbx * coverage)
@@ -669,9 +667,7 @@ proc blendLineCoverageNormalSse2*(
 
   for i in i ..< len:
     let coverage = coverages[i]
-    if coverage == 255 and rgbx.a == 255:
-      line[i] = rgbx
-    elif coverage == 0:
+    if coverage == 0:
       discard
     else:
       line[i] = blendNormal(line[i], rgbx * coverage)
@@ -680,7 +676,7 @@ proc blendLineMaskSse2*(
   line: ptr UncheckedArray[ColorRGBX], rgbx: ColorRGBX, len: int
 ) {.simd.} =
   var i: int
-  while (cast[uint](line[i].addr) and 15) != 0:
+  while i < len and (cast[uint](line[i].addr) and 15) != 0:
     line[i] = blendMask(line[i], rgbx)
     inc i
 
@@ -701,7 +697,7 @@ proc blendLineMaskSse2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
   var i: int
-  while (cast[uint](a[i].addr) and 15) != 0:
+  while  i < len and (cast[uint](a[i].addr) and 15) != 0:
     a[i] = blendMask(a[i], b[i])
     inc i
 
@@ -731,7 +727,7 @@ proc blendLineCoverageMaskSse2*(
   len: int
 ) {.simd.} =
   var i: int
-  while (cast[uint](line[i].addr) and 15) != 0:
+  while  i < len and (cast[uint](line[i].addr) and 15) != 0:
     let coverage = coverages[i]
     if coverage == 0:
       line[i] = rgbx(0, 0, 0, 0)

@@ -419,7 +419,7 @@ proc blendLineNormalAvx2*(
   line: ptr UncheckedArray[ColorRGBX], rgbx: ColorRGBX, len: int
 ) {.simd.} =
   var i: int
-  while (cast[uint](line[i].addr) and 31) != 0:
+  while i < len and (cast[uint](line[i].addr) and 31) != 0:
     line[i] = blendNormal(line[i], rgbx)
     inc i
 
@@ -445,7 +445,7 @@ proc blendLineNormalAvx2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
   var i: int
-  while (cast[uint](a[i].addr) and 31) != 0:
+  while i < len and (cast[uint](a[i].addr) and 31) != 0:
     a[i] = blendNormal(a[i], b[i])
     inc i
 
@@ -477,7 +477,7 @@ proc blendLineMaskAvx2*(
   line: ptr UncheckedArray[ColorRGBX], rgbx: ColorRGBX, len: int
 ) {.simd.} =
   var i: int
-  while (cast[uint](line[i].addr) and 31) != 0:
+  while i < len and (cast[uint](line[i].addr) and 31) != 0:
     line[i] = blendMask(line[i], rgbx)
     inc i
 
@@ -502,7 +502,7 @@ proc blendLineMaskAvx2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
   var i: int
-  while (cast[uint](a[i].addr) and 31) != 0:
+  while i < len and (cast[uint](a[i].addr) and 31) != 0:
     a[i] = blendMask(a[i], b[i])
     inc i
 
