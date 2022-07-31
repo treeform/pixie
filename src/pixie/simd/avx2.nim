@@ -107,6 +107,10 @@ proc toPremultipliedAlphaAvx2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
 
   let
     alphaMask = mm256_set1_epi32(cast[int32](0xff000000))
+    shuffleControl = mm256_set_epi8(
+      15, 0, 15, 0, 11, 0, 11, 0, 7, 0, 7, 0, 3, 0, 3, 0,
+      15, 0, 15, 0, 11, 0, 11, 0, 7, 0, 7, 0, 3, 0, 3, 0
+    )
     oddMask = mm256_set1_epi16(0xff00)
     vec128 = mm256_set1_epi16(128)
     hiMask = mm256_set1_epi16(255 shl 8)
@@ -118,7 +122,7 @@ proc toPremultipliedAlphaAvx2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
       eq = mm256_cmpeq_epi8(values, alphaMask)
     if (mm256_movemask_epi8(eq) and 0x88888888) != 0x88888888:
       let
-        evenMultiplier = mm256_or_si256(alpha, mm256_srli_epi32(alpha, 16))
+        evenMultiplier = mm256_shuffle_epi8(alpha, shuffleControl)
         oddMultiplier = mm256_or_si256(evenMultiplier, alphaMask)
       var
         colorsEven = mm256_slli_epi16(values, 8)
@@ -385,6 +389,10 @@ proc blitLineNormalAvx2*(
     div255 = mm256_set1_epi16(cast[int16](0x8081))
     vec255 = mm256_set1_epi8(255)
     vecAlpha255 = mm256_set1_epi32(cast[int32]([0.uint8, 255, 0, 255]))
+    shuffleControl = mm256_set_epi8(
+      15, 0, 15, 0, 11, 0, 11, 0, 7, 0, 7, 0, 3, 0, 3, 0,
+      15, 0, 15, 0, 11, 0, 11, 0, 7, 0, 7, 0, 3, 0, 3, 0
+    )
 
   var i: int
   while i < len - 8:
@@ -401,7 +409,7 @@ proc blitLineNormalAvx2*(
         backdropEven = mm256_slli_epi16(backdrop, 8)
         backdropOdd = mm256_and_si256(backdrop, oddMask)
 
-      sourceAlpha = mm256_or_si256(sourceAlpha, mm256_srli_epi32(sourceAlpha, 16))
+      sourceAlpha = mm256_shuffle_epi8(sourceAlpha, shuffleControl)
 
       let multiplier = mm256_sub_epi32(vecAlpha255, sourceAlpha)
 
@@ -430,6 +438,10 @@ proc blitLineMaskAvx2*(
     oddMask = mm256_set1_epi16(cast[int16](0xff00))
     div255 = mm256_set1_epi16(cast[int16](0x8081))
     vec255 = mm256_set1_epi8(255)
+    shuffleControl = mm256_set_epi8(
+      15, 0, 15, 0, 11, 0, 11, 0, 7, 0, 7, 0, 3, 0, 3, 0,
+      15, 0, 15, 0, 11, 0, 11, 0, 7, 0, 7, 0, 3, 0, 3, 0
+    )
 
   var i: int
   while i < len - 8:
@@ -446,7 +458,7 @@ proc blitLineMaskAvx2*(
         backdropEven = mm256_slli_epi16(backdrop, 8)
         backdropOdd = mm256_and_si256(backdrop, oddMask)
 
-      sourceAlpha = mm256_or_si256(sourceAlpha, mm256_srli_epi32(sourceAlpha, 16))
+      sourceAlpha = mm256_shuffle_epi8(sourceAlpha, shuffleControl)
 
       backdropEven = mm256_mulhi_epu16(backdropEven, sourceAlpha)
       backdropOdd = mm256_mulhi_epu16(backdropOdd, sourceAlpha)
