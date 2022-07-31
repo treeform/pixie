@@ -1,4 +1,4 @@
-import chroma, internal, nimsimd/neon, pixie/common, vmath
+import chroma, internal, nimsimd/neon, pixie/blends, pixie/common, vmath
 
 when defined(release):
   {.push checks: off.}
@@ -146,7 +146,7 @@ proc toPremultipliedAlphaNeon*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
     inc i
     p += 4
 
-  proc premultiply(c, a: uint8x8): uint8x8 {.inline.} =
+  template premultiply(c, a: uint8x8): uint8x8 =
     let ca = vmull_u8(c, a)
     vraddhn_u16(ca, vrshrq_n_u16(ca, 8))
 
@@ -407,6 +407,79 @@ proc magnifyBy2Neon*(image: Image, power = 1): Image {.simd.} =
         result.data[resultRowStart].addr,
         result.width * 4
       )
+
+proc blitLineNormalNeon*(
+  a, b: ptr UncheckedArray[ColorRGBX], len: int
+) {.simd.} =
+  var i: int
+  while (cast[uint](a[i].addr) and 15) != 0:
+    a[i] = blendNormal(a[i], b[i])
+    inc i
+
+  let vec255 = vmov_n_u8(255)
+  while i < len - 8:
+    let
+      source = vld4_u8(b[i].addr)
+      eq255 = vceq_u8(source.val[3], vec255)
+    if vget_lane_u64(cast[uint64x1](eq255), 0) == uint64.high:
+      vst4_u8(a[i].addr, source)
+    else:
+      template multiply(c, a: uint8x8): uint8x8 =
+        let ca = vmull_u8(c, a)
+        vraddhn_u16(ca, vrshrq_n_u16(ca, 8))
+
+      let
+        backdrop = vld4_u8(a[i].addr)
+        multiplier = vsub_u8(vec255, source.val[3])
+
+      var blended: uint8x8x4
+      blended.val[0] = multiply(backdrop.val[0], multiplier)
+      blended.val[1] = multiply(backdrop.val[1], multiplier)
+      blended.val[2] = multiply(backdrop.val[2], multiplier)
+      blended.val[3] = multiply(backdrop.val[3], multiplier)
+      blended.val[0] = vadd_u8(blended.val[0], source.val[0])
+      blended.val[1] = vadd_u8(blended.val[1], source.val[1])
+      blended.val[2] = vadd_u8(blended.val[2], source.val[2])
+      blended.val[3] = vadd_u8(blended.val[3], source.val[3])
+      vst4_u8(a[i].addr, blended)
+
+    i += 8
+
+  for i in i ..< len:
+    a[i] = blendNormal(a[i], b[i])
+
+proc blitLineMaskNeon*(
+  a, b: ptr UncheckedArray[ColorRGBX], len: int
+) {.simd.} =
+  var i: int
+  while (cast[uint](a[i].addr) and 15) != 0:
+    a[i] = blendMask(a[i], b[i])
+    inc i
+
+  let vec255 = vmov_n_u8(255)
+  while i < len - 8:
+    let
+      source = vld4_u8(b[i].addr)
+      eq255 = vceq_u8(source.val[3], vec255)
+    if vget_lane_u64(cast[uint64x1](eq255), 0) == uint64.high:
+      discard
+    else:
+      template multiply(c, a: uint8x8): uint8x8 =
+        let ca = vmull_u8(c, a)
+        vraddhn_u16(ca, vrshrq_n_u16(ca, 8))
+
+      let backdrop = vld4_u8(a[i].addr)
+      var blended: uint8x8x4
+      blended.val[0] = multiply(backdrop.val[0], source.val[3])
+      blended.val[1] = multiply(backdrop.val[1], source.val[3])
+      blended.val[2] = multiply(backdrop.val[2], source.val[3])
+      blended.val[3] = multiply(backdrop.val[3], source.val[3])
+      vst4_u8(a[i].addr, blended)
+
+    i += 8
+
+  for i in i ..< len:
+    a[i] = blendMask(a[i], b[i])
 
 when defined(release):
   {.pop.}
