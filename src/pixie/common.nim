@@ -76,17 +76,17 @@ proc `*`*(color: ColorRGBX, opacity: float32): ColorRGBX {.raises: [].} =
       a = ((color.a * x + 127) div 255).uint8
     rgbx(r, g, b, a)
 
-proc `*`*(rgbx: ColorRGBX, coverage: uint8): ColorRGBX {.inline.} =
-  if coverage == 0:
+proc `*`*(rgbx: ColorRGBX, opacity: uint8): ColorRGBX {.inline.} =
+  if opacity == 0:
     discard
-  elif coverage == 255:
+  elif opacity == 255:
     result = rgbx
   else:
     result = rgbx(
-      ((rgbx.r.uint32 * coverage + 127) div 255).uint8,
-      ((rgbx.g.uint32 * coverage + 127) div 255).uint8,
-      ((rgbx.b.uint32 * coverage + 127) div 255).uint8,
-      ((rgbx.a.uint32 * coverage + 127) div 255).uint8
+      ((rgbx.r.uint32 * opacity + 127) div 255).uint8,
+      ((rgbx.g.uint32 * opacity + 127) div 255).uint8,
+      ((rgbx.b.uint32 * opacity + 127) div 255).uint8,
+      ((rgbx.a.uint32 * opacity + 127) div 255).uint8
     )
 
 proc snapToPixels*(rect: Rect): Rect {.raises: [].} =
