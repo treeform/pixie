@@ -383,6 +383,11 @@ proc minifyBy2Avx2*(image: Image, power = 1): Image {.simd.} =
 proc blitLineNormalAvx2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
+  var i: int
+  while (cast[uint](a[i].addr) and 31) != 0:
+    a[i] = blendNormal(a[i], b[i])
+    inc i
+
   let
     alphaMask = mm256_set1_epi32(cast[int32](0xff000000))
     oddMask = mm256_set1_epi16(cast[int16](0xff00))
@@ -393,8 +398,6 @@ proc blitLineNormalAvx2*(
       15, -1, 15, -1, 11, -1, 11, -1, 7, -1, 7, -1, 3, -1, 3, -1,
       15, -1, 15, -1, 11, -1, 11, -1, 7, -1, 7, -1, 3, -1, 3, -1
     )
-
-  var i: int
   while i < len - 8:
     let
       source = mm256_loadu_si256(b[i].addr)
@@ -402,7 +405,7 @@ proc blitLineNormalAvx2*(
     if (mm256_movemask_epi8(eq255) and 0x88888888) == 0x88888888: # Opaque source
       mm256_storeu_si256(a[i].addr, source)
     else:
-      let backdrop = mm256_loadu_si256(a[i].addr)
+      let backdrop = mm256_load_si256(a[i].addr)
 
       var
         sourceAlpha = mm256_and_si256(source, alphaMask)
@@ -423,7 +426,7 @@ proc blitLineNormalAvx2*(
         mm256_or_si256(backdropEven, mm256_slli_epi16(backdropOdd, 8))
       )
 
-      mm256_storeu_si256(a[i].addr, added)
+      mm256_store_si256(a[i].addr, added)
 
     i += 8
 
@@ -433,6 +436,11 @@ proc blitLineNormalAvx2*(
 proc blitLineMaskAvx2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
+  var i: int
+  while (cast[uint](a[i].addr) and 31) != 0:
+    a[i] = blendMask(a[i], b[i])
+    inc i
+
   let
     alphaMask = mm256_set1_epi32(cast[int32](0xff000000))
     oddMask = mm256_set1_epi16(cast[int16](0xff00))
@@ -442,8 +450,6 @@ proc blitLineMaskAvx2*(
       15, -1, 15, -1, 11, -1, 11, -1, 7, -1, 7, -1, 3, -1, 3, -1,
       15, -1, 15, -1, 11, -1, 11, -1, 7, -1, 7, -1, 3, -1, 3, -1
     )
-
-  var i: int
   while i < len - 8:
     let
       source = mm256_loadu_si256(b[i].addr)
@@ -451,7 +457,7 @@ proc blitLineMaskAvx2*(
     if (mm256_movemask_epi8(eq255) and 0x88888888) == 0x88888888: # Opaque source
       discard
     else:
-      let backdrop = mm256_loadu_si256(a[i].addr)
+      let backdrop = mm256_load_si256(a[i].addr)
 
       var
         sourceAlpha = mm256_and_si256(source, alphaMask)
@@ -465,7 +471,7 @@ proc blitLineMaskAvx2*(
       backdropEven = mm256_srli_epi16(mm256_mulhi_epu16(backdropEven, div255), 7)
       backdropOdd = mm256_srli_epi16(mm256_mulhi_epu16(backdropOdd, div255), 7)
 
-      mm256_storeu_si256(
+      mm256_store_si256(
         a[i].addr,
         mm256_or_si256(backdropEven, mm256_slli_epi16(backdropOdd, 8))
       )

@@ -1,4 +1,4 @@
-import chroma, internal, nimsimd/neon, pixie/common, vmath
+import chroma, internal, nimsimd/neon, pixie/blends, pixie/common, vmath
 
 when defined(release):
   {.push checks: off.}
@@ -58,9 +58,9 @@ proc isOneColorNeon*(image: Image): bool {.simd.} =
       rgEq = vandq_u8(rEq, gEq)
       baEq = vandq_u8(bEq, aEq)
       rgbaEq = vandq_u8(rgEq, baEq)
-      mask =
-        cast[uint64](vget_low_u64(cast[uint64x2](rgbaEq))) and
-        cast[uint64](vget_high_u64(cast[uint64x2](rgbaEq)))
+      mask = vget_lane_u64(cast[uint64x1](
+        vand_u8(vget_low_u8(rgbaEq), vget_high_u8(rgbaEq)
+      )), 0)
     if mask != uint64.high:
       return false
     i += 16
@@ -82,12 +82,16 @@ proc isTransparentNeon*(image: Image): bool {.simd.} =
 
   result = true
 
-  let iterations = (image.data.len - i) div 16
+  let
+    vecZero = vmovq_n_u8(0)
+    iterations = (image.data.len - i) div 16
   for _ in 0 ..< iterations:
     let
       alphas = vld4q_u8(image.data[i].addr).val[3]
-      eq = vceqq_u64(cast[uint64x2](alphas), vmovq_n_u64(0))
-      mask = cast[uint64](vget_low_u64(eq)) and cast[uint64](vget_high_u64(eq))
+      eq = vceqq_u8(alphas, vecZero)
+      mask = vget_lane_u64(cast[uint64x1](
+        vand_u8(vget_low_u8(eq), vget_high_u8(eq)
+      )), 0)
     if mask != uint64.high:
       return false
     i += 16
@@ -109,12 +113,16 @@ proc isOpaqueNeon*(data: var seq[ColorRGBX], start, len: int): bool {.simd.} =
     inc i
     p += 4
 
-  let iterations = (start + len - i) div 16
+  let
+    vec255 = vmovq_n_u8(255)
+    iterations = (start + len - i) div 16
   for _ in 0 ..< iterations:
     let
       alphas = vld4q_u8(data[i].addr).val[3]
-      eq = vceqq_u64(cast[uint64x2](alphas), vmovq_n_u64(uint64.high))
-      mask = cast[uint64](vget_low_u64(eq)) and cast[uint64](vget_high_u64(eq))
+      eq = vceqq_u8(alphas, vec255)
+      mask = vget_lane_u64(cast[uint64x1](
+        vand_u8(vget_low_u8(eq), vget_high_u8(eq)
+      )), 0)
     if mask != uint64.high:
       return false
     i += 16
@@ -138,19 +146,25 @@ proc toPremultipliedAlphaNeon*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
     inc i
     p += 4
 
-  proc premultiply(c, a: uint8x8): uint8x8 {.inline.} =
+  template multiply(c, a: uint8x8): uint8x8 =
     let ca = vmull_u8(c, a)
     vraddhn_u16(ca, vrshrq_n_u16(ca, 8))
 
-  let iterations = (data.len - i) div 8
+  template multiply(c, a: uint8x16): uint8x16 =
+    vcombine_u8(
+      multiply(vget_low_u8(c), vget_low_u8(a)),
+      multiply(vget_high_u8(c), vget_high_u8(a))
+    )
+
+  let iterations = (data.len - i) div 16
   for _ in 0 ..< iterations:
-    var channels = vld4_u8(cast[pointer](p))
-    channels.val[0] = premultiply(channels.val[0], channels.val[3])
-    channels.val[1] = premultiply(channels.val[1], channels.val[3])
-    channels.val[2] = premultiply(channels.val[2], channels.val[3])
-    vst4_u8(cast[pointer](p), channels)
-    p += 32
-  i += 8 * iterations
+    var channels = vld4q_u8(cast[pointer](p))
+    channels.val[0] = multiply(channels.val[0], channels.val[3])
+    channels.val[1] = multiply(channels.val[1], channels.val[3])
+    channels.val[2] = multiply(channels.val[2], channels.val[3])
+    vst4q_u8(cast[pointer](p), channels)
+    p += 64
+  i += 16 * iterations
 
   for i in i ..< data.len:
     var c = data[i]
@@ -211,19 +225,19 @@ proc applyOpacityNeon*(image: Image, opacity: float32) {.simd.} =
     i: int
     p = cast[uint](image.data[0].addr)
 
-  proc apply(c, o: uint8x8): uint8x8 {.inline.} =
-    let co = vmull_u8(c, o)
-    vraddhn_u16(co, vrshrq_n_u16(co, 8))
+  template multiply(c, a: uint8x8): uint8x8 =
+    let ca = vmull_u8(c, a)
+    vraddhn_u16(ca, vrshrq_n_u16(ca, 8))
 
   let
     opacityVec = vmov_n_u8(opacity)
     iterations = image.data.len div 8
   for _ in 0 ..< iterations:
     var channels = vld4_u8(cast[pointer](p))
-    channels.val[0] = apply(channels.val[0], opacityVec)
-    channels.val[1] = apply(channels.val[1], opacityVec)
-    channels.val[2] = apply(channels.val[2], opacityVec)
-    channels.val[3] = apply(channels.val[3], opacityVec)
+    channels.val[0] = multiply(channels.val[0], opacityVec)
+    channels.val[1] = multiply(channels.val[1], opacityVec)
+    channels.val[2] = multiply(channels.val[2], opacityVec)
+    channels.val[3] = multiply(channels.val[3], opacityVec)
     vst4_u8(cast[pointer](p), channels)
     p += 32
   i += 8 * iterations
@@ -399,6 +413,97 @@ proc magnifyBy2Neon*(image: Image, power = 1): Image {.simd.} =
         result.data[resultRowStart].addr,
         result.width * 4
       )
+
+proc blitLineNormalNeon*(
+  a, b: ptr UncheckedArray[ColorRGBX], len: int
+) {.simd.} =
+  var i: int
+  while (cast[uint](a[i].addr) and 15) != 0:
+    a[i] = blendNormal(a[i], b[i])
+    inc i
+
+  let vec255 = vmovq_n_u8(255)
+  while i < len - 16:
+    let
+      source = vld4q_u8(b[i].addr)
+      eq255 = vceqq_u8(source.val[3], vec255)
+      mask = vget_lane_u64(cast[uint64x1](
+        vand_u8(vget_low_u8(eq255), vget_high_u8(eq255)
+      )), 0)
+    if mask == uint64.high:
+      vst4q_u8(a[i].addr, source)
+    else:
+      template multiply(c, a: uint8x8): uint8x8 =
+        let ca = vmull_u8(c, a)
+        vraddhn_u16(ca, vrshrq_n_u16(ca, 8))
+
+      template multiply(c, a: uint8x16): uint8x16 =
+        vcombine_u8(
+          multiply(vget_low_u8(c), vget_low_u8(a)),
+          multiply(vget_high_u8(c), vget_high_u8(a))
+        )
+
+      let
+        backdrop = vld4q_u8(a[i].addr)
+        multiplier = vsubq_u8(vec255, source.val[3])
+
+      var blended: uint8x16x4
+      blended.val[0] = multiply(backdrop.val[0], multiplier)
+      blended.val[1] = multiply(backdrop.val[1], multiplier)
+      blended.val[2] = multiply(backdrop.val[2], multiplier)
+      blended.val[3] = multiply(backdrop.val[3], multiplier)
+      blended.val[0] = vaddq_u8(blended.val[0], source.val[0])
+      blended.val[1] = vaddq_u8(blended.val[1], source.val[1])
+      blended.val[2] = vaddq_u8(blended.val[2], source.val[2])
+      blended.val[3] = vaddq_u8(blended.val[3], source.val[3])
+      vst4q_u8(a[i].addr, blended)
+
+    i += 16
+
+  for i in i ..< len:
+    a[i] = blendNormal(a[i], b[i])
+
+proc blitLineMaskNeon*(
+  a, b: ptr UncheckedArray[ColorRGBX], len: int
+) {.simd.} =
+  var i: int
+  while (cast[uint](a[i].addr) and 15) != 0:
+    a[i] = blendMask(a[i], b[i])
+    inc i
+
+  let vec255 = vmovq_n_u8(255)
+  while i < len - 16:
+    let
+      source = vld4q_u8(b[i].addr)
+      eq255 = vceqq_u8(source.val[3], vec255)
+      mask = vget_lane_u64(cast[uint64x1](
+        vand_u8(vget_low_u8(eq255), vget_high_u8(eq255)
+      )), 0)
+    if mask == uint64.high:
+      discard
+    else:
+      template multiply(c, a: uint8x8): uint8x8 =
+        let ca = vmull_u8(c, a)
+        vraddhn_u16(ca, vrshrq_n_u16(ca, 8))
+
+      template multiply(c, a: uint8x16): uint8x16 =
+        vcombine_u8(
+          multiply(vget_low_u8(c), vget_low_u8(a)),
+          multiply(vget_high_u8(c), vget_high_u8(a))
+        )
+
+      let backdrop = vld4q_u8(a[i].addr)
+      var blended: uint8x16x4
+      blended.val[0] = multiply(backdrop.val[0], source.val[3])
+      blended.val[1] = multiply(backdrop.val[1], source.val[3])
+      blended.val[2] = multiply(backdrop.val[2], source.val[3])
+      blended.val[3] = multiply(backdrop.val[3], source.val[3])
+      vst4q_u8(a[i].addr, blended)
+
+    i += 16
+
+  for i in i ..< len:
+    a[i] = blendMask(a[i], b[i])
 
 when defined(release):
   {.pop.}

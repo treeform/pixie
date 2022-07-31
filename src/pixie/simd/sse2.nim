@@ -530,14 +530,17 @@ proc magnifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
 proc blitLineNormalSse2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
+  var i: int
+  while (cast[uint](a[i].addr) and 15) != 0:
+    a[i] = blendNormal(a[i], b[i])
+    inc i
+
   let
     alphaMask = mm_set1_epi32(cast[int32](0xff000000))
     oddMask = mm_set1_epi16(cast[int16](0xff00))
     div255 = mm_set1_epi16(cast[int16](0x8081))
     vec255 = mm_set1_epi8(255)
     vecAlpha255 = mm_set1_epi32(cast[int32]([0.uint8, 255, 0, 255]))
-
-  var i: int
   while i < len - 4:
     let
       source = mm_loadu_si128(b[i].addr)
@@ -545,7 +548,7 @@ proc blitLineNormalSse2*(
     if (mm_movemask_epi8(eq255) and 0x00008888) == 0x00008888: # Opaque source
       mm_storeu_si128(a[i].addr, source)
     else:
-      let backdrop = mm_loadu_si128(a[i].addr)
+      let backdrop = mm_load_si128(a[i].addr)
 
       var
         sourceAlpha = mm_and_si128(source, alphaMask)
@@ -566,7 +569,7 @@ proc blitLineNormalSse2*(
         mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
       )
 
-      mm_storeu_si128(a[i].addr, added)
+      mm_store_si128(a[i].addr, added)
 
     i += 4
 
@@ -576,13 +579,16 @@ proc blitLineNormalSse2*(
 proc blitLineMaskSse2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
+  var i: int
+  while (cast[uint](a[i].addr) and 15) != 0:
+    a[i] = blendMask(a[i], b[i])
+    inc i
+
   let
     alphaMask = mm_set1_epi32(cast[int32](0xff000000))
     oddMask = mm_set1_epi16(cast[int16](0xff00))
     div255 = mm_set1_epi16(cast[int16](0x8081))
     vec255 = mm_set1_epi8(255)
-
-  var i: int
   while i < len - 4:
     let
       source = mm_loadu_si128(b[i].addr)
@@ -590,7 +596,7 @@ proc blitLineMaskSse2*(
     if (mm_movemask_epi8(eq255) and 0x00008888) == 0x00008888: # Opaque source
       discard
     else:
-      let backdrop = mm_loadu_si128(a[i].addr)
+      let backdrop = mm_load_si128(a[i].addr)
 
       var
         sourceAlpha = mm_and_si128(source, alphaMask)
@@ -604,7 +610,7 @@ proc blitLineMaskSse2*(
       backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
       backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
 
-      mm_storeu_si128(
+      mm_store_si128(
         a[i].addr,
         mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
       )
