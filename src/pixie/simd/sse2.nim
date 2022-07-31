@@ -590,7 +590,6 @@ proc blendLineNormalSse2*(
       mm_storeu_si128(a[i].addr, source)
     else:
       let backdrop = mm_load_si128(a[i].addr)
-
       var
         sourceAlpha = mm_and_si128(source, alphaMask)
         backdropEven = mm_slli_epi16(backdrop, 8)
@@ -674,7 +673,6 @@ proc blendLineMaskSse2*(
       discard
     else:
       let backdrop = mm_load_si128(a[i].addr)
-
       var
         sourceAlpha = mm_and_si128(source, alphaMask)
         backdropEven = mm_slli_epi16(backdrop, 8)

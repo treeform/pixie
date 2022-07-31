@@ -380,6 +380,51 @@ proc minifyBy2Avx2*(image: Image, power = 1): Image {.simd.} =
     # Set src as this result for if we do another power
     src = result
 
+proc blendLineNormalAvx2*(
+  line: ptr UncheckedArray[ColorRGBX], rgbx: ColorRGBX, len: int
+) {.simd.} =
+  var i: int
+  while (cast[uint](line[i].addr) and 31) != 0:
+    line[i] = blendNormal(line[i], rgbx)
+    inc i
+
+  let
+    source = mm256_set1_epi32(cast[uint32](rgbx))
+    alphaMask = mm256_set1_epi32(cast[int32](0xff000000))
+    oddMask = mm256_set1_epi16(cast[int16](0xff00))
+    div255 = mm256_set1_epi16(cast[int16](0x8081))
+    vecAlpha255 = mm256_set1_epi32(cast[int32]([0.uint8, 255, 0, 255]))
+    shuffleControl = mm256_set_epi8(
+      15, -1, 15, -1, 11, -1, 11, -1, 7, -1, 7, -1, 3, -1, 3, -1,
+      15, -1, 15, -1, 11, -1, 11, -1, 7, -1, 7, -1, 3, -1, 3, -1
+    )
+  while i < len - 8:
+    let backdrop = mm256_load_si256(line[i].addr)
+    var
+      sourceAlpha = mm256_and_si256(source, alphaMask)
+      backdropEven = mm256_slli_epi16(backdrop, 8)
+      backdropOdd = mm256_and_si256(backdrop, oddMask)
+
+    sourceAlpha = mm256_shuffle_epi8(sourceAlpha, shuffleControl)
+
+    let multiplier = mm256_sub_epi32(vecAlpha255, sourceAlpha)
+
+    backdropEven = mm256_mulhi_epu16(backdropEven, multiplier)
+    backdropOdd = mm256_mulhi_epu16(backdropOdd, multiplier)
+    backdropEven = mm256_srli_epi16(mm256_mulhi_epu16(backdropEven, div255), 7)
+    backdropOdd = mm256_srli_epi16(mm256_mulhi_epu16(backdropOdd, div255), 7)
+
+    let added = mm256_add_epi8(
+      source,
+      mm256_or_si256(backdropEven, mm256_slli_epi16(backdropOdd, 8))
+    )
+
+    mm256_store_si256(line[i].addr, added)
+    i += 8
+
+  for i in i ..< len:
+    line[i] = blendNormal(line[i], rgbx)
+
 proc blitLineNormalAvx2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
@@ -406,7 +451,6 @@ proc blitLineNormalAvx2*(
       mm256_storeu_si256(a[i].addr, source)
     else:
       let backdrop = mm256_load_si256(a[i].addr)
-
       var
         sourceAlpha = mm256_and_si256(source, alphaMask)
         backdropEven = mm256_slli_epi16(backdrop, 8)
@@ -433,6 +477,46 @@ proc blitLineNormalAvx2*(
   for i in i ..< len:
     a[i] = blendNormal(a[i], b[i])
 
+proc blendLineMaskAvx2*(
+  line: ptr UncheckedArray[ColorRGBX], rgbx: ColorRGBX, len: int
+) {.simd.} =
+  var i: int
+  while (cast[uint](line[i].addr) and 31) != 0:
+    line[i] = blendMask(line[i], rgbx)
+    inc i
+
+  let
+    source = mm256_set1_epi32(cast[uint32](rgbx))
+    alphaMask = mm256_set1_epi32(cast[int32](0xff000000))
+    oddMask = mm256_set1_epi16(cast[int16](0xff00))
+    div255 = mm256_set1_epi16(cast[int16](0x8081))
+    shuffleControl = mm256_set_epi8(
+      15, -1, 15, -1, 11, -1, 11, -1, 7, -1, 7, -1, 3, -1, 3, -1,
+      15, -1, 15, -1, 11, -1, 11, -1, 7, -1, 7, -1, 3, -1, 3, -1
+    )
+  while i < len - 8:
+    let backdrop = mm256_load_si256(line[i].addr)
+    var
+      sourceAlpha = mm256_and_si256(source, alphaMask)
+      backdropEven = mm256_slli_epi16(backdrop, 8)
+      backdropOdd = mm256_and_si256(backdrop, oddMask)
+
+    sourceAlpha = mm256_shuffle_epi8(sourceAlpha, shuffleControl)
+
+    backdropEven = mm256_mulhi_epu16(backdropEven, sourceAlpha)
+    backdropOdd = mm256_mulhi_epu16(backdropOdd, sourceAlpha)
+    backdropEven = mm256_srli_epi16(mm256_mulhi_epu16(backdropEven, div255), 7)
+    backdropOdd = mm256_srli_epi16(mm256_mulhi_epu16(backdropOdd, div255), 7)
+
+    mm256_store_si256(
+      line[i].addr,
+      mm256_or_si256(backdropEven, mm256_slli_epi16(backdropOdd, 8))
+    )
+    i += 8
+
+  for i in i ..< len:
+    line[i] = blendMask(line[i], rgbx)
+
 proc blitLineMaskAvx2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
@@ -458,7 +542,6 @@ proc blitLineMaskAvx2*(
       discard
     else:
       let backdrop = mm256_load_si256(a[i].addr)
-
       var
         sourceAlpha = mm256_and_si256(source, alphaMask)
         backdropEven = mm256_slli_epi16(backdrop, 8)
