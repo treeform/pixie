@@ -58,9 +58,9 @@ proc isOneColorNeon*(image: Image): bool {.simd.} =
       rgEq = vandq_u8(rEq, gEq)
       baEq = vandq_u8(bEq, aEq)
       rgbaEq = vandq_u8(rgEq, baEq)
-      mask =
-        cast[uint64](vget_low_u64(cast[uint64x2](rgbaEq))) and
-        cast[uint64](vget_high_u64(cast[uint64x2](rgbaEq)))
+      mask = vget_lane_u64(cast[uint64x1](
+        vand_u8(vget_low_u8(rgbaEq), vget_high_u8(rgbaEq)
+      )), 0)
     if mask != uint64.high:
       return false
     i += 16
@@ -82,12 +82,16 @@ proc isTransparentNeon*(image: Image): bool {.simd.} =
 
   result = true
 
-  let iterations = (image.data.len - i) div 16
+  let
+    vecZero = vmovq_n_u8(0)
+    iterations = (image.data.len - i) div 16
   for _ in 0 ..< iterations:
     let
       alphas = vld4q_u8(image.data[i].addr).val[3]
-      eq = vceqq_u64(cast[uint64x2](alphas), vmovq_n_u64(0))
-      mask = cast[uint64](vget_low_u64(eq)) and cast[uint64](vget_high_u64(eq))
+      eq = vceqq_u8(alphas, vecZero)
+      mask = vget_lane_u64(cast[uint64x1](
+        vand_u8(vget_low_u8(eq), vget_high_u8(eq)
+      )), 0)
     if mask != uint64.high:
       return false
     i += 16
@@ -109,12 +113,16 @@ proc isOpaqueNeon*(data: var seq[ColorRGBX], start, len: int): bool {.simd.} =
     inc i
     p += 4
 
-  let iterations = (start + len - i) div 16
+  let
+    vec255 = vmovq_n_u8(255)
+    iterations = (start + len - i) div 16
   for _ in 0 ..< iterations:
     let
       alphas = vld4q_u8(data[i].addr).val[3]
-      eq = vceqq_u64(cast[uint64x2](alphas), vmovq_n_u64(uint64.high))
-      mask = cast[uint64](vget_low_u64(eq)) and cast[uint64](vget_high_u64(eq))
+      eq = vceqq_u8(alphas, vec255)
+      mask = vget_lane_u64(cast[uint64x1](
+        vand_u8(vget_low_u8(eq), vget_high_u8(eq)
+      )), 0)
     if mask != uint64.high:
       return false
     i += 16
