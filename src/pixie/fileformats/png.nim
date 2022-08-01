@@ -129,16 +129,25 @@ proc unfilter(
         uncompressedStartIdx = uncompressedIdx(1, y)
         unfilteredStartIx = unfiteredIdx(0, y)
       var x: int
-      when allowSimd and defined(amd64):
+      when allowSimd and (defined(amd64) or defined(arm64)):
         if y - 1 >= 0:
           for _ in 0 ..< rowBytes div 16:
-            let
-              bytes = mm_loadu_si128(uncompressed[uncompressedStartIdx + x].addr)
-              up = mm_loadu_si128(result[unfilteredStartIx + x - rowBytes].addr)
-            mm_storeu_si128(
-              result[unfilteredStartIx + x].addr,
-              mm_add_epi8(bytes, up)
-            )
+            when defined(amd64):
+              let
+                bytes = mm_loadu_si128(uncompressed[uncompressedStartIdx + x].addr)
+                up = mm_loadu_si128(result[unfilteredStartIx + x - rowBytes].addr)
+              mm_storeu_si128(
+                result[unfilteredStartIx + x].addr,
+                mm_add_epi8(bytes, up)
+              )
+            else: # arm64
+              let
+                bytes = vld1q_u8(uncompressed[uncompressedStartIdx + x].addr)
+                up = vld1q_u8(result[unfilteredStartIx + x - rowBytes].addr)
+              vst1q_u8(
+                result[unfilteredStartIx + x].addr,
+                vaddq_u8(bytes, up)
+              )
             x += 16
       for x in x ..< rowBytes:
         var value = uncompressed[uncompressedStartIdx + x]
