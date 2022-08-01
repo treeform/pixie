@@ -414,7 +414,7 @@ proc magnifyBy2Neon*(image: Image, power = 1): Image {.simd.} =
         result.width * 4
       )
 
-proc blitLineNormalNeon*(
+proc blendLineNormalNeon*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
   var i: int
@@ -463,7 +463,7 @@ proc blitLineNormalNeon*(
   for i in i ..< len:
     a[i] = blendNormal(a[i], b[i])
 
-proc blitLineMaskNeon*(
+proc blendLineMaskNeon*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
   var i: int
