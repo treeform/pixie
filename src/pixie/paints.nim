@@ -119,7 +119,7 @@ proc fillGradientLinear(image: Image, paint: Paint) =
   if at.y == to.y: # Horizontal gradient
     var x: int
     while x < image.width:
-      when defined(amd64) and allowSimd:
+      when allowSimd and (defined(amd64) or defined(arm64)):
         if x + 4 <= image.width:
           var colors: array[4, ColorRGBX]
           for i in 0 ..< 4:
@@ -129,9 +129,14 @@ proc fillGradientLinear(image: Image, paint: Paint) =
               rgbx = paint.gradientColor(t)
             colors[i] = rgbx
 
-          let colorVec = cast[M128i](colors)
-          for y in 0 ..< image.height:
-            mm_storeu_si128(image.data[image.dataIndex(x, y)].addr, colorVec)
+          when defined(amd64):
+            let colorVec = mm_loadu_si128(colors[0].addr)
+            for y in 0 ..< image.height:
+              mm_storeu_si128(image.data[image.dataIndex(x, y)].addr, colorVec)
+          else: # arm64
+            let colorVec = vld1q_u32(colors[0].addr)
+            for y in 0 ..< image.height:
+              vst1q_u32(image.data[image.dataIndex(x, y)].addr, colorVec)
           x += 4
           continue
 
@@ -150,11 +155,17 @@ proc fillGradientLinear(image: Image, paint: Paint) =
         t = toLineSpace(at, to, xy)
         rgbx = paint.gradientColor(t)
       var x: int
-      when defined(amd64) and allowSimd:
-        let colorVec = mm_set1_epi32(cast[int32](rgbx))
-        for _ in 0 ..< image.width div 4:
-          mm_storeu_si128(image.data[image.dataIndex(x, y)].addr, colorVec)
-          x += 4
+      when allowSimd:
+        when defined(amd64):
+          let colorVec = mm_set1_epi32(cast[int32](rgbx))
+          for _ in 0 ..< image.width div 4:
+            mm_storeu_si128(image.data[image.dataIndex(x, y)].addr, colorVec)
+            x += 4
+        elif defined(arm64):
+          let colorVec = vmovq_n_u32(cast[uint32](rgbx))
+          for _ in 0 ..< image.width div 4:
+            vst1q_u32(image.data[image.dataIndex(x, y)].addr, colorVec)
+            x += 4
       for x in x ..< image.width:
         image.unsafe[x, y] = rgbx
 
@@ -227,7 +238,6 @@ proc fillGradientAngular(image: Image, paint: Paint) =
 
 proc fillGradient*(image: Image, paint: Paint) {.raises: [PixieError].} =
   ## Fills with the Paint gradient.
-
   case paint.kind:
   of LinearGradientPaint:
     image.fillGradientLinear(paint)
