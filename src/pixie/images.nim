@@ -1,6 +1,6 @@
 import blends, bumpy, chroma, common, internal, simd, vmath
 
-export Image, newImage, copy, dataIndex
+export Image, copy, dataIndex, newImage
 
 const h = 0.5.float32
 
@@ -436,27 +436,26 @@ proc drawCorrect(
         blended = blender(backdrop, sample)
       a.unsafe[x, y] = blended
 
-template getUncheckedArray(
-  image: Image, x, y: int
-): ptr UncheckedArray[ColorRGBX] =
-  cast[ptr UncheckedArray[ColorRGBX]](image.data[image.dataIndex(x, y)].addr)
-
-proc blitLine(a, b: ptr UncheckedArray[ColorRGBX], len: int, blender: Blender) {.inline.} =
+proc blendLine(
+  a, b: ptr UncheckedArray[ColorRGBX], len: int, blender: Blender
+) {.inline.} =
   for i in 0 ..< len:
     a[i] = blender(a[i], b[i])
 
-proc blitLineOverwrite(a, b: ptr UncheckedArray[ColorRGBX], len: int) {.inline.} =
+proc blendLineOverwrite(
+  a, b: ptr UncheckedArray[ColorRGBX], len: int
+) {.inline.} =
   copyMem(a[0].addr, b[0].addr, len * 4)
 
-proc blitLineNormal(a, b: ptr UncheckedArray[ColorRGBX], len: int) {.hasSimd.} =
+proc blendLineNormal(a, b: ptr UncheckedArray[ColorRGBX], len: int) {.hasSimd.} =
   for i in 0 ..< len:
     a[i] = blendNormal(a[i], b[i])
 
-proc blitLineMask(a, b: ptr UncheckedArray[ColorRGBX], len: int) {.hasSimd.} =
+proc blendLineMask(a, b: ptr UncheckedArray[ColorRGBX], len: int) {.hasSimd.} =
   for i in 0 ..< len:
     a[i] = blendMask(a[i], b[i])
 
-proc blitRect(a, b: Image, pos: Ivec2, blendMode: BlendMode) =
+proc blendRect(a, b: Image, pos: Ivec2, blendMode: BlendMode) =
   let
     px = pos.x.int
     py = pos.y.int
@@ -475,14 +474,14 @@ proc blitRect(a, b: Image, pos: Ivec2, blendMode: BlendMode) =
   case blendMode:
   of NormalBlend:
     for y in yStart ..< yEnd:
-      blitLineNormal(
+      blendLineNormal(
         a.getUncheckedArray(xStart + px, y + py),
         b.getUncheckedArray(xStart, y),
         xEnd - xStart
       )
   of OverwriteBlend:
     for y in yStart ..< yEnd:
-      blitLineOverwrite(
+      blendLineOverwrite(
         a.getUncheckedArray(xStart + px, y + py),
         b.getUncheckedArray(xStart, y),
         xEnd - xStart
@@ -494,7 +493,7 @@ proc blitRect(a, b: Image, pos: Ivec2, blendMode: BlendMode) =
     for y in yStart ..< yEnd:
       if xStart + px > 0:
         zeroMem(a.data[a.dataIndex(0, y + py)].addr, (xStart + px) * 4)
-      blitLineMask(
+      blendLineMask(
         a.getUncheckedArray(xStart + px, y + py),
         b.getUncheckedArray(xStart, y),
         xEnd - xStart
@@ -512,7 +511,7 @@ proc blitRect(a, b: Image, pos: Ivec2, blendMode: BlendMode) =
   else:
     let blender = blendMode.blender()
     for y in yStart ..< yEnd:
-      blitLine(
+      blendLine(
         a.getUncheckedArray(xStart + px, y + py),
         b.getUncheckedArray(xStart, y),
         xEnd - xStart,
@@ -560,7 +559,7 @@ proc draw*(
   if hasRotationOrScaling or smooth:
     a.drawCorrect(b, inverseTransform.inverse(), blendMode, false)
   else:
-    a.blitRect(b, ivec2(transform[2, 0].int32, transform[2, 1].int32), blendMode)
+    a.blendRect(b, ivec2(transform[2, 0].int32, transform[2, 1].int32), blendMode)
 
 proc drawTiled*(
   dst, src: Image, mat: Mat3, blendMode = NormalBlend

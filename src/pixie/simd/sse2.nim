@@ -10,17 +10,7 @@ proc applyOpacity*(color: M128, opacity: float32): ColorRGBX {.inline.} =
   finalColor = mm_packus_epi16(finalColor, mm_setzero_si128())
   cast[ColorRGBX](mm_cvtsi128_si32(finalColor))
 
-proc unpackAlphaValues*(v: M128i): M128i {.inline, raises: [].} =
-  ## Unpack the first 32 bits into 4 rgba(0, 0, 0, value).
-  result = mm_unpacklo_epi8(mm_setzero_si128(), v)
-  result = mm_unpacklo_epi8(mm_setzero_si128(), result)
-
-proc blendNormalSimd*(backdrop, source: M128i): M128i {.inline.} =
-  let
-    alphaMask = mm_set1_epi32(cast[int32](0xff000000))
-    oddMask = mm_set1_epi16(cast[int16](0xff00))
-    div255 = mm_set1_epi16(cast[int16](0x8081))
-
+template blendNormalSimd*(backdrop, source: M128i): M128i =
   var
     sourceAlpha = mm_and_si128(source, alphaMask)
     backdropEven = mm_slli_epi16(backdrop, 8)
@@ -28,14 +18,10 @@ proc blendNormalSimd*(backdrop, source: M128i): M128i {.inline.} =
 
   sourceAlpha = mm_or_si128(sourceAlpha, mm_srli_epi32(sourceAlpha, 16))
 
-  let k = mm_sub_epi32(
-    mm_set1_epi32(cast[int32]([0.uint8, 255, 0, 255])),
-    sourceAlpha
-  )
+  let multiplier = mm_sub_epi32(vecAlpha255, sourceAlpha)
 
-  backdropEven = mm_mulhi_epu16(backdropEven, k)
-  backdropOdd = mm_mulhi_epu16(backdropOdd, k)
-
+  backdropEven = mm_mulhi_epu16(backdropEven, multiplier)
+  backdropOdd = mm_mulhi_epu16(backdropOdd, multiplier)
   backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
   backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
 
@@ -44,12 +30,7 @@ proc blendNormalSimd*(backdrop, source: M128i): M128i {.inline.} =
     mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
   )
 
-proc blendMaskSimd*(backdrop, source: M128i): M128i {.inline.} =
-  let
-    alphaMask = mm_set1_epi32(cast[int32](0xff000000))
-    oddMask = mm_set1_epi16(cast[int16](0xff00))
-    div255 = mm_set1_epi16(cast[int16](0x8081))
-
+template blendMaskSimd*(backdrop, source: M128i): M128i =
   var
     sourceAlpha = mm_and_si128(source, alphaMask)
     backdropEven = mm_slli_epi16(backdrop, 8)
@@ -59,7 +40,6 @@ proc blendMaskSimd*(backdrop, source: M128i): M128i {.inline.} =
 
   backdropEven = mm_mulhi_epu16(backdropEven, sourceAlpha)
   backdropOdd = mm_mulhi_epu16(backdropOdd, sourceAlpha)
-
   backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
   backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
 
@@ -325,7 +305,7 @@ proc applyOpacitySse2*(image: Image, opacity: float32) {.simd.} =
       valuesOdd = mm_mulhi_epu16(valuesOdd, opacityVec)
       valuesEven = mm_srli_epi16(mm_mulhi_epu16(valuesEven, div255), 7)
       valuesOdd = mm_srli_epi16(mm_mulhi_epu16(valuesOdd, div255), 7)
-      mm_storeu_si128(
+      mm_store_si128(
         cast[pointer](p),
         mm_or_si128(valuesEven, mm_slli_epi16(valuesOdd, 8))
       )
@@ -367,8 +347,8 @@ proc ceilSse2*(image: Image) {.simd.} =
     values1 = mm_cmpeq_epi8(values1, vecZero)
     values0 = mm_andnot_si128(values0, vec255)
     values1 = mm_andnot_si128(values1, vec255)
-    mm_storeu_si128(cast[pointer](p), values0)
-    mm_storeu_si128(cast[pointer](p + 16), values1)
+    mm_store_si128(cast[pointer](p), values0)
+    mm_store_si128(cast[pointer](p + 16), values1)
     p += 32
   i += 8 * iterations
 
@@ -527,11 +507,91 @@ proc magnifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
         result.width * 4
       )
 
-proc blitLineNormalSse2*(
+template applyCoverage*(rgbxVec, coverage: M128i): M128i =
+  ## Unpack the first 4 coverage bytes.
+  var unpacked = mm_unpacklo_epi8(mm_setzero_si128(), coverage)
+  unpacked = mm_unpacklo_epi8(mm_setzero_si128(), unpacked)
+  unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
+
+  var
+    rgbxEven = mm_slli_epi16(rgbxVec, 8)
+    rgbxOdd = mm_and_si128(rgbxVec, oddMask)
+  rgbxEven = mm_mulhi_epu16(rgbxEven, unpacked)
+  rgbxOdd = mm_mulhi_epu16(rgbxOdd, unpacked)
+  rgbxEven = mm_srli_epi16(mm_mulhi_epu16(rgbxEven, div255), 7)
+  rgbxOdd = mm_srli_epi16(mm_mulhi_epu16(rgbxOdd, div255), 7)
+
+  mm_or_si128(rgbxEven, mm_slli_epi16(rgbxOdd, 8))
+
+proc blendLineCoverageOverwriteSse2*(
+  line: ptr UncheckedArray[ColorRGBX],
+  coverages: ptr UncheckedArray[uint8],
+  rgbx: ColorRGBX,
+  len: int
+ ) {.simd.} =
+  var i: int
+  while i < len and (cast[uint](line[i].addr) and 15) != 0:
+    let coverage = coverages[i]
+    if coverage != 0:
+      line[i] = rgbx * coverage
+    inc i
+
+  let
+    rgbxVec = mm_set1_epi32(cast[uint32](rgbx))
+    vecZero = mm_setzero_si128()
+    vec255 = mm_set1_epi8(255)
+    oddMask = mm_set1_epi16(0xff00)
+    div255 = mm_set1_epi16(0x8081)
+  while i < len - 16:
+    let
+      coverage = mm_loadu_si128(coverages[i].addr)
+      eqZero = mm_cmpeq_epi8(coverage, vecZero)
+      eq255 = mm_cmpeq_epi8(coverage, vec255)
+    if mm_movemask_epi8(eqZero) == 0xffff:
+      i += 16
+    elif mm_movemask_epi8(eq255) == 0xffff:
+      for _ in 0 ..< 4:
+        mm_store_si128(line[i].addr, rgbxVec)
+        i += 4
+    else:
+      var coverage = coverage
+      for _ in 0 ..< 4:
+        mm_store_si128(line[i].addr, rgbxVec.applyCoverage(coverage))
+        coverage = mm_srli_si128(coverage, 4)
+        i += 4
+
+  for i in i ..< len:
+    let coverage = coverages[i]
+    if coverage != 0:
+      line[i] = rgbx * coverage
+
+proc blendLineNormalSse2*(
+  line: ptr UncheckedArray[ColorRGBX], rgbx: ColorRGBX, len: int
+) {.simd.} =
+  var i: int
+  while i < len and (cast[uint](line[i].addr) and 15) != 0:
+    line[i] = blendNormal(line[i], rgbx)
+    inc i
+
+  let
+    source = mm_set1_epi32(cast[uint32](rgbx))
+    alphaMask = mm_set1_epi32(cast[int32](0xff000000))
+    oddMask = mm_set1_epi16(cast[int16](0xff00))
+    div255 = mm_set1_epi16(cast[int16](0x8081))
+    vecAlpha255 = mm_set1_epi32(cast[int32]([0.uint8, 255, 0, 255]))
+  while i < len - 4:
+    let backdrop = mm_load_si128(line[i].addr)
+    mm_store_si128(line[i].addr, blendNormalSimd(backdrop, source))
+    i += 4
+
+  for i in i ..< len:
+    line[i] = blendNormal(line[i], rgbx)
+
+proc blendLineNormalSse2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
   var i: int
-  while (cast[uint](a[i].addr) and 15) != 0:
+  while i < len and (cast[uint](a[i].addr) and 15) != 0:
     a[i] = blendNormal(a[i], b[i])
     inc i
 
@@ -546,41 +606,92 @@ proc blitLineNormalSse2*(
       source = mm_loadu_si128(b[i].addr)
       eq255 = mm_cmpeq_epi8(source, vec255)
     if (mm_movemask_epi8(eq255) and 0x00008888) == 0x00008888: # Opaque source
-      mm_storeu_si128(a[i].addr, source)
+      mm_store_si128(a[i].addr, source)
     else:
       let backdrop = mm_load_si128(a[i].addr)
-
-      var
-        sourceAlpha = mm_and_si128(source, alphaMask)
-        backdropEven = mm_slli_epi16(backdrop, 8)
-        backdropOdd = mm_and_si128(backdrop, oddMask)
-
-      sourceAlpha = mm_or_si128(sourceAlpha, mm_srli_epi32(sourceAlpha, 16))
-
-      let multiplier = mm_sub_epi32(vecAlpha255, sourceAlpha)
-
-      backdropEven = mm_mulhi_epu16(backdropEven, multiplier)
-      backdropOdd = mm_mulhi_epu16(backdropOdd, multiplier)
-      backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
-      backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
-
-      let added = mm_add_epi8(
-        source,
-        mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
-      )
-
-      mm_store_si128(a[i].addr, added)
-
+      mm_store_si128(a[i].addr, blendNormalSimd(backdrop, source))
     i += 4
 
   for i in i ..< len:
     a[i] = blendNormal(a[i], b[i])
 
-proc blitLineMaskSse2*(
+proc blendLineCoverageNormalSse2*(
+  line: ptr UncheckedArray[ColorRGBX],
+  coverages: ptr UncheckedArray[uint8],
+  rgbx: ColorRGBX,
+  len: int
+) {.simd.} =
+  var i: int
+  while i < len and (cast[uint](line[i].addr) and 15) != 0:
+    let coverage = coverages[i]
+    if coverage == 0:
+      discard
+    else:
+      line[i] = blendNormal(line[i], rgbx * coverage)
+    inc i
+
+  let
+    rgbxVec = mm_set1_epi32(cast[uint32](rgbx))
+    vecZero = mm_setzero_si128()
+    vec255 = mm_set1_epi8(255)
+    alphaMask = mm_set1_epi32(cast[int32](0xff000000))
+    oddMask = mm_set1_epi16(cast[int16](0xff00))
+    div255 = mm_set1_epi16(cast[int16](0x8081))
+    vecAlpha255 = mm_set1_epi32(cast[int32]([0.uint8, 255, 0, 255]))
+  while i < len - 16:
+    let
+      coverage = mm_loadu_si128(coverages[i].addr)
+      eqZero = mm_cmpeq_epi8(coverage, vecZero)
+      eq255 = mm_cmpeq_epi8(coverage, vec255)
+    if mm_movemask_epi8(eqZero) == 0xffff:
+      i += 16
+    elif mm_movemask_epi8(eq255) == 0xffff and rgbx.a == 255:
+      for _ in 0 ..< 4:
+        mm_store_si128(line[i].addr, rgbxVec)
+        i += 4
+    else:
+      var coverage = coverage
+      for _ in 0 ..< 4:
+        let
+          backdrop = mm_loadu_si128(line[i].addr)
+          source = rgbxVec.applyCoverage(coverage)
+        mm_store_si128(line[i].addr, blendNormalSimd(backdrop, source))
+        coverage = mm_srli_si128(coverage, 4)
+        i += 4
+
+  for i in i ..< len:
+    let coverage = coverages[i]
+    if coverage == 0:
+      discard
+    else:
+      line[i] = blendNormal(line[i], rgbx * coverage)
+
+proc blendLineMaskSse2*(
+  line: ptr UncheckedArray[ColorRGBX], rgbx: ColorRGBX, len: int
+) {.simd.} =
+  var i: int
+  while i < len and (cast[uint](line[i].addr) and 15) != 0:
+    line[i] = blendMask(line[i], rgbx)
+    inc i
+
+  let
+    source = mm_set1_epi32(cast[uint32](rgbx))
+    alphaMask = mm_set1_epi32(cast[int32](0xff000000))
+    oddMask = mm_set1_epi16(cast[int16](0xff00))
+    div255 = mm_set1_epi16(cast[int16](0x8081))
+  while i < len - 4:
+    let backdrop = mm_load_si128(line[i].addr)
+    mm_store_si128(line[i].addr, blendMaskSimd(backdrop, source))
+    i += 4
+
+  for i in i ..< len:
+    line[i] = blendMask(line[i], rgbx)
+
+proc blendLineMaskSse2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
   var i: int
-  while (cast[uint](a[i].addr) and 15) != 0:
+  while  i < len and (cast[uint](a[i].addr) and 15) != 0:
     a[i] = blendMask(a[i], b[i])
     inc i
 
@@ -597,28 +708,65 @@ proc blitLineMaskSse2*(
       discard
     else:
       let backdrop = mm_load_si128(a[i].addr)
-
-      var
-        sourceAlpha = mm_and_si128(source, alphaMask)
-        backdropEven = mm_slli_epi16(backdrop, 8)
-        backdropOdd = mm_and_si128(backdrop, oddMask)
-
-      sourceAlpha = mm_or_si128(sourceAlpha, mm_srli_epi32(sourceAlpha, 16))
-
-      backdropEven = mm_mulhi_epu16(backdropEven, sourceAlpha)
-      backdropOdd = mm_mulhi_epu16(backdropOdd, sourceAlpha)
-      backdropEven = mm_srli_epi16(mm_mulhi_epu16(backdropEven, div255), 7)
-      backdropOdd = mm_srli_epi16(mm_mulhi_epu16(backdropOdd, div255), 7)
-
-      mm_store_si128(
-        a[i].addr,
-        mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
-      )
-
+      mm_store_si128(a[i].addr, blendMaskSimd(backdrop, source))
     i += 4
 
   for i in i ..< len:
     a[i] = blendMask(a[i], b[i])
+
+proc blendLineCoverageMaskSse2*(
+  line: ptr UncheckedArray[ColorRGBX],
+  coverages: ptr UncheckedArray[uint8],
+  rgbx: ColorRGBX,
+  len: int
+) {.simd.} =
+  var i: int
+  while  i < len and (cast[uint](line[i].addr) and 15) != 0:
+    let coverage = coverages[i]
+    if coverage == 0:
+      line[i] = rgbx(0, 0, 0, 0)
+    elif coverage == 255:
+      discard
+    else:
+      line[i] = blendMask(line[i], rgbx * coverage)
+    inc i
+
+  let
+    rgbxVec = mm_set1_epi32(cast[uint32](rgbx))
+    vecZero = mm_setzero_si128()
+    vec255 = mm_set1_epi8(255)
+    alphaMask = mm_set1_epi32(cast[int32](0xff000000))
+    oddMask = mm_set1_epi16(cast[int16](0xff00))
+    div255 = mm_set1_epi16(cast[int16](0x8081))
+  while i < len - 16:
+    let
+      coverage = mm_loadu_si128(coverages[i].addr)
+      eqZero = mm_cmpeq_epi8(coverage, vecZero)
+      eq255 = mm_cmpeq_epi8(coverage, vec255)
+    if mm_movemask_epi8(eqZero) == 0xffff:
+      for _ in 0 ..< 4:
+        mm_store_si128(line[i].addr, vecZero)
+        i += 4
+    elif mm_movemask_epi8(eq255) == 0xffff and rgbx.a == 255:
+      i += 16
+    else:
+      var coverage = coverage
+      for _ in 0 ..< 4:
+        let
+          backdrop = mm_loadu_si128(line[i].addr)
+          source = rgbxVec.applyCoverage(coverage)
+        mm_store_si128(line[i].addr, blendMaskSimd(backdrop, source))
+        coverage = mm_srli_si128(coverage, 4)
+        i += 4
+
+  for i in i ..< len:
+    let coverage = coverages[i]
+    if coverage == 0:
+      line[i] = rgbx(0, 0, 0, 0)
+    elif coverage == 255:
+      discard
+    else:
+      line[i] = blendMask(line[i], rgbx * coverage)
 
 when defined(release):
   {.pop.}

@@ -1429,6 +1429,43 @@ proc clearUnsafe(image: Image, startX, startY, toX, toY: int) =
     len = image.dataIndex(toX, toY) - start
   fillUnsafe(image.data, rgbx(0, 0, 0, 0), start, len)
 
+proc blendLineCoverageOverwrite(
+  line: ptr UncheckedArray[ColorRGBX],
+  coverages: ptr UncheckedArray[uint8],
+  rgbx: ColorRGBX,
+  len: int
+ ) {.hasSimd.} =
+  for i in 0 ..< len:
+    let coverage = coverages[i]
+    if coverage != 0:
+      line[i] = rgbx * coverage
+
+proc blendLineCoverageNormal(
+  line: ptr UncheckedArray[ColorRGBX],
+  coverages: ptr UncheckedArray[uint8],
+  rgbx: ColorRGBX,
+  len: int
+) {.hasSimd.} =
+  for i in 0 ..< len:
+    let coverage = coverages[i]
+    if coverage == 0:
+      discard
+    else:
+      line[i] = blendNormal(line[i], rgbx * coverage)
+
+proc blendLineCoverageMask(
+  line: ptr UncheckedArray[ColorRGBX],
+  coverages: ptr UncheckedArray[uint8],
+  rgbx: ColorRGBX,
+  len: int
+) {.hasSimd.} =
+  for i in 0 ..< len:
+    let coverage = coverages[i]
+    if coverage == 255:
+      discard
+    else:
+      line[i] = blendMask(line[i], rgbx * coverage)
+
 proc fillCoverage(
   image: Image,
   rgbx: ColorRGBX,
@@ -1440,171 +1477,34 @@ proc fillCoverage(
     x = startX
     dataIndex = image.dataIndex(x, y)
 
-  when allowSimd:
-    when defined(amd64):
-      iterator simd(
-        coverages: seq[uint8], x: var int, startX: int
-      ): (M128i, bool, bool) =
-        for _ in 0 ..< coverages.len div 16:
-          let
-            coverageVec = mm_loadu_si128(coverages[x - startX].unsafeAddr)
-            eqZero = mm_cmpeq_epi8(coverageVec, mm_setzero_si128())
-            eq255 = mm_cmpeq_epi8(coverageVec, mm_set1_epi8(255))
-            allZeroes = mm_movemask_epi8(eqZero) == 0xffff
-            all255 = mm_movemask_epi8(eq255) == 0xffff
-          yield (coverageVec, allZeroes, all255)
-          x += 16
-
-      proc source(colorVec, coverageVec: M128i): M128i {.inline.} =
-        let
-          oddMask = mm_set1_epi16(0xff00)
-          div255 = mm_set1_epi16(0x8081)
-
-        var unpacked = unpackAlphaValues(coverageVec)
-        unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
-
-        var
-          sourceEven = mm_slli_epi16(colorVec, 8)
-          sourceOdd = mm_and_si128(colorVec, oddMask)
-        sourceEven = mm_mulhi_epu16(sourceEven, unpacked)
-        sourceOdd = mm_mulhi_epu16(sourceOdd, unpacked)
-        sourceEven = mm_srli_epi16(mm_mulhi_epu16(sourceEven, div255), 7)
-        sourceOdd = mm_srli_epi16(mm_mulhi_epu16(sourceOdd, div255), 7)
-        result = mm_or_si128(sourceEven, mm_slli_epi16(sourceOdd, 8))
-
-      let colorVec = mm_set1_epi32(cast[int32](rgbx))
-
-  proc source(rgbx: ColorRGBX, coverage: uint8): ColorRGBX {.inline.} =
-    if coverage == 0:
-      discard
-    elif coverage == 255:
-      result = rgbx
-    else:
-      result = rgbx(
-        ((rgbx.r.uint32 * coverage) div 255).uint8,
-        ((rgbx.g.uint32 * coverage) div 255).uint8,
-        ((rgbx.b.uint32 * coverage) div 255).uint8,
-        ((rgbx.a.uint32 * coverage) div 255).uint8
-      )
-
   case blendMode:
   of OverwriteBlend:
-    when allowSimd:
-      when defined(amd64):
-        for (coverageVec, allZeroes, all255) in simd(coverages, x, startX):
-          if allZeroes:
-            dataIndex += 16
-          else:
-            if all255:
-              for i in 0 ..< 4:
-                mm_storeu_si128(image.data[dataIndex].addr, colorVec)
-                dataIndex += 4
-            else:
-              var coverageVec = coverageVec
-              for i in 0 ..< 4:
-                let source = source(colorVec, coverageVec)
-                mm_storeu_si128(image.data[dataIndex].addr, source)
-                coverageVec = mm_srli_si128(coverageVec, 4)
-                dataIndex += 4
-
-    for x in x ..< startX + coverages.len:
-      let coverage = coverages[x - startX]
-      if coverage != 0:
-        image.data[dataIndex] = source(rgbx, coverage)
-      inc dataIndex
+    blendLineCoverageOverwrite(
+      image.getUncheckedArray(startX, y),
+      cast[ptr UncheckedArray[uint8]](coverages[0].unsafeAddr),
+      rgbx,
+      coverages.len
+    )
 
   of NormalBlend:
-    when allowSimd:
-      when defined(amd64):
-        for (coverageVec, allZeroes, all255) in simd(coverages, x, startX):
-          if allZeroes:
-            dataIndex += 16
-          else:
-            if all255 and rgbx.a == 255:
-              for i in 0 ..< 4:
-                mm_storeu_si128(image.data[dataIndex].addr, colorVec)
-                dataIndex += 4
-            else:
-              var coverageVec = coverageVec
-              for i in 0 ..< 4:
-                let
-                  backdrop = mm_loadu_si128(image.data[dataIndex].addr)
-                  source = source(colorVec, coverageVec)
-                mm_storeu_si128(
-                  image.data[dataIndex].addr,
-                  blendNormalSimd(backdrop, source)
-                )
-                coverageVec = mm_srli_si128(coverageVec, 4)
-                dataIndex += 4
-
-    for x in x ..< startX + coverages.len:
-      let coverage = coverages[x - startX]
-      if coverage == 255 and rgbx.a == 255:
-        image.data[dataIndex] = rgbx
-      elif coverage == 0:
-        discard
-      else:
-        let backdrop = image.data[dataIndex]
-        image.data[dataIndex] = blendNormal(backdrop, source(rgbx, coverage))
-      inc dataIndex
+    blendLineCoverageNormal(
+      image.getUncheckedArray(startX, y),
+      cast[ptr UncheckedArray[uint8]](coverages[0].unsafeAddr),
+      rgbx,
+      coverages.len
+    )
 
   of MaskBlend:
     {.linearScanEnd.}
-
-    when allowSimd:
-      when defined(amd64):
-        for (coverageVec, allZeroes, all255) in simd(coverages, x, startX):
-          if not allZeroes:
-            if all255:
-              dataIndex += 16
-            else:
-              var coverageVec = coverageVec
-              for i in 0 ..< 4:
-                let
-                  backdrop = mm_loadu_si128(image.data[dataIndex].addr)
-                  source = source(colorVec, coverageVec)
-                mm_storeu_si128(
-                  image.data[dataIndex].addr,
-                  blendMaskSimd(backdrop, source)
-                )
-                coverageVec = mm_srli_si128(coverageVec, 4)
-                dataIndex += 4
-          else:
-            for i in 0 ..< 4:
-              mm_storeu_si128(image.data[dataIndex].addr, mm_setzero_si128())
-              dataIndex += 4
-
-    for x in x ..< startX + coverages.len:
-      let coverage = coverages[x - startX]
-      if coverage == 0:
-        image.data[dataIndex] = rgbx(0, 0, 0, 0)
-      elif coverage == 255:
-        discard
-      else:
-        let backdrop = image.data[dataIndex]
-        image.data[dataIndex] = blendMask(backdrop, source(rgbx, coverage))
-      inc dataIndex
+    blendLineCoverageMask(
+      image.getUncheckedArray(startX, y),
+      cast[ptr UncheckedArray[uint8]](coverages[0].unsafeAddr),
+      rgbx,
+      coverages.len
+    )
 
     image.clearUnsafe(0, y, startX, y)
     image.clearUnsafe(startX + coverages.len, y, image.width, y)
-
-  of SubtractMaskBlend:
-    for x in x ..< startX + coverages.len:
-      let coverage = coverages[x - startX]
-      if coverage == 255 and rgbx.a == 255:
-        image.data[dataIndex] = rgbx(0, 0, 0, 0)
-      elif coverage != 0:
-        let backdrop = image.data[dataIndex]
-        image.data[dataIndex] = blendSubtractMask(backdrop, source(rgbx, coverage))
-      inc dataIndex
-
-  of ExcludeMaskBlend:
-    for x in x ..< startX + coverages.len:
-      let
-        coverage = coverages[x - startX]
-        backdrop = image.data[dataIndex]
-      image.data[dataIndex] = blendExcludeMask(backdrop, source(rgbx, coverage))
-      inc dataIndex
 
   else:
     let blender = blendMode.blender()
@@ -1612,8 +1512,20 @@ proc fillCoverage(
       let coverage = coverages[x - startX]
       if coverage != 0:
         let backdrop = image.data[dataIndex]
-        image.data[dataIndex] = blender(backdrop, source(rgbx, coverage))
+        image.data[dataIndex] = blender(backdrop, rgbx * coverage)
       inc dataIndex
+
+proc blendLineNormal(
+  line: ptr UncheckedArray[ColorRGBX], rgbx: ColorRGBX, len: int
+) {.hasSimd.} =
+  for i in 0 ..< len:
+    line[i] = blendNormal(line[i], rgbx)
+
+proc blendLineMask(
+  line: ptr UncheckedArray[ColorRGBX], rgbx: ColorRGBX, len: int
+) {.hasSimd.} =
+  for i in 0 ..< len:
+    line[i] = blendMask(line[i], rgbx)
 
 proc fillHits(
   image: Image,
@@ -1625,19 +1537,6 @@ proc fillHits(
   blendMode: BlendMode,
   maskClears = true
 ) =
-  template simdBlob(image: Image, x: var int, len: int, blendProc: untyped) =
-    when allowSimd:
-      when defined(amd64):
-        var p = cast[uint](image.data[image.dataIndex(x, y)].addr)
-        let
-          iterations = len div 4
-          colorVec = mm_set1_epi32(cast[int32](rgbx))
-        for _ in 0 ..< iterations:
-          let backdrop = mm_loadu_si128(cast[pointer](p))
-          mm_storeu_si128(cast[pointer](p), blendProc(backdrop, colorVec))
-          p += 16
-        x += iterations * 4
-
   case blendMode:
   of OverwriteBlend:
     for (start, len) in hits.walkInteger(numHits, windingRule, y, image.width):
@@ -1648,17 +1547,10 @@ proc fillHits(
       if rgbx.a == 255:
         fillUnsafe(image.data, rgbx, image.dataIndex(start, y), len)
       else:
-        var x = start
-        simdBlob(image, x, len, blendNormalSimd)
-        var dataIndex = image.dataIndex(x, y)
-        for _ in x ..< start + len:
-          let backdrop = image.data[dataIndex]
-          image.data[dataIndex] = blendNormal(backdrop, rgbx)
-          inc dataIndex
+        blendLineNormal(image.getUncheckedArray(start, y), rgbx, len)
 
   of MaskBlend:
     {.linearScanEnd.}
-
     var filledTo = startX
     for (start, len) in hits.walkInteger(numHits, windingRule, y, image.width):
       if maskClears: # Clear any gap between this fill and the previous fill
@@ -1672,36 +1564,12 @@ proc fillHits(
           )
       block: # Handle this fill
         if rgbx.a != 255:
-          var x = start
-          simdBlob(image, x, len, blendMaskSimd)
-          var dataIndex = image.dataIndex(x, y)
-          for _ in x ..< start + len:
-            let backdrop = image.data[dataIndex]
-            image.data[dataIndex] = blendMask(backdrop, rgbx)
+          blendLineMask(image.getUncheckedArray(start, y), rgbx, len)
         filledTo = start + len
 
     if maskClears:
       image.clearUnsafe(0, y, startX, y)
       image.clearUnsafe(filledTo, y, image.width, y)
-
-  of SubtractMaskBlend:
-    for (start, len) in hits.walkInteger(numHits, windingRule, y, image.width):
-      var dataIndex = image.dataIndex(start, y)
-      for _ in 0 ..< len:
-        if rgbx.a == 255:
-          image.data[dataIndex] = rgbx(0, 0, 0, 0)
-        else:
-          let backdrop = image.data[dataIndex]
-          image.data[dataIndex] = blendSubtractMask(backdrop, rgbx)
-        inc dataIndex
-
-  of ExcludeMaskBlend:
-    for (start, len) in hits.walkInteger(numHits, windingRule, y, image.width):
-      var dataIndex = image.dataIndex(start, y)
-      for _ in 0 ..< len:
-        let backdrop = image.data[dataIndex]
-        image.data[dataIndex] = blendExcludeMask(backdrop, rgbx)
-        inc dataIndex
 
   else:
     let blender = blendMode.blender()
