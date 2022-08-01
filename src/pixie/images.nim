@@ -447,7 +447,9 @@ proc blendLineOverwrite(
 ) {.inline.} =
   copyMem(a[0].addr, b[0].addr, len * 4)
 
-proc blendLineNormal(a, b: ptr UncheckedArray[ColorRGBX], len: int) {.hasSimd.} =
+proc blendLineNormal(
+  a, b: ptr UncheckedArray[ColorRGBX], len: int
+) {.hasSimd.} =
   for i in 0 ..< len:
     a[i] = blendNormal(a[i], b[i])
 

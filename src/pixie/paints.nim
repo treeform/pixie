@@ -128,7 +128,6 @@ proc fillGradientLinear(image: Image, paint: Paint) =
               t = toLineSpace(at, to, xy)
               rgbx = paint.gradientColor(t)
             colors[i] = rgbx
-
           when defined(amd64):
             let colorVec = mm_loadu_si128(colors[0].addr)
             for y in 0 ..< image.height:
