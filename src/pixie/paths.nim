@@ -1410,13 +1410,21 @@ proc computeCoverage(
         let fillLen = at.integer - fillStart
         if fillLen > 0:
           var i = fillStart
-          when defined(amd64) and allowSimd:
-            let sampleCoverageVec = mm_set1_epi8(sampleCoverage)
-            for _ in 0 ..< fillLen div 16:
-              var coverageVec = mm_loadu_si128(coverages[i - startX].addr)
-              coverageVec = mm_add_epi8(coverageVec, sampleCoverageVec)
-              mm_storeu_si128(coverages[i - startX].addr, coverageVec)
-              i += 16
+          when allowSimd:
+            when defined(amd64):
+              let sampleCoverageVec = mm_set1_epi8(sampleCoverage)
+              for _ in 0 ..< fillLen div 16:
+                var coverageVec = mm_loadu_si128(coverages[i - startX].addr)
+                coverageVec = mm_add_epi8(coverageVec, sampleCoverageVec)
+                mm_storeu_si128(coverages[i - startX].addr, coverageVec)
+                i += 16
+            elif defined(arm64):
+              let sampleCoverageVec = vmovq_n_u8(sampleCoverage)
+              for _ in 0 ..< fillLen div 16:
+                var coverageVec = vld1q_u8(coverages[i - startX].addr)
+                coverageVec = vaddq_u8(coverageVec, sampleCoverageVec)
+                vst1q_u8(coverages[i - startX].addr, coverageVec)
+                i += 16
           for j in i ..< fillStart + fillLen:
             coverages[j - startX] += sampleCoverage
 
