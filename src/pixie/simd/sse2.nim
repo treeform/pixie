@@ -528,7 +528,7 @@ proc blendLineCoverageOverwriteSse2*(
   coverages: ptr UncheckedArray[uint8],
   rgbx: ColorRGBX,
   len: int
- ) {.simd.} =
+) {.simd.} =
   var i: int
   while i < len and (cast[uint](line[i].addr) and 15) != 0:
     let coverage = coverages[i]
