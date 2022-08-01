@@ -5,8 +5,7 @@ const text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis in q
 var font = readFont("tests/fonts/Roboto-Regular_1.ttf")
 font.size = 16
 
-let
-  image = newImage(500, 300)
+let image = newImage(500, 300)
 
 timeIt "typeset":
   discard font.typeset(text, bounds = vec2(image.width.float32, 0))

@@ -507,18 +507,10 @@ proc magnifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
         result.width * 4
       )
 
-proc applyCoverage*(rgbxVec, coverage: M128i): M128i {.inline.} =
-
-  proc unpackAlphaValues(v: M128i): M128i {.inline.} =
-    ## Unpack the first 32 bits into 4 rgba(0, 0, 0, value).
-    result = mm_unpacklo_epi8(mm_setzero_si128(), v)
-    result = mm_unpacklo_epi8(mm_setzero_si128(), result)
-
-  let
-    oddMask = mm_set1_epi16(0xff00)
-    div255 = mm_set1_epi16(0x8081)
-
-  var unpacked = unpackAlphaValues(coverage)
+template applyCoverage*(rgbxVec, coverage: M128i): M128i =
+  ## Unpack the first 4 coverage bytes.
+  var unpacked = mm_unpacklo_epi8(mm_setzero_si128(), coverage)
+  unpacked = mm_unpacklo_epi8(mm_setzero_si128(), unpacked)
   unpacked = mm_or_si128(unpacked, mm_srli_epi32(unpacked, 16))
 
   var
@@ -548,6 +540,8 @@ proc blendLineCoverageOverwriteSse2*(
     rgbxVec = mm_set1_epi32(cast[uint32](rgbx))
     vecZero = mm_setzero_si128()
     vec255 = mm_set1_epi8(255)
+    oddMask = mm_set1_epi16(0xff00)
+    div255 = mm_set1_epi16(0x8081)
   while i < len - 16:
     let
       coverage = mm_loadu_si128(coverages[i].addr)
