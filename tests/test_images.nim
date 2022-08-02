@@ -259,5 +259,5 @@ block:
   )
   let rect = image.opaqueBounds()
   doAssert rect == rect(6.0, 6.0, 48.0, 48.0)
-  let trimmedImage = image.subImage(rect.x.int, rect.y.int, rect.w.int, rect.h.int)
+  let trimmedImage = image.subImage(rect)
   trimmedImage.xray("tests/images/opaqueBounds.png")

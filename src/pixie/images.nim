@@ -129,6 +129,12 @@ proc subImage*(image: Image, x, y, w, h: int): Image {.raises: [PixieError].} =
       w * 4
     )
 
+proc subImage*(image: Image, rect: Rect): Image {.raises: [PixieError].} =
+  ## Gets a sub image from this image via rectangle.
+  ## Rectangle is snapped/expanded to whole pixels first.
+  let r = rect.snapToPixels()
+  image.subImage(r.x.int, r.y.int, r.w.int, r.h.int)
+
 proc diff*(master, image: Image): (float32, Image) {.raises: [PixieError].} =
   ## Compares the parameters and returns a score and image of the difference.
   let
