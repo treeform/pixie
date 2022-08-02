@@ -231,3 +231,42 @@ block:
   let image = newImage(100, 100)
   image.fill("white")
   doAssert image[10, 10] == rgba(255, 255, 255, 255)
+
+block:
+  # Make sure cropAlpha rases error.
+  let image = newImage(100, 100)
+  var hadError = false
+  try:
+    discard image.cropAlpha()
+  except PixieError:
+    hadError = true
+  doAssert hadError
+
+block:
+  # Make sure cropAlpha does nothing to full images.
+  let image = newImage(100, 100)
+  image.fill(rgbx(255, 255, 255, 255))
+  let (crop, rect) = image.cropAlpha()
+  doAssert crop.width == image.width
+  doAssert crop.height == image.height
+  doAssert rect == rect(0.0, 0.0, 100.0, 100.0)
+
+block:
+  let image = newImage(100, 100)
+  image.fillPath(
+    """
+      M 20 60
+      A 40 40 90 0 1 100 60
+      A 40 40 90 0 1 180 60
+      Q 180 120 100 180
+      Q 20 120 20 60
+      z
+    """,
+    parseHtmlColor("#FC427B").rgba,
+    scale(vec2(0.3, 0.3))
+  )
+  let (crop, rect) = image.cropAlpha()
+  doAssert crop.width == 48
+  doAssert crop.height == 48
+  doAssert rect == rect(6.0, 6.0, 48.0, 48.0)
+  crop.xray("tests/images/cropHeart.png")

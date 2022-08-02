@@ -751,5 +751,35 @@ proc superImage*(image: Image, x, y, w, h: int): Image {.raises: [PixieError].} 
     result = newImage(w, h)
     result.draw(image, translate(vec2(-x.float32, -y.float32)), OverwriteBlend)
 
+proc cropAlpha*(image: Image): (Image, Rect) =
+  ## Crops the alpha off the edges of an image.
+  ## Returns the new cropped image and the rectangle it used for cropping.
+  var
+    xMin = image.width
+    xMax = 0
+    yMin = image.height
+    yMax = 0
+  # Find the crop coordinates.
+  for y in 0 ..< image.height:
+    for x in 0 ..< image.width:
+      if image.unsafe[x, y].a != 0:
+        xMin = min(xMin, x)
+        xMax = max(xMax, x + 1)
+        yMin = min(yMin, y)
+        yMax = max(yMax, y + 1)
+  if xMax <= xMin or yMax <= yMin:
+    raise newException(PixieError, "Cannot cropAlpha fully transparent image")
+  let
+    corpImage = newImage(xMax - xMin, yMax - yMin)
+    cropRect = rect(
+      xMin.float32,
+      yMin.float32,
+      corpImage.width.float32,
+      corpImage.height.float32
+    )
+  # Draw the bigger image into the cropped image.
+  corpImage.draw(image, translate(vec2(-xMin.float32, -yMin.float32)))
+  return (corpImage, cropRect)
+
 when defined(release):
   {.pop.}
