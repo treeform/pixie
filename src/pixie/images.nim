@@ -522,11 +522,88 @@ proc blendRect(a, b: Image, pos: Ivec2, blendMode: BlendMode) =
         blender
       )
 
+proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
+  let
+    corners = [
+      transform * vec2(0, 0),
+      transform * vec2(b.width.float32, 0),
+      transform * vec2(b.width.float32, b.height.float32),
+      transform * vec2(0, b.height.float32)
+    ]
+    perimeter = [
+      segment(corners[0], corners[1]),
+      segment(corners[1], corners[2]),
+      segment(corners[2], corners[3]),
+      segment(corners[3], corners[0])
+    ]
+    inverseTransform = transform.inverse()
+    # Compute movement vectors
+    p = inverseTransform * vec2(0 + h, 0 + h)
+    dx = inverseTransform * vec2(1 + h, 0 + h) - p
+    dy = inverseTransform * vec2(0 + h, 1 + h) - p
+
+  # Determine where we should start and stop drawing in the y dimension
+  var
+    yStart = a.height
+    yEnd = 0
+  for segment in perimeter:
+    yStart = min(yStart, segment.at.y.floor.int)
+    yEnd = max(yEnd, segment.at.y.ceil.int)
+  yStart = yStart.clamp(0, a.height)
+  yEnd = yEnd.clamp(0, a.height)
+
+  if blendMode == MaskBlend and yStart > 0:
+    zeroMem(a.data[0].addr, yStart * a.width * 4)
+
+  let blender = blendMode.blender()
+  for y in yStart ..< yEnd:
+    # Determine where we should start and stop drawing in the x dimension
+    var
+      xMin = a.width.float32
+      xMax = 0.float32
+    for yOffset in [0.float32, 1]:
+      let scanLine = Line(
+        a: vec2(-1000, y.float32 + yOffset),
+        b: vec2(1000, y.float32 + yOffset)
+      )
+      for segment in perimeter:
+        var at: Vec2
+        if scanline.intersects(segment, at) and segment.to != at:
+          xMin = min(xMin, at.x)
+          xMax = max(xMax, at.x)
+
+    let
+      xStart = clamp(xMin.floor.int, 0, a.width)
+      xEnd = clamp(xMax.ceil.int, 0, a.width)
+
+    if blendMode == MaskBlend and xStart > 0:
+      zeroMem(a.data[a.dataIndex(0, y)].addr, xStart * 4)
+
+    var srcPos = p + dx * xStart.float32 + dy * y.float32
+    srcPos = vec2(srcPos.x - h, srcPos.y - h)
+    for x in xStart ..< xEnd:
+      let
+        backdrop = a.unsafe[x, y]
+        sample = b.getRgbaSmooth(srcPos.x, srcPos.y)
+        blended = blender(backdrop, sample)
+      a.unsafe[x, y] = blended
+      srcPos += dx
+
+    if blendMode == MaskBlend and a.width - xEnd > 0:
+      zeroMem(a.data[a.dataIndex(xEnd, y)].addr, (a.width - xEnd) * 4)
+
+  if blendMode == MaskBlend and a.height - yEnd > 0:
+    zeroMem(
+      a.data[a.dataIndex(0, yEnd)].addr,
+      a.width * (a.height - yEnd) * 4
+    )
+
 proc draw*(
   a, b: Image, transform = mat3(), blendMode = NormalBlend
 ) {.raises: [PixieError].} =
   ## Draws one image onto another using a matrix transform and color blending.
   var
+    transform = transform
     inverseTransform = transform.inverse()
     # Compute movement vectors
     p = inverseTransform * vec2(0 + h, 0 + h)
@@ -541,7 +618,7 @@ proc draw*(
     dx /= 2
     dy /= 2
     filterBy2 /= 2
-    inverseTransform = scale(vec2(0.5, 0.5)) * inverseTransform
+    transform = transform * scale(vec2(2, 2))
 
   while filterBy2 <= 0.5:
     b = b.magnifyBy2()
@@ -549,7 +626,7 @@ proc draw*(
     dx *= 2
     dy *= 2
     filterBy2 *= 2
-    inverseTransform = scale(vec2(2, 2)) * inverseTransform
+    transform = transform * scale(vec2(1/2, 1/2))
 
   let
     hasRotationOrScaling = not(dx == vec2(1, 0) and dy == vec2(0, 1))
@@ -561,7 +638,7 @@ proc draw*(
     )
 
   if hasRotationOrScaling or smooth:
-    a.drawCorrect(b, inverseTransform.inverse(), blendMode, false)
+    a.drawSmooth(b, transform, blendMode)
   else:
     a.blendRect(b, ivec2(transform[2, 0].int32, transform[2, 1].int32), blendMode)
 
