@@ -244,20 +244,17 @@ block:
   doAssert image.opaqueBounds() == rect(0.0, 0.0, 100.0, 100.0)
 
 block:
-  let image = newImage(100, 100)
+  let image = newImage(160, 160)
   image.fillPath(
     """
-      M 20 60
-      A 40 40 90 0 1 100 60
-      A 40 40 90 0 1 180 60
-      Q 180 120 100 180
-      Q 20 120 20 60
+      M 20 20
+      L 140 20
+      L 80 140
       z
     """,
     parseHtmlColor("#FC427B").rgba,
     scale(vec2(0.3, 0.3))
   )
   let rect = image.opaqueBounds()
-  doAssert rect == rect(6.0, 6.0, 48.0, 48.0)
   let trimmedImage = image.subImage(rect)
   trimmedImage.xray("tests/images/opaqueBounds.png")
