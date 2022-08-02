@@ -123,7 +123,8 @@ exportRefObject Image:
     flipHorizontal
     flipVertical
     rotate90
-    subImage
+    subImage(Image, int, int, int, int)
+    subImage(Image, Rect)
     minifyBy2(Image, int)
     magnifyBy2(Image, int)
     applyOpacity(Image, float32)
@@ -142,6 +143,7 @@ exportRefObject Image:
     fillPath(Image, Path, Paint, Mat3, WindingRule)
     strokePath(Image, Path, Paint, Mat3, float32, LineCap, LineJoin, float32, seq[float32])
     newContext(Image)
+    opaqueBounds
 
 exportRefObject Paint:
   fields:
