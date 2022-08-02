@@ -63,46 +63,58 @@ macro simd*(procedure: untyped) =
 macro hasSimd*(procedure: untyped) =
   let
     name = procedure.procName()
-    originalBody = procedure[6]
     nameNeon = name & "Neon"
     nameSse2 = name & "Sse2"
     nameAvx = name & "Avx"
     nameAvx2 = name & "Avx2"
+    callNeon = callAndReturn(ident(nameNeon), procedure)
+    callSse2 = callAndReturn(ident(nameSse2), procedure)
     callAvx = callAndReturn(ident(nameAvx), procedure)
     callAvx2 = callAndReturn(ident(nameAvx2), procedure)
 
   var
     foundSimd: bool
-    body = newStmtList()
+
+  if procedure[6].kind != nnkStmtList:
+    error("hasSimd proc body must start with nnkStmtList")
+
+  var insertIdx = 0
+  if procedure[6][0].kind == nnkCommentStmt:
+    insertIdx = 1
 
   when defined(amd64) and not defined(pixieNoAvx):
     if nameAvx2 & procSignature(procedure) in simdProcs:
       foundSimd = true
-      body.add quote do:
+      procedure[6].insert(insertIdx, quote do:
         if cpuHasAvx2:
           `callAvx2`
-
+      )
+      inc insertIdx
     if nameAvx & procSignature(procedure) in simdProcs:
       foundSimd = true
-      body.add quote do:
-        if cpuHasAvx2:
+      procedure[6].insert(insertIdx, quote do:
+        if cpuHasAvx:
           `callAvx`
-
-  if nameSse2 & procSignature(procedure) in simdProcs:
-    foundSimd = true
-    let bodySse2 = simdProcs[nameSse2 & procSignature(procedure)][6]
-    body.add quote do:
-      `bodySse2`
-  elif nameNeon & procSignature(procedure) in simdProcs:
-    foundSimd = true
-    let bodyNeon = simdProcs[nameNeon & procSignature(procedure)][6]
-    body.add quote do:
-      `bodyNeon`
-  else:
-    body.add quote do:
-      `originalBody`
-
-  procedure[6] = body
+      )
+      inc insertIdx
+  when defined(amd64):
+    if nameSse2 & procSignature(procedure) in simdProcs:
+      foundSimd = true
+      procedure[6].insert(insertIdx, quote do:
+        `callSse2`
+      )
+      inc insertIdx
+      while procedure[6].len > insertIdx:
+        procedure[6].del(insertIdx)
+  elif defined(arm64):
+    if nameNeon & procSignature(procedure) in simdProcs:
+      foundSimd = true
+      procedure[6].insert(insertIdx, quote do:
+        `callNeon`
+      )
+      inc insertIdx
+      while procedure[6].len > insertIdx:
+        procedure[6].del(insertIdx)
 
   when not defined(pixieNoSimd):
     if not foundSimd:

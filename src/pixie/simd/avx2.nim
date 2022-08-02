@@ -415,7 +415,7 @@ proc minifyBy2Avx2*(image: Image, power = 1): Image {.simd.} =
     # Set src as this result for if we do another power
     src = result
 
-template applyCoverage*(rgbxVec: M256i, coverage: M128i): M256i =
+template applyCoverage(rgbxVec: M256i, coverage: M128i): M256i =
   ## Unpack the first 8 coverage bytes.
   let
     unpacked0 = mm_shuffle_epi8(coverage, coverageShuffle)

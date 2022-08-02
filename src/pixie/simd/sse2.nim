@@ -10,7 +10,7 @@ proc applyOpacity*(color: M128, opacity: float32): ColorRGBX {.inline.} =
   finalColor = mm_packus_epi16(finalColor, mm_setzero_si128())
   cast[ColorRGBX](mm_cvtsi128_si32(finalColor))
 
-template blendNormalSimd*(backdrop, source: M128i): M128i =
+template blendNormalSimd(backdrop, source: M128i): M128i =
   var
     sourceAlpha = mm_and_si128(source, alphaMask)
     backdropEven = mm_slli_epi16(backdrop, 8)
@@ -30,7 +30,7 @@ template blendNormalSimd*(backdrop, source: M128i): M128i =
     mm_or_si128(backdropEven, mm_slli_epi16(backdropOdd, 8))
   )
 
-template blendMaskSimd*(backdrop, source: M128i): M128i =
+template blendMaskSimd(backdrop, source: M128i): M128i =
   var
     sourceAlpha = mm_and_si128(source, alphaMask)
     backdropEven = mm_slli_epi16(backdrop, 8)
@@ -507,7 +507,7 @@ proc magnifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
         result.width * 4
       )
 
-template applyCoverage*(rgbxVec, coverage: M128i): M128i =
+template applyCoverage(rgbxVec, coverage: M128i): M128i =
   ## Unpack the first 4 coverage bytes.
   var unpacked = mm_unpacklo_epi8(mm_setzero_si128(), coverage)
   unpacked = mm_unpacklo_epi8(mm_setzero_si128(), unpacked)
