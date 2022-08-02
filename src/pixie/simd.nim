@@ -1,16 +1,18 @@
-import simd/internal
+import nimsimd/hassimd
 
-export internal
+export hassimd
 
 const allowSimd* = not defined(pixieNoSimd) and not defined(tcc)
 
 when allowSimd:
   when defined(amd64):
-    import simd/sse2, simd/avx, simd/avx2
-    export sse2, avx, avx2
+    import simd/sse2
+    export sse2
 
     when not defined(pixieNoAvx):
-      import nimsimd/runtimecheck
+      import nimsimd/runtimecheck, simd/avx, simd/avx2
+      export avx, avx2
+
       let
         cpuHasAvx* = checkInstructionSets({AVX})
         cpuHasAvx2* = checkInstructionSets({AVX, AVX2})

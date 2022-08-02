@@ -1,4 +1,4 @@
-import avx, chroma, internal, nimsimd/avx2, pixie/blends, pixie/common, vmath
+import avx, chroma, nimsimd/hassimd, nimsimd/avx2, pixie/blends, pixie/common, vmath
 
 when defined(gcc) or defined(clang):
   {.localPassc: "-mavx2".}
