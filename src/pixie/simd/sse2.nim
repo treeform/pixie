@@ -528,7 +528,7 @@ proc blendLineCoverageOverwriteSse2*(
   coverages: ptr UncheckedArray[uint8],
   rgbx: ColorRGBX,
   len: int
- ) {.simd.} =
+) {.simd.} =
   var i: int
   while i < len and (cast[uint](line[i].addr) and 15) != 0:
     let coverage = coverages[i]
@@ -691,7 +691,7 @@ proc blendLineMaskSse2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
 ) {.simd.} =
   var i: int
-  while  i < len and (cast[uint](a[i].addr) and 15) != 0:
+  while i < len and (cast[uint](a[i].addr) and 15) != 0:
     a[i] = blendMask(a[i], b[i])
     inc i
 
@@ -721,7 +721,7 @@ proc blendLineCoverageMaskSse2*(
   len: int
 ) {.simd.} =
   var i: int
-  while  i < len and (cast[uint](line[i].addr) and 15) != 0:
+  while i < len and (cast[uint](line[i].addr) and 15) != 0:
     let coverage = coverages[i]
     if coverage == 0:
       line[i] = rgbx(0, 0, 0, 0)

@@ -338,8 +338,9 @@ proc blur*(
       var values: array[4, uint32]
       for xx in x - radius ..< min(x + radius, 0):
         values += outOfBounds * kernel[xx - x + radius]
+      var idx = image.dataIndex(0, y)
       for xx in max(x - radius, 0) .. min(x + radius, image.width - 1):
-        values += image.unsafe[xx, y] * kernel[xx - x + radius]
+        values += image.data[idx + xx] * kernel[xx - x + radius]
       for xx in max(x - radius, image.width) .. x + radius:
         values += outOfBounds * kernel[xx - x + radius]
       blurX.unsafe[y, x] = rgbx(values)
@@ -350,8 +351,9 @@ proc blur*(
       var values: array[4, uint32]
       for yy in y - radius ..< min(y + radius, 0):
         values += outOfBounds * kernel[yy - y + radius]
+      var idx = blurX.dataIndex(0, x)
       for yy in max(y - radius, 0) .. min(y + radius, image.height - 1):
-        values += blurX.unsafe[yy, x] * kernel[yy - y + radius]
+        values += blurX.data[idx + yy] * kernel[yy - y + radius]
       for yy in max(y - radius, image.height) .. y + radius:
         values += outOfBounds * kernel[yy - y + radius]
       image.unsafe[x, y] = rgbx(values)
@@ -447,7 +449,9 @@ proc blendLineOverwrite(
 ) {.inline.} =
   copyMem(a[0].addr, b[0].addr, len * 4)
 
-proc blendLineNormal(a, b: ptr UncheckedArray[ColorRGBX], len: int) {.hasSimd.} =
+proc blendLineNormal(
+  a, b: ptr UncheckedArray[ColorRGBX], len: int
+) {.hasSimd.} =
   for i in 0 ..< len:
     a[i] = blendNormal(a[i], b[i])
 
