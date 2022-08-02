@@ -117,13 +117,18 @@ exportRefObject Image:
     setColor
     fill(Image, Color)
     fill(Image, Paint)
+    isOneColor(Image)
+    isTransparent(Image)
+    isOpaque(Image)
     flipHorizontal
     flipVertical
+    rotate90
     subImage
     minifyBy2(Image, int)
     magnifyBy2(Image, int)
     applyOpacity(Image, float32)
     invert(Image)
+    ceil(Image)
     blur(Image, float32, Color)
     resize(Image, int, int)
     shadow(Image, Vec2, float32, float32, Color)
@@ -298,6 +303,7 @@ exportProcs:
   rotate(float32)
   scale(float32, float32)
   inverse(Matrix3)
+  snapToPixels
 
 writeFiles("bindings/generated", "Pixie")
 
