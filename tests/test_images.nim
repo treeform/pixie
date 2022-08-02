@@ -233,23 +233,15 @@ block:
   doAssert image[10, 10] == rgba(255, 255, 255, 255)
 
 block:
-  # Make sure cropAlpha rases error.
+  # opaqueBounds of fully transparent image.
   let image = newImage(100, 100)
-  var hadError = false
-  try:
-    discard image.cropAlpha()
-  except PixieError:
-    hadError = true
-  doAssert hadError
+  doAssert image.opaqueBounds() == rect(0, 0, 0, 0)
 
 block:
-  # Make sure cropAlpha does nothing to full images.
+  # opaqueBounds of fully opaque image.
   let image = newImage(100, 100)
   image.fill(rgbx(255, 255, 255, 255))
-  let (crop, rect) = image.cropAlpha()
-  doAssert crop.width == image.width
-  doAssert crop.height == image.height
-  doAssert rect == rect(0.0, 0.0, 100.0, 100.0)
+  doAssert image.opaqueBounds() == rect(0.0, 0.0, 100.0, 100.0)
 
 block:
   let image = newImage(100, 100)
@@ -265,8 +257,7 @@ block:
     parseHtmlColor("#FC427B").rgba,
     scale(vec2(0.3, 0.3))
   )
-  let (crop, rect) = image.cropAlpha()
-  doAssert crop.width == 48
-  doAssert crop.height == 48
+  let rect = image.opaqueBounds()
   doAssert rect == rect(6.0, 6.0, 48.0, 48.0)
-  crop.xray("tests/images/cropHeart.png")
+  let trimmedImage = image.subImage(rect.x.int, rect.y.int, rect.w.int, rect.h.int)
+  trimmedImage.xray("tests/images/opaqueBounds.png")

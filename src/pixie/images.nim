@@ -751,15 +751,18 @@ proc superImage*(image: Image, x, y, w, h: int): Image {.raises: [PixieError].} 
     result = newImage(w, h)
     result.draw(image, translate(vec2(-x.float32, -y.float32)), OverwriteBlend)
 
-proc cropAlpha*(image: Image): (Image, Rect) =
-  ## Crops the alpha off the edges of an image.
-  ## Returns the new cropped image and the rectangle it used for cropping.
+proc opaqueBounds*(image: Image): Rect =
+  ## Returns the bounds of opaque pixels.
+  ## Some images have transparency around them, use this to find just the
+  ## visible part of the image and then use subImage to cut it out.
+  ## Returns zero rect if whole image is transparent.
+  ## Returns just the size of the image if no edge is transparent.
   var
     xMin = image.width
     xMax = 0
     yMin = image.height
     yMax = 0
-  # Find the crop coordinates.
+  # Find the trim coordinates.
   for y in 0 ..< image.height:
     for x in 0 ..< image.width:
       if image.unsafe[x, y].a != 0:
@@ -768,18 +771,13 @@ proc cropAlpha*(image: Image): (Image, Rect) =
         yMin = min(yMin, y)
         yMax = max(yMax, y + 1)
   if xMax <= xMin or yMax <= yMin:
-    raise newException(PixieError, "Cannot cropAlpha fully transparent image")
-  let
-    corpImage = newImage(xMax - xMin, yMax - yMin)
-    cropRect = rect(
-      xMin.float32,
-      yMin.float32,
-      corpImage.width.float32,
-      corpImage.height.float32
-    )
-  # Draw the bigger image into the cropped image.
-  corpImage.draw(image, translate(vec2(-xMin.float32, -yMin.float32)))
-  return (corpImage, cropRect)
+    return rect(0, 0, 0, 0)
+  rect(
+    xMin.float32,
+    yMin.float32,
+    (xMax - xMin).float32,
+    (yMax - yMin).float32
+  )
 
 when defined(release):
   {.pop.}
