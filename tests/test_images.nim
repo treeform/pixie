@@ -231,3 +231,30 @@ block:
   let image = newImage(100, 100)
   image.fill("white")
   doAssert image[10, 10] == rgba(255, 255, 255, 255)
+
+block:
+  # opaqueBounds of fully transparent image.
+  let image = newImage(100, 100)
+  doAssert image.opaqueBounds() == rect(0, 0, 0, 0)
+
+block:
+  # opaqueBounds of fully opaque image.
+  let image = newImage(100, 100)
+  image.fill(rgbx(255, 255, 255, 255))
+  doAssert image.opaqueBounds() == rect(0.0, 0.0, 100.0, 100.0)
+
+block:
+  let image = newImage(160, 160)
+  image.fillPath(
+    """
+      M 20 20
+      L 140 20
+      L 80 140
+      z
+    """,
+    parseHtmlColor("#FC427B").rgba,
+    scale(vec2(0.3, 0.3))
+  )
+  let rect = image.opaqueBounds()
+  let trimmedImage = image.subImage(rect)
+  trimmedImage.xray("tests/images/opaqueBounds.png")

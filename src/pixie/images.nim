@@ -129,6 +129,12 @@ proc subImage*(image: Image, x, y, w, h: int): Image {.raises: [PixieError].} =
       w * 4
     )
 
+proc subImage*(image: Image, rect: Rect): Image {.raises: [PixieError].} =
+  ## Gets a sub image from this image via rectangle.
+  ## Rectangle is snapped/expanded to whole pixels first.
+  let r = rect.snapToPixels()
+  image.subImage(r.x.int, r.y.int, r.w.int, r.h.int)
+
 proc diff*(master, image: Image): (float32, Image) {.raises: [PixieError].} =
   ## Compares the parameters and returns a score and image of the difference.
   let
@@ -750,6 +756,34 @@ proc superImage*(image: Image, x, y, w, h: int): Image {.raises: [PixieError].} 
   else:
     result = newImage(w, h)
     result.draw(image, translate(vec2(-x.float32, -y.float32)), OverwriteBlend)
+
+proc opaqueBounds*(image: Image): Rect =
+  ## Returns the bounds of opaque pixels.
+  ## Some images have transparency around them, use this to find just the
+  ## visible part of the image and then use subImage to cut it out.
+  ## Returns zero rect if whole image is transparent.
+  ## Returns just the size of the image if no edge is transparent.
+  var
+    xMin = image.width
+    xMax = 0
+    yMin = image.height
+    yMax = 0
+  # Find the trim coordinates.
+  for y in 0 ..< image.height:
+    for x in 0 ..< image.width:
+      if image.unsafe[x, y].a != 0:
+        xMin = min(xMin, x)
+        xMax = max(xMax, x + 1)
+        yMin = min(yMin, y)
+        yMax = max(yMax, y + 1)
+  if xMax <= xMin or yMax <= yMin:
+    return rect(0, 0, 0, 0)
+  rect(
+    xMin.float32,
+    yMin.float32,
+    (xMax - xMin).float32,
+    (yMax - yMin).float32
+  )
 
 when defined(release):
   {.pop.}
