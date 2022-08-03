@@ -38,25 +38,6 @@ proc alphaFix(backdrop, source, mixed: ColorRGBA): ColorRGBA =
   result.b = (b div a div 255).uint8
   result.a = a.uint8
 
-proc alphaFix(backdrop, source, mixed: Color): Color =
-  ## After mixing an image, adjust its alpha value to be correct.
-  result.a = (source.a + backdrop.a * (1.0 - source.a))
-  if result.a == 0:
-    return
-
-  let
-    t0 = source.a * (1 - backdrop.a)
-    t1 = source.a * backdrop.a
-    t2 = (1 - source.a) * backdrop.a
-
-  result.r = t0 * source.r + t1 * mixed.r + t2 * backdrop.r
-  result.g = t0 * source.g + t1 * mixed.g + t2 * backdrop.g
-  result.b = t0 * source.b + t1 * mixed.b + t2 * backdrop.b
-
-  result.r /= result.a
-  result.g /= result.a
-  result.b /= result.a
-
 proc blendAlpha*(backdrop, source: uint8): uint8 {.inline.} =
   ## Blends alphas of backdrop, source.
   source + ((backdrop.uint32 * (255 - source)) div 255).uint8
@@ -75,65 +56,6 @@ proc hardLight(
     ) div 255).uint8
   else:
     screen(backdropColor, sourceColor)
-
-proc softLight(backdrop, source: float32): float32 {.inline.} =
-  ## Pegtop
-  (1 - 2 * source) * backdrop ^ 2 + 2 * source * backdrop
-
-proc `+`(c: Color, v: float32): Color {.inline.} =
-  result.r = c.r + v
-  result.g = c.g + v
-  result.b = c.b + v
-  result.a = c.a + v
-
-proc `+`(v: float32, c: Color): Color {.inline.} =
-  c + v
-
-proc `*`(c: Color, v: float32): Color {.inline.} =
-  result.r = c.r * v
-  result.g = c.g * v
-  result.b = c.b * v
-  result.a = c.a * v
-
-proc `/`(c: Color, v: float32): Color {.inline.} =
-  result.r = c.r / v
-  result.g = c.g / v
-  result.b = c.b / v
-  result.a = c.a / v
-
-proc `-`(c: Color, v: float32): Color {.inline.} =
-  result.r = c.r - v
-  result.g = c.g - v
-  result.b = c.b - v
-  result.a = c.a - v
-
-proc Lum(C: Color): float32 {.inline.} =
-  0.3 * C.r + 0.59 * C.g + 0.11 * C.b
-
-proc ClipColor(C: var Color) {.inline.} =
-  let
-    L = Lum(C)
-    n = min([C.r, C.g, C.b])
-    x = max([C.r, C.g, C.b])
-  if n < 0:
-    C = L + (((C - L) * L) / (L - n))
-  if x > 1:
-    C = L + (((C - L) * (1 - L)) / (x - L))
-
-proc SetLum(C: Color, l: float32): Color {.inline.} =
-  let d = l - Lum(C)
-  result.r = C.r + d
-  result.g = C.g + d
-  result.b = C.b + d
-  ClipColor(result)
-
-proc Sat(C: Color): float32 {.inline.} =
-  max([C.r, C.g, C.b]) - min([C.r, C.g, C.b])
-
-proc SetSat(C: Color, s: float32): Color {.inline.} =
-  let satC = Sat(C)
-  if satC > 0:
-    result = (C - min([C.r, C.g, C.b])) * s / satC
 
 proc blendNormal*(backdrop, source: ColorRGBX): ColorRGBX {.inline.} =
   if backdrop.a == 0 or source.a == 255:
@@ -257,27 +179,7 @@ proc blendOverlay*(backdrop, source: ColorRGBX): ColorRGBX =
   result.a = blendAlpha(backdrop.a, source.a)
 
 proc blendSoftLight*(backdrop, source: ColorRGBX): ColorRGBX =
-  # proc softLight(backdrop, source: int32): uint8 {.inline.} =
-  #   ## Pegtop
-  #   (
-  #     ((255 - 2 * source) * backdrop ^ 2) div 255 ^ 2 +
-  #     (2 * source * backdrop) div 255
-  #   ).uint8
-
-  let
-    backdrop = backdrop.rgba()
-    source = source.rgba()
-
-  let
-    b = backdrop.color
-    s = source.color
-  var blended: Color
-  blended.r = softLight(b.r, s.r)
-  blended.g = softLight(b.g, s.g)
-  blended.b = softLight(b.b, s.b)
-  blended = alphaFix(b, s, blended)
-
-  result = blended.rgbx()
+  blendSoftLight(backdrop.color, source.color).rgbx
 
 proc blendHardLight*(backdrop, source: ColorRGBX): ColorRGBX =
   result.r = hardLight(backdrop.r, backdrop.a, source.r, source.a)
@@ -311,32 +213,16 @@ proc blendExclusion*(backdrop, source: ColorRGBX): ColorRGBX =
   result.a = blendAlpha(backdrop.a, source.a)
 
 proc blendColor*(backdrop, source: ColorRGBX): ColorRGBX =
-  let
-    backdrop = backdrop.rgba().color
-    source = source.rgba().color
-    blended = SetLum(source, Lum(backdrop))
-  result = alphaFix(backdrop, source, blended).rgba.rgbx()
+  blendColor(backdrop.color, source.color).rgbx
 
 proc blendLuminosity*(backdrop, source: ColorRGBX): ColorRGBX =
-  let
-    backdrop = backdrop.rgba().color
-    source = source.rgba().color
-    blended = SetLum(backdrop, Lum(source))
-  result = alphaFix(backdrop, source, blended).rgba.rgbx()
+  blendLuminosity(backdrop.color, source.color).rgbx
 
 proc blendHue*(backdrop, source: ColorRGBX): ColorRGBX =
-  let
-    backdrop = backdrop.rgba().color
-    source = source.rgba().color
-    blended = SetLum(SetSat(source, Sat(backdrop)), Lum(backdrop))
-  result = alphaFix(backdrop, source, blended).rgba.rgbx()
+  blendHue(backdrop.color, source.color).rgbx
 
 proc blendSaturation*(backdrop, source: ColorRGBX): ColorRGBX =
-  let
-    backdrop = backdrop.rgba().color
-    source = source.rgba().color
-    blended = SetLum(SetSat(backdrop, Sat(source)), Lum(backdrop))
-  result = alphaFix(backdrop, source, blended).rgba.rgbx()
+  blendSaturation(backdrop.color, source.color).rgbx
 
 proc blendMask*(backdrop, source: ColorRGBX): ColorRGBX {.inline.} =
   let k = source.a.uint32
