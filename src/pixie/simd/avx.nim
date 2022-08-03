@@ -1,4 +1,4 @@
-import chroma, internal, nimsimd/avx
+import chroma, nimsimd/hassimd, nimsimd/avx
 
 when defined(gcc) or defined(clang):
   {.localPassc: "-mavx".}
