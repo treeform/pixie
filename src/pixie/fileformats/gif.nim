@@ -105,6 +105,9 @@ proc decodeGif*(data: string): Gif {.raises: [PixieError].} =
 
       pos += 9
 
+      if imageWidth > screenWidth or imageHeight > screenHeight:
+        raise newException(PixieError, "Invalid GIF frame dimensions")
+
       if pos + localColorTableSize * 3 > data.len:
         failInvalid()
 
