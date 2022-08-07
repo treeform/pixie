@@ -270,7 +270,6 @@ proc transform*(path: Path, mat: Mat3) {.raises: [].} =
     path.commands[0] = Move.float32
 
   var i: int
-  # for command in path.commands.mitems:
   while i < path.commands.len:
     let kind = path.commands[i].PathCommandKind
     inc i
