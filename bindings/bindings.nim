@@ -306,6 +306,7 @@ exportProcs:
   scale(float32, float32)
   inverse(Matrix3)
   snapToPixels
+  mix(Color, Color, float32)
 
 writeFiles("bindings/generated", "Pixie")
 
