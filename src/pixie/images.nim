@@ -582,6 +582,9 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
       xStart = clamp(xMin.floor.int, 0, a.width)
       xEnd = clamp(xMax.ceil.int, 0, a.width)
 
+    if xEnd - xStart == 0:
+      continue
+
     var srcPos = p + dx * xStart.float32 + dy * y.float32
     srcPos = vec2(srcPos.x - h, srcPos.y - h)
     for x in xStart ..< xEnd:
