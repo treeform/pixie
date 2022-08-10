@@ -14,6 +14,12 @@ This library is being actively developed and we'd be happy for you to use it.
 
 [API reference](https://nimdocs.com/treeform/pixie)
 
+### Videos
+
+* [Pixie 5.0 performance improvements](https://www.youtube.com/watch?v=Did21OYIrGI)
+* [The details of JPEG decoding in Nim](https://www.youtube.com/watch?v=vYwD7OynFcg&t=4s)
+* [A full-featured 2D graphics library for Nim (NimConf 2021)](https://www.youtube.com/watch?v=8acDfUIwLnk)
+
 Features:
 * Typesetting and rasterizing text, including styled rich text via spans.
 * Drawing paths, shapes and curves with even-odd and non-zero windings.
