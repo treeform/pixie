@@ -402,6 +402,42 @@ proc getRgbaSmooth*(
   else:
     topMix
 
+proc getRgbaSmoothUnsafe(
+  image: Image, x, y: float32
+): ColorRGBX {.raises: [].} =
+  ## Gets a interpolated color with float point coordinates.
+  ## Pixels outside the image are segfaults.
+  let
+    x0 = x.floor.int
+    y0 = y.floor.int
+    x1 = x0 + 1
+    y1 = y0 + 1
+    xFractional = x - x.floor
+    yFractional = y - y.floor
+
+  let
+    x0y0 = image.unsafe[x0, y0]
+    x1y0 = image.unsafe[x1, y0]
+    x0y1 = image.unsafe[x0, y1]
+    x1y1 = image.unsafe[x1, y1]
+
+  # var topMix = mix(x0y0, x1y0, xFractional)
+  # var bottomMix = mix(x0y1, x1y1, xFractional)
+  # mix(topMix, bottomMix, yFractional)
+
+  var topMix = x0y0
+  if xFractional > 0 and x0y0 != x1y0:
+    topMix = mix(x0y0, x1y0, xFractional)
+
+  var bottomMix = x0y1
+  if xFractional > 0 and x0y1 != x1y1:
+    bottomMix = mix(x0y1, x1y1, xFractional)
+
+  if yFractional != 0 and topMix != bottomMix:
+    mix(topMix, bottomMix, yFractional)
+  else:
+    topMix
+
 proc drawCorrect(
   a, b: Image, transform = mat3(), blendMode: BlendMode, tiled: bool
 ) =
@@ -562,35 +598,81 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
     zeroMem(a.data[0].addr, yStart * a.width * 4)
 
   var sampleLine = newSeq[ColorRGBX](a.width)
+
   for y in yStart ..< yEnd:
-    # Determine where we should start and stop drawing in the x dimension
-    var
-      xMin = a.width.float32
-      xMax = 0.float32
-    for yOffset in [0.float32, 1]:
+
+    proc rangeScan(y: float32): (float32, float32) =
+      ## Determines where we should start and stop drawing in the x dimension
+      var
+        xMin = Nan.float32
+        xMax = Nan.float32
       let scanLine = Line(
-        a: vec2(-1000, y.float32 + yOffset),
-        b: vec2(1000, y.float32 + yOffset)
+        a: vec2(-1000, y),
+        b: vec2(1000, y)
       )
       for segment in perimeter:
         var at: Vec2
-        if scanline.intersects(segment, at) and segment.to != at:
+        if scanLine.intersects(segment, at) and segment.to != at:
           xMin = min(xMin, at.x)
           xMax = max(xMax, at.x)
+      return (xMin, xMax)
 
     let
-      xStart = clamp(xMin.floor.int, 0, a.width)
-      xEnd = clamp(xMax.ceil.int, 0, a.width)
+      top = rangeScan(y.float32)
+      bottom = rangeScan(y.float32 + 1f)
 
-    if xEnd - xStart == 0:
+    var
+      x0 = clamp(min(top[0], bottom[0]).floor.int, 0, a.width)
+      x1 = clamp(max(top[0], bottom[0]).ceil.int, 0, a.width)
+      x2 = clamp(min(top[1], bottom[1]).floor.int, 0, a.width)
+      x3 = clamp(max(top[1], bottom[1]).ceil.int, 0, a.width)
+
+    var srcPos = p + dx * x0.float32 + dy * y.float32 - vec2(h, h)
+    #srcPos = vec2(srcPos.x - h, srcPos.y - h)
+
+    # if top[0].isNaN() or top[1].isNaN() or bottom[0].isNaN() or bottom[1].isNaN():
+    #   x0 = min(x0, x1)
+    #   x3 = max(x2, x3)
+    #   #echo x0, " .. ", x3
+
+    #   for x in x0 ..< x3:
+    #     sampleLine[x] = b.getRgbaSmooth(srcPos.x, srcPos.y)
+    #     srcPos += dx
+
+    # else:
+    #   #echo x0, " .. ", x1, " -- ", x2, " .. ", x3
+
+    #   for x in x0 ..< x1:
+    #     sampleLine[x] = b.getRgbaSmooth(srcPos.x, srcPos.y)
+    #     srcPos += dx
+
+    #   for x in x1 ..< x2:
+    #     if srcPos.y < 0 or srcPos.x < 0:
+    #       echo x, ", ", y
+    #       echo srcPos
+    #       echo top
+    #       echo bottom
+    #       for ff in x ..< x2:
+    #         sampleLine[ff] = rgbx(255, 0, 0, 255) # red
+    #         srcPos += dx
+    #       quit()
+    #       break
+
+    #     sampleLine[x] = b.getRgbaSmoothUnsafe(srcPos.x, srcPos.y)
+    #     srcPos += dx
+
+    #   for x in x2 ..< x3:
+    #     sampleLine[x] = b.getRgbaSmooth(srcPos.x, srcPos.y)
+    #     srcPos += dx
+
+    if x0 == x3:
+      #echo "skip"
       continue
 
-    var srcPos = p + dx * xStart.float32 + dy * y.float32
-    srcPos = vec2(srcPos.x - h, srcPos.y - h)
-    for x in xStart ..< xEnd:
-      sampleLine[x] = b.getRgbaSmooth(srcPos.x, srcPos.y)
-      srcPos += dx
 
+    let
+      xStart = x0
+      xEnd = x3
     case blendMode:
     of NormalBlend:
       blendLineNormal(
