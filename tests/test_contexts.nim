@@ -204,7 +204,7 @@ block:
   ctx.setTransform(mat3(1, 0.2, 0, 0.8, 1, 0, 0, 0, 1))
   ctx.fillRect(0, 0, 100, 100)
 
-  ctx.image.xray("tests/contexts/setTransform_1.png")
+  ctx.image.xray("tests/contexts/setTransform_0.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
