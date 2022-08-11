@@ -572,25 +572,21 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
       transform * vec2(b.width.float32, b.height.float32),
       transform * vec2(0, b.height.float32)
     ]
-    perimeter = [
-      segment(corners[0], corners[1]),
-      segment(corners[1], corners[2]),
-      segment(corners[2], corners[3]),
-      segment(corners[3], corners[0])
-    ]
     inverseTransform = transform.inverse()
     # Compute movement vectors
-    p = inverseTransform * vec2(0 + h, 0 + h)
-    dx = inverseTransform * vec2(1 + h, 0 + h) - p
-    dy = inverseTransform * vec2(0 + h, 1 + h) - p
+    p = inverseTransform * vec2(0, 0)
+    dx = inverseTransform * vec2(1, 0) - p
+    dy = inverseTransform * vec2(0, 1) - p
+
+  #echo "at", corners[0]
 
   # Determine where we should start and stop drawing in the y dimension
   var
     yStart = a.height
     yEnd = 0
-  for segment in perimeter:
-    yStart = min(yStart, segment.at.y.floor.int)
-    yEnd = max(yEnd, segment.at.y.ceil.int)
+  for corner in corners:
+    yStart = min(yStart, corner.y.floor.int)
+    yEnd = max(yEnd, corner.y.ceil.int)
   yStart = yStart.clamp(0, a.height)
   yEnd = yEnd.clamp(0, a.height)
 
@@ -601,78 +597,95 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
 
   for y in yStart ..< yEnd:
 
-    proc rangeScan(y: float32): (float32, float32) =
-      ## Determines where we should start and stop drawing in the x dimension
-      var
-        xMin = Nan.float32
-        xMax = Nan.float32
-      let scanLine = Line(
-        a: vec2(-1000, y),
-        b: vec2(1000, y)
-      )
-      for segment in perimeter:
-        var at: Vec2
-        if scanLine.intersects(segment, at) and segment.to != at:
-          xMin = min(xMin, at.x)
-          xMax = max(xMax, at.x)
-      return (xMin, xMax)
+    var
+      inner1x, inner1y, inner2x, inner2y: float32
+      outer1x, outer1y, outer2x, outer2y: float32
+      inner1, inner2: int
+      outer1, outer2: int
+
+    var srcPos = p + dy * y.float32 #- vec2(h, h)
 
     let
-      top = rangeScan(y.float32)
-      bottom = rangeScan(y.float32 + 1f)
+      width = b.width.float32
+      height = b.height.float32
 
-    var
-      x0 = clamp(min(top[0], bottom[0]).floor.int, 0, a.width)
-      x1 = clamp(max(top[0], bottom[0]).ceil.int, 0, a.width)
-      x2 = clamp(min(top[1], bottom[1]).floor.int, 0, a.width)
-      x3 = clamp(max(top[1], bottom[1]).ceil.int, 0, a.width)
+    if dx.x != 0:
+      # 1 = srcPos.x + dx * inner1x
+      inner1x = (1 - srcPos.x) / dx.x
+      # width - 1 = srcPos.x + dx * inner2x
+      inner2x = (width - 1 - srcPos.x) / dx.x
+      # -1 = srcPos.x + dx * outer1x
+      outer1x = -1 - srcPos.x / dx.x
+      # width + 1 = srcPos.x + dx * outer2x
+      outer2x = (width + 1 - srcPos.x) / dx.x
 
-    var srcPos = p + dx * x0.float32 + dy * y.float32 - vec2(h, h)
-    #srcPos = vec2(srcPos.x - h, srcPos.y - h)
+    if dx.y != 0:
+      # 1 = srcPos.y + dx * inner1y
+      inner1y = (1 - srcPos.y) / dx.y
+      # height - 1 = srcPos.y + dx * inner2x
+      inner2y = (height - 1 - srcPos.y) / dx.y
+      # -1 = srcPos.y + dx * outer1y
+      outer1y = -1 - srcPos.y / dx.y
+      # height + 1 = srcPos.y + dx * outer2y
+      outer2y = (height + 1 - srcPos.y) / dx.y
 
-    # if top[0].isNaN() or top[1].isNaN() or bottom[0].isNaN() or bottom[1].isNaN():
-    #   x0 = min(x0, x1)
-    #   x3 = max(x2, x3)
-    #   #echo x0, " .. ", x3
+    echo " X ", outer1x, " ... ", inner1x, " --- ", inner2x, " ... ", outer2x
+    echo " Y ", outer1y, " ... ", inner1y, " --- ", inner2y, " ... ", outer2y
 
-    #   for x in x0 ..< x3:
-    #     sampleLine[x] = b.getRgbaSmooth(srcPos.x, srcPos.y)
-    #     srcPos += dx
 
-    # else:
-    #   #echo x0, " .. ", x1, " -- ", x2, " .. ", x3
+    if dx.x == 0:
+      inner1 = inner1y.floor.int.clamp(0, a.width)
+      inner2 = inner2y.floor.int.clamp(0, a.width)
+      outer1 = outer1y.floor.int.clamp(0, a.width)
+      outer2 = outer2y.floor.int.clamp(0, a.width)
 
-    #   for x in x0 ..< x1:
-    #     sampleLine[x] = b.getRgbaSmooth(srcPos.x, srcPos.y)
-    #     srcPos += dx
+      if srcPos.x < 0 or srcPos.x >= (b.width - 1).float32:
+        inner1 = outer2
+        inner2 = outer2
 
-    #   for x in x1 ..< x2:
-    #     if srcPos.y < 0 or srcPos.x < 0:
-    #       echo x, ", ", y
-    #       echo srcPos
-    #       echo top
-    #       echo bottom
-    #       for ff in x ..< x2:
-    #         sampleLine[ff] = rgbx(255, 0, 0, 255) # red
-    #         srcPos += dx
-    #       quit()
-    #       break
+    elif dx.y == 0:
+      inner1 = inner1x.floor.int.clamp(0, a.width)
+      inner2 = inner2x.floor.int.clamp(0, a.width)
+      outer1 = outer1x.floor.int.clamp(0, a.width)
+      outer2 = outer2x.floor.int.clamp(0, a.width)
 
-    #     sampleLine[x] = b.getRgbaSmoothUnsafe(srcPos.x, srcPos.y)
-    #     srcPos += dx
+      if srcPos.y < 0 or srcPos.y >= (b.height - 1).float32:
+        inner1 = outer2
+        inner2 = outer2
 
-    #   for x in x2 ..< x3:
-    #     sampleLine[x] = b.getRgbaSmooth(srcPos.x, srcPos.y)
-    #     srcPos += dx
+    else:
+      inner1 = max(inner1x, inner1y).floor.int.clamp(0, a.width)
+      inner2 = min(inner2x, inner2y).floor.int.clamp(0, a.width)
+      outer1 = max(outer1x, outer1y).floor.int.clamp(0, a.width)
+      outer2 = min(outer2x, outer2y).floor.int.clamp(0, a.width)
 
-    if x0 == x3:
+    # for very small 1x1 sized images.
+    if inner1 < outer1:
+      inner1 = outer1
+    if inner2 > outer2:
+      inner2 = outer2
+
+    echo y, " : ", outer1, " ... ", inner1, " --- ", inner2, " ... ", outer2
+
+    for x in outer1 ..< inner1:
+      let srcPos2 = srcPos + dx * x.float32
+      sampleLine[x] = b.getRgbaSmooth(srcPos2.x, srcPos2.y)
+
+    for x in inner1 ..< inner2:
+      let srcPos2 = srcPos + dx * x.float32
+      sampleLine[x] = b.getRgbaSmoothUnsafe(srcPos2.x, srcPos2.y)
+
+    for x in inner2 ..< outer2:
+      let srcPos2 = srcPos + dx * x.float32
+      sampleLine[x] = b.getRgbaSmooth(srcPos2.x, srcPos2.y)
+
+
+    let
+      xStart = outer1
+      xEnd = outer2
+    if xStart >= xEnd:
       #echo "skip"
       continue
-
-
-    let
-      xStart = x0
-      xEnd = x3
     case blendMode:
     of NormalBlend:
       blendLineNormal(
