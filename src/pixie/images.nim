@@ -735,16 +735,16 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
       x3 = outerRange[1].ceil.int.clamp(0, a.width)
 
       var srcPos = p + dx * x0.float32 + dy * y.float32
-      for x in x0 ..< x1:
-        sampleLine[x - xStart] = b.getRgbaSmooth(srcPos.x, srcPos.y)
+      for x in x0 - xStart ..< x1 - xStart:
+        sampleLine[x] = b.getRgbaSmooth(srcPos.x, srcPos.y)
         srcPos += dx
 
-      for x in x1 ..< x2:
-        sampleLine[x - xStart] = b.getRgbaSmoothUnsafe(srcPos.x, srcPos.y)
+      for x in x1 - xStart ..< x2 - xStart:
+        sampleLine[x] = b.getRgbaSmoothUnsafe(srcPos.x, srcPos.y)
         srcPos += dx
 
-      for x in x2 ..< x3:
-        sampleLine[x - xStart] = b.getRgbaSmooth(srcPos.x, srcPos.y)
+      for x in x2 - xStart ..< x3 - xStart:
+        sampleLine[x] = b.getRgbaSmooth(srcPos.x, srcPos.y)
         srcPos += dx
 
     elif outerRange[2]:
@@ -752,8 +752,8 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
       x0 = outerRange[0].floor.int.clamp(0, a.width)
       x3 = outerRange[1].ceil.int.clamp(0, a.width)
       var srcPos = p + dx * x0.float32 + dy * y.float32
-      for x in x0 ..< x3:
-        sampleLine[x - xStart] = b.getRgbaSmooth(srcPos.x, srcPos.y)
+      for x in x0 - xStart ..< x3 - xStart:
+        sampleLine[x] = b.getRgbaSmooth(srcPos.x, srcPos.y)
         srcPos += dx
 
     elif innerRange[2]:
