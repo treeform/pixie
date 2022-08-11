@@ -649,24 +649,12 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
       transform * vec2(innerRect.x + innerRect.w, innerRect.y + innerRect.h),
       transform * vec2(innerRect.x, innerRect.y + innerRect.h)
     ]
-    innerPerimeter = [
-      segment(innerCorners[0], innerCorners[1]),
-      segment(innerCorners[1], innerCorners[2]),
-      segment(innerCorners[2], innerCorners[3]),
-      segment(innerCorners[3], innerCorners[0])
-    ]
     # Outer sampling region where safety is not guaranteed
     outerCorners = [
       transform * vec2(-1, -1),
       transform * vec2(b.width.float32, -1),
       transform * vec2(b.width.float32, b.height.float32),
       transform * vec2(-1, b.height.float32)
-    ]
-    outerPerimeter = [
-      segment(outerCorners[0], outerCorners[1]),
-      segment(outerCorners[1], outerCorners[2]),
-      segment(outerCorners[2], outerCorners[3]),
-      segment(outerCorners[3], outerCorners[0])
     ]
     inverseTransform = transform.inverse()
     # Compute movement vectors
@@ -676,19 +664,38 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
 
   # Determine where we should start and stop drawing in the y dimension
   var
-    xStart = min([outerCorners[0].x, outerCorners[1].x, outerCorners[2].x, outerCorners[3].x]).floor.int.clamp(0, a.width)
-    yStart = min([outerCorners[0].y, outerCorners[1].y, outerCorners[2].y, outerCorners[3].y]).floor.int.clamp(0, a.height)
-    xEnd = max([outerCorners[0].x, outerCorners[1].x, outerCorners[2].x, outerCorners[3].x]).ceil.int.clamp(0, a.width)
-    yEnd = max([outerCorners[0].y, outerCorners[1].y, outerCorners[2].y, outerCorners[3].y]).ceil.int.clamp(0, a.height)
+    xStart = min([
+      outerCorners[0].x,
+      outerCorners[1].x,
+      outerCorners[2].x,
+      outerCorners[3].x
+    ]).floor.int.clamp(0, a.width)
+    yStart = min([
+      outerCorners[0].y,
+      outerCorners[1].y,
+      outerCorners[2].y,
+      outerCorners[3].y
+    ]).floor.int.clamp(0, a.height)
+    xEnd = max([
+      outerCorners[0].x,
+      outerCorners[1].x,
+      outerCorners[2].x,
+      outerCorners[3].x
+    ]).ceil.int.clamp(0, a.width)
+    yEnd = max([
+      outerCorners[0].y,
+      outerCorners[1].y,
+      outerCorners[2].y,
+      outerCorners[3].y
+    ]).ceil.int.clamp(0, a.height)
 
-  if yStart >= yEnd:
-    return
-  if xStart >= xEnd:
+  # Nothing to draw probably out of bounds.
+  if xStart >= xEnd or yStart >= yEnd:
     return
 
   var sampleLine = newSeq[ColorRGBX](a.width)
 
-  proc rayScan(y: int, perimeter: array[4, Segment]): (float32, float32, bool) =
+  proc rayScan(y: int, corners: array[4, Vec2]): (float32, float32, bool) =
     var
       hit = false
       xMin = a.width.float32
@@ -697,7 +704,12 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
       a: vec2(-1000, y.float32),
       b: vec2(1000, y.float32)
     )
-    for segment in perimeter:
+    for segment in [
+      segment(corners[0], corners[1]),
+      segment(corners[1], corners[2]),
+      segment(corners[2], corners[3]),
+      segment(corners[3], corners[0])
+    ]:
       var at: Vec2
       if scanLine.intersects(segment, at) and segment.to != at:
         hit = true
@@ -709,8 +721,8 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
   for y in yStart ..< yEnd:
 
     let
-      innerRange = rayScan(y, innerPerimeter)
-      outerRange = rayScan(y, outerPerimeter)
+      innerRange = rayScan(y, innerCorners)
+      outerRange = rayScan(y, outerCorners)
 
     var
       x0, x1, x2, x3: int
@@ -718,8 +730,8 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
     if innerRange[2] and outerRange[2]:
       # Both inner and out edge present.
       x0 = outerRange[0].floor.int.clamp(0, a.width)
-      x1 = (innerRange[0]).ceil.int.clamp(0, a.width)
-      x2 = (innerRange[1]).floor.int.clamp(0, a.width)
+      x1 = innerRange[0].ceil.int.clamp(0, a.width)
+      x2 = innerRange[1].floor.int.clamp(0, a.width)
       x3 = outerRange[1].ceil.int.clamp(0, a.width)
 
       var srcPos = p + dx * x0.float32 + dy * y.float32
@@ -754,7 +766,6 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
     # If nothing was drawn there is nothing to blend
     if x0 == x3:
       continue
-
 
     let
       xStart = x0
