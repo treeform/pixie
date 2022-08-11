@@ -364,7 +364,7 @@ proc blur*(
         values += outOfBounds * kernel[yy - y + radius]
       image.unsafe[x, y] = rgbx(values)
 
-proc getRgbaSmooth*(
+proc getRgbaSmoothWrapped*(
   image: Image, x, y: float32, wrapped = false
 ): ColorRGBX {.raises: [].} =
   ## Gets a interpolated color with float point coordinates.
@@ -402,6 +402,58 @@ proc getRgbaSmooth*(
   else:
     topMix
 
+proc getRgbaSmooth*(
+  image: Image, x, y: float32
+): ColorRGBX {.raises: [].} =
+  ## Gets a interpolated color with float point coordinates.
+  ## Pixels outside the image are transparent.
+  let
+    x0 = x.floor.int
+    y0 = y.floor.int
+    x1 = x0 + 1
+    y1 = y0 + 1
+    xFractional = x - x.floor
+    yFractional = y - y.floor
+
+  if xFractional == 0 and yFractional == 0:
+    let x0y0 = image[x0, y0]
+    return x0y0
+  elif xFractional == 0:
+    let
+      x0y0 = image[x0, y0]
+      x0y1 = image[x0, y1]
+      topMix = x0y0
+      bottomMix = x0y1
+    result = topMix
+    if topMix != bottomMix:
+      result = mix(topMix, bottomMix, yFractional)
+  elif yFractional == 0:
+    let
+      x0y0 = image[x0, y0]
+      x1y0 = image[x1, y0]
+    var topMix = x0y0
+    if x0y0 != x1y0:
+      topMix = mix(x0y0, x1y0, xFractional)
+    result = topMix
+  else:
+    let
+      x0y0 = image[x0, y0]
+      x1y0 = image[x1, y0]
+      x0y1 = image[x0, y1]
+      x1y1 = image[x1, y1]
+
+    var topMix = x0y0
+    if x0y0 != x1y0:
+      topMix = mix(x0y0, x1y0, xFractional)
+
+    var bottomMix = x0y1
+    if x0y1 != x1y1:
+      bottomMix = mix(x0y1, x1y1, xFractional)
+
+    result = topMix
+    if topMix != bottomMix:
+      result = mix(topMix, bottomMix, yFractional)
+
 proc getRgbaSmoothUnsafe(
   image: Image, x, y: float32
 ): ColorRGBX {.raises: [].} =
@@ -415,28 +467,44 @@ proc getRgbaSmoothUnsafe(
     xFractional = x - x.floor
     yFractional = y - y.floor
 
-  let
-    x0y0 = image.unsafe[x0, y0]
-    x1y0 = image.unsafe[x1, y0]
-    x0y1 = image.unsafe[x0, y1]
-    x1y1 = image.unsafe[x1, y1]
-
-  # var topMix = mix(x0y0, x1y0, xFractional)
-  # var bottomMix = mix(x0y1, x1y1, xFractional)
-  # mix(topMix, bottomMix, yFractional)
-
-  var topMix = x0y0
-  if xFractional > 0 and x0y0 != x1y0:
-    topMix = mix(x0y0, x1y0, xFractional)
-
-  var bottomMix = x0y1
-  if xFractional > 0 and x0y1 != x1y1:
-    bottomMix = mix(x0y1, x1y1, xFractional)
-
-  if yFractional != 0 and topMix != bottomMix:
-    mix(topMix, bottomMix, yFractional)
+  if xFractional == 0 and yFractional == 0:
+    let x0y0 = image.unsafe[x0, y0]
+    return x0y0
+  elif xFractional == 0:
+    let
+      x0y0 = image.unsafe[x0, y0]
+      x0y1 = image.unsafe[x0, y1]
+      topMix = x0y0
+      bottomMix = x0y1
+    result = topMix
+    if topMix != bottomMix:
+      result = mix(topMix, bottomMix, yFractional)
+  elif yFractional == 0:
+    let
+      x0y0 = image.unsafe[x0, y0]
+      x1y0 = image.unsafe[x1, y0]
+    var topMix = x0y0
+    if x0y0 != x1y0:
+      topMix = mix(x0y0, x1y0, xFractional)
+    result = topMix
   else:
-    topMix
+    let
+      x0y0 = image.unsafe[x0, y0]
+      x1y0 = image.unsafe[x1, y0]
+      x0y1 = image.unsafe[x0, y1]
+      x1y1 = image.unsafe[x1, y1]
+
+    var topMix = x0y0
+    if x0y0 != x1y0:
+      topMix = mix(x0y0, x1y0, xFractional)
+
+    var bottomMix = x0y1
+    if x0y1 != x1y1:
+      bottomMix = mix(x0y1, x1y1, xFractional)
+
+    result = topMix
+    if topMix != bottomMix:
+      result = mix(topMix, bottomMix, yFractional)
 
 proc drawCorrect(
   a, b: Image, transform = mat3(), blendMode: BlendMode, tiled: bool
@@ -476,7 +544,7 @@ proc drawCorrect(
         xFloat = samplePos.x - h
         yFloat = samplePos.y - h
         backdrop = a.unsafe[x, y]
-        sample = b.getRgbaSmooth(xFloat, yFloat, tiled)
+        sample = b.getRgbaSmoothWrapped(xFloat, yFloat, tiled)
         blended = blender(backdrop, sample)
       a.unsafe[x, y] = blended
 
