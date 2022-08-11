@@ -565,12 +565,40 @@ proc blendRect(a, b: Image, pos: Ivec2, blendMode: BlendMode) =
       )
 
 proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
+
   let
-    corners = [
-      transform * vec2(0, 0),
-      transform * vec2(b.width.float32, 0),
+    # Inner sampling region where is safe to be unsafe
+    k = 1/4f # Safety margin.
+    innerRect = rect(
+      k,
+      k,
+      max(b.width.float32 - 1 - k * 2, 0),
+      max(b.height.float32 - 1 - k * 2, 0)
+    )
+    innerCorners = [
+      transform * vec2(innerRect.x, innerRect.y),
+      transform * vec2(innerRect.x + innerRect.w, innerRect.y),
+      transform * vec2(innerRect.x + innerRect.w, innerRect.y + innerRect.h),
+      transform * vec2(innerRect.x, innerRect.y + innerRect.h)
+    ]
+    innerPerimeter = [
+      segment(innerCorners[0], innerCorners[1]),
+      segment(innerCorners[1], innerCorners[2]),
+      segment(innerCorners[2], innerCorners[3]),
+      segment(innerCorners[3], innerCorners[0])
+    ]
+    # Outer sampling region where safety is not guaranteed
+    outerCorners = [
+      transform * vec2(-1, -1),
+      transform * vec2(b.width.float32, -1),
       transform * vec2(b.width.float32, b.height.float32),
-      transform * vec2(0, b.height.float32)
+      transform * vec2(-1, b.height.float32)
+    ]
+    outerPerimeter = [
+      segment(outerCorners[0], outerCorners[1]),
+      segment(outerCorners[1], outerCorners[2]),
+      segment(outerCorners[2], outerCorners[3]),
+      segment(outerCorners[3], outerCorners[0])
     ]
     inverseTransform = transform.inverse()
     # Compute movement vectors
@@ -578,114 +606,91 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
     dx = inverseTransform * vec2(1, 0) - p
     dy = inverseTransform * vec2(0, 1) - p
 
-  #echo "at", corners[0]
-
   # Determine where we should start and stop drawing in the y dimension
   var
-    yStart = a.height
-    yEnd = 0
-  for corner in corners:
-    yStart = min(yStart, corner.y.floor.int)
-    yEnd = max(yEnd, corner.y.ceil.int)
-  yStart = yStart.clamp(0, a.height)
-  yEnd = yEnd.clamp(0, a.height)
+    xStart = min([outerCorners[0].x, outerCorners[1].x, outerCorners[2].x, outerCorners[3].x]).floor.int.clamp(0, a.width)
+    yStart = min([outerCorners[0].y, outerCorners[1].y, outerCorners[2].y, outerCorners[3].y]).floor.int.clamp(0, a.height)
+    xEnd = max([outerCorners[0].x, outerCorners[1].x, outerCorners[2].x, outerCorners[3].x]).ceil.int.clamp(0, a.width)
+    yEnd = max([outerCorners[0].y, outerCorners[1].y, outerCorners[2].y, outerCorners[3].y]).ceil.int.clamp(0, a.height)
 
-  if blendMode == MaskBlend and yStart > 0:
-    zeroMem(a.data[0].addr, yStart * a.width * 4)
+  if yStart >= yEnd:
+    return
+  if xStart >= xEnd:
+    return
 
   var sampleLine = newSeq[ColorRGBX](a.width)
 
+  proc rayScan(y: int, perimeter: array[4, Segment]): (float32, float32, bool) =
+    var
+      hit = false
+      xMin = a.width.float32
+      xMax = 0.float32
+    let scanLine = Line(
+      a: vec2(-1000, y.float32),
+      b: vec2(1000, y.float32)
+    )
+    for segment in perimeter:
+      var at: Vec2
+      if scanLine.intersects(segment, at) and segment.to != at:
+        hit = true
+        xMin = min(xMin, at.x)
+        xMax = max(xMax, at.x)
+
+    return (xMin, xMax, hit)
+
   for y in yStart ..< yEnd:
 
-    var
-      inner1x, inner1y, inner2x, inner2y: float32
-      outer1x, outer1y, outer2x, outer2y: float32
-      inner1, inner2: int
-      outer1, outer2: int
-
-    var srcPos = p + dy * y.float32 #- vec2(h, h)
-
     let
-      width = b.width.float32
-      height = b.height.float32
+      innerRange = rayScan(y, innerPerimeter)
+      outerRange = rayScan(y, outerPerimeter)
 
-    if dx.x != 0:
-      # 1 = srcPos.x + dx * inner1x
-      inner1x = (1 - srcPos.x) / dx.x
-      # width - 1 = srcPos.x + dx * inner2x
-      inner2x = (width - 1 - srcPos.x) / dx.x
-      # -1 = srcPos.x + dx * outer1x
-      outer1x = -1 - srcPos.x / dx.x
-      # width + 1 = srcPos.x + dx * outer2x
-      outer2x = (width + 1 - srcPos.x) / dx.x
+    var
+      x0, x1, x2, x3: int
 
-    if dx.y != 0:
-      # 1 = srcPos.y + dx * inner1y
-      inner1y = (1 - srcPos.y) / dx.y
-      # height - 1 = srcPos.y + dx * inner2x
-      inner2y = (height - 1 - srcPos.y) / dx.y
-      # -1 = srcPos.y + dx * outer1y
-      outer1y = -1 - srcPos.y / dx.y
-      # height + 1 = srcPos.y + dx * outer2y
-      outer2y = (height + 1 - srcPos.y) / dx.y
+    if innerRange[2] and outerRange[2]:
+      # Both inner and out edge present.
+      x0 = outerRange[0].floor.int.clamp(0, a.width)
+      x1 = (innerRange[0]).ceil.int.clamp(0, a.width)
+      x2 = (innerRange[1]).floor.int.clamp(0, a.width)
+      x3 = outerRange[1].ceil.int.clamp(0, a.width)
 
-    echo " X ", outer1x, " ... ", inner1x, " --- ", inner2x, " ... ", outer2x
-    echo " Y ", outer1y, " ... ", inner1y, " --- ", inner2y, " ... ", outer2y
+      var srcPos = p + dx * x0.float32 + dy * y.float32
+      for x in x0 ..< x1:
+        sampleLine[x] = b.getRgbaSmooth(srcPos.x, srcPos.y)
+        srcPos += dx
 
+      for x in x1 ..< x2:
+        sampleLine[x] = b.getRgbaSmoothUnsafe(srcPos.x, srcPos.y)
+        srcPos += dx
 
-    if dx.x == 0:
-      inner1 = inner1y.floor.int.clamp(0, a.width)
-      inner2 = inner2y.floor.int.clamp(0, a.width)
-      outer1 = outer1y.floor.int.clamp(0, a.width)
-      outer2 = outer2y.floor.int.clamp(0, a.width)
+      for x in x2 ..< x3:
+        sampleLine[x] = b.getRgbaSmooth(srcPos.x, srcPos.y)
+        srcPos += dx
 
-      if srcPos.x < 0 or srcPos.x >= (b.width - 1).float32:
-        inner1 = outer2
-        inner2 = outer2
+    elif outerRange[2]:
+      # Only the outer edge present, probably top or bottom.
+      x0 = outerRange[0].floor.int.clamp(0, a.width)
+      x3 = outerRange[1].ceil.int.clamp(0, a.width)
+      var srcPos = p + dx * x0.float32 + dy * y.float32
+      for x in x0 ..< x3:
+        sampleLine[x] = b.getRgbaSmooth(srcPos.x, srcPos.y)
+        srcPos += dx
 
-    elif dx.y == 0:
-      inner1 = inner1x.floor.int.clamp(0, a.width)
-      inner2 = inner2x.floor.int.clamp(0, a.width)
-      outer1 = outer1x.floor.int.clamp(0, a.width)
-      outer2 = outer2x.floor.int.clamp(0, a.width)
-
-      if srcPos.y < 0 or srcPos.y >= (b.height - 1).float32:
-        inner1 = outer2
-        inner2 = outer2
+    elif innerRange[2]:
+      quit("should never happen")
 
     else:
-      inner1 = max(inner1x, inner1y).floor.int.clamp(0, a.width)
-      inner2 = min(inner2x, inner2y).floor.int.clamp(0, a.width)
-      outer1 = max(outer1x, outer1y).floor.int.clamp(0, a.width)
-      outer2 = min(outer2x, outer2y).floor.int.clamp(0, a.width)
+      # The edge of the transparent edge
+      continue
 
-    # for very small 1x1 sized images.
-    if inner1 < outer1:
-      inner1 = outer1
-    if inner2 > outer2:
-      inner2 = outer2
-
-    echo y, " : ", outer1, " ... ", inner1, " --- ", inner2, " ... ", outer2
-
-    for x in outer1 ..< inner1:
-      let srcPos2 = srcPos + dx * x.float32
-      sampleLine[x] = b.getRgbaSmooth(srcPos2.x, srcPos2.y)
-
-    for x in inner1 ..< inner2:
-      let srcPos2 = srcPos + dx * x.float32
-      sampleLine[x] = b.getRgbaSmoothUnsafe(srcPos2.x, srcPos2.y)
-
-    for x in inner2 ..< outer2:
-      let srcPos2 = srcPos + dx * x.float32
-      sampleLine[x] = b.getRgbaSmooth(srcPos2.x, srcPos2.y)
+    # If nothing was drawn there is nothing to blend
+    if x0 == x3:
+      continue
 
 
     let
-      xStart = outer1
-      xEnd = outer2
-    if xStart >= xEnd:
-      #echo "skip"
-      continue
+      xStart = x0
+      xEnd = x3
     case blendMode:
     of NormalBlend:
       blendLineNormal(
