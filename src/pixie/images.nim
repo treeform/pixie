@@ -364,7 +364,7 @@ proc blur*(
         values += outOfBounds * kernel[yy - y + radius]
       image.unsafe[x, y] = rgbx(values)
 
-proc getRgbaSmooth*(
+proc getRgbaSmoothWrapped*(
   image: Image, x, y: float32, wrapped = false
 ): ColorRGBX {.raises: [].} =
   ## Gets a interpolated color with float point coordinates.
@@ -402,6 +402,58 @@ proc getRgbaSmooth*(
   else:
     topMix
 
+proc getRgbaSmooth*(
+  image: Image, x, y: float32
+): ColorRGBX {.raises: [].} =
+  ## Gets a interpolated color with float point coordinates.
+  ## Pixels outside the image are transparent.
+  let
+    x0 = x.floor.int
+    y0 = y.floor.int
+    x1 = x0 + 1
+    y1 = y0 + 1
+    xFractional = x - x.floor
+    yFractional = y - y.floor
+
+  if xFractional == 0 and yFractional == 0:
+    let x0y0 = image[x0, y0]
+    return x0y0
+  elif xFractional == 0:
+    let
+      x0y0 = image[x0, y0]
+      x0y1 = image[x0, y1]
+      topMix = x0y0
+      bottomMix = x0y1
+    result = topMix
+    if topMix != bottomMix:
+      result = mix(topMix, bottomMix, yFractional)
+  elif yFractional == 0:
+    let
+      x0y0 = image[x0, y0]
+      x1y0 = image[x1, y0]
+    var topMix = x0y0
+    if x0y0 != x1y0:
+      topMix = mix(x0y0, x1y0, xFractional)
+    result = topMix
+  else:
+    let
+      x0y0 = image[x0, y0]
+      x1y0 = image[x1, y0]
+      x0y1 = image[x0, y1]
+      x1y1 = image[x1, y1]
+
+    var topMix = x0y0
+    if xFractional > 0 and x0y0 != x1y0:
+      topMix = mix(x0y0, x1y0, xFractional)
+
+    var bottomMix = x0y1
+    if xFractional > 0 and x0y1 != x1y1:
+      bottomMix = mix(x0y1, x1y1, xFractional)
+
+    result = topMix
+    if yFractional != 0 and topMix != bottomMix:
+      result = mix(topMix, bottomMix, yFractional)
+
 proc getRgbaSmoothUnsafe(
   image: Image, x, y: float32
 ): ColorRGBX {.raises: [].} =
@@ -415,28 +467,44 @@ proc getRgbaSmoothUnsafe(
     xFractional = x - x.floor
     yFractional = y - y.floor
 
-  let
-    x0y0 = image.unsafe[x0, y0]
-    x1y0 = image.unsafe[x1, y0]
-    x0y1 = image.unsafe[x0, y1]
-    x1y1 = image.unsafe[x1, y1]
-
-  # var topMix = mix(x0y0, x1y0, xFractional)
-  # var bottomMix = mix(x0y1, x1y1, xFractional)
-  # mix(topMix, bottomMix, yFractional)
-
-  var topMix = x0y0
-  if xFractional > 0 and x0y0 != x1y0:
-    topMix = mix(x0y0, x1y0, xFractional)
-
-  var bottomMix = x0y1
-  if xFractional > 0 and x0y1 != x1y1:
-    bottomMix = mix(x0y1, x1y1, xFractional)
-
-  if yFractional != 0 and topMix != bottomMix:
-    mix(topMix, bottomMix, yFractional)
+  if xFractional == 0 and yFractional == 0:
+    let x0y0 = image.unsafe[x0, y0]
+    return x0y0
+  elif xFractional == 0:
+    let
+      x0y0 = image.unsafe[x0, y0]
+      x0y1 = image.unsafe[x0, y1]
+      topMix = x0y0
+      bottomMix = x0y1
+    result = topMix
+    if topMix != bottomMix:
+      result = mix(topMix, bottomMix, yFractional)
+  elif yFractional == 0:
+    let
+      x0y0 = image.unsafe[x0, y0]
+      x1y0 = image.unsafe[x1, y0]
+    var topMix = x0y0
+    if x0y0 != x1y0:
+      topMix = mix(x0y0, x1y0, xFractional)
+    result = topMix
   else:
-    topMix
+    let
+      x0y0 = image.unsafe[x0, y0]
+      x1y0 = image.unsafe[x1, y0]
+      x0y1 = image.unsafe[x0, y1]
+      x1y1 = image.unsafe[x1, y1]
+
+    var topMix = x0y0
+    if xFractional > 0 and x0y0 != x1y0:
+      topMix = mix(x0y0, x1y0, xFractional)
+
+    var bottomMix = x0y1
+    if xFractional > 0 and x0y1 != x1y1:
+      bottomMix = mix(x0y1, x1y1, xFractional)
+
+    result = topMix
+    if yFractional != 0 and topMix != bottomMix:
+      result = mix(topMix, bottomMix, yFractional)
 
 proc drawCorrect(
   a, b: Image, transform = mat3(), blendMode: BlendMode, tiled: bool
@@ -476,7 +544,7 @@ proc drawCorrect(
         xFloat = samplePos.x - h
         yFloat = samplePos.y - h
         backdrop = a.unsafe[x, y]
-        sample = b.getRgbaSmooth(xFloat, yFloat, tiled)
+        sample = b.getRgbaSmoothWrapped(xFloat, yFloat, tiled)
         blended = blender(backdrop, sample)
       a.unsafe[x, y] = blended
 
@@ -580,24 +648,12 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
       transform * vec2(innerRect.x + innerRect.w, innerRect.y + innerRect.h),
       transform * vec2(innerRect.x, innerRect.y + innerRect.h)
     ]
-    innerPerimeter = [
-      segment(innerCorners[0], innerCorners[1]),
-      segment(innerCorners[1], innerCorners[2]),
-      segment(innerCorners[2], innerCorners[3]),
-      segment(innerCorners[3], innerCorners[0])
-    ]
     # Outer sampling region where safety is not guaranteed
     outerCorners = [
       transform * vec2(-1, -1),
       transform * vec2(b.width.float32, -1),
       transform * vec2(b.width.float32, b.height.float32),
       transform * vec2(-1, b.height.float32)
-    ]
-    outerPerimeter = [
-      segment(outerCorners[0], outerCorners[1]),
-      segment(outerCorners[1], outerCorners[2]),
-      segment(outerCorners[2], outerCorners[3]),
-      segment(outerCorners[3], outerCorners[0])
     ]
     inverseTransform = transform.inverse()
     # Compute movement vectors
@@ -632,14 +688,13 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
       outerCorners[3].y
     ]).ceil.int.clamp(0, a.height)
 
-  if yStart >= yEnd:
-    return
-  if xStart >= xEnd:
+  # Nothing to draw probably out of bounds.
+  if xStart >= xEnd or yStart >= yEnd:
     return
 
-  var sampleLine = newSeq[ColorRGBX](a.width)
+  var sampleLine = newSeq[ColorRGBX](xEnd - xStart)
 
-  proc rayScan(y: int, perimeter: array[4, Segment]): (float32, float32, bool) =
+  proc rayScan(y: int, corners: array[4, Vec2]): (float32, float32, bool) =
     var
       hit = false
       xMin = a.width.float32
@@ -648,41 +703,43 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
       a: vec2(-1000, y.float32),
       b: vec2(1000, y.float32)
     )
-    for segment in perimeter:
+    for segment in [
+      segment(corners[0], corners[1]),
+      segment(corners[1], corners[2]),
+      segment(corners[2], corners[3]),
+      segment(corners[3], corners[0])
+    ]:
       var at: Vec2
       if scanLine.intersects(segment, at) and segment.to != at:
         hit = true
         xMin = min(xMin, at.x)
         xMax = max(xMax, at.x)
-
     return (xMin, xMax, hit)
 
   for y in yStart ..< yEnd:
-
     let
-      innerRange = rayScan(y, innerPerimeter)
-      outerRange = rayScan(y, outerPerimeter)
-
+      innerRange = rayScan(y, innerCorners)
+      outerRange = rayScan(y, outerCorners)
     var
       x0, x1, x2, x3: int
 
     if innerRange[2] and outerRange[2]:
       # Both inner and out edge present.
       x0 = outerRange[0].floor.int.clamp(0, a.width)
-      x1 = (innerRange[0]).ceil.int.clamp(0, a.width)
-      x2 = (innerRange[1]).floor.int.clamp(0, a.width)
+      x1 = innerRange[0].ceil.int.clamp(0, a.width)
+      x2 = innerRange[1].floor.int.clamp(0, a.width)
       x3 = outerRange[1].ceil.int.clamp(0, a.width)
-
       var srcPos = p + dx * x0.float32 + dy * y.float32
-      for x in x0 ..< x1:
+
+      for x in x0 - xStart ..< x1 - xStart:
         sampleLine[x] = b.getRgbaSmooth(srcPos.x, srcPos.y)
         srcPos += dx
 
-      for x in x1 ..< x2:
+      for x in x1 - xStart ..< x2 - xStart:
         sampleLine[x] = b.getRgbaSmoothUnsafe(srcPos.x, srcPos.y)
         srcPos += dx
 
-      for x in x2 ..< x3:
+      for x in x2 - xStart ..< x3 - xStart:
         sampleLine[x] = b.getRgbaSmooth(srcPos.x, srcPos.y)
         srcPos += dx
 
@@ -691,12 +748,14 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
       x0 = outerRange[0].floor.int.clamp(0, a.width)
       x3 = outerRange[1].ceil.int.clamp(0, a.width)
       var srcPos = p + dx * x0.float32 + dy * y.float32
-      for x in x0 ..< x3:
+
+      for x in x0 - xStart ..< x3 - xStart:
         sampleLine[x] = b.getRgbaSmooth(srcPos.x, srcPos.y)
         srcPos += dx
 
     elif innerRange[2]:
-      quit("should never happen")
+      # should never happen
+      continue
 
     else:
       # The edge of the transparent edge
@@ -713,14 +772,14 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
     of NormalBlend:
       blendLineNormal(
         a.getUncheckedArray(xStart, y),
-        cast[ptr UncheckedArray[ColorRGBX]](sampleLine[xStart].addr),
+        cast[ptr UncheckedArray[ColorRGBX]](sampleLine[0].addr),
         xEnd - xStart
       )
 
     of OverwriteBlend:
       blendLineOverwrite(
         a.getUncheckedArray(xStart, y),
-        cast[ptr UncheckedArray[ColorRGBX]](sampleLine[xStart].addr),
+        cast[ptr UncheckedArray[ColorRGBX]](sampleLine[0].addr),
         xEnd - xStart
       )
 
@@ -731,7 +790,7 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
 
       blendLineMask(
         a.getUncheckedArray(xStart, y),
-        cast[ptr UncheckedArray[ColorRGBX]](sampleLine[xStart].addr),
+        cast[ptr UncheckedArray[ColorRGBX]](sampleLine[0].addr),
         xEnd - xStart
       )
 
@@ -740,7 +799,7 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
     else:
       blendLine(
         a.getUncheckedArray(xStart, y),
-        cast[ptr UncheckedArray[ColorRGBX]](sampleLine[xStart].addr),
+        cast[ptr UncheckedArray[ColorRGBX]](sampleLine[0].addr),
         xEnd - xStart,
         blendMode.blender()
       )
