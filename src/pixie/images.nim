@@ -565,7 +565,6 @@ proc blendRect(a, b: Image, pos: Ivec2, blendMode: BlendMode) =
       )
 
 proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
-
   let
     # Inner sampling region where is safe to be unsafe
     k = 1/4f # Safety margin.
@@ -608,10 +607,30 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
 
   # Determine where we should start and stop drawing in the y dimension
   var
-    xStart = min([outerCorners[0].x, outerCorners[1].x, outerCorners[2].x, outerCorners[3].x]).floor.int.clamp(0, a.width)
-    yStart = min([outerCorners[0].y, outerCorners[1].y, outerCorners[2].y, outerCorners[3].y]).floor.int.clamp(0, a.height)
-    xEnd = max([outerCorners[0].x, outerCorners[1].x, outerCorners[2].x, outerCorners[3].x]).ceil.int.clamp(0, a.width)
-    yEnd = max([outerCorners[0].y, outerCorners[1].y, outerCorners[2].y, outerCorners[3].y]).ceil.int.clamp(0, a.height)
+    xStart = min([
+      outerCorners[0].x,
+      outerCorners[1].x,
+      outerCorners[2].x,
+      outerCorners[3].x
+    ]).floor.int.clamp(0, a.width)
+    yStart = min([
+      outerCorners[0].y,
+      outerCorners[1].y,
+      outerCorners[2].y,
+      outerCorners[3].y
+    ]).floor.int.clamp(0, a.height)
+    xEnd = max([
+      outerCorners[0].x,
+      outerCorners[1].x,
+      outerCorners[2].x,
+      outerCorners[3].x
+    ]).ceil.int.clamp(0, a.width)
+    yEnd = max([
+      outerCorners[0].y,
+      outerCorners[1].y,
+      outerCorners[2].y,
+      outerCorners[3].y
+    ]).ceil.int.clamp(0, a.height)
 
   if yStart >= yEnd:
     return
@@ -686,7 +705,6 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
     # If nothing was drawn there is nothing to blend
     if x0 == x3:
       continue
-
 
     let
       xStart = x0
