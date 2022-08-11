@@ -693,7 +693,7 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
   if xStart >= xEnd or yStart >= yEnd:
     return
 
-  var sampleLine = newSeq[ColorRGBX](a.width)
+  var sampleLine = newSeq[ColorRGBX](xEnd - xStart)
 
   proc rayScan(y: int, corners: array[4, Vec2]): (float32, float32, bool) =
     var
@@ -736,15 +736,15 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
 
       var srcPos = p + dx * x0.float32 + dy * y.float32
       for x in x0 ..< x1:
-        sampleLine[x] = b.getRgbaSmooth(srcPos.x, srcPos.y)
+        sampleLine[x - xStart] = b.getRgbaSmooth(srcPos.x, srcPos.y)
         srcPos += dx
 
       for x in x1 ..< x2:
-        sampleLine[x] = b.getRgbaSmoothUnsafe(srcPos.x, srcPos.y)
+        sampleLine[x - xStart] = b.getRgbaSmoothUnsafe(srcPos.x, srcPos.y)
         srcPos += dx
 
       for x in x2 ..< x3:
-        sampleLine[x] = b.getRgbaSmooth(srcPos.x, srcPos.y)
+        sampleLine[x - xStart] = b.getRgbaSmooth(srcPos.x, srcPos.y)
         srcPos += dx
 
     elif outerRange[2]:
@@ -753,11 +753,12 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
       x3 = outerRange[1].ceil.int.clamp(0, a.width)
       var srcPos = p + dx * x0.float32 + dy * y.float32
       for x in x0 ..< x3:
-        sampleLine[x] = b.getRgbaSmooth(srcPos.x, srcPos.y)
+        sampleLine[x - xStart] = b.getRgbaSmooth(srcPos.x, srcPos.y)
         srcPos += dx
 
     elif innerRange[2]:
-      quit("should never happen")
+      # should never happen
+      continue
 
     else:
       # The edge of the transparent edge
@@ -768,41 +769,42 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
       continue
 
     let
-      xStart = x0
-      xEnd = x3
+      sampleStart = x0 - xStart
+      xFillStart = x0
+      xFillEnd = x3
     case blendMode:
     of NormalBlend:
       blendLineNormal(
-        a.getUncheckedArray(xStart, y),
-        cast[ptr UncheckedArray[ColorRGBX]](sampleLine[xStart].addr),
-        xEnd - xStart
+        a.getUncheckedArray(xFillStart, y),
+        cast[ptr UncheckedArray[ColorRGBX]](sampleLine[sampleStart].addr),
+        xFillEnd - xFillStart
       )
 
     of OverwriteBlend:
       blendLineOverwrite(
-        a.getUncheckedArray(xStart, y),
-        cast[ptr UncheckedArray[ColorRGBX]](sampleLine[xStart].addr),
-        xEnd - xStart
+        a.getUncheckedArray(xFillStart, y),
+        cast[ptr UncheckedArray[ColorRGBX]](sampleLine[sampleStart].addr),
+        xFillEnd - xFillStart
       )
 
     of MaskBlend:
       {.linearScanEnd.}
-      if blendMode == MaskBlend and xStart > 0:
-        zeroMem(a.data[a.dataIndex(0, y)].addr, xStart * 4)
+      if blendMode == MaskBlend and xFillStart > 0:
+        zeroMem(a.data[a.dataIndex(0, y)].addr, xFillStart * 4)
 
       blendLineMask(
-        a.getUncheckedArray(xStart, y),
-        cast[ptr UncheckedArray[ColorRGBX]](sampleLine[xStart].addr),
-        xEnd - xStart
+        a.getUncheckedArray(xFillStart, y),
+        cast[ptr UncheckedArray[ColorRGBX]](sampleLine[sampleStart].addr),
+        xFillEnd - xFillStart
       )
 
-      if blendMode == MaskBlend and a.width - xEnd > 0:
-        zeroMem(a.data[a.dataIndex(xEnd, y)].addr, (a.width - xEnd) * 4)
+      if blendMode == MaskBlend and a.width - xFillEnd > 0:
+        zeroMem(a.data[a.dataIndex(xFillEnd, y)].addr, (a.width - xFillEnd) * 4)
     else:
       blendLine(
-        a.getUncheckedArray(xStart, y),
-        cast[ptr UncheckedArray[ColorRGBX]](sampleLine[xStart].addr),
-        xEnd - xStart,
+        a.getUncheckedArray(xFillStart, y),
+        cast[ptr UncheckedArray[ColorRGBX]](sampleLine[sampleStart].addr),
+        xFillEnd - xFillStart,
         blendMode.blender()
       )
 
