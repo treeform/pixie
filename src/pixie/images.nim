@@ -633,10 +633,11 @@ proc blendRect(a, b: Image, pos: Ivec2, blendMode: BlendMode) =
       )
 
 proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
-
   let
+    # Adjust transform
+    # transform = translate(vec2(-1, 1)) * transform * translate(vec2(-1, 1))
     # Inner sampling region where is safe to be unsafe
-    k = 1/4f # Safety margin.
+    k = 1f # Safety margin.
     innerRect = rect(
       k,
       k,
@@ -650,11 +651,12 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
       transform * vec2(innerRect.x, innerRect.y + innerRect.h)
     ]
     # Outer sampling region where safety is not guaranteed
+    j = 1f
     outerCorners = [
-      transform * vec2(-1, -1),
-      transform * vec2(b.width.float32, -1),
-      transform * vec2(b.width.float32, b.height.float32),
-      transform * vec2(-1, b.height.float32)
+      transform * vec2(-j, -j),
+      transform * vec2(b.width.float32 - 1 + j, -j),
+      transform * vec2(b.width.float32 - 1 + j, b.height.float32 - 1 + j),
+      transform * vec2(-j, b.height.float32 - 1 + j)
     ]
     inverseTransform = transform.inverse()
     # Compute movement vectors
@@ -733,6 +735,9 @@ proc drawSmooth(a, b: Image, transform: Mat3, blendMode: BlendMode) =
       x1 = innerRange[0].ceil.int.clamp(0, a.width)
       x2 = innerRange[1].floor.int.clamp(0, a.width)
       x3 = outerRange[1].ceil.int.clamp(0, a.width)
+
+      # Some times middles overlap, fix it:
+      if x1 > x2: x1 = x2
 
       var srcPos = p + dx * x0.float32 + dy * y.float32
       for x in x0 - xStart ..< x1 - xStart:
