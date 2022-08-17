@@ -1056,7 +1056,7 @@ proc commandsToShapes*(
       shape.addSegment(at, start)
     result.add(shape)
 
-proc shapesToSegments*(shapes: seq[Polygon]): seq[(Segment, int16)] =
+proc shapesToSegments(shapes: seq[Polygon]): seq[(Segment, int16)] =
   ## Converts the shapes into a set of filtered segments with winding value.
 
   # Quantize the segment to prevent leaks
