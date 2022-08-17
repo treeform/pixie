@@ -651,7 +651,7 @@ proc polygon*(
   ## Adds a n-sided regular polygon at (x, y) with the parameter size.
   path.polygon(pos.x, pos.y, size, sides)
 
-proc commandsToShapes(
+proc commandsToShapes*(
   path: Path, closeSubpaths: bool, pixelScale: float32
 ): seq[Polygon] =
   ## Converts SVG-like commands to sequences of vectors.
@@ -1056,7 +1056,7 @@ proc commandsToShapes(
       shape.addSegment(at, start)
     result.add(shape)
 
-proc shapesToSegments(shapes: seq[Polygon]): seq[(Segment, int16)] =
+proc shapesToSegments*(shapes: seq[Polygon]): seq[(Segment, int16)] =
   ## Converts the shapes into a set of filtered segments with winding value.
 
   # Quantize the segment to prevent leaks
