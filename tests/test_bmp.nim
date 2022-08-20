@@ -1,4 +1,4 @@
-import os, pixie/fileformats/bmp
+import os, pixie, pixie/fileformats/bmp
 
 # block:
 #   var image = newImage(4, 2)
@@ -52,3 +52,13 @@ block:
     #image.writeFile(file.replace("bmpsuite", "output") & ".png")
     doAssert image.width == dimensions.width
     doAssert image.height == dimensions.height
+
+block:
+  let image = newImage(100, 100)
+  image.fill(color(1, 0, 0, 1))
+
+  let
+    encoded = encodeDib(image)
+    decoded = decodeDib(encoded.cstring, encoded.len, true)
+
+  doAssert image.data == decoded.data
