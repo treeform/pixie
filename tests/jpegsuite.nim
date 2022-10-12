@@ -45,4 +45,6 @@ const jpegSuiteFiles* = [
   "tests/fileformats/jpeg/masters/f6-exif.jpg",
   "tests/fileformats/jpeg/masters/f7-exif.jpg",
   "tests/fileformats/jpeg/masters/f8-exif.jpg",
+
+  "tests/fileformats/jpeg/masters/restartmarker.jpg",
 ]
