@@ -19,3 +19,7 @@ jobs:
     - run: nimble test --gc:arc -d:release -d:pixieNoSimd -y
     - run: nimble test --gc:orc -d:release -y
     - run: nim cpp --gc:orc -d:release -r tests/all.nim
+      if: runner.os != 'macOS'
+    - run: nim cpp --gc:orc -d:release -d:pixieNoSimd -d:zippyNoSimd -r tests/all.nim
+      if: runner.os == 'macOS'
+    
