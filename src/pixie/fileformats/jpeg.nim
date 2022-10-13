@@ -877,7 +877,6 @@ proc checkRestart(state: var DecoderState) =
   dec state.todoBeforeRestart
   if state.todoBeforeRestart <= 0:
     if state.pos + 1 > state.len:
-      echo $state
       failInvalid()
     if state.buffer[state.pos] == 0xFF and state.buffer[state.pos+1] == jpegEndOfImage:
       return
