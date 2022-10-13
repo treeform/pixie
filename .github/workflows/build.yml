@@ -2,19 +2,21 @@ name: Github Actions
 on: [push, pull_request]
 jobs:
   build:
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        nim-version: ['1.4.x', 'stable']
+        nim-version: ['1.4', 'stable']
 
     runs-on: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v2
-    - uses: jiro4989/setup-nim-action@v1
+    - uses: iffy/install-nim@v4
       with:
-        nim-version: ${{ matrix.nim-version }}
+        version: ${{ matrix.nim-version }}
     - run: nimble test --gc:arc -d:release -y
     - run: nimble test --gc:arc -d:release -d:pixieNoSimd -y
     - run: nimble test --gc:orc -d:release -y
