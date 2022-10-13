@@ -39,6 +39,7 @@ const
     0.uint32, 1, 3, 7, 15, 31, 63, 127, 255, 511,
     1023, 2047, 4095, 8191, 16383, 32767, 65535
   ]
+  jpegEndOfImage = 0xD9
 
 type
   Huffman = object
@@ -876,7 +877,10 @@ proc checkRestart(state: var DecoderState) =
   dec state.todoBeforeRestart
   if state.todoBeforeRestart <= 0:
     if state.pos + 1 > state.len:
+      echo $state
       failInvalid()
+    if state.buffer[state.pos] == 0xFF and state.buffer[state.pos+1] == jpegEndOfImage:
+      return
     if state.buffer[state.pos] != 0xFF or
       state.buffer[state.pos + 1] notin {0xD0 .. 0xD7}:
       failInvalid("did not get expected restart marker")
