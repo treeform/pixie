@@ -224,11 +224,9 @@ proc copy*(font: Font): Font {.raises: [].} =
   result.strikethrough = font.strikethrough
   result.noKerningAdjustments = font.noKerningAdjustments
 
-proc newSpan*(text: string, font: Font): Span {.raises: [].} =
+proc newSpan*(text: sink string, font: Font): Span {.raises: [].} =
   ## Creates a span, associating a font with the text.
-  result = Span()
-  result.text = text
-  result.font = font
+  result = Span(text: text, font: font)
 
 proc convertTextCase(runes: var seq[Rune], textCase: TextCase) =
   case textCase:
@@ -251,7 +249,7 @@ proc canWrap(rune: Rune): bool {.inline.} =
   rune == Rune(32) or rune.isWhiteSpace()
 
 proc typeset*(
-  spans: seq[Span],
+  spans: openarray[Span],
   bounds = vec2(0, 0),
   hAlign = LeftAlign,
   vAlign = TopAlign,
@@ -464,7 +462,7 @@ proc typeset*(
 
 proc typeset*(
   font: Font,
-  text: string,
+  text: sink string,
   bounds = vec2(0, 0),
   hAlign = LeftAlign,
   vAlign = TopAlign,
@@ -476,7 +474,7 @@ proc typeset*(
   ## hAlign: horizontal alignment of the text
   ## vAlign: vertical alignment of the text
   ## wrap: enable/disable text wrapping
-  typeset(@[newSpan(text, font)], bounds, hAlign, vAlign, wrap)
+  typeset([newSpan(text, font)], bounds, hAlign, vAlign, wrap)
 
 proc layoutBounds*(arrangement: Arrangement): Vec2 {.raises: [].} =
   ## Computes the width and height of the arrangement in pixels.
@@ -617,7 +615,7 @@ proc fillText*(
 proc fillText*(
   target: Image,
   font: Font,
-  text: string,
+  text: sink string,
   transform = mat3(),
   bounds = vec2(0, 0),
   hAlign = LeftAlign,
@@ -656,7 +654,7 @@ proc strokeText*(
 proc strokeText*(
   target: Image,
   font: Font,
-  text: string,
+  text: sink string,
   transform = mat3(),
   strokeWidth: float32 = 1.0,
   bounds = vec2(0, 0),
