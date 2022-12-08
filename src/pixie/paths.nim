@@ -167,7 +167,7 @@ proc parsePath*(path: string): Path {.raises: [PixieError].} =
     armed = true
 
   template expectsArcFlag(): bool =
-    kind in {Arc, RArc} and numbers.len mod 7 in {3, 4}
+    kind in {Arc, RArc} and numbers.len mod 7 in [3, 4]
 
   while p < path.len:
     case path[p]:
