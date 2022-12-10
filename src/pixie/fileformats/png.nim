@@ -575,22 +575,59 @@ proc encodePng*(
 
   # Add IDAT
   # Add room for 1 byte before each row for the filter type.
-  var filtered = newString(width * height * channels + height)
+  var
+    filtered = newString(width * height * channels + height)
+    upRow = newSeq[uint8](width * channels)
+    subRow = newSeq[uint8](width * channels)
+    avgRow = newSeq[uint8](width * channels)
   for y in 0 ..< height:
-    filtered[y * width * channels + y] = 2.char # Up filter type
+    let rowStart = y * width * channels
     for x in 0 ..< width * channels:
       # Move through the image data byte-by-byte
-      let
-        dataPos = y * width * channels + x
-        filteredPos = y * width * channels + y + 1 + x
-      var up: uint8
+      let dataPos = rowStart + x
+      var left, up: uint8
+      if x - channels >= 0:
+        left = data[dataPos - channels]
       if y - 1 >= 0:
         up = data[(y - 1) * width * channels + x]
-      filtered[filteredPos] = (data[dataPos] - up).char
+      upRow[x] = data[dataPos] - up.uint8
+      subRow[x] = data[dataPos] - left.uint8
+      let avg = ((left.int + up.int) div 2).uint8
+      avgRow[x] = data[dataPos] - avg
+
+    var upRowSum, subRowSum, avgRowSum: uint64
+    for i in 0 ..< upRow.len:
+      upRowSum += upRow[i]
+      subRowSum += subRow[i]
+      avgRowSum += avgRow[i]
+
+    let minRowSum = min(min(upRowSum, subRowSum), avgRowSum)
+
+    if upRowSum == minRowSum:
+      filtered[rowStart + y] = 2.char # Up filter type
+      copyMem(
+        filtered[rowStart + y + 1].addr,
+        upRow[0].addr,
+        upRow.len
+      )
+    elif subRowSum == minRowSum:
+      filtered[rowStart + y] = 1.char # Sub filter type
+      copyMem(
+        filtered[rowStart + y + 1].addr,
+        subRow[0].addr,
+        subRow.len
+      )
+    else:
+      filtered[rowStart + y] = 3.char # Average filter type
+      copyMem(
+        filtered[rowStart + y + 1].addr,
+        avgRow[0].addr,
+        avgRow.len
+      )
 
   let compressed =
     try:
-      compress(filtered, BestSpeed, dfZlib)
+      compress(filtered, DefaultCompression, dfZlib)
     except ZippyError:
       raise newException(
         PixieError, "Unexpected error compressing PNG image data"

@@ -1,7 +1,7 @@
 import bumpy, chroma, vmath
 
 type
-  PixieError* = object of ValueError ## Raised if an operation fails.
+  PixieError* = object of CatchableError ## Raised if an operation fails.
 
   BlendMode* = enum
     NormalBlend
