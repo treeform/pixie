@@ -2563,7 +2563,7 @@ proc parseOpenTypeCollection*(buf: string): seq[OpenType] {.raises: [PixieError]
     minorVersion = buf.readUint16(i + 6).swap()
     numFonts = buf.readUint32(i + 8).swap()
 
-  if majorVersion notin {1, 2} and minorVersion != 0:
+  if majorVersion notin {1'u16, 2} and minorVersion != 0:
     failUnsupported("ttc version")
 
   var tableDirectoryOffsets: seq[uint32]

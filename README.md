@@ -4,7 +4,7 @@
 
 # Pixie - A full-featured 2D graphics library for Nim
 
-Pixie is a 2D graphics library similar to [Cairo](https://www.cairographics.org/) and [Skia](https://skia.org) written (almost) entirely in Nim.
+Pixie is a 2D graphics library similar to [Cairo](https://www.cairographics.org/) and [Skia](https://skia.org) written entirely in Nim.
 
 This library is being actively developed and we'd be happy for you to use it.
 
