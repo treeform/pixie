@@ -444,13 +444,13 @@ proc reset(state: var DecoderState) =
 proc decodeSOS(state: var DecoderState) =
   ## Decode Start of Scan - header before the block data.
   var len = state.readUint16be() - 2
-  let scanComponentsU8 = state.readUint8()
-  state.scanComponents = scanComponentsU8.int
+
+  state.scanComponents = state.readUint8().int
 
   if state.scanComponents > state.components.len:
     failInvalid("extra components")
 
-  if scanComponentsU8 notin {1'u8, 3}:
+  if cast[uint8](state.scanComponents) notin {1'u8, 3}:
     failInvalid("unsupported scan component count")
 
   state.componentOrder.setLen(0)
