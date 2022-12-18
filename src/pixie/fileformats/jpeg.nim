@@ -297,8 +297,9 @@ proc decodeSOF0(state: var DecoderState) =
   if state.imageWidth == 0:
     failInvalid("image invalid 0 width")
 
-  let numComponents = state.readUint8().int
-  if numComponents notin {1, 3}:
+  let numComponentsU8 = state.readUint8()
+  let numComponents = numComponentsU8.int
+  if numComponentsU8 notin {1'u8, 3}:
     failInvalid("unsupported component count, must be 1 or 3")
 
   len -= 6
@@ -315,7 +316,7 @@ proc decodeSOF0(state: var DecoderState) =
     if quantizationTableId > 3:
       failInvalid("invalid quantization table id")
 
-    if vertical notin {1, 2, 4} or horizontal notin {1, 2, 4}:
+    if vertical notin {1'u8, 2, 4} or horizontal notin {1'u8, 2, 4}:
       failInvalid("invalid component scaling factor")
 
     component.xScale = vertical.int
@@ -443,13 +444,13 @@ proc reset(state: var DecoderState) =
 proc decodeSOS(state: var DecoderState) =
   ## Decode Start of Scan - header before the block data.
   var len = state.readUint16be() - 2
-
-  state.scanComponents = state.readUint8().int
+  let scanComponentsU8 = state.readUint8()
+  state.scanComponents = scanComponentsU8.int
 
   if state.scanComponents > state.components.len:
     failInvalid("extra components")
 
-  if state.scanComponents notin {1, 3}:
+  if scanComponentsU8 notin {1'u8, 3}:
     failInvalid("unsupported scan component count")
 
   state.componentOrder.setLen(0)
@@ -878,7 +879,7 @@ proc checkRestart(state: var DecoderState) =
     if state.pos + 1 > state.len:
       failInvalid()
     if state.buffer[state.pos] != 0xFF or
-      state.buffer[state.pos + 1] notin {0xD0 .. 0xD7}:
+      state.buffer[state.pos + 1] notin 0xD0'u8 .. 0xD7'u8:
       failInvalid("did not get expected restart marker")
     state.pos += 2
     state.reset()
