@@ -60,7 +60,7 @@ proc decodeQoi*(data: string): Qoi {.raises: [PixieError].} =
     channels = data.readUint8(12)
     colorspace = data.readUint8(13)
 
-  if channels notin {3, 4} or colorspace notin {0, 1}:
+  if channels notin {3'u8, 4} or colorspace notin {0'u8, 1}:
     raise newException(PixieError, "Invalid QOI header")
 
   if width.int * height.int > uint32.high.int64:
