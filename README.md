@@ -14,6 +14,8 @@ This library is being actively developed and we'd be happy for you to use it.
 
 [API reference](https://nimdocs.com/treeform/pixie)
 
+[Pixie Book](https://github.com/treeform/pixiebook)
+
 ### Videos
 
 * [Pixie 5.0 performance improvements](https://www.youtube.com/watch?v=Did21OYIrGI)
