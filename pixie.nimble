@@ -1,4 +1,4 @@
-version     = "5.0.4"
+version     = "5.0.5"
 author      = "Andre von Houck and Ryan Oldenburg"
 description = "Full-featured 2d graphics library for Nim."
 license     = "MIT"
@@ -12,6 +12,7 @@ requires "zippy >= 0.10.3"
 requires "flatty >= 0.3.4"
 requires "nimsimd >= 1.2.0"
 requires "bumpy >= 1.1.1"
+requires "crunchy >= 0.1.0"
 
 task bindings, "Generate bindings":
 
