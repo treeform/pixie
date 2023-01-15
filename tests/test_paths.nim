@@ -709,3 +709,55 @@ block:
   image.fill(rgba(255, 255, 255, 255))
   image.fillPath(pathStr, color)
   image.xray("tests/paths/pathSwish.png")
+
+# https://www.w3.org/TR/SVG2/coords.html#BoundingBoxes
+# block:
+#   let pathStr = """
+#     M 100 0
+#   """
+#   let path = parsePath(pathStr)
+#   doAssert path.computeBounds() == rect(100, 0, 0, 0)
+
+# block:
+#   let pathStr = """
+#     M 0 100
+#   """
+#   let path = parsePath(pathStr)
+#   doAssert path.computeBounds() == rect(100, 0, 0, 0)
+
+# block:
+#   let pathStr = """
+#     M 100 0 M 200 0
+#   """
+#   let path = parsePath(pathStr)
+#   doAssert path.computeBounds() == rect(100, 0, 100, 0)
+
+# block:
+#   let pathStr = """
+#     M 0 100 M 0 200
+#   """
+#   let path = parsePath(pathStr)
+#   doAssert path.computeBounds() == rect(0, 100, 0, 100)
+
+# block:
+#   let pathStr = """
+#     M 0 0 L 10 0 L 10 10 L 0 10 M 1000 1000
+#   """
+#   let path = parsePath(pathStr)
+#   doAssert path.computeBounds() == rect(0, 0, 1000, 1000)
+
+# block:
+#   let pathStr = """
+#     M 0 0
+#     L 100 0
+#   """
+#   let path = parsePath(pathStr)
+#   doAssert path.computeBounds() == rect(0, 0, 100, 0)
+
+block:
+  let pathStr = """
+    M 0 0
+    L 0 100
+  """
+  let path = parsePath(pathStr)
+  doAssert path.computeBounds() == rect(0, 0, 0, 100)
