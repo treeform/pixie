@@ -746,13 +746,13 @@ block:
 #   let path = parsePath(pathStr)
 #   doAssert path.computeBounds() == rect(0, 0, 1000, 1000)
 
-# block:
-#   let pathStr = """
-#     M 0 0
-#     L 100 0
-#   """
-#   let path = parsePath(pathStr)
-#   doAssert path.computeBounds() == rect(0, 0, 100, 0)
+block:
+  let pathStr = """
+    M 0 0
+    L 100 0
+  """
+  let path = parsePath(pathStr)
+  doAssert path.computeBounds() == rect(0, 0, 100, 0)
 
 block:
   let pathStr = """
