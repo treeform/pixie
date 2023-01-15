@@ -1056,7 +1056,10 @@ proc commandsToShapes(
       shape.addSegment(at, start)
     result.add(shape)
 
-proc shapesToSegments(shapes: seq[Polygon]): seq[(Segment, int16)] =
+proc shapesToSegments(
+  shapes: seq[Polygon],
+  skipHorizontal = true
+): seq[(Segment, int16)] =
   ## Converts the shapes into a set of filtered segments with winding value.
 
   # Quantize the segment to prevent leaks
@@ -1075,7 +1078,7 @@ proc shapesToSegments(shapes: seq[Polygon]): seq[(Segment, int16)] =
       segment = segment(vec1, vec2)
       vec1 = vec2
 
-      if segment.at.y == segment.to.y: # Skip horizontal
+      if skipHorizontal and segment.at.y == segment.to.y: # Skip horizontal
         continue
       var
         segment = segment
@@ -1119,7 +1122,7 @@ proc computeBounds*(
   ## Compute the bounds of the path.
   var shapes = path.commandsToShapes(true, pixelScale(transform))
   shapes.transform(transform)
-  computeBounds(shapes.shapesToSegments())
+  computeBounds(shapes.shapesToSegments(skipHorizontal = false))
 
 proc initPartitionEntry(segment: Segment, winding: int16): PartitionEntry =
   result.segment = segment
