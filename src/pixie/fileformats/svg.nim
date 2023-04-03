@@ -500,11 +500,10 @@ proc parseSvgElement(
     raise newException(PixieError, "Unsupported SVG tag: " & node.tag)
 
 proc parseSvg*(
-  data: string | XmlNode, width = 0, height = 0
+  root: XmlNode; width = 0; height = 0
 ): Svg {.raises: [PixieError].} =
   ## Parse SVG XML. Defaults to the SVG's view box size.
   try:
-    let root = parseXml(data)
     if root.tag != "svg":
       failInvalid()
 
@@ -540,6 +539,16 @@ proc parseSvg*(
     var propertiesStack = @[rootProps]
     for node in root.items:
       result.elements.add node.parseSvgElement(result, propertiesStack)
+  except PixieError as e:
+    raise e
+  except:
+    raise currentExceptionAsPixieError()
+
+proc parseSvg*(
+  data: string; width = 0; height = 0
+): Svg {.raises: [PixieError].} =
+  ## Parse SVG XML. Defaults to the SVG's view box size.
+  try: parseSvg(parseXml(data), width, height)
   except PixieError as e:
     raise e
   except:
