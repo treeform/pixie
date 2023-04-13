@@ -172,7 +172,7 @@ proc decodeTiff*(data: string): Tiff =
     failInvalid()
 
   for i, bits in bitsPerSample:
-    if bits notin {8}:
+    if bits != 8:
       raise newException(
         PixieError,
         "TIFF bits per sample of " & $bits & " not supported yet"
