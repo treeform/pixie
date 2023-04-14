@@ -1,7 +1,7 @@
 import chroma, nimsimd/hassimd, nimsimd/avx
 
 when defined(gcc) or defined(clang):
-  {.localPassc: "-mavx".}
+  {.localPassC: "-mavx".}
 
 when defined(release):
   {.push checks: off.}
