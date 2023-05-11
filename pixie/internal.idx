@@ -1,0 +1,9 @@
+currentExceptionAsPixieError	pixie/internal.html#currentExceptionAsPixieError.t	internal: currentExceptionAsPixieError(): untyped	
+failUnsupportedBlendMode	pixie/internal.html#failUnsupportedBlendMode.t,BlendMode	internal: failUnsupportedBlendMode(blendMode: BlendMode)	
+gaussianKernel	pixie/internal.html#gaussianKernel,int	internal: gaussianKernel(radius: int): seq[uint16]	
+intersectsInside	pixie/internal.html#intersectsInside,Segment,Segment,Vec2	internal: intersectsInside(a, b: Segment; at: var Vec2): bool	
+getUncheckedArray	pixie/internal.html#getUncheckedArray.t,Image,int,int	internal: getUncheckedArray(image: Image; x, y: int): ptr UncheckedArray[ColorRGBX]	
+fillUnsafe	pixie/internal.html#fillUnsafe,seq[ColorRGBX],SomeColor,int,int	internal: fillUnsafe(data: var seq[ColorRGBX]; color: SomeColor; start, len: int)	
+toStraightAlpha	pixie/internal.html#toStraightAlpha,seq[]	internal: toStraightAlpha(data: var seq[ColorRGBA | ColorRGBX])	
+toPremultipliedAlpha	pixie/internal.html#toPremultipliedAlpha,seq[]	internal: toPremultipliedAlpha(data: var seq[ColorRGBA | ColorRGBX])	
+isOpaque	pixie/internal.html#isOpaque,seq[ColorRGBX],int,int	internal: isOpaque(data: var seq[ColorRGBX]; start, len: int): bool	

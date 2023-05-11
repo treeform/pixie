@@ -1,0 +1,18 @@
+applyOpacity	pixie/simd/sse2.html#applyOpacity,M128,float32	sse2: applyOpacity(color: M128; opacity: float32): ColorRGBX	
+fillUnsafeSse2	pixie/simd/sse2.html#fillUnsafeSse2,seq[ColorRGBX],SomeColor,int,int	sse2: fillUnsafeSse2(data: var seq[ColorRGBX]; color: SomeColor; start, len: int)	
+isOneColorSse2	pixie/simd/sse2.html#isOneColorSse2,Image	sse2: isOneColorSse2(image: Image): bool	
+isTransparentSse2	pixie/simd/sse2.html#isTransparentSse2,Image	sse2: isTransparentSse2(image: Image): bool	
+isOpaqueSse2	pixie/simd/sse2.html#isOpaqueSse2,seq[ColorRGBX],int,int	sse2: isOpaqueSse2(data: var seq[ColorRGBX]; start, len: int): bool	
+toPremultipliedAlphaSse2	pixie/simd/sse2.html#toPremultipliedAlphaSse2,seq[]	sse2: toPremultipliedAlphaSse2(data: var seq[ColorRGBA | ColorRGBX])	
+invertSse2	pixie/simd/sse2.html#invertSse2,Image	sse2: invertSse2(image: Image)	
+applyOpacitySse2	pixie/simd/sse2.html#applyOpacitySse2,Image,float32	sse2: applyOpacitySse2(image: Image; opacity: float32)	
+ceilSse2	pixie/simd/sse2.html#ceilSse2,Image	sse2: ceilSse2(image: Image)	
+minifyBy2Sse2	pixie/simd/sse2.html#minifyBy2Sse2,Image,int	sse2: minifyBy2Sse2(image: Image; power = 1): Image	
+magnifyBy2Sse2	pixie/simd/sse2.html#magnifyBy2Sse2,Image,int	sse2: magnifyBy2Sse2(image: Image; power = 1): Image	
+blendLineCoverageOverwriteSse2	pixie/simd/sse2.html#blendLineCoverageOverwriteSse2,ptr.UncheckedArray[ColorRGBX],ptr.UncheckedArray[uint8],ColorRGBX,int	sse2: blendLineCoverageOverwriteSse2(line: ptr UncheckedArray[ColorRGBX];\n                               coverages: ptr UncheckedArray[uint8];\n                               rgbx: ColorRGBX; len: int)	
+blendLineNormalSse2	pixie/simd/sse2.html#blendLineNormalSse2,ptr.UncheckedArray[ColorRGBX],ColorRGBX,int	sse2: blendLineNormalSse2(line: ptr UncheckedArray[ColorRGBX]; rgbx: ColorRGBX;\n                    len: int)	
+blendLineNormalSse2	pixie/simd/sse2.html#blendLineNormalSse2,ptr.UncheckedArray[ColorRGBX],ptr.UncheckedArray[ColorRGBX],int	sse2: blendLineNormalSse2(a, b: ptr UncheckedArray[ColorRGBX]; len: int)	
+blendLineCoverageNormalSse2	pixie/simd/sse2.html#blendLineCoverageNormalSse2,ptr.UncheckedArray[ColorRGBX],ptr.UncheckedArray[uint8],ColorRGBX,int	sse2: blendLineCoverageNormalSse2(line: ptr UncheckedArray[ColorRGBX];\n                            coverages: ptr UncheckedArray[uint8];\n                            rgbx: ColorRGBX; len: int)	
+blendLineMaskSse2	pixie/simd/sse2.html#blendLineMaskSse2,ptr.UncheckedArray[ColorRGBX],ColorRGBX,int	sse2: blendLineMaskSse2(line: ptr UncheckedArray[ColorRGBX]; rgbx: ColorRGBX; len: int)	
+blendLineMaskSse2	pixie/simd/sse2.html#blendLineMaskSse2,ptr.UncheckedArray[ColorRGBX],ptr.UncheckedArray[ColorRGBX],int	sse2: blendLineMaskSse2(a, b: ptr UncheckedArray[ColorRGBX]; len: int)	
+blendLineCoverageMaskSse2	pixie/simd/sse2.html#blendLineCoverageMaskSse2,ptr.UncheckedArray[ColorRGBX],ptr.UncheckedArray[uint8],ColorRGBX,int	sse2: blendLineCoverageMaskSse2(line: ptr UncheckedArray[ColorRGBX];\n                          coverages: ptr UncheckedArray[uint8]; rgbx: ColorRGBX;\n                          len: int)	

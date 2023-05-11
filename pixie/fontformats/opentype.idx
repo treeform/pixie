@@ -1,0 +1,26 @@
+EncodingRecord	pixie/fontformats/opentype.html#EncodingRecord	opentype: EncodingRecord	
+CmapTable	pixie/fontformats/opentype.html#CmapTable	opentype: CmapTable	
+HeadTable	pixie/fontformats/opentype.html#HeadTable	opentype: HeadTable	
+HheaTable	pixie/fontformats/opentype.html#HheaTable	opentype: HheaTable	
+MaxpTable	pixie/fontformats/opentype.html#MaxpTable	opentype: MaxpTable	
+LongHorMetricRecord	pixie/fontformats/opentype.html#LongHorMetricRecord	opentype: LongHorMetricRecord	
+HmtxTable	pixie/fontformats/opentype.html#HmtxTable	opentype: HmtxTable	
+NameRecord	pixie/fontformats/opentype.html#NameRecord	opentype: NameRecord	
+NameTable	pixie/fontformats/opentype.html#NameTable	opentype: NameTable	
+OS2Table	pixie/fontformats/opentype.html#OS2Table	opentype: OS2Table	
+LocaTable	pixie/fontformats/opentype.html#LocaTable	opentype: LocaTable	
+GlyfTable	pixie/fontformats/opentype.html#GlyfTable	opentype: GlyfTable	
+KernPair	pixie/fontformats/opentype.html#KernPair	opentype: KernPair	
+KernSubTable	pixie/fontformats/opentype.html#KernSubTable	opentype: KernSubTable	
+KernTable	pixie/fontformats/opentype.html#KernTable	opentype: KernTable	
+TableRecord	pixie/fontformats/opentype.html#TableRecord	opentype: TableRecord	
+OpenType	pixie/fontformats/opentype.html#OpenType	opentype: OpenType	
+hasGlyph	pixie/fontformats/opentype.html#hasGlyph,OpenType,Rune	opentype: hasGlyph(opentype: OpenType; rune: Rune): bool	
+getGlyphPath	pixie/fontformats/opentype.html#getGlyphPath,OpenType,Rune	opentype: getGlyphPath(opentype: OpenType; rune: Rune): Path	
+getLeftSideBearing	pixie/fontformats/opentype.html#getLeftSideBearing,OpenType,Rune	opentype: getLeftSideBearing(opentype: OpenType; rune: Rune): float32	
+getAdvance	pixie/fontformats/opentype.html#getAdvance,OpenType,Rune	opentype: getAdvance(opentype: OpenType; rune: Rune): float32	
+getKerningAdjustment	pixie/fontformats/opentype.html#getKerningAdjustment,OpenType,Rune,Rune	opentype: getKerningAdjustment(opentype: OpenType; left, right: Rune): float32	
+isCCW	pixie/fontformats/opentype.html#isCCW,OpenType	opentype: isCCW(opentype: OpenType): bool	
+fullName	pixie/fontformats/opentype.html#fullName,OpenType	opentype: fullName(opentype: OpenType): string	
+parseOpenType	pixie/fontformats/opentype.html#parseOpenType,string,int	opentype: parseOpenType(buf: string; startLoc = 0): OpenType	
+parseOpenTypeCollection	pixie/fontformats/opentype.html#parseOpenTypeCollection,string	opentype: parseOpenTypeCollection(buf: string): seq[OpenType]	

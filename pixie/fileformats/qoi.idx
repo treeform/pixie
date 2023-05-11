@@ -1,0 +1,11 @@
+qoiSignature	pixie/fileformats/qoi.html#qoiSignature	qoi: qoiSignature	
+sRBG	pixie/fileformats/qoi.html#sRBG	Colorspace.sRBG	
+Linear	pixie/fileformats/qoi.html#Linear	Colorspace.Linear	
+Colorspace	pixie/fileformats/qoi.html#Colorspace	qoi: Colorspace	
+Qoi	pixie/fileformats/qoi.html#Qoi	qoi: Qoi	
+newImage	pixie/fileformats/qoi.html#newImage,Qoi	qoi: newImage(qoi: Qoi): Image	
+convertToImage	pixie/fileformats/qoi.html#convertToImage,Qoi	qoi: convertToImage(qoi: Qoi): Image	
+decodeQoi	pixie/fileformats/qoi.html#decodeQoi,string	qoi: decodeQoi(data: string): Qoi	
+decodeQoiDimensions	pixie/fileformats/qoi.html#decodeQoiDimensions,string	qoi: decodeQoiDimensions(data: string): ImageDimensions	
+encodeQoi	pixie/fileformats/qoi.html#encodeQoi,Qoi	qoi: encodeQoi(qoi: Qoi): string	
+encodeQoi	pixie/fileformats/qoi.html#encodeQoi,Image	qoi: encodeQoi(image: Image): string	

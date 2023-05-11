@@ -1,0 +1,92 @@
+TopBaseline	pixie/contexts.html#TopBaseline	BaselineAlignment.TopBaseline	
+HangingBaseline	pixie/contexts.html#HangingBaseline	BaselineAlignment.HangingBaseline	
+MiddleBaseline	pixie/contexts.html#MiddleBaseline	BaselineAlignment.MiddleBaseline	
+AlphabeticBaseline	pixie/contexts.html#AlphabeticBaseline	BaselineAlignment.AlphabeticBaseline	
+IdeographicBaseline	pixie/contexts.html#IdeographicBaseline	BaselineAlignment.IdeographicBaseline	
+BottomBaseline	pixie/contexts.html#BottomBaseline	BaselineAlignment.BottomBaseline	
+BaselineAlignment	pixie/contexts.html#BaselineAlignment	contexts: BaselineAlignment	
+Context	pixie/contexts.html#Context	contexts: Context	
+TextMetrics	pixie/contexts.html#TextMetrics	contexts: TextMetrics	
+newContext	pixie/contexts.html#newContext,Image	contexts: newContext(image: Image): Context	
+newContext	pixie/contexts.html#newContext,int,int	contexts: newContext(width, height: int): Context	
+save	pixie/contexts.html#save,Context	contexts: save(ctx: Context)	
+saveLayer	pixie/contexts.html#saveLayer,Context	contexts: saveLayer(ctx: Context)	
+restore	pixie/contexts.html#restore,Context	contexts: restore(ctx: Context)	
+beginPath	pixie/contexts.html#beginPath,Context	contexts: beginPath(ctx: Context)	
+moveTo	pixie/contexts.html#moveTo,Context,Vec2	contexts: moveTo(ctx: Context; v: Vec2)	
+moveTo	pixie/contexts.html#moveTo,Context,float32,float32	contexts: moveTo(ctx: Context; x, y: float32)	
+lineTo	pixie/contexts.html#lineTo,Context,Vec2	contexts: lineTo(ctx: Context; v: Vec2)	
+lineTo	pixie/contexts.html#lineTo,Context,float32,float32	contexts: lineTo(ctx: Context; x, y: float32)	
+bezierCurveTo	pixie/contexts.html#bezierCurveTo,Context,Vec2,Vec2,Vec2	contexts: bezierCurveTo(ctx: Context; cp1, cp2, to: Vec2)	
+bezierCurveTo	pixie/contexts.html#bezierCurveTo,Context,float32,float32,float32,float32,float32,float32	contexts: bezierCurveTo(ctx: Context; cp1x, cp1y, cp2x, cp2y, x, y: float32)	
+quadraticCurveTo	pixie/contexts.html#quadraticCurveTo,Context,float32,float32,float32,float32	contexts: quadraticCurveTo(ctx: Context; cpx, cpy, x, y: float32)	
+quadraticCurveTo	pixie/contexts.html#quadraticCurveTo,Context,Vec2,Vec2	contexts: quadraticCurveTo(ctx: Context; ctrl, to: Vec2)	
+arc	pixie/contexts.html#arc,Context,float32,float32,float32,float32,float32,bool	contexts: arc(ctx: Context; x, y, r, a0, a1: float32; ccw: bool = false)	
+arc	pixie/contexts.html#arc,Context,Vec2,float32,Vec2,bool	contexts: arc(ctx: Context; pos: Vec2; r: float32; a: Vec2; ccw: bool = false)	
+arcTo	pixie/contexts.html#arcTo,Context,float32,float32,float32,float32,float32	contexts: arcTo(ctx: Context; x1, y1, x2, y2, radius: float32)	
+arcTo	pixie/contexts.html#arcTo,Context,Vec2,Vec2,float32	contexts: arcTo(ctx: Context; a, b: Vec2; r: float32)	
+closePath	pixie/contexts.html#closePath,Context	contexts: closePath(ctx: Context)	
+rect	pixie/contexts.html#rect,Context,Rect	contexts: rect(ctx: Context; rect: Rect)	
+rect	pixie/contexts.html#rect,Context,float32,float32,float32,float32	contexts: rect(ctx: Context; x, y, width, height: float32)	
+ellipse	pixie/contexts.html#ellipse,Context,Vec2,float32,float32	contexts: ellipse(ctx: Context; center: Vec2; rx, ry: float32)	
+ellipse	pixie/contexts.html#ellipse,Context,float32,float32,float32,float32	contexts: ellipse(ctx: Context; x, y, rx, ry: float32)	
+fill	pixie/contexts.html#fill,Context,Path	contexts: fill(ctx: Context; path: Path; windingRule = NonZero)	
+fill	pixie/contexts.html#fill,Context	contexts: fill(ctx: Context; windingRule = NonZero)	
+clip	pixie/contexts.html#clip,Context,Path	contexts: clip(ctx: Context; path: Path; windingRule = NonZero)	
+clip	pixie/contexts.html#clip,Context	contexts: clip(ctx: Context; windingRule = NonZero)	
+stroke	pixie/contexts.html#stroke,Context,Path	contexts: stroke(ctx: Context; path: Path)	
+stroke	pixie/contexts.html#stroke,Context	contexts: stroke(ctx: Context)	
+clearRect	pixie/contexts.html#clearRect,Context,Rect	contexts: clearRect(ctx: Context; rect: Rect)	
+clearRect	pixie/contexts.html#clearRect,Context,float32,float32,float32,float32	contexts: clearRect(ctx: Context; x, y, width, height: float32)	
+fillRect	pixie/contexts.html#fillRect,Context,Rect	contexts: fillRect(ctx: Context; rect: Rect)	
+fillRect	pixie/contexts.html#fillRect,Context,float32,float32,float32,float32	contexts: fillRect(ctx: Context; x, y, width, height: float32)	
+strokeRect	pixie/contexts.html#strokeRect,Context,Rect	contexts: strokeRect(ctx: Context; rect: Rect)	
+strokeRect	pixie/contexts.html#strokeRect,Context,float32,float32,float32,float32	contexts: strokeRect(ctx: Context; x, y, width, height: float32)	
+fillText	pixie/contexts.html#fillText,Context,string,Vec2	contexts: fillText(ctx: Context; text: string; at: Vec2)	
+fillText	pixie/contexts.html#fillText,Context,string,float32,float32	contexts: fillText(ctx: Context; text: string; x, y: float32)	
+strokeText	pixie/contexts.html#strokeText,Context,string,Vec2	contexts: strokeText(ctx: Context; text: string; at: Vec2)	
+strokeText	pixie/contexts.html#strokeText,Context,string,float32,float32	contexts: strokeText(ctx: Context; text: string; x, y: float32)	
+measureText	pixie/contexts.html#measureText,Context,string	contexts: measureText(ctx: Context; text: string): TextMetrics	
+getLineDash	pixie/contexts.html#getLineDash,Context	contexts: getLineDash(ctx: Context): seq[float32]	
+setLineDash	pixie/contexts.html#setLineDash,Context,seq[float32]	contexts: setLineDash(ctx: Context; lineDash: seq[float32])	
+getTransform	pixie/contexts.html#getTransform,Context	contexts: getTransform(ctx: Context): Mat3	
+setTransform	pixie/contexts.html#setTransform,Context,Mat3	contexts: setTransform(ctx: Context; transform: Mat3)	
+transform	pixie/contexts.html#transform,Context,Mat3	contexts: transform(ctx: Context; transform: Mat3)	
+translate	pixie/contexts.html#translate,Context,Vec2	contexts: translate(ctx: Context; v: Vec2)	
+translate	pixie/contexts.html#translate,Context,float32,float32	contexts: translate(ctx: Context; x, y: float32)	
+scale	pixie/contexts.html#scale,Context,Vec2	contexts: scale(ctx: Context; v: Vec2)	
+scale	pixie/contexts.html#scale,Context,float32,float32	contexts: scale(ctx: Context; x, y: float32)	
+rotate	pixie/contexts.html#rotate,Context,float32	contexts: rotate(ctx: Context; angle: float32)	
+resetTransform	pixie/contexts.html#resetTransform,Context	contexts: resetTransform(ctx: Context)	
+drawImage	pixie/contexts.html#drawImage,Context,Image,float32,float32,float32,float32	contexts: drawImage(ctx: Context; image: Image; dx, dy, dWidth, dHeight: float32)	
+drawImage	pixie/contexts.html#drawImage,Context,Image,float32,float32	contexts: drawImage(ctx: Context; image: Image; dx, dy: float32)	
+drawImage	pixie/contexts.html#drawImage,Context,Image,Vec2	contexts: drawImage(ctx: Context; image: Image; pos: Vec2)	
+drawImage	pixie/contexts.html#drawImage,Context,Image,Rect	contexts: drawImage(ctx: Context; image: Image; rect: Rect)	
+drawImage	pixie/contexts.html#drawImage,Context,Image,float32,float32,float32,float32,float32,float32,float32,float32	contexts: drawImage(ctx: Context; image: Image;\n          sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight: float32)	
+drawImage	pixie/contexts.html#drawImage,Context,Image,Rect,Rect	contexts: drawImage(ctx: Context; image: Image; src, dest: Rect)	
+isPointInPath	pixie/contexts.html#isPointInPath,Context,Path,Vec2	contexts: isPointInPath(ctx: Context; path: Path; pos: Vec2; windingRule = NonZero): bool	
+isPointInPath	pixie/contexts.html#isPointInPath,Context,Path,float32,float32	contexts: isPointInPath(ctx: Context; path: Path; x, y: float32; windingRule = NonZero): bool	
+isPointInPath	pixie/contexts.html#isPointInPath,Context,Vec2	contexts: isPointInPath(ctx: Context; pos: Vec2; windingRule = NonZero): bool	
+isPointInPath	pixie/contexts.html#isPointInPath,Context,float32,float32	contexts: isPointInPath(ctx: Context; x, y: float32; windingRule = NonZero): bool	
+isPointInStroke	pixie/contexts.html#isPointInStroke,Context,Path,Vec2	contexts: isPointInStroke(ctx: Context; path: Path; pos: Vec2): bool	
+isPointInStroke	pixie/contexts.html#isPointInStroke,Context,Path,float32,float32	contexts: isPointInStroke(ctx: Context; path: Path; x, y: float32): bool	
+isPointInStroke	pixie/contexts.html#isPointInStroke,Context,Vec2	contexts: isPointInStroke(ctx: Context; pos: Vec2): bool	
+isPointInStroke	pixie/contexts.html#isPointInStroke,Context,float32,float32	contexts: isPointInStroke(ctx: Context; x, y: float32): bool	
+roundedRect	pixie/contexts.html#roundedRect,Context,float32,float32,float32,float32,float32,float32,float32,float32	contexts: roundedRect(ctx: Context; x, y, w, h, nw, ne, se, sw: float32)	
+roundedRect	pixie/contexts.html#roundedRect,Context,Rect,float32,float32,float32,float32	contexts: roundedRect(ctx: Context; rect: Rect; nw, ne, se, sw: float32)	
+circle	pixie/contexts.html#circle,Context,float32,float32,float32	contexts: circle(ctx: Context; cx, cy, r: float32)	
+circle	pixie/contexts.html#circle,Context,Circle	contexts: circle(ctx: Context; circle: Circle)	
+polygon	pixie/contexts.html#polygon,Context,float32,float32,float32,int	contexts: polygon(ctx: Context; x, y, size: float32; sides: int)	
+polygon	pixie/contexts.html#polygon,Context,Vec2,float32,int	contexts: polygon(ctx: Context; pos: Vec2; size: float32; sides: int)	
+strokeSegment	pixie/contexts.html#strokeSegment,Context,Segment	contexts: strokeSegment(ctx: Context; segment: Segment)	
+strokeSegment	pixie/contexts.html#strokeSegment,Context,float32,float32,float32,float32	contexts: strokeSegment(ctx: Context; ax, ay, bx, by: float32)	
+fillRoundedRect	pixie/contexts.html#fillRoundedRect,Context,Rect,float32,float32,float32,float32	contexts: fillRoundedRect(ctx: Context; rect: Rect; nw, ne, se, sw: float32)	
+fillRoundedRect	pixie/contexts.html#fillRoundedRect,Context,Rect,float32	contexts: fillRoundedRect(ctx: Context; rect: Rect; radius: float32)	
+strokeRoundedRect	pixie/contexts.html#strokeRoundedRect,Context,Rect,float32,float32,float32,float32	contexts: strokeRoundedRect(ctx: Context; rect: Rect; nw, ne, se, sw: float32)	
+strokeRoundedRect	pixie/contexts.html#strokeRoundedRect,Context,Rect,float32	contexts: strokeRoundedRect(ctx: Context; rect: Rect; radius: float32)	
+fillEllipse	pixie/contexts.html#fillEllipse,Context,Vec2,float32,float32	contexts: fillEllipse(ctx: Context; center: Vec2; rx, ry: float32)	
+strokeEllipse	pixie/contexts.html#strokeEllipse,Context,Vec2,float32,float32	contexts: strokeEllipse(ctx: Context; center: Vec2; rx, ry: float32)	
+fillCircle	pixie/contexts.html#fillCircle,Context,Circle	contexts: fillCircle(ctx: Context; circle: Circle)	
+strokeCircle	pixie/contexts.html#strokeCircle,Context,Circle	contexts: strokeCircle(ctx: Context; circle: Circle)	
+fillPolygon	pixie/contexts.html#fillPolygon,Context,Vec2,float32,int	contexts: fillPolygon(ctx: Context; pos: Vec2; size: float32; sides: int)	
+strokePolygon	pixie/contexts.html#strokePolygon,Context,Vec2,float32,int	contexts: strokePolygon(ctx: Context; pos: Vec2; size: float32; sides: int)	

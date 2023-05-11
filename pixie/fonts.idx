@@ -1,0 +1,52 @@
+autoLineHeight	pixie/fonts.html#autoLineHeight	fonts: autoLineHeight	
+Typeface	pixie/fonts.html#Typeface	fonts: Typeface	
+Font	pixie/fonts.html#Font	fonts: Font	
+Span	pixie/fonts.html#Span	fonts: Span	
+Arrangement	pixie/fonts.html#Arrangement	fonts: Arrangement	
+LeftAlign	pixie/fonts.html#LeftAlign	HorizontalAlignment.LeftAlign	
+CenterAlign	pixie/fonts.html#CenterAlign	HorizontalAlignment.CenterAlign	
+RightAlign	pixie/fonts.html#RightAlign	HorizontalAlignment.RightAlign	
+HorizontalAlignment	pixie/fonts.html#HorizontalAlignment	fonts: HorizontalAlignment	
+TopAlign	pixie/fonts.html#TopAlign	VerticalAlignment.TopAlign	
+MiddleAlign	pixie/fonts.html#MiddleAlign	VerticalAlignment.MiddleAlign	
+BottomAlign	pixie/fonts.html#BottomAlign	VerticalAlignment.BottomAlign	
+VerticalAlignment	pixie/fonts.html#VerticalAlignment	fonts: VerticalAlignment	
+NormalCase	pixie/fonts.html#NormalCase	TextCase.NormalCase	
+UpperCase	pixie/fonts.html#UpperCase	TextCase.UpperCase	
+LowerCase	pixie/fonts.html#LowerCase	TextCase.LowerCase	
+TitleCase	pixie/fonts.html#TitleCase	TextCase.TitleCase	
+TextCase	pixie/fonts.html#TextCase	fonts: TextCase	
+scale	pixie/fonts.html#scale,Typeface	fonts: scale(typeface: Typeface): float32	
+ascent	pixie/fonts.html#ascent,Typeface	fonts: ascent(typeface: Typeface): float32	
+descent	pixie/fonts.html#descent,Typeface	fonts: descent(typeface: Typeface): float32	
+lineGap	pixie/fonts.html#lineGap,Typeface	fonts: lineGap(typeface: Typeface): float32	
+lineHeight	pixie/fonts.html#lineHeight,Typeface	fonts: lineHeight(typeface: Typeface): float32	
+hasGlyph	pixie/fonts.html#hasGlyph,Typeface,Rune	fonts: hasGlyph(typeface: Typeface; rune: Rune): bool	
+fallbackTypeface	pixie/fonts.html#fallbackTypeface,Typeface,Rune	fonts: fallbackTypeface(typeface: Typeface; rune: Rune): Typeface	
+getGlyphPath	pixie/fonts.html#getGlyphPath,Typeface,Rune	fonts: getGlyphPath(typeface: Typeface; rune: Rune): Path	
+getAdvance	pixie/fonts.html#getAdvance,Typeface,Rune	fonts: getAdvance(typeface: Typeface; rune: Rune): float32	
+getKerningAdjustment	pixie/fonts.html#getKerningAdjustment,Typeface,Rune,Rune	fonts: getKerningAdjustment(typeface: Typeface; left, right: Rune): float32	
+scale	pixie/fonts.html#scale,Font	fonts: scale(font: Font): float32	
+defaultLineHeight	pixie/fonts.html#defaultLineHeight,Font	fonts: defaultLineHeight(font: Font): float32	
+paint	pixie/fonts.html#paint,Font	fonts: paint(font: Font): Paint	
+paint=	pixie/fonts.html#paint=,Font,Paint	fonts: paint=(font: Font; paint: Paint)	
+newFont	pixie/fonts.html#newFont,Typeface	fonts: newFont(typeface: Typeface): Font	
+copy	pixie/fonts.html#copy,Font	fonts: copy(font: Font): Font	
+newSpan	pixie/fonts.html#newSpan,sinkstring,Font	fonts: newSpan(text: sink string; font: Font): Span	
+typeset	pixie/fonts.html#typeset,openArray[Span]	fonts: typeset(spans: openArray[Span]; bounds = vec2(0, 0); hAlign = LeftAlign;\n        vAlign = TopAlign; wrap = true): Arrangement	
+typeset	pixie/fonts.html#typeset,Font,sinkstring	fonts: typeset(font: Font; text: sink string; bounds = vec2(0, 0); hAlign = LeftAlign;\n        vAlign = TopAlign; wrap = true): Arrangement	
+layoutBounds	pixie/fonts.html#layoutBounds,Arrangement	fonts: layoutBounds(arrangement: Arrangement): Vec2	
+layoutBounds	pixie/fonts.html#layoutBounds,Font,string	fonts: layoutBounds(font: Font; text: string): Vec2	
+layoutBounds	pixie/fonts.html#layoutBounds,seq[Span]	fonts: layoutBounds(spans: seq[Span]): Vec2	
+parseOtf	pixie/fonts.html#parseOtf,string	fonts: parseOtf(buf: string): Typeface	
+parseTtf	pixie/fonts.html#parseTtf,string	fonts: parseTtf(buf: string): Typeface	
+parseSvgFont	pixie/fonts.html#parseSvgFont,string	fonts: parseSvgFont(buf: string): Typeface	
+computeBounds	pixie/fonts.html#computeBounds,Arrangement	fonts: computeBounds(arrangement: Arrangement; transform = mat3()): Rect	
+fillText	pixie/fonts.html#fillText,Image,Arrangement	fonts: fillText(target: Image; arrangement: Arrangement; transform = mat3())	
+fillText	pixie/fonts.html#fillText,Image,Font,sinkstring	fonts: fillText(target: Image; font: Font; text: sink string; transform = mat3();\n         bounds = vec2(0, 0); hAlign = LeftAlign; vAlign = TopAlign)	
+strokeText	pixie/fonts.html#strokeText,Image,Arrangement,float32,seq[float32]	fonts: strokeText(target: Image; arrangement: Arrangement; transform = mat3();\n           strokeWidth: float32 = 1.0; lineCap = ButtCap; lineJoin = MiterJoin;\n           miterLimit = defaultMiterLimit; dashes: seq[float32] = @[])	
+strokeText	pixie/fonts.html#strokeText,Image,Font,sinkstring,float32,seq[float32]	fonts: strokeText(target: Image; font: Font; text: sink string; transform = mat3();\n           strokeWidth: float32 = 1.0; bounds = vec2(0, 0); hAlign = LeftAlign;\n           vAlign = TopAlign; lineCap = ButtCap; lineJoin = MiterJoin;\n           miterLimit = defaultMiterLimit; dashes: seq[float32] = @[])	
+readTypeface	pixie/fonts.html#readTypeface,string	fonts: readTypeface(filePath: string): Typeface	
+readTypefaces	pixie/fonts.html#readTypefaces,string	fonts: readTypefaces(filePath: string): seq[Typeface]	
+name	pixie/fonts.html#name,Typeface	fonts: name(typeface: Typeface): string	
+readFont	pixie/fonts.html#readFont,string	fonts: readFont(filePath: string): Font	

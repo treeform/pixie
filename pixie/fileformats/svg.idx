@@ -1,0 +1,5 @@
+xmlSignature	pixie/fileformats/svg.html#xmlSignature	svg: xmlSignature	
+svgSignature	pixie/fileformats/svg.html#svgSignature	svg: svgSignature	
+Svg	pixie/fileformats/svg.html#Svg	svg: Svg	
+parseSvg	pixie/fileformats/svg.html#parseSvg,,int,int	svg: parseSvg(data: string | XmlNode; width = 0; height = 0): Svg	
+newImage	pixie/fileformats/svg.html#newImage,Svg	svg: newImage(svg: Svg): Image	

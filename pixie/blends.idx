@@ -1,0 +1,22 @@
+Blender	pixie/blends.html#Blender	blends: Blender	
+blendAlpha	pixie/blends.html#blendAlpha,uint8,uint8	blends: blendAlpha(backdrop, source: uint8): uint8	
+blendNormal	pixie/blends.html#blendNormal,ColorRGBX,ColorRGBX	blends: blendNormal(backdrop, source: ColorRGBX): ColorRGBX	
+blendDarken	pixie/blends.html#blendDarken,ColorRGBX,ColorRGBX	blends: blendDarken(backdrop, source: ColorRGBX): ColorRGBX	
+blendMultiply	pixie/blends.html#blendMultiply,ColorRGBX,ColorRGBX	blends: blendMultiply(backdrop, source: ColorRGBX): ColorRGBX	
+blendColorBurn	pixie/blends.html#blendColorBurn,ColorRGBX,ColorRGBX	blends: blendColorBurn(backdrop, source: ColorRGBX): ColorRGBX	
+blendLighten	pixie/blends.html#blendLighten,ColorRGBX,ColorRGBX	blends: blendLighten(backdrop, source: ColorRGBX): ColorRGBX	
+blendScreen	pixie/blends.html#blendScreen,ColorRGBX,ColorRGBX	blends: blendScreen(backdrop, source: ColorRGBX): ColorRGBX	
+blendColorDodge	pixie/blends.html#blendColorDodge,ColorRGBX,ColorRGBX	blends: blendColorDodge(backdrop, source: ColorRGBX): ColorRGBX	
+blendOverlay	pixie/blends.html#blendOverlay,ColorRGBX,ColorRGBX	blends: blendOverlay(backdrop, source: ColorRGBX): ColorRGBX	
+blendSoftLight	pixie/blends.html#blendSoftLight,ColorRGBX,ColorRGBX	blends: blendSoftLight(backdrop, source: ColorRGBX): ColorRGBX	
+blendHardLight	pixie/blends.html#blendHardLight,ColorRGBX,ColorRGBX	blends: blendHardLight(backdrop, source: ColorRGBX): ColorRGBX	
+blendDifference	pixie/blends.html#blendDifference,ColorRGBX,ColorRGBX	blends: blendDifference(backdrop, source: ColorRGBX): ColorRGBX	
+blendExclusion	pixie/blends.html#blendExclusion,ColorRGBX,ColorRGBX	blends: blendExclusion(backdrop, source: ColorRGBX): ColorRGBX	
+blendColor	pixie/blends.html#blendColor,ColorRGBX,ColorRGBX	blends: blendColor(backdrop, source: ColorRGBX): ColorRGBX	
+blendLuminosity	pixie/blends.html#blendLuminosity,ColorRGBX,ColorRGBX	blends: blendLuminosity(backdrop, source: ColorRGBX): ColorRGBX	
+blendHue	pixie/blends.html#blendHue,ColorRGBX,ColorRGBX	blends: blendHue(backdrop, source: ColorRGBX): ColorRGBX	
+blendSaturation	pixie/blends.html#blendSaturation,ColorRGBX,ColorRGBX	blends: blendSaturation(backdrop, source: ColorRGBX): ColorRGBX	
+blendMask	pixie/blends.html#blendMask,ColorRGBX,ColorRGBX	blends: blendMask(backdrop, source: ColorRGBX): ColorRGBX	
+blendSubtractMask	pixie/blends.html#blendSubtractMask,ColorRGBX,ColorRGBX	blends: blendSubtractMask(backdrop, source: ColorRGBX): ColorRGBX	
+blendExcludeMask	pixie/blends.html#blendExcludeMask,ColorRGBX,ColorRGBX	blends: blendExcludeMask(backdrop, source: ColorRGBX): ColorRGBX	
+blender	pixie/blends.html#blender,BlendMode	blends: blender(blendMode: BlendMode): Blender	

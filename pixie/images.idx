@@ -1,0 +1,32 @@
+`$`	pixie/images.html#$,Image	images: `$`(image: Image): string	
+inside	pixie/images.html#inside,Image,int,int	images: inside(image: Image; x, y: int): bool	
+unsafe	pixie/images.html#unsafe.t,Image	images: unsafe(src: Image): UnsafeImage	
+`[]`	pixie/images.html#[].t,UnsafeImage,int,int	images: `[]`(view: UnsafeImage; x, y: int): var ColorRGBX	
+`[]=`	pixie/images.html#[]=.t,UnsafeImage,int,int,ColorRGBX	images: `[]=`(view: UnsafeImage; x, y: int; color: ColorRGBX)	
+`[]`	pixie/images.html#[],Image,int,int	images: `[]`(image: Image; x, y: int): ColorRGBX	
+`[]=`	pixie/images.html#[]=,Image,int,int,SomeColor	images: `[]=`(image: Image; x, y: int; color: SomeColor)	
+getColor	pixie/images.html#getColor,Image,int,int	images: getColor(image: Image; x, y: int): Color	
+setColor	pixie/images.html#setColor,Image,int,int,Color	images: setColor(image: Image; x, y: int; color: Color)	
+fill	pixie/images.html#fill,Image,SomeColor	images: fill(image: Image; color: SomeColor)	
+isOneColor	pixie/images.html#isOneColor,Image	images: isOneColor(image: Image): bool	
+isTransparent	pixie/images.html#isTransparent,Image	images: isTransparent(image: Image): bool	
+isOpaque	pixie/images.html#isOpaque,Image	images: isOpaque(image: Image): bool	
+flipHorizontal	pixie/images.html#flipHorizontal,Image	images: flipHorizontal(image: Image)	
+flipVertical	pixie/images.html#flipVertical,Image	images: flipVertical(image: Image)	
+rotate90	pixie/images.html#rotate90,Image	images: rotate90(image: Image)	
+subImage	pixie/images.html#subImage,Image,int,int,int,int	images: subImage(image: Image; x, y, w, h: int): Image	
+subImage	pixie/images.html#subImage,Image,Rect	images: subImage(image: Image; rect: Rect): Image	
+diff	pixie/images.html#diff,Image,Image	images: diff(master, image: Image): (float32, Image)	
+minifyBy2	pixie/images.html#minifyBy2,Image,int	images: minifyBy2(image: Image; power = 1): Image	
+magnifyBy2	pixie/images.html#magnifyBy2,Image,int	images: magnifyBy2(image: Image; power = 1): Image	
+applyOpacity	pixie/images.html#applyOpacity,Image,float32	images: applyOpacity(image: Image; opacity: float32)	
+invert	pixie/images.html#invert,Image	images: invert(image: Image)	
+ceil	pixie/images.html#ceil,Image	images: ceil(image: Image)	
+blur	pixie/images.html#blur,Image,float32,SomeColor	images: blur(image: Image; radius: float32; outOfBounds: SomeColor = color(0, 0, 0, 0))	
+getRgbaSmooth	pixie/images.html#getRgbaSmooth,Image,float32,float32	images: getRgbaSmooth(image: Image; x, y: float32; wrapped = false): ColorRGBX	
+draw	pixie/images.html#draw,Image,Image	images: draw(a, b: Image; transform = mat3(); blendMode = NormalBlend)	
+drawTiled	pixie/images.html#drawTiled,Image,Image,Mat3	images: drawTiled(dst, src: Image; mat: Mat3; blendMode = NormalBlend)	
+resize	pixie/images.html#resize,Image,int,int	images: resize(srcImage: Image; width, height: int): Image	
+shadow	pixie/images.html#shadow,Image,Vec2,float32,float32,SomeColor	images: shadow(image: Image; offset: Vec2; spread, blur: float32; color: SomeColor): Image	
+superImage	pixie/images.html#superImage,Image,int,int,int,int	images: superImage(image: Image; x, y, w, h: int): Image	
+opaqueBounds	pixie/images.html#opaqueBounds,Image	images: opaqueBounds(image: Image): Rect	

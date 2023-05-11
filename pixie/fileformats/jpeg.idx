@@ -1,0 +1,3 @@
+jpegStartOfImage	pixie/fileformats/jpeg.html#jpegStartOfImage	jpeg: jpegStartOfImage	
+decodeJpeg	pixie/fileformats/jpeg.html#decodeJpeg,string	jpeg: decodeJpeg(data: string): Image	
+decodeJpegDimensions	pixie/fileformats/jpeg.html#decodeJpegDimensions,string	jpeg: decodeJpegDimensions(data: string): ImageDimensions	

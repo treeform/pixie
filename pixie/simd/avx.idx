@@ -1,0 +1,1 @@
+fillUnsafeAvx	pixie/simd/avx.html#fillUnsafeAvx,seq[ColorRGBX],SomeColor,int,int	avx: fillUnsafeAvx(data: var seq[ColorRGBX]; color: SomeColor; start, len: int)	

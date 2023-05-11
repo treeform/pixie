@@ -1,0 +1,3 @@
+allowSimd	pixie/simd.html#allowSimd	simd: allowSimd	
+cpuHasAvx	pixie/simd.html#cpuHasAvx	simd: cpuHasAvx	
+cpuHasAvx2	pixie/simd.html#cpuHasAvx2	simd: cpuHasAvx2	

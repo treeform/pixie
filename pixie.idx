@@ -1,0 +1,16 @@
+PngFormat	pixie.html#PngFormat	FileFormat.PngFormat	
+BmpFormat	pixie.html#BmpFormat	FileFormat.BmpFormat	
+JpegFormat	pixie.html#JpegFormat	FileFormat.JpegFormat	
+GifFormat	pixie.html#GifFormat	FileFormat.GifFormat	
+QoiFormat	pixie.html#QoiFormat	FileFormat.QoiFormat	
+PpmFormat	pixie.html#PpmFormat	FileFormat.PpmFormat	
+FileFormat	pixie.html#FileFormat	pixie: FileFormat	
+autoStraightAlpha	pixie.html#autoStraightAlpha.c,ColorRGBX	pixie: autoStraightAlpha(c: ColorRGBX): ColorRGBA	
+autoPremultipliedAlpha	pixie.html#autoPremultipliedAlpha.c,ColorRGBA	pixie: autoPremultipliedAlpha(c: ColorRGBA): ColorRGBX	
+decodeImageDimensions	pixie.html#decodeImageDimensions,string	pixie: decodeImageDimensions(data: string): ImageDimensions	
+decodeImage	pixie.html#decodeImage,string	pixie: decodeImage(data: string): Image	
+readImageDimensions	pixie.html#readImageDimensions,string	pixie: readImageDimensions(filePath: string): ImageDimensions	
+readImage	pixie.html#readImage,string	pixie: readImage(filePath: string): Image	
+encodeImage	pixie.html#encodeImage,Image,FileFormat	pixie: encodeImage(image: Image; fileFormat: FileFormat): string	
+writeFile	pixie.html#writeFile,Image,string	pixie: writeFile(image: Image; filePath: string)	
+fill	pixie.html#fill,Image,Paint	pixie: fill(image: Image; paint: Paint)	

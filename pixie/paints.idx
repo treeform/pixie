@@ -1,0 +1,15 @@
+SolidPaint	pixie/paints.html#SolidPaint	PaintKind.SolidPaint	
+ImagePaint	pixie/paints.html#ImagePaint	PaintKind.ImagePaint	
+TiledImagePaint	pixie/paints.html#TiledImagePaint	PaintKind.TiledImagePaint	
+LinearGradientPaint	pixie/paints.html#LinearGradientPaint	PaintKind.LinearGradientPaint	
+RadialGradientPaint	pixie/paints.html#RadialGradientPaint	PaintKind.RadialGradientPaint	
+AngularGradientPaint	pixie/paints.html#AngularGradientPaint	PaintKind.AngularGradientPaint	
+PaintKind	pixie/paints.html#PaintKind	paints: PaintKind	
+Paint	pixie/paints.html#Paint	paints: Paint	
+ColorStop	pixie/paints.html#ColorStop	paints: ColorStop	
+SomePaint	pixie/paints.html#SomePaint	paints: SomePaint	
+newPaint	pixie/paints.html#newPaint,PaintKind	paints: newPaint(kind: PaintKind): Paint	
+copy	pixie/paints.html#copy,Paint	paints: copy(paint: Paint): Paint	
+parseSomePaint	pixie/paints.html#parseSomePaint.c,SomePaint	paints: parseSomePaint(paint: SomePaint): Paint	
+colorStop	pixie/paints.html#colorStop,Color,float32	paints: colorStop(color: Color; position: float32): ColorStop	
+fillGradient	pixie/paints.html#fillGradient,Image,Paint	paints: fillGradient(image: Image; paint: Paint)	

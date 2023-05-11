@@ -1,0 +1,51 @@
+NonZero	pixie/paths.html#NonZero	WindingRule.NonZero	
+EvenOdd	pixie/paths.html#EvenOdd	WindingRule.EvenOdd	
+WindingRule	pixie/paths.html#WindingRule	paths: WindingRule	
+ButtCap	pixie/paths.html#ButtCap	LineCap.ButtCap	
+RoundCap	pixie/paths.html#RoundCap	LineCap.RoundCap	
+SquareCap	pixie/paths.html#SquareCap	LineCap.SquareCap	
+LineCap	pixie/paths.html#LineCap	paths: LineCap	
+MiterJoin	pixie/paths.html#MiterJoin	LineJoin.MiterJoin	
+RoundJoin	pixie/paths.html#RoundJoin	LineJoin.RoundJoin	
+BevelJoin	pixie/paths.html#BevelJoin	LineJoin.BevelJoin	
+LineJoin	pixie/paths.html#LineJoin	paths: LineJoin	
+Path	pixie/paths.html#Path	paths: Path	
+SomePath	pixie/paths.html#SomePath	paths: SomePath	
+defaultMiterLimit	pixie/paths.html#defaultMiterLimit	paths: defaultMiterLimit	
+newPath	pixie/paths.html#newPath	paths: newPath(): Path	
+copy	pixie/paths.html#copy,Path	paths: copy(path: Path): Path	
+`$`	pixie/paths.html#$,Path	paths: `$`(path: Path): string	
+parsePath	pixie/paths.html#parsePath,string	paths: parsePath(path: string): Path	
+transform	pixie/paths.html#transform,Path,Mat3	paths: transform(path: Path; mat: Mat3)	
+addPath	pixie/paths.html#addPath,Path,Path	paths: addPath(path: Path; other: Path)	
+closePath	pixie/paths.html#closePath,Path	paths: closePath(path: Path)	
+moveTo	pixie/paths.html#moveTo,Path,float32,float32	paths: moveTo(path: Path; x, y: float32)	
+moveTo	pixie/paths.html#moveTo,Path,Vec2	paths: moveTo(path: Path; v: Vec2)	
+lineTo	pixie/paths.html#lineTo,Path,float32,float32	paths: lineTo(path: Path; x, y: float32)	
+lineTo	pixie/paths.html#lineTo,Path,Vec2	paths: lineTo(path: Path; v: Vec2)	
+bezierCurveTo	pixie/paths.html#bezierCurveTo,Path,float32,float32,float32,float32,float32,float32	paths: bezierCurveTo(path: Path; x1, y1, x2, y2, x3, y3: float32)	
+bezierCurveTo	pixie/paths.html#bezierCurveTo,Path,Vec2,Vec2,Vec2	paths: bezierCurveTo(path: Path; ctrl1, ctrl2, to: Vec2)	
+quadraticCurveTo	pixie/paths.html#quadraticCurveTo,Path,float32,float32,float32,float32	paths: quadraticCurveTo(path: Path; x1, y1, x2, y2: float32)	
+quadraticCurveTo	pixie/paths.html#quadraticCurveTo,Path,Vec2,Vec2	paths: quadraticCurveTo(path: Path; ctrl, to: Vec2)	
+ellipticalArcTo	pixie/paths.html#ellipticalArcTo,Path,float32,float32,float32,bool,bool,float32,float32	paths: ellipticalArcTo(path: Path; rx, ry: float32; xAxisRotation: float32;\n                largeArcFlag, sweepFlag: bool; x, y: float32)	
+arc	pixie/paths.html#arc,Path,float32,float32,float32,float32,float32,bool	paths: arc(path: Path; x, y, r, a0, a1: float32; ccw: bool = false)	
+arc	pixie/paths.html#arc,Path,Vec2,float32,Vec2,bool	paths: arc(path: Path; pos: Vec2; r: float32; a: Vec2; ccw: bool = false)	
+arcTo	pixie/paths.html#arcTo,Path,float32,float32,float32,float32,float32	paths: arcTo(path: Path; x1, y1, x2, y2, r: float32)	
+arcTo	pixie/paths.html#arcTo,Path,Vec2,Vec2,float32	paths: arcTo(path: Path; a, b: Vec2; r: float32)	
+rect	pixie/paths.html#rect,Path,float32,float32,float32,float32	paths: rect(path: Path; x, y, w, h: float32; clockwise = true)	
+rect	pixie/paths.html#rect,Path,Rect	paths: rect(path: Path; rect: Rect; clockwise = true)	
+roundedRect	pixie/paths.html#roundedRect,Path,float32,float32,float32,float32,float32,float32,float32,float32	paths: roundedRect(path: Path; x, y, w, h, nw, ne, se, sw: float32; clockwise = true)	
+roundedRect	pixie/paths.html#roundedRect,Path,Rect,float32,float32,float32,float32	paths: roundedRect(path: Path; rect: Rect; nw, ne, se, sw: float32; clockwise = true)	
+ellipse	pixie/paths.html#ellipse,Path,float32,float32,float32,float32	paths: ellipse(path: Path; cx, cy, rx, ry: float32)	
+ellipse	pixie/paths.html#ellipse,Path,Vec2,float32,float32	paths: ellipse(path: Path; center: Vec2; rx, ry: float32)	
+circle	pixie/paths.html#circle,Path,float32,float32,float32	paths: circle(path: Path; cx, cy, r: float32)	
+circle	pixie/paths.html#circle,Path,Circle	paths: circle(path: Path; circle: Circle)	
+polygon	pixie/paths.html#polygon,Path,float32,float32,float32,int	paths: polygon(path: Path; x, y, size: float32; sides: int)	
+polygon	pixie/paths.html#polygon,Path,Vec2,float32,int	paths: polygon(path: Path; pos: Vec2; size: float32; sides: int)	
+computeBounds	pixie/paths.html#computeBounds,Path	paths: computeBounds(path: Path; transform = mat3()): Rect	
+miterLimitToAngle	pixie/paths.html#miterLimitToAngle,float32	paths: miterLimitToAngle(limit: float32): float32	
+angleToMiterLimit	pixie/paths.html#angleToMiterLimit,float32	paths: angleToMiterLimit(angle: float32): float32	
+fillPath	pixie/paths.html#fillPath,Image,SomePath,Paint	paths: fillPath(image: Image; path: SomePath; paint: Paint; transform = mat3();\n         windingRule = NonZero)	
+strokePath	pixie/paths.html#strokePath,Image,SomePath,Paint,float32,seq[float32]	paths: strokePath(image: Image; path: SomePath; paint: Paint; transform = mat3();\n           strokeWidth: float32 = 1.0; lineCap = ButtCap; lineJoin = MiterJoin;\n           miterLimit = defaultMiterLimit; dashes: seq[float32] = @[])	
+fillOverlaps	pixie/paths.html#fillOverlaps,Path,Vec2	paths: fillOverlaps(path: Path; test: Vec2; transform = mat3(); ## Applied to the path, not the test point.\n             windingRule = NonZero): bool	
+strokeOverlaps	pixie/paths.html#strokeOverlaps,Path,Vec2,float32,seq[float32]	paths: strokeOverlaps(path: Path; test: Vec2; transform = mat3(); ## Applied to the path, not the test point.\n               strokeWidth: float32 = 1.0; lineCap = ButtCap;\n               lineJoin = MiterJoin; miterLimit = defaultMiterLimit;\n               dashes: seq[float32] = @[]): bool	

@@ -1,0 +1,4 @@
+ppmSignatures	pixie/fileformats/ppm.html#ppmSignatures	ppm: ppmSignatures	
+decodePpm	pixie/fileformats/ppm.html#decodePpm,string	ppm: decodePpm(data: string): Image	
+decodePpmDimensions	pixie/fileformats/ppm.html#decodePpmDimensions,string	ppm: decodePpmDimensions(data: string): ImageDimensions	
+encodePpm	pixie/fileformats/ppm.html#encodePpm,Image	ppm: encodePpm(image: Image): string	
