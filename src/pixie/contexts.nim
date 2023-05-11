@@ -1,5 +1,4 @@
-import bumpy, chroma, pixie/common, pixie/fonts, pixie/images, pixie/paints,
-    pixie/paths, tables, vmath
+import bumpy, chroma, common, fonts, images, paints, paths, tables, vmath
 
 ## This file provides a Nim version of the Canvas 2D API commonly used on the
 ## web. The goal is to make picking up Pixie easy for developers familiar with
