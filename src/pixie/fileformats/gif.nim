@@ -1,4 +1,4 @@
-import chroma, flatty/binny, pixie/common, pixie/images, std/math, std/strutils,
+import chroma, flatty/binny, ../common, ../images, std/math, std/strutils,
     vmath, zippy/bitstreams
 
 # See: https://www.w3.org/Graphics/GIF/spec-gif89a.txt

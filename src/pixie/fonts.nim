@@ -1,5 +1,5 @@
-import bumpy, chroma, common, os, pixie/fontformats/opentype,
-    pixie/fontformats/svgfont, pixie/images, pixie/paints, pixie/paths,
+import bumpy, chroma, common, os, fontformats/opentype,
+    fontformats/svgfont, images, paints, paths,
     strutils, unicode, vmath
 
 const

@@ -1,4 +1,4 @@
-import chroma, nimsimd/hassimd, nimsimd/neon, pixie/blends, pixie/common, vmath
+import chroma, nimsimd/hassimd, nimsimd/neon, ../blends, ../common, vmath
 
 when defined(release):
   {.push checks: off.}

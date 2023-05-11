@@ -1,5 +1,5 @@
-import chroma, flatty/binny, math, pixie/common, pixie/images, pixie/internal,
-    pixie/simd, zippy, crunchy
+import chroma, flatty/binny, math, ../common, ../images, ../internal,
+    ../simd, zippy, crunchy
 
 # See http://www.libpng.org/pub/png/spec/1.2/PNG-Contents.html
 

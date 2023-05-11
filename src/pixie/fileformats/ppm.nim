@@ -1,4 +1,4 @@
-import chroma, flatty/binny, pixie/common, pixie/images, std/strutils
+import chroma, flatty/binny, ../common, ../images, std/strutils
 
 # See: http://netpbm.sourceforge.net/doc/ppm.html
 

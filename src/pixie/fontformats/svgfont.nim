@@ -1,4 +1,4 @@
-import pixie/common, pixie/internal, pixie/paths, strutils, tables, unicode,
+import ../common, ../internal, ../paths, strutils, tables, unicode,
     vmath, xmlparser, xmltree
 
 type SvgFont* = ref object

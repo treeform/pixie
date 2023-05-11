@@ -1,4 +1,4 @@
-import chroma, flatty/binny, pixie/common, pixie/images, pixie/internal
+import chroma, flatty/binny, ../common, ../images, ../internal
 
 const
   tiffSignatures* = [

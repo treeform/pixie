@@ -1,4 +1,4 @@
-import bitops, chroma, flatty/binny, pixie/common, pixie/images
+import bitops, chroma, flatty/binny, ../common, ../images
 
 # See: https://en.wikipedia.org/wiki/BMP_file_format
 # See: https://bmptestsuite.sourceforge.io/

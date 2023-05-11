@@ -1,5 +1,5 @@
-import chroma, flatty/binny, pixie/common, pixie/images, pixie/internal,
-    pixie/simd, std/decls, std/sequtils, std/strutils
+import chroma, flatty/binny, ../common, ../images, ../internal,
+    ../simd, std/decls, std/sequtils, std/strutils
 
 # This JPEG decoder is loosely based on stb_image which is public domain.
 
