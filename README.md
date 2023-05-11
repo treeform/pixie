@@ -12,7 +12,7 @@ This library is being actively developed and we'd be happy for you to use it.
 
 ![Github Actions](https://github.com/treeform/pixie/workflows/Github%20Actions/badge.svg)
 
-[API reference](https://nimdocs.com/treeform/pixie)
+[API reference](https://treeform.github.io/pixie)
 
 [Pixie Book](https://github.com/treeform/pixiebook)
 

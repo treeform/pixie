@@ -1,0 +1,26 @@
+name: docs
+on:
+  push:
+    branches:
+      - master
+env:
+  nim-version: 'stable'
+  nim-src: src/${{ github.event.repository.name }}.nim
+  deploy-dir: .gh-pages
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: jiro4989/setup-nim-action@v1
+        with:
+          nim-version: ${{ env.nim-version }}
+      - run: nimble install -Y
+      - run: nimble doc --index:on --project --git.url:https://github.com/${{ github.repository }} --git.commit:master  --out:${{ env.deploy-dir }} ${{ env.nim-src }}
+      - name: "Copy to index.html"
+        run: cp ${{ env.deploy-dir }}/${{ github.event.repository.name }}.html ${{ env.deploy-dir }}/index.html
+      - name: Deploy documents
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{ env.deploy-dir }}
