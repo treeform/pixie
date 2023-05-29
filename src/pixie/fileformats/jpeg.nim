@@ -380,15 +380,16 @@ proc decodeSOF2(state: var DecoderState) =
 
 proc decodeExif(state: var DecoderState) =
   ## Decode Exif header
-  let
-    len = state.readUint16be().int - 2
-    endOffset = state.pos + len
+  var len = state.readUint16be().int - 2
 
   let exifHeader = state.readStr(6)
+
+  len -= 6
+
   if exifHeader != "Exif\0\0":
     # Happens with progressive images, just ignore instead of error.
     # Skip to the end.
-    state.pos = endOffset
+    state.skipBytes(len)
     return
 
   # Read the endianess of the exif header
@@ -402,22 +403,40 @@ proc decodeExif(state: var DecoderState) =
       else:
         failInvalid("invalid Tiff header")
 
+  len -= 2
+
   # Verify we got the endianess right.
   if state.readUint16be().maybeSwap(littleEndian) != 0x002A.uint16:
     failInvalid("invalid Tiff header endianess")
 
+  len -= 2
+
   # Skip any other tiff header data.
   let offsetToFirstIFD = state.readUint32be().maybeSwap(littleEndian).int
+
+  len -= 4
+
+  if offsetToFirstIFD < 8:
+    failInvalid("invalid Tiff offset")
+
   state.skipBytes(offsetToFirstIFD - 8)
+
+  len -= (offsetToFirstIFD - 8)
 
   # Read the IFD0 (main image) tags.
   let numTags = state.readUint16be().maybeSwap(littleEndian).int
+
+  len -= 2
+
   for i in 0 ..< numTags:
     let
       tagNumber = state.readUint16be().maybeSwap(littleEndian)
       dataFormat = state.readUint16be().maybeSwap(littleEndian)
       numberComponents = state.readUint32be().maybeSwap(littleEndian)
       dataOffset = state.readUint32be().maybeSwap(littleEndian).int
+
+    len -= 12
+
     # For now we only care about orientation tag.
     case tagNumber:
       of 0x0112: # Orientation
@@ -426,7 +445,7 @@ proc decodeExif(state: var DecoderState) =
         discard
 
   # Skip all of the data we do not want to read, IFD1, thumbnail, etc.
-  state.pos = endOffset
+  state.skipBytes(len) # Skip any remaining len
 
 proc reset(state: var DecoderState) =
   ## Rests the decoder state need for restart markers.
@@ -1153,18 +1172,15 @@ proc decodeJpegDimensions*(
       of 0xD8:
         # SOI - Start of Image
         discard
-      of 0xC0:
-        # Start Of Frame (Baseline DCT)
-        state.decodeSOF0()
+      of 0xC0, 0xC2:
+        # Start Of Frame (Baseline DCT or Progressive DCT)
+        discard state.readUint16be().int # Chunk len
+        discard state.readUint8() # Precision
+        state.imageHeight = state.readUint16be().int
+        state.imageWidth = state.readUint16be().int
         break
       of 0xC1:
-        # Start Of Frame (Extended sequential DCT)
-        state.decodeSOF1()
-        break
-      of 0xC2:
-        # Start Of Frame (Progressive DCT)
-        state.decodeSOF2()
-        break
+        failInvalid("unsupported extended sequential DCT format")
       of 0xDB:
         # Define Quantization Table(s)
         state.skipChunk()
