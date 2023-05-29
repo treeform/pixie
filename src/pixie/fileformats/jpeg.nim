@@ -1183,6 +1183,9 @@ proc decodeJpegDimensions*(
         break
       of 0xC1:
         failInvalid("unsupported extended sequential DCT format")
+      of 0xC4:
+        # Define Huffman Table
+        state.decodeDHT()
       of 0xDB:
         # Define Quantization Table(s)
         state.skipChunk()
