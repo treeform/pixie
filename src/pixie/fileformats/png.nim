@@ -3,7 +3,7 @@ import chroma, flatty/binny, math, ../common, ../images, ../internal,
 
 # See http://www.libpng.org/pub/png/spec/1.2/PNG-Contents.html
 
-const
+let
   pngSignature* = [137.uint8, 80, 78, 71, 13, 10, 26, 10]
 
 type

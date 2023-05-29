@@ -19,23 +19,35 @@ converter autoPremultipliedAlpha*(c: ColorRGBA): ColorRGBX {.inline, raises: [].
   c.rgbx()
 
 proc decodeImageDimensions*(
+  data: pointer, len: int
+): ImageDimensions {.raises: [PixieError].} =
+  ## Decodes an image's dimensions from memory.
+  if len > 8 and equalMem(data, pngSignature[0].unsafeAddr, 8):
+    decodePngDimensions(data, len)
+  elif len > 2 and equalMem(data, jpegStartOfImage[0].unsafeAddr, 2):
+    decodeJpegDimensions(data, len)
+  elif len > 2 and equalMem(data, bmpSignature.cstring, 2):
+    decodeBmpDimensions(data, len)
+  elif len > 6 and (
+    equalMem(data, gifSignatures[0].cstring, 6) or
+    equalMem(data, gifSignatures[1].cstring, 6)
+  ):
+    decodeGifDimensions(data, len)
+  elif len > (14 + 8) and equalMem(data, qoiSignature.cstring, 4):
+    decodeQoiDimensions(data, len)
+  elif len > 9 and (
+    equalMem(data, ppmSignatures[0].cstring, 2) or
+    equalMem(data, ppmSignatures[1].cstring, 2)
+  ):
+    decodePpmDimensions(data, len)
+  else:
+    raise newException(PixieError, "Unsupported image file format")
+
+proc decodeImageDimensions*(
   data: string
 ): ImageDimensions {.raises: [PixieError].} =
   ## Decodes an image's dimensions from memory.
-  if data.len > 8 and data.readUint64(0) == cast[uint64](pngSignature):
-    decodePngDimensions(data)
-  elif data.len > 2 and data.readUint16(0) == cast[uint16](jpegStartOfImage):
-    decodeJpegDimensions(data)
-  elif data.len > 2 and data.readStr(0, 2) == bmpSignature:
-    decodeBmpDimensions(data)
-  elif data.len > 6 and data.readStr(0, 6) in gifSignatures:
-    decodeGifDimensions(data)
-  elif data.len > (14+8) and data.readStr(0, 4) == qoiSignature:
-    decodeQoiDimensions(data)
-  elif data.len > 9 and data.readStr(0, 2) in ppmSignatures:
-    decodePpmDimensions(data)
-  else:
-    raise newException(PixieError, "Unsupported image file format")
+  decodeImageDimensions(data.cstring, data.len)
 
 proc decodeImage*(data: string): Image {.raises: [PixieError].} =
   ## Loads an image from memory.

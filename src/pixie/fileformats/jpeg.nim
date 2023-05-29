@@ -24,7 +24,6 @@ import chroma, flatty/binny, ../common, ../images, ../internal,
 
 const
   fastBits = 9
-  jpegStartOfImage* = [0xFF.uint8, 0xD8]
   deZigZag = [
     uint8 00, 01, 08, 16, 09, 02, 03, 10,
     uint8 17, 24, 32, 25, 18, 11, 04, 05,
@@ -39,6 +38,9 @@ const
     0.uint32, 1, 3, 7, 15, 31, 63, 127, 255, 511,
     1023, 2047, 4095, 8191, 16383, 32767, 65535
   ]
+
+let
+  jpegStartOfImage* = [0xFF.uint8, 0xD8]
 
 type
   Huffman = object
@@ -1155,13 +1157,13 @@ proc decodeJpeg*(data: string): Image {.raises: [PixieError].} =
   state.buildImage()
 
 proc decodeJpegDimensions*(
-  data: string
+  data: pointer, len: int
 ): ImageDimensions {.raises: [PixieError].} =
   ## Decodes the JPEG dimensions.
 
   var state = DecoderState()
-  state.buffer = cast[ptr UncheckedArray[uint8]](data.cstring)
-  state.len = data.len
+  state.buffer = cast[ptr UncheckedArray[uint8]](data)
+  state.len = len
 
   while true:
     if state.readUint8() != 0xFF:
@@ -1208,6 +1210,12 @@ proc decodeJpegDimensions*(
       result.height = state.imageWidth
     else:
       failInvalid("invalid orientation")
+
+proc decodeJpegDimensions*(
+  data: string
+): ImageDimensions {.raises: [PixieError].} =
+  ## Decodes the JPEG dimensions.
+  decodeJpegDimensions(data.cstring, data.len)
 
 when defined(release):
   {.pop.}
