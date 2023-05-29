@@ -228,18 +228,26 @@ proc decodeBmp*(data: string): Image {.raises: [PixieError].} =
   decodeDib(data[14].unsafeAddr, data.len - 14)
 
 proc decodeBmpDimensions*(
-  data: string
+  data: pointer, len: int
 ): ImageDimensions {.raises: [PixieError].} =
   ## Decodes the BMP dimensions.
-  if data.len < 26:
+  if len < 26:
     failInvalid()
 
+  let data = cast[ptr UncheckedArray[uint8]](data)
+
   # BMP Header
-  if data[0 .. 1] != "BM":
+  if data[0].char != 'B' or data[1].char != 'M': # Must start with BM
     failInvalid()
 
   result.width = data.readInt32(18).int
   result.height = abs(data.readInt32(22)).int
+
+proc decodeBmpDimensions*(
+  data: string
+): ImageDimensions {.raises: [PixieError].} =
+  ## Decodes the BMP dimensions.
+  decodeBmpDimensions(data.cstring, data.len)
 
 proc encodeDib*(image: Image): string {.raises: [].} =
   ## Encodes an image into a DIB.

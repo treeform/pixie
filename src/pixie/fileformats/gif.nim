@@ -379,17 +379,28 @@ proc decodeGif*(data: string): Gif {.raises: [PixieError].} =
     result.duration += interval
 
 proc decodeGifDimensions*(
-  data: string
+  data: pointer, len: int
 ): ImageDimensions {.raises: [PixieError].} =
   ## Decodes the GIF dimensions.
-  if data.len < 10:
+  if len < 10:
     failInvalid()
 
-  if data[0 .. 5] notin gifSignatures:
+  let data = cast[ptr UncheckedArray[uint8]](data)
+
+  let startsWithSignature =
+    equalMem(data, gifSignatures[0].cstring, 6) or
+    equalMem(data, gifSignatures[1].cstring, 6)
+
+  if not startsWithSignature:
     raise newException(PixieError, "Invalid GIF file signature")
 
   result.width = data.readInt16(6).int
   result.height = data.readInt16(8).int
+
+proc decodeGifDimensions*(
+  data: string
+): ImageDimensions {.raises: [PixieError].} =
+  decodeGifDimensions(data.cstring, data.len)
 
 proc newImage*(gif: Gif): Image {.raises: [].} =
   gif.frames[0].copy()
