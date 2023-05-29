@@ -12,8 +12,10 @@ type
 template failInvalid() =
   raise newException(PixieError, "Invalid PPM data")
 
-proc decodeHeader(data: string): PpmHeader {.raises: [PixieError].} =
-  if data.len <= 10: # Each part + whitespace
+proc decodeHeader(
+  data: ptr UncheckedArray[uint8], len: int
+): PpmHeader {.raises: [PixieError].} =
+  if len <= 10: # Each part + whitespace
     raise newException(PixieError, "Invalid PPM file header")
 
   var
@@ -21,7 +23,7 @@ proc decodeHeader(data: string): PpmHeader {.raises: [PixieError].} =
     i, readFields: int
     field: string
   while readFields < 4:
-    let c = readUint8(data, i).char
+    let c = data[i].char
     if c == '#':
       commentMode = true
     elif c == '\n':
@@ -120,7 +122,10 @@ proc decodeP3Data(data: string, maxVal: int): seq[ColorRGBX] {.raises: [PixieErr
 proc decodePpm*(data: string): Image {.raises: [PixieError].} =
   ## Decodes Portable Pixel Map data into an Image.
 
-  let header = decodeHeader(data)
+  let header = decodeHeader(
+    cast[ptr UncheckedArray[uint8]](data.cstring),
+    data.len
+  )
 
   if not (header.version in ppmSignatures):
     failInvalid()
@@ -136,12 +141,20 @@ proc decodePpm*(data: string): Image {.raises: [PixieError].} =
       decodeP6Data(data[header.dataOffset .. ^1], header.maxVal)
 
 proc decodePpmDimensions*(
+  data: pointer, len: int
+): ImageDimensions {.raises: [PixieError].} =
+  ## Decodes the PPM dimensions.
+  let
+    data = cast[ptr UncheckedArray[uint8]](data)
+    header = decodeHeader(data, len)
+  result.width = header.width
+  result.height = header.height
+
+proc decodePpmDimensions*(
   data: string
 ): ImageDimensions {.raises: [PixieError].} =
   ## Decodes the PPM dimensions.
-  let header = decodeHeader(data)
-  result.width = header.width
-  result.height = header.height
+  decodePpmDimensions(data.cstring, data.len)
 
 proc encodePpm*(image: Image): string {.raises: [].} =
   ## Encodes an image into the PPM file format (version P6).
