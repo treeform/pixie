@@ -15,14 +15,13 @@ template failInvalid() =
 proc decodeHeader(
   data: ptr UncheckedArray[uint8], len: int
 ): PpmHeader {.raises: [PixieError].} =
-  if len <= 10: # Each part + whitespace
-    raise newException(PixieError, "Invalid PPM file header")
-
   var
     commentMode, readWhitespace: bool
     i, readFields: int
     field: string
   while readFields < 4:
+    if i >= len:
+      raise newException(PixieError, "Invalid PPM file header")
     let c = data[i].char
     if c == '#':
       commentMode = true
