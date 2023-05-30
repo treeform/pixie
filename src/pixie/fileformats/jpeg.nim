@@ -1189,6 +1189,9 @@ proc decodeJpegDimensions*(
       of 0xDB:
         # Define Quantization Table(s)
         state.skipChunk()
+      of 0xDD:
+        # Define Restart Interval
+        state.skipChunk()
       of 0XE0:
         # Application-specific
         state.skipChunk()
