@@ -76,14 +76,6 @@ proc decodeHeader(data: pointer): PngHeader =
   if result.interlaceMethod notin [0.uint8, 1]:
     raise newException(PixieError, "Invalid PNG interlace method")
 
-  # Not yet supported:
-
-  if result.bitDepth == 16:
-    raise newException(PixieError, "PNG 16 bit depth not supported yet")
-
-  if result.interlaceMethod != 0:
-    raise newException(PixieError, "Interlaced PNG not supported yet")
-
 proc decodePalette(data: pointer, len: int): seq[ColorRGB] =
   if len == 0 or len mod 3 != 0:
     failInvalid()
@@ -450,6 +442,12 @@ proc decodePng*(data: pointer, len: int): Png {.raises: [PixieError].} =
   if headerCrc != data.readUint32(pos).swap():
     failCRC()
   inc(pos, 4) # CRC
+
+  # Not yet supported:
+  if header.bitDepth == 16:
+    raise newException(PixieError, "PNG 16 bit depth not supported yet")
+  if header.interlaceMethod != 0:
+    raise newException(PixieError, "Interlaced PNG not supported yet")
 
   while true:
     if pos + 8 > len:
