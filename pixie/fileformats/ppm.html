@@ -121,7 +121,9 @@ window.addEventListener('DOMContentLoaded', main);
 
   </ul>
   <ul class="simple nested-toc-section">decodePpmDimensions
-      <li><a class="reference" href="#decodePpmDimensions%2Cstring"
+      <li><a class="reference" href="#decodePpmDimensions%2Cpointer%2Cint"
+    title="decodePpmDimensions(data: pointer; len: int): ImageDimensions">decodePpmDimensions(data: pointer; len: int): ImageDimensions</a></li>
+  <li><a class="reference" href="#decodePpmDimensions%2Cstring"
     title="decodePpmDimensions(data: string): ImageDimensions">decodePpmDimensions(data: string): ImageDimensions</a></li>
 
   </ul>
@@ -177,9 +179,22 @@ class="link-seesrc" target="_blank">Source</a>
 
 Decodes Portable Pixel Map data into an Image.
 &nbsp;&nbsp;<a
-href="https://github.com/treeform/pixie/tree/master/src/pixie/fileformats/ppm.nim#L120"
+href="https://github.com/treeform/pixie/tree/master/src/pixie/fileformats/ppm.nim#L121"
 class="link-seesrc" target="_blank">Source</a>
-&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fileformats/ppm.nim#L120" class="link-seesrc" target="_blank" >Edit</a>
+&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fileformats/ppm.nim#L121" class="link-seesrc" target="_blank" >Edit</a>
+
+</dd>
+</div>
+<div id="decodePpmDimensions,pointer,int">
+<dt><pre><span class="Keyword">proc</span> <a href="#decodePpmDimensions%2Cpointer%2Cint"><span class="Identifier">decodePpmDimensions</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">pointer</span><span class="Other">;</span> <span class="Identifier">len</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span><span class="Other">:</span> <a href="../common.html#ImageDimensions"><span class="Identifier">ImageDimensions</span></a> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><a href="../common.html#PixieError"><span class="Identifier">PixieError</span></a><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+<dd>
+
+Decodes the PPM dimensions.
+&nbsp;&nbsp;<a
+href="https://github.com/treeform/pixie/tree/master/src/pixie/fileformats/ppm.nim#L142"
+class="link-seesrc" target="_blank">Source</a>
+&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fileformats/ppm.nim#L142" class="link-seesrc" target="_blank" >Edit</a>
 
 </dd>
 </div>
@@ -190,9 +205,9 @@ class="link-seesrc" target="_blank">Source</a>
 
 Decodes the PPM dimensions.
 &nbsp;&nbsp;<a
-href="https://github.com/treeform/pixie/tree/master/src/pixie/fileformats/ppm.nim#L138"
+href="https://github.com/treeform/pixie/tree/master/src/pixie/fileformats/ppm.nim#L152"
 class="link-seesrc" target="_blank">Source</a>
-&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fileformats/ppm.nim#L138" class="link-seesrc" target="_blank" >Edit</a>
+&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fileformats/ppm.nim#L152" class="link-seesrc" target="_blank" >Edit</a>
 
 </dd>
 </div>
@@ -202,9 +217,9 @@ class="link-seesrc" target="_blank">Source</a>
 
 Encodes an image into the PPM file format (version P6).
 &nbsp;&nbsp;<a
-href="https://github.com/treeform/pixie/tree/master/src/pixie/fileformats/ppm.nim#L146"
+href="https://github.com/treeform/pixie/tree/master/src/pixie/fileformats/ppm.nim#L158"
 class="link-seesrc" target="_blank">Source</a>
-&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fileformats/ppm.nim#L146" class="link-seesrc" target="_blank" >Edit</a>
+&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fileformats/ppm.nim#L158" class="link-seesrc" target="_blank" >Edit</a>
 
 </dd>
 </div>
@@ -218,7 +233,7 @@ class="link-seesrc" target="_blank">Source</a>
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2023-05-11 01:14:03 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2023-06-22 23:36:08 UTC</small>
       </div>
     </div>
   </div>

@@ -1,5 +1,6 @@
 gifSignatures	pixie/fileformats/gif.html#gifSignatures	gif: gifSignatures	
 Gif	pixie/fileformats/gif.html#Gif	gif: Gif	
 decodeGif	pixie/fileformats/gif.html#decodeGif,string	gif: decodeGif(data: string): Gif	
+decodeGifDimensions	pixie/fileformats/gif.html#decodeGifDimensions,pointer,int	gif: decodeGifDimensions(data: pointer; len: int): ImageDimensions	
 decodeGifDimensions	pixie/fileformats/gif.html#decodeGifDimensions,string	gif: decodeGifDimensions(data: string): ImageDimensions	
 newImage	pixie/fileformats/gif.html#newImage,Gif	gif: newImage(gif: Gif): Image	

@@ -121,7 +121,9 @@ window.addEventListener('DOMContentLoaded', main);
 
   </ul>
   <ul class="simple nested-toc-section">decodeBmpDimensions
-      <li><a class="reference" href="#decodeBmpDimensions%2Cstring"
+      <li><a class="reference" href="#decodeBmpDimensions%2Cpointer%2Cint"
+    title="decodeBmpDimensions(data: pointer; len: int): ImageDimensions">decodeBmpDimensions(data: pointer; len: int): ImageDimensions</a></li>
+  <li><a class="reference" href="#decodeBmpDimensions%2Cstring"
     title="decodeBmpDimensions(data: string): ImageDimensions">decodeBmpDimensions(data: string): ImageDimensions</a></li>
 
   </ul>
@@ -193,9 +195,9 @@ class="link-seesrc" target="_blank">Source</a>
 
 </dd>
 </div>
-<div id="decodeBmpDimensions,string">
-<dt><pre><span class="Keyword">proc</span> <a href="#decodeBmpDimensions%2Cstring"><span class="Identifier">decodeBmpDimensions</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="../common.html#ImageDimensions"><span class="Identifier">ImageDimensions</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><a href="../common.html#PixieError"><span class="Identifier">PixieError</span></a><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+<div id="decodeBmpDimensions,pointer,int">
+<dt><pre><span class="Keyword">proc</span> <a href="#decodeBmpDimensions%2Cpointer%2Cint"><span class="Identifier">decodeBmpDimensions</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">pointer</span><span class="Other">;</span> <span class="Identifier">len</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span><span class="Other">:</span> <a href="../common.html#ImageDimensions"><span class="Identifier">ImageDimensions</span></a> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><a href="../common.html#PixieError"><span class="Identifier">PixieError</span></a><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
 <dd>
 
 Decodes the BMP dimensions.
@@ -203,6 +205,19 @@ Decodes the BMP dimensions.
 href="https://github.com/treeform/pixie/tree/master/src/pixie/fileformats/bmp.nim#L230"
 class="link-seesrc" target="_blank">Source</a>
 &nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fileformats/bmp.nim#L230" class="link-seesrc" target="_blank" >Edit</a>
+
+</dd>
+</div>
+<div id="decodeBmpDimensions,string">
+<dt><pre><span class="Keyword">proc</span> <a href="#decodeBmpDimensions%2Cstring"><span class="Identifier">decodeBmpDimensions</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="../common.html#ImageDimensions"><span class="Identifier">ImageDimensions</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><a href="../common.html#PixieError"><span class="Identifier">PixieError</span></a><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+<dd>
+
+Decodes the BMP dimensions.
+&nbsp;&nbsp;<a
+href="https://github.com/treeform/pixie/tree/master/src/pixie/fileformats/bmp.nim#L246"
+class="link-seesrc" target="_blank">Source</a>
+&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fileformats/bmp.nim#L246" class="link-seesrc" target="_blank" >Edit</a>
 
 </dd>
 </div>
@@ -225,9 +240,9 @@ class="link-seesrc" target="_blank">Source</a>
 
 Encodes an image into the BMP file format.
 &nbsp;&nbsp;<a
-href="https://github.com/treeform/pixie/tree/master/src/pixie/fileformats/bmp.nim#L274"
+href="https://github.com/treeform/pixie/tree/master/src/pixie/fileformats/bmp.nim#L282"
 class="link-seesrc" target="_blank">Source</a>
-&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fileformats/bmp.nim#L274" class="link-seesrc" target="_blank" >Edit</a>
+&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fileformats/bmp.nim#L282" class="link-seesrc" target="_blank" >Edit</a>
 
 </dd>
 </div>
@@ -237,9 +252,9 @@ class="link-seesrc" target="_blank">Source</a>
 
 Encodes an image into a DIB.
 &nbsp;&nbsp;<a
-href="https://github.com/treeform/pixie/tree/master/src/pixie/fileformats/bmp.nim#L244"
+href="https://github.com/treeform/pixie/tree/master/src/pixie/fileformats/bmp.nim#L252"
 class="link-seesrc" target="_blank">Source</a>
-&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fileformats/bmp.nim#L244" class="link-seesrc" target="_blank" >Edit</a>
+&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fileformats/bmp.nim#L252" class="link-seesrc" target="_blank" >Edit</a>
 
 </dd>
 </div>
@@ -253,7 +268,7 @@ class="link-seesrc" target="_blank">Source</a>
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2023-05-11 01:14:03 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2023-06-22 23:36:08 UTC</small>
       </div>
     </div>
   </div>

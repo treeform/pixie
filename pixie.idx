@@ -7,6 +7,7 @@ PpmFormat	pixie.html#PpmFormat	FileFormat.PpmFormat
 FileFormat	pixie.html#FileFormat	pixie: FileFormat	
 autoStraightAlpha	pixie.html#autoStraightAlpha.c,ColorRGBX	pixie: autoStraightAlpha(c: ColorRGBX): ColorRGBA	
 autoPremultipliedAlpha	pixie.html#autoPremultipliedAlpha.c,ColorRGBA	pixie: autoPremultipliedAlpha(c: ColorRGBA): ColorRGBX	
+decodeImageDimensions	pixie.html#decodeImageDimensions,pointer,int	pixie: decodeImageDimensions(data: pointer; len: int): ImageDimensions	
 decodeImageDimensions	pixie.html#decodeImageDimensions,string	pixie: decodeImageDimensions(data: string): ImageDimensions	
 decodeImage	pixie.html#decodeImage,string	pixie: decodeImage(data: string): Image	
 readImageDimensions	pixie.html#readImageDimensions,string	pixie: readImageDimensions(filePath: string): ImageDimensions	

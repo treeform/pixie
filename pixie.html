@@ -122,7 +122,9 @@ window.addEventListener('DOMContentLoaded', main);
 
   </ul>
   <ul class="simple nested-toc-section">decodeImageDimensions
-      <li><a class="reference" href="#decodeImageDimensions%2Cstring"
+      <li><a class="reference" href="#decodeImageDimensions%2Cpointer%2Cint"
+    title="decodeImageDimensions(data: pointer; len: int): ImageDimensions">decodeImageDimensions(data: pointer; len: int): ImageDimensions</a></li>
+  <li><a class="reference" href="#decodeImageDimensions%2Cstring"
     title="decodeImageDimensions(data: string): ImageDimensions">decodeImageDimensions(data: string): ImageDimensions</a></li>
 
   </ul>
@@ -222,14 +224,14 @@ class="link-seesrc" target="_blank">Source</a>
 
 Loads an image from memory.
 &nbsp;&nbsp;<a
-href="https://github.com/treeform/pixie/tree/master/src/pixie.nim#L40"
+href="https://github.com/treeform/pixie/tree/master/src/pixie.nim#L52"
 class="link-seesrc" target="_blank">Source</a>
-&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie.nim#L40" class="link-seesrc" target="_blank" >Edit</a>
+&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie.nim#L52" class="link-seesrc" target="_blank" >Edit</a>
 
 </dd>
 </div>
-<div id="decodeImageDimensions,string">
-<dt><pre><span class="Keyword">proc</span> <a href="#decodeImageDimensions%2Cstring"><span class="Identifier">decodeImageDimensions</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="pixie/common.html#ImageDimensions"><span class="Identifier">ImageDimensions</span></a> {.
+<div id="decodeImageDimensions,pointer,int">
+<dt><pre><span class="Keyword">proc</span> <a href="#decodeImageDimensions%2Cpointer%2Cint"><span class="Identifier">decodeImageDimensions</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">pointer</span><span class="Other">;</span> <span class="Identifier">len</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span><span class="Other">:</span> <a href="pixie/common.html#ImageDimensions"><span class="Identifier">ImageDimensions</span></a> {.
     <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><a href="pixie/common.html#PixieError"><span class="Identifier">PixieError</span></a><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
 <dd>
 
@@ -241,6 +243,19 @@ class="link-seesrc" target="_blank">Source</a>
 
 </dd>
 </div>
+<div id="decodeImageDimensions,string">
+<dt><pre><span class="Keyword">proc</span> <a href="#decodeImageDimensions%2Cstring"><span class="Identifier">decodeImageDimensions</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="pixie/common.html#ImageDimensions"><span class="Identifier">ImageDimensions</span></a> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><a href="pixie/common.html#PixieError"><span class="Identifier">PixieError</span></a><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+<dd>
+
+Decodes an image's dimensions from memory.
+&nbsp;&nbsp;<a
+href="https://github.com/treeform/pixie/tree/master/src/pixie.nim#L46"
+class="link-seesrc" target="_blank">Source</a>
+&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie.nim#L46" class="link-seesrc" target="_blank" >Edit</a>
+
+</dd>
+</div>
 <div id="encodeImage,Image,FileFormat">
 <dt><pre><span class="Keyword">proc</span> <a href="#encodeImage%2CImage%2CFileFormat"><span class="Identifier">encodeImage</span></a><span class="Other">(</span><span class="Identifier">image</span><span class="Other">:</span> <a href="pixie/common.html#Image"><span class="Identifier">Image</span></a><span class="Other">;</span> <span class="Identifier">fileFormat</span><span class="Other">:</span> <a href="pixie.html#FileFormat"><span class="Identifier">FileFormat</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.
     <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><a href="pixie/common.html#PixieError"><span class="Identifier">PixieError</span></a><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
@@ -248,9 +263,9 @@ class="link-seesrc" target="_blank">Source</a>
 
 Encodes an image into memory.
 &nbsp;&nbsp;<a
-href="https://github.com/treeform/pixie/tree/master/src/pixie.nim#L76"
+href="https://github.com/treeform/pixie/tree/master/src/pixie.nim#L88"
 class="link-seesrc" target="_blank">Source</a>
-&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie.nim#L76" class="link-seesrc" target="_blank" >Edit</a>
+&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie.nim#L88" class="link-seesrc" target="_blank" >Edit</a>
 
 </dd>
 </div>
@@ -260,9 +275,9 @@ class="link-seesrc" target="_blank">Source</a>
 
 Fills the image with the paint.
 &nbsp;&nbsp;<a
-href="https://github.com/treeform/pixie/tree/master/src/pixie.nim#L108"
+href="https://github.com/treeform/pixie/tree/master/src/pixie.nim#L120"
 class="link-seesrc" target="_blank">Source</a>
-&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie.nim#L108" class="link-seesrc" target="_blank" >Edit</a>
+&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie.nim#L120" class="link-seesrc" target="_blank" >Edit</a>
 
 </dd>
 </div>
@@ -273,9 +288,9 @@ class="link-seesrc" target="_blank">Source</a>
 
 Loads an image from a file.
 &nbsp;&nbsp;<a
-href="https://github.com/treeform/pixie/tree/master/src/pixie.nim#L69"
+href="https://github.com/treeform/pixie/tree/master/src/pixie.nim#L81"
 class="link-seesrc" target="_blank">Source</a>
-&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie.nim#L69" class="link-seesrc" target="_blank" >Edit</a>
+&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie.nim#L81" class="link-seesrc" target="_blank" >Edit</a>
 
 </dd>
 </div>
@@ -286,9 +301,9 @@ class="link-seesrc" target="_blank">Source</a>
 
 Decodes an image's dimensions from a file.
 &nbsp;&nbsp;<a
-href="https://github.com/treeform/pixie/tree/master/src/pixie.nim#L60"
+href="https://github.com/treeform/pixie/tree/master/src/pixie.nim#L72"
 class="link-seesrc" target="_blank">Source</a>
-&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie.nim#L60" class="link-seesrc" target="_blank" >Edit</a>
+&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie.nim#L72" class="link-seesrc" target="_blank" >Edit</a>
 
 </dd>
 </div>
@@ -299,9 +314,9 @@ class="link-seesrc" target="_blank">Source</a>
 
 Writes an image to a file.
 &nbsp;&nbsp;<a
-href="https://github.com/treeform/pixie/tree/master/src/pixie.nim#L92"
+href="https://github.com/treeform/pixie/tree/master/src/pixie.nim#L104"
 class="link-seesrc" target="_blank">Source</a>
-&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie.nim#L92" class="link-seesrc" target="_blank" >Edit</a>
+&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie.nim#L104" class="link-seesrc" target="_blank" >Edit</a>
 
 </dd>
 </div>
@@ -351,7 +366,7 @@ class="link-seesrc" target="_blank">Source</a>
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2023-05-11 01:14:03 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2023-06-22 23:36:09 UTC</small>
       </div>
     </div>
   </div>

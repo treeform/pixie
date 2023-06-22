@@ -132,7 +132,9 @@ window.addEventListener('DOMContentLoaded', main);
 
   </ul>
   <ul class="simple nested-toc-section">decodeGifDimensions
-      <li><a class="reference" href="#decodeGifDimensions%2Cstring"
+      <li><a class="reference" href="#decodeGifDimensions%2Cpointer%2Cint"
+    title="decodeGifDimensions(data: pointer; len: int): ImageDimensions">decodeGifDimensions(data: pointer; len: int): ImageDimensions</a></li>
+  <li><a class="reference" href="#decodeGifDimensions%2Cstring"
     title="decodeGifDimensions(data: string): ImageDimensions">decodeGifDimensions(data: string): ImageDimensions</a></li>
 
   </ul>
@@ -215,9 +217,9 @@ class="link-seesrc" target="_blank">Source</a>
 
 </dd>
 </div>
-<div id="decodeGifDimensions,string">
-<dt><pre><span class="Keyword">proc</span> <a href="#decodeGifDimensions%2Cstring"><span class="Identifier">decodeGifDimensions</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="../common.html#ImageDimensions"><span class="Identifier">ImageDimensions</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><a href="../common.html#PixieError"><span class="Identifier">PixieError</span></a><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+<div id="decodeGifDimensions,pointer,int">
+<dt><pre><span class="Keyword">proc</span> <a href="#decodeGifDimensions%2Cpointer%2Cint"><span class="Identifier">decodeGifDimensions</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">pointer</span><span class="Other">;</span> <span class="Identifier">len</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span><span class="Other">:</span> <a href="../common.html#ImageDimensions"><span class="Identifier">ImageDimensions</span></a> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><a href="../common.html#PixieError"><span class="Identifier">PixieError</span></a><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
 <dd>
 
 Decodes the GIF dimensions.
@@ -228,15 +230,28 @@ class="link-seesrc" target="_blank">Source</a>
 
 </dd>
 </div>
+<div id="decodeGifDimensions,string">
+<dt><pre><span class="Keyword">proc</span> <a href="#decodeGifDimensions%2Cstring"><span class="Identifier">decodeGifDimensions</span></a><span class="Other">(</span><span class="Identifier">data</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="../common.html#ImageDimensions"><span class="Identifier">ImageDimensions</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><a href="../common.html#PixieError"><span class="Identifier">PixieError</span></a><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+<dd>
+
+
+&nbsp;&nbsp;<a
+href="https://github.com/treeform/pixie/tree/master/src/pixie/fileformats/gif.nim#L400"
+class="link-seesrc" target="_blank">Source</a>
+&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fileformats/gif.nim#L400" class="link-seesrc" target="_blank" >Edit</a>
+
+</dd>
+</div>
 <div id="newImage,Gif">
 <dt><pre><span class="Keyword">proc</span> <a href="#newImage%2CGif"><span class="Identifier">newImage</span></a><span class="Other">(</span><span class="Identifier">gif</span><span class="Other">:</span> <a href="gif.html#Gif"><span class="Identifier">Gif</span></a><span class="Other">)</span><span class="Other">:</span> <a href="../common.html#Image"><span class="Identifier">Image</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
 <dd>
 
 
 &nbsp;&nbsp;<a
-href="https://github.com/treeform/pixie/tree/master/src/pixie/fileformats/gif.nim#L394"
+href="https://github.com/treeform/pixie/tree/master/src/pixie/fileformats/gif.nim#L405"
 class="link-seesrc" target="_blank">Source</a>
-&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fileformats/gif.nim#L394" class="link-seesrc" target="_blank" >Edit</a>
+&nbsp;&nbsp;<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fileformats/gif.nim#L405" class="link-seesrc" target="_blank" >Edit</a>
 
 </dd>
 </div>
@@ -250,7 +265,7 @@ class="link-seesrc" target="_blank">Source</a>
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2023-05-11 01:14:03 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2023-06-22 23:36:08 UTC</small>
       </div>
     </div>
   </div>
