@@ -136,14 +136,22 @@ proc decodeQoi*(data: string): Qoi {.raises: [PixieError].} =
     inc(p)
 
 proc decodeQoiDimensions*(
-  data: string
+  data: pointer, len: int
 ): ImageDimensions {.raises: [PixieError].} =
   ## Decodes the QOI dimensions.
-  if data.len <= 12 or data[0 .. 3] != qoiSignature:
+  if len <= 12 or not equalMem(data, qoiSignature.cstring, 4):
     raise newException(PixieError, "Invalid QOI header")
+
+  let data = cast[ptr UncheckedArray[uint8]](data)
 
   result.width = data.readUint32(4).swap().int
   result.height = data.readUint32(8).swap().int
+
+proc decodeQoiDimensions*(
+  data: string
+): ImageDimensions {.raises: [PixieError].} =
+  ## Decodes the QOI dimensions.
+  decodeQoiDimensions(data.cstring, data.len)
 
 proc encodeQoi*(qoi: Qoi): string {.raises: [PixieError].} =
   ## Encodes raw QOI pixels to the QOI file format.
