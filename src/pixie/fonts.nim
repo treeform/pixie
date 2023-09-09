@@ -110,8 +110,10 @@ proc hasGlyph*(typeface: Typeface, rune: Rune): bool {.inline.} =
   ## Returns if there is a glyph for this rune.
   if typeface.opentype != nil:
     typeface.opentype.hasGlyph(rune)
-  else:
+  elif typeface.svgFont != nil:
     typeface.svgFont.hasGlyph(rune)
+  else:
+    false
 
 proc fallbackTypeface*(typeface: Typeface, rune: Rune): Typeface =
   ## Looks through fallback typefaces to find one that has the glyph.
