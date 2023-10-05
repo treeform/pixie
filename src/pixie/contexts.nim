@@ -481,8 +481,8 @@ proc fillText*(ctx: Context, text: string, at: Vec2) {.raises: [PixieError].} =
 proc fillText*(
   ctx: Context, text: string, x, y: float32
 ) {.inline, raises: [PixieError].} =
-  ## Draws the outlines of the characters of a text string at the specified
-  ## coordinates.
+  ## Draws a text string at the specified coordinates, filling the string's
+  ## characters with the current fillStyle
   ctx.fillText(text, vec2(x, y))
 
 proc strokeText*(ctx: Context, text: string, at: Vec2) {.raises: [PixieError].} =
