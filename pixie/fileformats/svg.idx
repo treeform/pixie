@@ -1,5 +1,6 @@
-xmlSignature	pixie/fileformats/svg.html#xmlSignature	svg: xmlSignature	
-svgSignature	pixie/fileformats/svg.html#svgSignature	svg: svgSignature	
-Svg	pixie/fileformats/svg.html#Svg	svg: Svg	
-parseSvg	pixie/fileformats/svg.html#parseSvg,,int,int	svg: parseSvg(data: string | XmlNode; width = 0; height = 0): Svg	
-newImage	pixie/fileformats/svg.html#newImage,Svg	svg: newImage(svg: Svg): Image	
+nimTitle	svg	pixie/fileformats/svg.html	module src/pixie/fileformats/svg		0
+nim	xmlSignature	pixie/fileformats/svg.html#xmlSignature	const xmlSignature		10
+nim	svgSignature	pixie/fileformats/svg.html#svgSignature	const svgSignature		11
+nim	Svg	pixie/fileformats/svg.html#Svg	type Svg		14
+nim	parseSvg	pixie/fileformats/svg.html#parseSvg,,int,int	proc parseSvg(data: string | XmlNode; width = 0; height = 0): Svg		502
+nim	newImage	pixie/fileformats/svg.html#newImage,Svg	proc newImage(svg: Svg): Image		548

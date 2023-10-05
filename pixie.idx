@@ -1,17 +1,19 @@
-PngFormat	pixie.html#PngFormat	FileFormat.PngFormat	
-BmpFormat	pixie.html#BmpFormat	FileFormat.BmpFormat	
-JpegFormat	pixie.html#JpegFormat	FileFormat.JpegFormat	
-GifFormat	pixie.html#GifFormat	FileFormat.GifFormat	
-QoiFormat	pixie.html#QoiFormat	FileFormat.QoiFormat	
-PpmFormat	pixie.html#PpmFormat	FileFormat.PpmFormat	
-FileFormat	pixie.html#FileFormat	pixie: FileFormat	
-autoStraightAlpha	pixie.html#autoStraightAlpha.c,ColorRGBX	pixie: autoStraightAlpha(c: ColorRGBX): ColorRGBA	
-autoPremultipliedAlpha	pixie.html#autoPremultipliedAlpha.c,ColorRGBA	pixie: autoPremultipliedAlpha(c: ColorRGBA): ColorRGBX	
-decodeImageDimensions	pixie.html#decodeImageDimensions,pointer,int	pixie: decodeImageDimensions(data: pointer; len: int): ImageDimensions	
-decodeImageDimensions	pixie.html#decodeImageDimensions,string	pixie: decodeImageDimensions(data: string): ImageDimensions	
-decodeImage	pixie.html#decodeImage,string	pixie: decodeImage(data: string): Image	
-readImageDimensions	pixie.html#readImageDimensions,string	pixie: readImageDimensions(filePath: string): ImageDimensions	
-readImage	pixie.html#readImage,string	pixie: readImage(filePath: string): Image	
-encodeImage	pixie.html#encodeImage,Image,FileFormat	pixie: encodeImage(image: Image; fileFormat: FileFormat): string	
-writeFile	pixie.html#writeFile,Image,string	pixie: writeFile(image: Image; filePath: string)	
-fill	pixie.html#fill,Image,Paint	pixie: fill(image: Image; paint: Paint)	
+nimTitle	pixie	pixie.html	module src/pixie		0
+nim	PngFormat	pixie.html#PngFormat	FileFormat.PngFormat		10
+nim	BmpFormat	pixie.html#BmpFormat	FileFormat.BmpFormat		10
+nim	JpegFormat	pixie.html#JpegFormat	FileFormat.JpegFormat		10
+nim	GifFormat	pixie.html#GifFormat	FileFormat.GifFormat		10
+nim	QoiFormat	pixie.html#QoiFormat	FileFormat.QoiFormat		10
+nim	PpmFormat	pixie.html#PpmFormat	FileFormat.PpmFormat		10
+nim	FileFormat	pixie.html#FileFormat	enum FileFormat		10
+nim	autoStraightAlpha	pixie.html#autoStraightAlpha.c,ColorRGBX	converter autoStraightAlpha(c: ColorRGBX): ColorRGBA		13
+nim	autoPremultipliedAlpha	pixie.html#autoPremultipliedAlpha.c,ColorRGBA	converter autoPremultipliedAlpha(c: ColorRGBA): ColorRGBX		17
+nim	decodeImageDimensions	pixie.html#decodeImageDimensions,pointer,int	proc decodeImageDimensions(data: pointer; len: int): ImageDimensions		21
+nim	decodeImageDimensions	pixie.html#decodeImageDimensions,string	proc decodeImageDimensions(data: string): ImageDimensions		46
+nim	decodeImage	pixie.html#decodeImage,string	proc decodeImage(data: string): Image		52
+nim	readImageDimensions	pixie.html#readImageDimensions,string	proc readImageDimensions(filePath: string): ImageDimensions		72
+nim	readImage	pixie.html#readImage,string	proc readImage(filePath: string): Image		81
+nim	encodeImage	pixie.html#encodeImage,Image,FileFormat	proc encodeImage(image: Image; fileFormat: FileFormat): string		88
+nim	writeFile	pixie.html#writeFile,Image,string	proc writeFile(image: Image; filePath: string)		104
+nim	fill	pixie.html#fill,Image,Paint	proc fill(image: Image; paint: Paint)		120
+nimgrp	decodeimagedimensions	pixie.html#decodeImageDimensions-procs-all	proc		21

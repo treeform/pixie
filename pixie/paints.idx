@@ -1,15 +1,16 @@
-SolidPaint	pixie/paints.html#SolidPaint	PaintKind.SolidPaint	
-ImagePaint	pixie/paints.html#ImagePaint	PaintKind.ImagePaint	
-TiledImagePaint	pixie/paints.html#TiledImagePaint	PaintKind.TiledImagePaint	
-LinearGradientPaint	pixie/paints.html#LinearGradientPaint	PaintKind.LinearGradientPaint	
-RadialGradientPaint	pixie/paints.html#RadialGradientPaint	PaintKind.RadialGradientPaint	
-AngularGradientPaint	pixie/paints.html#AngularGradientPaint	PaintKind.AngularGradientPaint	
-PaintKind	pixie/paints.html#PaintKind	paints: PaintKind	
-Paint	pixie/paints.html#Paint	paints: Paint	
-ColorStop	pixie/paints.html#ColorStop	paints: ColorStop	
-SomePaint	pixie/paints.html#SomePaint	paints: SomePaint	
-newPaint	pixie/paints.html#newPaint,PaintKind	paints: newPaint(kind: PaintKind): Paint	
-copy	pixie/paints.html#copy,Paint	paints: copy(paint: Paint): Paint	
-parseSomePaint	pixie/paints.html#parseSomePaint.c,SomePaint	paints: parseSomePaint(paint: SomePaint): Paint	
-colorStop	pixie/paints.html#colorStop,Color,float32	paints: colorStop(color: Color; position: float32): ColorStop	
-fillGradient	pixie/paints.html#fillGradient,Image,Paint	paints: fillGradient(image: Image; paint: Paint)	
+nimTitle	paints	pixie/paints.html	module src/pixie/paints		0
+nim	SolidPaint	pixie/paints.html#SolidPaint	PaintKind.SolidPaint		4
+nim	ImagePaint	pixie/paints.html#ImagePaint	PaintKind.ImagePaint		4
+nim	TiledImagePaint	pixie/paints.html#TiledImagePaint	PaintKind.TiledImagePaint		4
+nim	LinearGradientPaint	pixie/paints.html#LinearGradientPaint	PaintKind.LinearGradientPaint		4
+nim	RadialGradientPaint	pixie/paints.html#RadialGradientPaint	PaintKind.RadialGradientPaint		4
+nim	AngularGradientPaint	pixie/paints.html#AngularGradientPaint	PaintKind.AngularGradientPaint		4
+nim	PaintKind	pixie/paints.html#PaintKind	enum PaintKind		4
+nim	Paint	pixie/paints.html#Paint	type Paint		12
+nim	ColorStop	pixie/paints.html#ColorStop	object ColorStop		26
+nim	SomePaint	pixie/paints.html#SomePaint	type SomePaint		31
+nim	newPaint	pixie/paints.html#newPaint,PaintKind	proc newPaint(kind: PaintKind): Paint		33
+nim	copy	pixie/paints.html#copy,Paint	proc copy(paint: Paint): Paint		37
+nim	parseSomePaint	pixie/paints.html#parseSomePaint.c,SomePaint	converter parseSomePaint(paint: SomePaint): Paint		48
+nim	colorStop	pixie/paints.html#colorStop,Color,float32	proc colorStop(color: Color; position: float32): ColorStop		65
+nim	fillGradient	pixie/paints.html#fillGradient,Image,Paint	proc fillGradient(image: Image; paint: Paint)		238

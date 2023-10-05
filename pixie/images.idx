@@ -1,32 +1,34 @@
-`$`	pixie/images.html#$,Image	images: `$`(image: Image): string	
-inside	pixie/images.html#inside,Image,int,int	images: inside(image: Image; x, y: int): bool	
-unsafe	pixie/images.html#unsafe.t,Image	images: unsafe(src: Image): UnsafeImage	
-`[]`	pixie/images.html#[].t,UnsafeImage,int,int	images: `[]`(view: UnsafeImage; x, y: int): var ColorRGBX	
-`[]=`	pixie/images.html#[]=.t,UnsafeImage,int,int,ColorRGBX	images: `[]=`(view: UnsafeImage; x, y: int; color: ColorRGBX)	
-`[]`	pixie/images.html#[],Image,int,int	images: `[]`(image: Image; x, y: int): ColorRGBX	
-`[]=`	pixie/images.html#[]=,Image,int,int,SomeColor	images: `[]=`(image: Image; x, y: int; color: SomeColor)	
-getColor	pixie/images.html#getColor,Image,int,int	images: getColor(image: Image; x, y: int): Color	
-setColor	pixie/images.html#setColor,Image,int,int,Color	images: setColor(image: Image; x, y: int; color: Color)	
-fill	pixie/images.html#fill,Image,SomeColor	images: fill(image: Image; color: SomeColor)	
-isOneColor	pixie/images.html#isOneColor,Image	images: isOneColor(image: Image): bool	
-isTransparent	pixie/images.html#isTransparent,Image	images: isTransparent(image: Image): bool	
-isOpaque	pixie/images.html#isOpaque,Image	images: isOpaque(image: Image): bool	
-flipHorizontal	pixie/images.html#flipHorizontal,Image	images: flipHorizontal(image: Image)	
-flipVertical	pixie/images.html#flipVertical,Image	images: flipVertical(image: Image)	
-rotate90	pixie/images.html#rotate90,Image	images: rotate90(image: Image)	
-subImage	pixie/images.html#subImage,Image,int,int,int,int	images: subImage(image: Image; x, y, w, h: int): Image	
-subImage	pixie/images.html#subImage,Image,Rect	images: subImage(image: Image; rect: Rect): Image	
-diff	pixie/images.html#diff,Image,Image	images: diff(master, image: Image): (float32, Image)	
-minifyBy2	pixie/images.html#minifyBy2,Image,int	images: minifyBy2(image: Image; power = 1): Image	
-magnifyBy2	pixie/images.html#magnifyBy2,Image,int	images: magnifyBy2(image: Image; power = 1): Image	
-applyOpacity	pixie/images.html#applyOpacity,Image,float32	images: applyOpacity(image: Image; opacity: float32)	
-invert	pixie/images.html#invert,Image	images: invert(image: Image)	
-ceil	pixie/images.html#ceil,Image	images: ceil(image: Image)	
-blur	pixie/images.html#blur,Image,float32,SomeColor	images: blur(image: Image; radius: float32; outOfBounds: SomeColor = color(0, 0, 0, 0))	
-getRgbaSmooth	pixie/images.html#getRgbaSmooth,Image,float32,float32	images: getRgbaSmooth(image: Image; x, y: float32; wrapped = false): ColorRGBX	
-draw	pixie/images.html#draw,Image,Image	images: draw(a, b: Image; transform = mat3(); blendMode = NormalBlend)	
-drawTiled	pixie/images.html#drawTiled,Image,Image,Mat3	images: drawTiled(dst, src: Image; mat: Mat3; blendMode = NormalBlend)	
-resize	pixie/images.html#resize,Image,int,int	images: resize(srcImage: Image; width, height: int): Image	
-shadow	pixie/images.html#shadow,Image,Vec2,float32,float32,SomeColor	images: shadow(image: Image; offset: Vec2; spread, blur: float32; color: SomeColor): Image	
-superImage	pixie/images.html#superImage,Image,int,int,int,int	images: superImage(image: Image; x, y, w, h: int): Image	
-opaqueBounds	pixie/images.html#opaqueBounds,Image	images: opaqueBounds(image: Image): Rect	
+nimTitle	images	pixie/images.html	module src/pixie/images		0
+nim	`$`	pixie/images.html#$,Image	proc `$`(image: Image): string		12
+nim	inside	pixie/images.html#inside,Image,int,int	proc inside(image: Image; x, y: int): bool		16
+nim	unsafe	pixie/images.html#unsafe.t,Image	template unsafe(src: Image): UnsafeImage		20
+nim	`[]`	pixie/images.html#[].t,UnsafeImage,int,int	template `[]`(view: UnsafeImage; x, y: int): var ColorRGBX		23
+nim	`[]=`	pixie/images.html#[]=.t,UnsafeImage,int,int,ColorRGBX	template `[]=`(view: UnsafeImage; x, y: int; color: ColorRGBX)		30
+nim	`[]`	pixie/images.html#[],Image,int,int	proc `[]`(image: Image; x, y: int): ColorRGBX		37
+nim	`[]=`	pixie/images.html#[]=,Image,int,int,SomeColor	proc `[]=`(image: Image; x, y: int; color: SomeColor)		42
+nim	getColor	pixie/images.html#getColor,Image,int,int	proc getColor(image: Image; x, y: int): Color		47
+nim	setColor	pixie/images.html#setColor,Image,int,int,Color	proc setColor(image: Image; x, y: int; color: Color)		51
+nim	fill	pixie/images.html#fill,Image,SomeColor	proc fill(image: Image; color: SomeColor)		55
+nim	isOneColor	pixie/images.html#isOneColor,Image	proc isOneColor(image: Image): bool		59
+nim	isTransparent	pixie/images.html#isTransparent,Image	proc isTransparent(image: Image): bool		67
+nim	isOpaque	pixie/images.html#isOpaque,Image	proc isOpaque(image: Image): bool		74
+nim	flipHorizontal	pixie/images.html#flipHorizontal,Image	proc flipHorizontal(image: Image)		78
+nim	flipVertical	pixie/images.html#flipVertical,Image	proc flipVertical(image: Image)		90
+nim	rotate90	pixie/images.html#rotate90,Image	proc rotate90(image: Image)		100
+nim	subImage	pixie/images.html#subImage,Image,int,int,int,int	proc subImage(image: Image; x, y, w, h: int): Image		111
+nim	subImage	pixie/images.html#subImage,Image,Rect	proc subImage(image: Image; rect: Rect): Image		132
+nim	diff	pixie/images.html#diff,Image,Image	proc diff(master, image: Image): (float32, Image)		138
+nim	minifyBy2	pixie/images.html#minifyBy2,Image,int	proc minifyBy2(image: Image; power = 1): Image		170
+nim	magnifyBy2	pixie/images.html#magnifyBy2,Image,int	proc magnifyBy2(image: Image; power = 1): Image		234
+nim	applyOpacity	pixie/images.html#applyOpacity,Image,float32	proc applyOpacity(image: Image; opacity: float32)		261
+nim	invert	pixie/images.html#invert,Image	proc invert(image: Image)		279
+nim	ceil	pixie/images.html#ceil,Image	proc ceil(image: Image)		294
+nim	blur	pixie/images.html#blur,Image,float32,SomeColor	proc blur(image: Image; radius: float32; outOfBounds: SomeColor = color(0, 0, 0, 0))		304
+nim	getRgbaSmooth	pixie/images.html#getRgbaSmooth,Image,float32,float32	proc getRgbaSmooth(image: Image; x, y: float32; wrapped = false): ColorRGBX		367
+nim	draw	pixie/images.html#draw,Image,Image	proc draw(a, b: Image; transform = mat3(); blendMode = NormalBlend)		636
+nim	drawTiled	pixie/images.html#drawTiled,Image,Image,Mat3	proc drawTiled(dst, src: Image; mat: Mat3; blendMode = NormalBlend)		680
+nim	resize	pixie/images.html#resize,Image,int,int	proc resize(srcImage: Image; width, height: int): Image		685
+nim	shadow	pixie/images.html#shadow,Image,Vec2,float32,float32,SomeColor	proc shadow(image: Image; offset: Vec2; spread, blur: float32; color: SomeColor): Image		760
+nim	superImage	pixie/images.html#superImage,Image,int,int,int,int	proc superImage(image: Image; x, y, w, h: int): Image		778
+nim	opaqueBounds	pixie/images.html#opaqueBounds,Image	proc opaqueBounds(image: Image): Rect		789
+nimgrp	subimage	pixie/images.html#subImage-procs-all	proc		111

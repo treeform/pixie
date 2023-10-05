@@ -1,15 +1,18 @@
-isOneColorAvx2	pixie/simd/avx2.html#isOneColorAvx2,Image	avx2: isOneColorAvx2(image: Image): bool	
-isTransparentAvx2	pixie/simd/avx2.html#isTransparentAvx2,Image	avx2: isTransparentAvx2(image: Image): bool	
-isOpaqueAvx2	pixie/simd/avx2.html#isOpaqueAvx2,seq[ColorRGBX],int,int	avx2: isOpaqueAvx2(data: var seq[ColorRGBX]; start, len: int): bool	
-toPremultipliedAlphaAvx2	pixie/simd/avx2.html#toPremultipliedAlphaAvx2,seq[]	avx2: toPremultipliedAlphaAvx2(data: var seq[ColorRGBA | ColorRGBX])	
-invertAvx2	pixie/simd/avx2.html#invertAvx2,Image	avx2: invertAvx2(image: Image)	
-applyOpacityAvx2	pixie/simd/avx2.html#applyOpacityAvx2,Image,float32	avx2: applyOpacityAvx2(image: Image; opacity: float32)	
-ceilAvx2	pixie/simd/avx2.html#ceilAvx2,Image	avx2: ceilAvx2(image: Image)	
-minifyBy2Avx2	pixie/simd/avx2.html#minifyBy2Avx2,Image,int	avx2: minifyBy2Avx2(image: Image; power = 1): Image	
-blendLineCoverageOverwriteAvx2	pixie/simd/avx2.html#blendLineCoverageOverwriteAvx2,ptr.UncheckedArray[ColorRGBX],ptr.UncheckedArray[uint8],ColorRGBX,int	avx2: blendLineCoverageOverwriteAvx2(line: ptr UncheckedArray[ColorRGBX];\n                               coverages: ptr UncheckedArray[uint8];\n                               rgbx: ColorRGBX; len: int)	
-blendLineNormalAvx2	pixie/simd/avx2.html#blendLineNormalAvx2,ptr.UncheckedArray[ColorRGBX],ColorRGBX,int	avx2: blendLineNormalAvx2(line: ptr UncheckedArray[ColorRGBX]; rgbx: ColorRGBX;\n                    len: int)	
-blendLineNormalAvx2	pixie/simd/avx2.html#blendLineNormalAvx2,ptr.UncheckedArray[ColorRGBX],ptr.UncheckedArray[ColorRGBX],int	avx2: blendLineNormalAvx2(a, b: ptr UncheckedArray[ColorRGBX]; len: int)	
-blendLineCoverageNormalAvx2	pixie/simd/avx2.html#blendLineCoverageNormalAvx2,ptr.UncheckedArray[ColorRGBX],ptr.UncheckedArray[uint8],ColorRGBX,int	avx2: blendLineCoverageNormalAvx2(line: ptr UncheckedArray[ColorRGBX];\n                            coverages: ptr UncheckedArray[uint8];\n                            rgbx: ColorRGBX; len: int)	
-blendLineMaskAvx2	pixie/simd/avx2.html#blendLineMaskAvx2,ptr.UncheckedArray[ColorRGBX],ColorRGBX,int	avx2: blendLineMaskAvx2(line: ptr UncheckedArray[ColorRGBX]; rgbx: ColorRGBX; len: int)	
-blendLineMaskAvx2	pixie/simd/avx2.html#blendLineMaskAvx2,ptr.UncheckedArray[ColorRGBX],ptr.UncheckedArray[ColorRGBX],int	avx2: blendLineMaskAvx2(a, b: ptr UncheckedArray[ColorRGBX]; len: int)	
-blendLineCoverageMaskAvx2	pixie/simd/avx2.html#blendLineCoverageMaskAvx2,ptr.UncheckedArray[ColorRGBX],ptr.UncheckedArray[uint8],ColorRGBX,int	avx2: blendLineCoverageMaskAvx2(line: ptr UncheckedArray[ColorRGBX];\n                          coverages: ptr UncheckedArray[uint8]; rgbx: ColorRGBX;\n                          len: int)	
+nimTitle	avx2	pixie/simd/avx2.html	module src/pixie/simd/avx2		0
+nim	isOneColorAvx2	pixie/simd/avx2.html#isOneColorAvx2,Image	proc isOneColorAvx2(image: Image): bool		44
+nim	isTransparentAvx2	pixie/simd/avx2.html#isTransparentAvx2,Image	proc isTransparentAvx2(image: Image): bool		74
+nim	isOpaqueAvx2	pixie/simd/avx2.html#isOpaqueAvx2,seq[ColorRGBX],int,int	proc isOpaqueAvx2(data: var seq[ColorRGBX]; start, len: int): bool		101
+nim	toPremultipliedAlphaAvx2	pixie/simd/avx2.html#toPremultipliedAlphaAvx2,seq[]	proc toPremultipliedAlphaAvx2(data: var seq[ColorRGBA | ColorRGBX])		128
+nim	invertAvx2	pixie/simd/avx2.html#invertAvx2,Image	proc invertAvx2(image: Image)		188
+nim	applyOpacityAvx2	pixie/simd/avx2.html#applyOpacityAvx2,Image,float32	proc applyOpacityAvx2(image: Image; opacity: float32)		225
+nim	ceilAvx2	pixie/simd/avx2.html#ceilAvx2,Image	proc ceilAvx2(image: Image)		281
+nim	minifyBy2Avx2	pixie/simd/avx2.html#minifyBy2Avx2,Image,int	proc minifyBy2Avx2(image: Image; power = 1): Image		316
+nim	blendLineCoverageOverwriteAvx2	pixie/simd/avx2.html#blendLineCoverageOverwriteAvx2,ptr.UncheckedArray[ColorRGBX],ptr.UncheckedArray[uint8],ColorRGBX,int	proc blendLineCoverageOverwriteAvx2(line: ptr UncheckedArray[ColorRGBX];\n                               coverages: ptr UncheckedArray[uint8];\n                               rgbx: ColorRGBX; len: int)		441
+nim	blendLineNormalAvx2	pixie/simd/avx2.html#blendLineNormalAvx2,ptr.UncheckedArray[ColorRGBX],ColorRGBX,int	proc blendLineNormalAvx2(line: ptr UncheckedArray[ColorRGBX]; rgbx: ColorRGBX;\n                    len: int)		490
+nim	blendLineNormalAvx2	pixie/simd/avx2.html#blendLineNormalAvx2,ptr.UncheckedArray[ColorRGBX],ptr.UncheckedArray[ColorRGBX],int	proc blendLineNormalAvx2(a, b: ptr UncheckedArray[ColorRGBX]; len: int)		516
+nim	blendLineCoverageNormalAvx2	pixie/simd/avx2.html#blendLineCoverageNormalAvx2,ptr.UncheckedArray[ColorRGBX],ptr.UncheckedArray[uint8],ColorRGBX,int	proc blendLineCoverageNormalAvx2(line: ptr UncheckedArray[ColorRGBX];\n                            coverages: ptr UncheckedArray[uint8];\n                            rgbx: ColorRGBX; len: int)		551
+nim	blendLineMaskAvx2	pixie/simd/avx2.html#blendLineMaskAvx2,ptr.UncheckedArray[ColorRGBX],ColorRGBX,int	proc blendLineMaskAvx2(line: ptr UncheckedArray[ColorRGBX]; rgbx: ColorRGBX; len: int)		613
+nim	blendLineMaskAvx2	pixie/simd/avx2.html#blendLineMaskAvx2,ptr.UncheckedArray[ColorRGBX],ptr.UncheckedArray[ColorRGBX],int	proc blendLineMaskAvx2(a, b: ptr UncheckedArray[ColorRGBX]; len: int)		638
+nim	blendLineCoverageMaskAvx2	pixie/simd/avx2.html#blendLineCoverageMaskAvx2,ptr.UncheckedArray[ColorRGBX],ptr.UncheckedArray[uint8],ColorRGBX,int	proc blendLineCoverageMaskAvx2(line: ptr UncheckedArray[ColorRGBX];\n                          coverages: ptr UncheckedArray[uint8]; rgbx: ColorRGBX;\n                          len: int)		672
+nimgrp	blendlinenormalavx2	pixie/simd/avx2.html#blendLineNormalAvx2-procs-all	proc		488
+nimgrp	blendlinemaskavx2	pixie/simd/avx2.html#blendLineMaskAvx2-procs-all	proc		611

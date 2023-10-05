@@ -1,26 +1,27 @@
-EncodingRecord	pixie/fontformats/opentype.html#EncodingRecord	opentype: EncodingRecord	
-CmapTable	pixie/fontformats/opentype.html#CmapTable	opentype: CmapTable	
-HeadTable	pixie/fontformats/opentype.html#HeadTable	opentype: HeadTable	
-HheaTable	pixie/fontformats/opentype.html#HheaTable	opentype: HheaTable	
-MaxpTable	pixie/fontformats/opentype.html#MaxpTable	opentype: MaxpTable	
-LongHorMetricRecord	pixie/fontformats/opentype.html#LongHorMetricRecord	opentype: LongHorMetricRecord	
-HmtxTable	pixie/fontformats/opentype.html#HmtxTable	opentype: HmtxTable	
-NameRecord	pixie/fontformats/opentype.html#NameRecord	opentype: NameRecord	
-NameTable	pixie/fontformats/opentype.html#NameTable	opentype: NameTable	
-OS2Table	pixie/fontformats/opentype.html#OS2Table	opentype: OS2Table	
-LocaTable	pixie/fontformats/opentype.html#LocaTable	opentype: LocaTable	
-GlyfTable	pixie/fontformats/opentype.html#GlyfTable	opentype: GlyfTable	
-KernPair	pixie/fontformats/opentype.html#KernPair	opentype: KernPair	
-KernSubTable	pixie/fontformats/opentype.html#KernSubTable	opentype: KernSubTable	
-KernTable	pixie/fontformats/opentype.html#KernTable	opentype: KernTable	
-TableRecord	pixie/fontformats/opentype.html#TableRecord	opentype: TableRecord	
-OpenType	pixie/fontformats/opentype.html#OpenType	opentype: OpenType	
-hasGlyph	pixie/fontformats/opentype.html#hasGlyph,OpenType,Rune	opentype: hasGlyph(opentype: OpenType; rune: Rune): bool	
-getGlyphPath	pixie/fontformats/opentype.html#getGlyphPath,OpenType,Rune	opentype: getGlyphPath(opentype: OpenType; rune: Rune): Path	
-getLeftSideBearing	pixie/fontformats/opentype.html#getLeftSideBearing,OpenType,Rune	opentype: getLeftSideBearing(opentype: OpenType; rune: Rune): float32	
-getAdvance	pixie/fontformats/opentype.html#getAdvance,OpenType,Rune	opentype: getAdvance(opentype: OpenType; rune: Rune): float32	
-getKerningAdjustment	pixie/fontformats/opentype.html#getKerningAdjustment,OpenType,Rune,Rune	opentype: getKerningAdjustment(opentype: OpenType; left, right: Rune): float32	
-isCCW	pixie/fontformats/opentype.html#isCCW,OpenType	opentype: isCCW(opentype: OpenType): bool	
-fullName	pixie/fontformats/opentype.html#fullName,OpenType	opentype: fullName(opentype: OpenType): string	
-parseOpenType	pixie/fontformats/opentype.html#parseOpenType,string,int	opentype: parseOpenType(buf: string; startLoc = 0): OpenType	
-parseOpenTypeCollection	pixie/fontformats/opentype.html#parseOpenTypeCollection,string	opentype: parseOpenTypeCollection(buf: string): seq[OpenType]	
+nimTitle	opentype	pixie/fontformats/opentype.html	module src/pixie/fontformats/opentype		0
+nim	EncodingRecord	pixie/fontformats/opentype.html#EncodingRecord	object EncodingRecord		9
+nim	CmapTable	pixie/fontformats/opentype.html#CmapTable	type CmapTable		14
+nim	HeadTable	pixie/fontformats/opentype.html#HeadTable	type HeadTable		21
+nim	HheaTable	pixie/fontformats/opentype.html#HheaTable	type HheaTable		41
+nim	MaxpTable	pixie/fontformats/opentype.html#MaxpTable	type MaxpTable		57
+nim	LongHorMetricRecord	pixie/fontformats/opentype.html#LongHorMetricRecord	object LongHorMetricRecord		74
+nim	HmtxTable	pixie/fontformats/opentype.html#HmtxTable	type HmtxTable		78
+nim	NameRecord	pixie/fontformats/opentype.html#NameRecord	object NameRecord		82
+nim	NameTable	pixie/fontformats/opentype.html#NameTable	type NameTable		91
+nim	OS2Table	pixie/fontformats/opentype.html#OS2Table	type OS2Table		97
+nim	LocaTable	pixie/fontformats/opentype.html#LocaTable	type LocaTable		138
+nim	GlyfTable	pixie/fontformats/opentype.html#GlyfTable	type GlyfTable		141
+nim	KernPair	pixie/fontformats/opentype.html#KernPair	object KernPair		144
+nim	KernSubTable	pixie/fontformats/opentype.html#KernSubTable	object KernSubTable		149
+nim	KernTable	pixie/fontformats/opentype.html#KernTable	type KernTable		159
+nim	TableRecord	pixie/fontformats/opentype.html#TableRecord	object TableRecord		165
+nim	OpenType	pixie/fontformats/opentype.html#OpenType	type OpenType		371
+nim	hasGlyph	pixie/fontformats/opentype.html#hasGlyph,OpenType,Rune	proc hasGlyph(opentype: OpenType; rune: Rune): bool		2140
+nim	getGlyphPath	pixie/fontformats/opentype.html#getGlyphPath,OpenType,Rune	proc getGlyphPath(opentype: OpenType; rune: Rune): Path		2417
+nim	getLeftSideBearing	pixie/fontformats/opentype.html#getLeftSideBearing,OpenType,Rune	proc getLeftSideBearing(opentype: OpenType; rune: Rune): float32		2426
+nim	getAdvance	pixie/fontformats/opentype.html#getAdvance,OpenType,Rune	proc getAdvance(opentype: OpenType; rune: Rune): float32		2435
+nim	getKerningAdjustment	pixie/fontformats/opentype.html#getKerningAdjustment,OpenType,Rune,Rune	proc getKerningAdjustment(opentype: OpenType; left, right: Rune): float32		2442
+nim	isCCW	pixie/fontformats/opentype.html#isCCW,OpenType	proc isCCW(opentype: OpenType): bool		2478
+nim	fullName	pixie/fontformats/opentype.html#fullName,OpenType	proc fullName(opentype: OpenType): string		2484
+nim	parseOpenType	pixie/fontformats/opentype.html#parseOpenType,string,int	proc parseOpenType(buf: string; startLoc = 0): OpenType		2492
+nim	parseOpenTypeCollection	pixie/fontformats/opentype.html#parseOpenTypeCollection,string	proc parseOpenTypeCollection(buf: string): seq[OpenType]		2552

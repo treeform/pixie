@@ -1,31 +1,33 @@
-PixieError	pixie/common.html#PixieError	common: PixieError	
-NormalBlend	pixie/common.html#NormalBlend	BlendMode.NormalBlend	
-DarkenBlend	pixie/common.html#DarkenBlend	BlendMode.DarkenBlend	
-MultiplyBlend	pixie/common.html#MultiplyBlend	BlendMode.MultiplyBlend	
-ColorBurnBlend	pixie/common.html#ColorBurnBlend	BlendMode.ColorBurnBlend	
-LightenBlend	pixie/common.html#LightenBlend	BlendMode.LightenBlend	
-ScreenBlend	pixie/common.html#ScreenBlend	BlendMode.ScreenBlend	
-ColorDodgeBlend	pixie/common.html#ColorDodgeBlend	BlendMode.ColorDodgeBlend	
-OverlayBlend	pixie/common.html#OverlayBlend	BlendMode.OverlayBlend	
-SoftLightBlend	pixie/common.html#SoftLightBlend	BlendMode.SoftLightBlend	
-HardLightBlend	pixie/common.html#HardLightBlend	BlendMode.HardLightBlend	
-DifferenceBlend	pixie/common.html#DifferenceBlend	BlendMode.DifferenceBlend	
-ExclusionBlend	pixie/common.html#ExclusionBlend	BlendMode.ExclusionBlend	
-HueBlend	pixie/common.html#HueBlend	BlendMode.HueBlend	
-SaturationBlend	pixie/common.html#SaturationBlend	BlendMode.SaturationBlend	
-ColorBlend	pixie/common.html#ColorBlend	BlendMode.ColorBlend	
-LuminosityBlend	pixie/common.html#LuminosityBlend	BlendMode.LuminosityBlend	
-MaskBlend	pixie/common.html#MaskBlend	BlendMode.MaskBlend	
-OverwriteBlend	pixie/common.html#OverwriteBlend	BlendMode.OverwriteBlend	
-SubtractMaskBlend	pixie/common.html#SubtractMaskBlend	BlendMode.SubtractMaskBlend	
-ExcludeMaskBlend	pixie/common.html#ExcludeMaskBlend	BlendMode.ExcludeMaskBlend	
-BlendMode	pixie/common.html#BlendMode	common: BlendMode	
-ImageDimensions	pixie/common.html#ImageDimensions	common: ImageDimensions	
-Image	pixie/common.html#Image	common: Image	
-newImage	pixie/common.html#newImage,int,int	common: newImage(width, height: int): Image	
-copy	pixie/common.html#copy,Image	common: copy(image: Image): Image	
-dataIndex	pixie/common.html#dataIndex.t,Image,int,int	common: dataIndex(image: Image; x, y: int): int	
-mix	pixie/common.html#mix,ColorRGBX,ColorRGBX,float32	common: mix(a, b: ColorRGBX; t: float32): ColorRGBX	
-`*`	pixie/common.html#*,ColorRGBX,float32	common: `*`(color: ColorRGBX; opacity: float32): ColorRGBX	
-`*`	pixie/common.html#*,ColorRGBX,uint8	common: `*`(rgbx: ColorRGBX; opacity: uint8): ColorRGBX	
-snapToPixels	pixie/common.html#snapToPixels,Rect	common: snapToPixels(rect: Rect): Rect	
+nimTitle	common	pixie/common.html	module src/pixie/common		0
+nim	PixieError	pixie/common.html#PixieError	object PixieError		4
+nim	NormalBlend	pixie/common.html#NormalBlend	BlendMode.NormalBlend		6
+nim	DarkenBlend	pixie/common.html#DarkenBlend	BlendMode.DarkenBlend		6
+nim	MultiplyBlend	pixie/common.html#MultiplyBlend	BlendMode.MultiplyBlend		6
+nim	ColorBurnBlend	pixie/common.html#ColorBurnBlend	BlendMode.ColorBurnBlend		6
+nim	LightenBlend	pixie/common.html#LightenBlend	BlendMode.LightenBlend		6
+nim	ScreenBlend	pixie/common.html#ScreenBlend	BlendMode.ScreenBlend		6
+nim	ColorDodgeBlend	pixie/common.html#ColorDodgeBlend	BlendMode.ColorDodgeBlend		6
+nim	OverlayBlend	pixie/common.html#OverlayBlend	BlendMode.OverlayBlend		6
+nim	SoftLightBlend	pixie/common.html#SoftLightBlend	BlendMode.SoftLightBlend		6
+nim	HardLightBlend	pixie/common.html#HardLightBlend	BlendMode.HardLightBlend		6
+nim	DifferenceBlend	pixie/common.html#DifferenceBlend	BlendMode.DifferenceBlend		6
+nim	ExclusionBlend	pixie/common.html#ExclusionBlend	BlendMode.ExclusionBlend		6
+nim	HueBlend	pixie/common.html#HueBlend	BlendMode.HueBlend		6
+nim	SaturationBlend	pixie/common.html#SaturationBlend	BlendMode.SaturationBlend		6
+nim	ColorBlend	pixie/common.html#ColorBlend	BlendMode.ColorBlend		6
+nim	LuminosityBlend	pixie/common.html#LuminosityBlend	BlendMode.LuminosityBlend		6
+nim	MaskBlend	pixie/common.html#MaskBlend	BlendMode.MaskBlend		6
+nim	OverwriteBlend	pixie/common.html#OverwriteBlend	BlendMode.OverwriteBlend		6
+nim	SubtractMaskBlend	pixie/common.html#SubtractMaskBlend	BlendMode.SubtractMaskBlend		6
+nim	ExcludeMaskBlend	pixie/common.html#ExcludeMaskBlend	BlendMode.ExcludeMaskBlend		6
+nim	BlendMode	pixie/common.html#BlendMode	enum BlendMode		6
+nim	ImageDimensions	pixie/common.html#ImageDimensions	object ImageDimensions		31
+nim	Image	pixie/common.html#Image	type Image		34
+nim	newImage	pixie/common.html#newImage,int,int	proc newImage(width, height: int): Image		39
+nim	copy	pixie/common.html#copy,Image	proc copy(image: Image): Image		49
+nim	dataIndex	pixie/common.html#dataIndex.t,Image,int,int	template dataIndex(image: Image; x, y: int): int		56
+nim	mix	pixie/common.html#mix,ColorRGBX,ColorRGBX,float32	proc mix(a, b: ColorRGBX; t: float32): ColorRGBX		59
+nim	`*`	pixie/common.html#*,ColorRGBX,float32	proc `*`(color: ColorRGBX; opacity: float32): ColorRGBX		67
+nim	`*`	pixie/common.html#*,ColorRGBX,uint8	proc `*`(rgbx: ColorRGBX; opacity: uint8): ColorRGBX		79
+nim	snapToPixels	pixie/common.html#snapToPixels,Rect	proc snapToPixels(rect: Rect): Rect		92
+nimgrp	*	pixie/common.html#*-procs-all	proc		67

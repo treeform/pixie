@@ -1,7 +1,9 @@
-bmpSignature	pixie/fileformats/bmp.html#bmpSignature	bmp: bmpSignature	
-decodeDib	pixie/fileformats/bmp.html#decodeDib,pointer,int	bmp: decodeDib(data: pointer; len: int; lpBitmapInfo = false): Image	
-decodeBmp	pixie/fileformats/bmp.html#decodeBmp,string	bmp: decodeBmp(data: string): Image	
-decodeBmpDimensions	pixie/fileformats/bmp.html#decodeBmpDimensions,pointer,int	bmp: decodeBmpDimensions(data: pointer; len: int): ImageDimensions	
-decodeBmpDimensions	pixie/fileformats/bmp.html#decodeBmpDimensions,string	bmp: decodeBmpDimensions(data: string): ImageDimensions	
-encodeDib	pixie/fileformats/bmp.html#encodeDib,Image	bmp: encodeDib(image: Image): string	
-encodeBmp	pixie/fileformats/bmp.html#encodeBmp,Image	bmp: encodeBmp(image: Image): string	
+nimTitle	bmp	pixie/fileformats/bmp.html	module src/pixie/fileformats/bmp		0
+nim	bmpSignature	pixie/fileformats/bmp.html#bmpSignature	const bmpSignature		10
+nim	decodeDib	pixie/fileformats/bmp.html#decodeDib,pointer,int	proc decodeDib(data: pointer; len: int; lpBitmapInfo = false): Image		19
+nim	decodeBmp	pixie/fileformats/bmp.html#decodeBmp,string	proc decodeBmp(data: string): Image		219
+nim	decodeBmpDimensions	pixie/fileformats/bmp.html#decodeBmpDimensions,pointer,int	proc decodeBmpDimensions(data: pointer; len: int): ImageDimensions		230
+nim	decodeBmpDimensions	pixie/fileformats/bmp.html#decodeBmpDimensions,string	proc decodeBmpDimensions(data: string): ImageDimensions		246
+nim	encodeDib	pixie/fileformats/bmp.html#encodeDib,Image	proc encodeDib(image: Image): string		252
+nim	encodeBmp	pixie/fileformats/bmp.html#encodeBmp,Image	proc encodeBmp(image: Image): string		282
+nimgrp	decodebmpdimensions	pixie/fileformats/bmp.html#decodeBmpDimensions-procs-all	proc		230

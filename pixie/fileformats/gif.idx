@@ -1,6 +1,8 @@
-gifSignatures	pixie/fileformats/gif.html#gifSignatures	gif: gifSignatures	
-Gif	pixie/fileformats/gif.html#Gif	gif: Gif	
-decodeGif	pixie/fileformats/gif.html#decodeGif,string	gif: decodeGif(data: string): Gif	
-decodeGifDimensions	pixie/fileformats/gif.html#decodeGifDimensions,pointer,int	gif: decodeGifDimensions(data: pointer; len: int): ImageDimensions	
-decodeGifDimensions	pixie/fileformats/gif.html#decodeGifDimensions,string	gif: decodeGifDimensions(data: string): ImageDimensions	
-newImage	pixie/fileformats/gif.html#newImage,Gif	gif: newImage(gif: Gif): Image	
+nimTitle	gif	pixie/fileformats/gif.html	module src/pixie/fileformats/gif		0
+nim	gifSignatures	pixie/fileformats/gif.html#gifSignatures	const gifSignatures		6
+nim	Gif	pixie/fileformats/gif.html#Gif	type Gif		9
+nim	decodeGif	pixie/fileformats/gif.html#decodeGif,string	proc decodeGif(data: string): Gif		25
+nim	decodeGifDimensions	pixie/fileformats/gif.html#decodeGifDimensions,pointer,int	proc decodeGifDimensions(data: pointer; len: int): ImageDimensions		381
+nim	decodeGifDimensions	pixie/fileformats/gif.html#decodeGifDimensions,string	proc decodeGifDimensions(data: string): ImageDimensions		400
+nim	newImage	pixie/fileformats/gif.html#newImage,Gif	proc newImage(gif: Gif): Image		405
+nimgrp	decodegifdimensions	pixie/fileformats/gif.html#decodeGifDimensions-procs-all	proc		381

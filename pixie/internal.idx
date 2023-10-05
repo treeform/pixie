@@ -1,9 +1,10 @@
-currentExceptionAsPixieError	pixie/internal.html#currentExceptionAsPixieError.t	internal: currentExceptionAsPixieError(): untyped	
-failUnsupportedBlendMode	pixie/internal.html#failUnsupportedBlendMode.t,BlendMode	internal: failUnsupportedBlendMode(blendMode: BlendMode)	
-gaussianKernel	pixie/internal.html#gaussianKernel,int	internal: gaussianKernel(radius: int): seq[uint16]	
-intersectsInside	pixie/internal.html#intersectsInside,Segment,Segment,Vec2	internal: intersectsInside(a, b: Segment; at: var Vec2): bool	
-getUncheckedArray	pixie/internal.html#getUncheckedArray.t,Image,int,int	internal: getUncheckedArray(image: Image; x, y: int): ptr UncheckedArray[ColorRGBX]	
-fillUnsafe	pixie/internal.html#fillUnsafe,seq[ColorRGBX],SomeColor,int,int	internal: fillUnsafe(data: var seq[ColorRGBX]; color: SomeColor; start, len: int)	
-toStraightAlpha	pixie/internal.html#toStraightAlpha,seq[]	internal: toStraightAlpha(data: var seq[ColorRGBA | ColorRGBX])	
-toPremultipliedAlpha	pixie/internal.html#toPremultipliedAlpha,seq[]	internal: toPremultipliedAlpha(data: var seq[ColorRGBA | ColorRGBX])	
-isOpaque	pixie/internal.html#isOpaque,seq[ColorRGBX],int,int	internal: isOpaque(data: var seq[ColorRGBX]; start, len: int): bool	
+nimTitle	internal	pixie/internal.html	module src/pixie/internal		0
+nim	currentExceptionAsPixieError	pixie/internal.html#currentExceptionAsPixieError.t	template currentExceptionAsPixieError(): untyped		3
+nim	failUnsupportedBlendMode	pixie/internal.html#failUnsupportedBlendMode.t,BlendMode	template failUnsupportedBlendMode(blendMode: BlendMode)		8
+nim	gaussianKernel	pixie/internal.html#gaussianKernel,int	proc gaussianKernel(radius: int): seq[uint16]		17
+nim	intersectsInside	pixie/internal.html#intersectsInside,Segment,Segment,Vec2	proc intersectsInside(a, b: Segment; at: var Vec2): bool		36
+nim	getUncheckedArray	pixie/internal.html#getUncheckedArray.t,Image,int,int	template getUncheckedArray(image: Image; x, y: int): ptr UncheckedArray[ColorRGBX]		50
+nim	fillUnsafe	pixie/internal.html#fillUnsafe,seq[ColorRGBX],SomeColor,int,int	proc fillUnsafe(data: var seq[ColorRGBX]; color: SomeColor; start, len: int)		57
+nim	toStraightAlpha	pixie/internal.html#toStraightAlpha,seq[]	proc toStraightAlpha(data: var seq[ColorRGBA | ColorRGBX])		76
+nim	toPremultipliedAlpha	pixie/internal.html#toPremultipliedAlpha,seq[]	proc toPremultipliedAlpha(data: var seq[ColorRGBA | ColorRGBX])		88
+nim	isOpaque	pixie/internal.html#isOpaque,seq[ColorRGBX],int,int	proc isOpaque(data: var seq[ColorRGBX]; start, len: int): bool		98

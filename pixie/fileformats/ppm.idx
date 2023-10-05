@@ -1,5 +1,7 @@
-ppmSignatures	pixie/fileformats/ppm.html#ppmSignatures	ppm: ppmSignatures	
-decodePpm	pixie/fileformats/ppm.html#decodePpm,string	ppm: decodePpm(data: string): Image	
-decodePpmDimensions	pixie/fileformats/ppm.html#decodePpmDimensions,pointer,int	ppm: decodePpmDimensions(data: pointer; len: int): ImageDimensions	
-decodePpmDimensions	pixie/fileformats/ppm.html#decodePpmDimensions,string	ppm: decodePpmDimensions(data: string): ImageDimensions	
-encodePpm	pixie/fileformats/ppm.html#encodePpm,Image	ppm: encodePpm(image: Image): string	
+nimTitle	ppm	pixie/fileformats/ppm.html	module src/pixie/fileformats/ppm		0
+nim	ppmSignatures	pixie/fileformats/ppm.html#ppmSignatures	const ppmSignatures		5
+nim	decodePpm	pixie/fileformats/ppm.html#decodePpm,string	proc decodePpm(data: string): Image		121
+nim	decodePpmDimensions	pixie/fileformats/ppm.html#decodePpmDimensions,pointer,int	proc decodePpmDimensions(data: pointer; len: int): ImageDimensions		142
+nim	decodePpmDimensions	pixie/fileformats/ppm.html#decodePpmDimensions,string	proc decodePpmDimensions(data: string): ImageDimensions		152
+nim	encodePpm	pixie/fileformats/ppm.html#encodePpm,Image	proc encodePpm(image: Image): string		158
+nimgrp	decodeppmdimensions	pixie/fileformats/ppm.html#decodePpmDimensions-procs-all	proc		142

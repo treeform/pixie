@@ -1,6 +1,7 @@
-SvgFont	pixie/fontformats/svgfont.html#SvgFont	svgfont: SvgFont	
-getGlyphPath	pixie/fontformats/svgfont.html#getGlyphPath,SvgFont,Rune	svgfont: getGlyphPath(svgFont: SvgFont; rune: Rune): Path	
-hasGlyph	pixie/fontformats/svgfont.html#hasGlyph,SvgFont,Rune	svgfont: hasGlyph(svgFont: SvgFont; rune: Rune): bool	
-getAdvance	pixie/fontformats/svgfont.html#getAdvance,SvgFont,Rune	svgfont: getAdvance(svgFont: SvgFont; rune: Rune): float32	
-getKerningAdjustment	pixie/fontformats/svgfont.html#getKerningAdjustment,SvgFont,Rune,Rune	svgfont: getKerningAdjustment(svgFont: SvgFont; left, right: Rune): float32	
-parseSvgFont	pixie/fontformats/svgfont.html#parseSvgFont,string	svgfont: parseSvgFont(buf: string): SvgFont	
+nimTitle	svgfont	pixie/fontformats/svgfont.html	module src/pixie/fontformats/svgfont		0
+nim	SvgFont	pixie/fontformats/svgfont.html#SvgFont	type SvgFont		4
+nim	getGlyphPath	pixie/fontformats/svgfont.html#getGlyphPath,SvgFont,Rune	proc getGlyphPath(svgFont: SvgFont; rune: Rune): Path		12
+nim	hasGlyph	pixie/fontformats/svgfont.html#hasGlyph,SvgFont,Rune	proc hasGlyph(svgFont: SvgFont; rune: Rune): bool		15
+nim	getAdvance	pixie/fontformats/svgfont.html#getAdvance,SvgFont,Rune	proc getAdvance(svgFont: SvgFont; rune: Rune): float32		18
+nim	getKerningAdjustment	pixie/fontformats/svgfont.html#getKerningAdjustment,SvgFont,Rune,Rune	proc getKerningAdjustment(svgFont: SvgFont; left, right: Rune): float32		21
+nim	parseSvgFont	pixie/fontformats/svgfont.html#parseSvgFont,string	proc parseSvgFont(buf: string): SvgFont		39

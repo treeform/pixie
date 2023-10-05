@@ -1,3 +1,4 @@
-allowSimd	pixie/simd.html#allowSimd	simd: allowSimd	
-cpuHasAvx	pixie/simd.html#cpuHasAvx	simd: cpuHasAvx	
-cpuHasAvx2	pixie/simd.html#cpuHasAvx2	simd: cpuHasAvx2	
+nimTitle	simd	pixie/simd.html	module src/pixie/simd		0
+nim	allowSimd	pixie/simd.html#allowSimd	const allowSimd		5
+nim	cpuHasAvx	pixie/simd.html#cpuHasAvx	let cpuHasAvx		17
+nim	cpuHasAvx2	pixie/simd.html#cpuHasAvx2	let cpuHasAvx2		18
