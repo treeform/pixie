@@ -38,6 +38,7 @@ const
     0.uint32, 1, 3, 7, 15, 31, 63, 127, 255, 511,
     1023, 2047, 4095, 8191, 16383, 32767, 65535
   ]
+  jpegEndOfImage = 0xD9
 
 let
   jpegStartOfImage* = [0xFF.uint8, 0xD8]
@@ -899,6 +900,8 @@ proc checkRestart(state: var DecoderState) =
   if state.todoBeforeRestart <= 0:
     if state.pos + 1 > state.len:
       failInvalid()
+    if state.buffer[state.pos] == 0xFF and state.buffer[state.pos+1] == jpegEndOfImage:
+      return
     if state.buffer[state.pos] != 0xFF or
       state.buffer[state.pos + 1] notin 0xD0'u8 .. 0xD7'u8:
       failInvalid("did not get expected restart marker")
