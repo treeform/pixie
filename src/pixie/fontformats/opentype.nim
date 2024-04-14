@@ -455,6 +455,7 @@ proc parseCmapTable(buf: string, offset: int): CmapTable =
 
       let format = buf.readUint16(i + 0).swap()
       if format == 4:
+        # https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#format-4-segment-mapping-to-delta-values
         type Format4 = object
           format: uint16
           length: uint16
@@ -518,8 +519,46 @@ proc parseCmapTable(buf: string, offset: int): CmapTable =
             if c != 65535:
               result.runeToGlyphId[Rune(c)] = glyphId.uint16
               result.glyphIdToRune[glyphId.uint16] = Rune(c)
+
+      elif format == 12:
+        # https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#format-12-segmented-coverage
+        type Format12 = object
+          format: uint16
+          reserved: uint16
+          length: uint32
+          language: uint32
+          numGroups: uint32
+
+        buf.eofCheck(i + 16)
+
+        var subTable: Format12
+        subTable.format = format
+        subTable.reserved = buf.readUint16(i + 2).swap()
+        subTable.length = buf.readUint32(i + 4).swap()
+        subTable.language = buf.readUint32(i + 8).swap()
+        subTable.numGroups = buf.readUint32(i + 12).swap()
+        i += 16
+
+        buf.eofCheck(i + subTable.numGroups.int * 12)
+
+        for k in 0 ..< subTable.numGroups:
+          let startCharCode = buf.readUint32(i + 0).swap()
+          let endCharCode = buf.readUint32(i + 4).swap()
+          let startGlyphId = buf.readUint32(i + 8).swap()
+
+          for c in startCharCode .. endCharCode:
+            let glyphId = startGlyphId + (c - startCharCode)
+            if glyphId > uint16.high:
+              # TODO: currently onld 16 bit glyph ids are supported
+              raise newException(PixieError, "Found glyph outside of uint16 range: " & $glyphId)
+
+            result.runeToGlyphId[Rune(c)] = uint16(glyphId)
+            result.glyphIdToRune[uint16(glyphId)] = Rune(c)
+
+          i += 12
+
       else:
-        # TODO implement other Windows encodingIDs
+        # TODO implement other windows formats
         discard
     else:
       # TODO implement other cmap platformIDs
