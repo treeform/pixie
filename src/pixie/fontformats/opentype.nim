@@ -549,7 +549,7 @@ proc parseCmapTable(buf: string, offset: int): CmapTable =
           for c in startCharCode .. endCharCode:
             let glyphId = startGlyphId + (c - startCharCode)
             if glyphId > uint16.high:
-              # TODO: currently onld 16 bit glyph ids are supported
+              # TODO: currently only 16 bit glyph ids are supported
               raise newException(PixieError, "Found glyph outside of uint16 range: " & $glyphId)
 
             result.runeToGlyphId[Rune(c)] = uint16(glyphId)
