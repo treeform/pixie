@@ -17,7 +17,6 @@ block:
 📁🧞😃🌴🚶󾠫🦙🔎⏲🔵🖐☦😪🌯🙆🇺😂🍅🇿🚟🤜
 📼👰🍁📽☪🔄🤝🔧🦸🏰🏳🔜🎥🚋🇫🦨🏜🆖🏤🪖⏏""")
 
-  image.writeFile("tests/fonts/masters/emoji2.png")
   image.xray("tests/fonts/masters/emoji.png")
 
 block:
