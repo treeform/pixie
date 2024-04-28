@@ -16,12 +16,12 @@ nim	KernSubTable	pixie/fontformats/opentype.html#KernSubTable	object KernSubTabl
 nim	KernTable	pixie/fontformats/opentype.html#KernTable	type KernTable		159
 nim	TableRecord	pixie/fontformats/opentype.html#TableRecord	object TableRecord		165
 nim	OpenType	pixie/fontformats/opentype.html#OpenType	type OpenType		371
-nim	hasGlyph	pixie/fontformats/opentype.html#hasGlyph,OpenType,Rune	proc hasGlyph(opentype: OpenType; rune: Rune): bool		2140
-nim	getGlyphPath	pixie/fontformats/opentype.html#getGlyphPath,OpenType,Rune	proc getGlyphPath(opentype: OpenType; rune: Rune): Path		2417
-nim	getLeftSideBearing	pixie/fontformats/opentype.html#getLeftSideBearing,OpenType,Rune	proc getLeftSideBearing(opentype: OpenType; rune: Rune): float32		2426
-nim	getAdvance	pixie/fontformats/opentype.html#getAdvance,OpenType,Rune	proc getAdvance(opentype: OpenType; rune: Rune): float32		2435
-nim	getKerningAdjustment	pixie/fontformats/opentype.html#getKerningAdjustment,OpenType,Rune,Rune	proc getKerningAdjustment(opentype: OpenType; left, right: Rune): float32		2442
-nim	isCCW	pixie/fontformats/opentype.html#isCCW,OpenType	proc isCCW(opentype: OpenType): bool		2478
-nim	fullName	pixie/fontformats/opentype.html#fullName,OpenType	proc fullName(opentype: OpenType): string		2484
-nim	parseOpenType	pixie/fontformats/opentype.html#parseOpenType,string,int	proc parseOpenType(buf: string; startLoc = 0): OpenType		2492
-nim	parseOpenTypeCollection	pixie/fontformats/opentype.html#parseOpenTypeCollection,string	proc parseOpenTypeCollection(buf: string): seq[OpenType]		2552
+nim	hasGlyph	pixie/fontformats/opentype.html#hasGlyph,OpenType,Rune	proc hasGlyph(opentype: OpenType; rune: Rune): bool		2179
+nim	getGlyphPath	pixie/fontformats/opentype.html#getGlyphPath,OpenType,Rune	proc getGlyphPath(opentype: OpenType; rune: Rune): Path		2456
+nim	getLeftSideBearing	pixie/fontformats/opentype.html#getLeftSideBearing,OpenType,Rune	proc getLeftSideBearing(opentype: OpenType; rune: Rune): float32		2465
+nim	getAdvance	pixie/fontformats/opentype.html#getAdvance,OpenType,Rune	proc getAdvance(opentype: OpenType; rune: Rune): float32		2474
+nim	getKerningAdjustment	pixie/fontformats/opentype.html#getKerningAdjustment,OpenType,Rune,Rune	proc getKerningAdjustment(opentype: OpenType; left, right: Rune): float32		2481
+nim	isCCW	pixie/fontformats/opentype.html#isCCW,OpenType	proc isCCW(opentype: OpenType): bool		2517
+nim	fullName	pixie/fontformats/opentype.html#fullName,OpenType	proc fullName(opentype: OpenType): string		2523
+nim	parseOpenType	pixie/fontformats/opentype.html#parseOpenType,string,int	proc parseOpenType(buf: string; startLoc = 0): OpenType		2531
+nim	parseOpenTypeCollection	pixie/fontformats/opentype.html#parseOpenTypeCollection,string	proc parseOpenTypeCollection(buf: string): seq[OpenType]		2591
