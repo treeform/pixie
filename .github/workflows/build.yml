@@ -2,11 +2,13 @@ name: Github Actions
 on: [push, pull_request]
 jobs:
   build:
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        nim-version: ['1.4.x', 'stable']
+        nim-version: ['1.4.x', '2.2.0', '2.0.12']
 
     runs-on: ${{ matrix.os }}
 
