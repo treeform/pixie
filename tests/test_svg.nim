@@ -1,4 +1,4 @@
-import pixie, pixie/fileformats/svg, strformat, xrays
+import pixie, pixie/fileformats/svg, strformat, xrays, xmlparser, xmltree
 
 const files = [
   "line01",
@@ -29,3 +29,12 @@ block:
     )
     image = newImage(svg)
   image.xray(&"tests/fileformats/svg/masters/accessibility-outline.png")
+
+block:
+  # Test using XML node by itself, see: https://github.com/treeform/pixie/pull/533
+  let
+    xmlNode = parseXml(readFile("tests/fileformats/svg/accessibility-outline.svg"))
+    svg = parseSvg(
+      xmlNode,
+      512, 512
+    )

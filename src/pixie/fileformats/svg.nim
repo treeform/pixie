@@ -500,11 +500,10 @@ proc parseSvgElement(
     raise newException(PixieError, "Unsupported SVG tag: " & node.tag)
 
 proc parseSvg*(
-  data: string | XmlNode, width = 0, height = 0
+  root: XmlNode, width = 0, height = 0
 ): Svg {.raises: [PixieError].} =
   ## Parse SVG XML. Defaults to the SVG's view box size.
   try:
-    let root = parseXml(data)
     if root.tag != "svg":
       failInvalid()
 
@@ -521,7 +520,7 @@ proc parseSvg*(
 
     if viewBoxMinX != 0 or viewBoxMinY != 0:
       let viewBoxMin = vec2(-viewBoxMinX.float32, -viewBoxMinY.float32)
-      rootprops.transform = rootprops.transform * translate(viewBoxMin)
+      rootProps.transform = rootProps.transform * translate(viewBoxMin)
 
     result = Svg()
 
@@ -535,11 +534,21 @@ proc parseSvg*(
       let
         scaleX = width.float32 / viewBoxWidth.float32
         scaleY = height.float32 / viewBoxHeight.float32
-      rootprops.transform = rootprops.transform * scale(vec2(scaleX, scaleY))
+      rootProps.transform = rootProps.transform * scale(vec2(scaleX, scaleY))
 
     var propertiesStack = @[rootProps]
     for node in root.items:
       result.elements.add node.parseSvgElement(result, propertiesStack)
+  except PixieError as e:
+    raise e
+  except:
+    raise currentExceptionAsPixieError()
+
+proc parseSvg*(data: string, width = 0, height = 0): Svg {.raises: [PixieError].} =
+  ## Parse SVG data. Defaults to the SVG's view box size.
+  try:
+    let root = parseXml(data)
+    result = root.parseSvg(width, height)
   except PixieError as e:
     raise e
   except:
