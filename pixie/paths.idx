@@ -51,13 +51,13 @@ nim	strokePath	pixie/paths.html#strokePath,Image,SomePath,Paint,float32,seq[floa
 nim	fillOverlaps	pixie/paths.html#fillOverlaps,Path,Vec2	proc fillOverlaps(path: Path; test: Vec2; transform = mat3(); ## Applied to the path, not the test point.\n             windingRule = NonZero): bool		2243
 nim	strokeOverlaps	pixie/paths.html#strokeOverlaps,Path,Vec2,float32,seq[float32]	proc strokeOverlaps(path: Path; test: Vec2; transform = mat3(); ## Applied to the path, not the test point.\n               strokeWidth: float32 = 1.0; lineCap = ButtCap;\n               lineJoin = MiterJoin; miterLimit = defaultMiterLimit;\n               dashes: seq[float32] = @[]): bool		2254
 nimgrp	beziercurveto	pixie/paths.html#bezierCurveTo-procs-all	proc		367
-nimgrp	circle	pixie/paths.html#circle-procs-all	proc		625
-nimgrp	roundedrect	pixie/paths.html#roundedRect-procs-all	proc		533
-nimgrp	ellipse	pixie/paths.html#ellipse-procs-all	proc		608
 nimgrp	quadraticcurveto	pixie/paths.html#quadraticCurveTo-procs-all	proc		382
-nimgrp	arc	pixie/paths.html#arc-procs-all	proc		416
 nimgrp	moveto	pixie/paths.html#moveTo-procs-all	proc		346
-nimgrp	arcto	pixie/paths.html#arcTo-procs-all	proc		461
-nimgrp	rect	pixie/paths.html#rect-procs-all	proc		506
-nimgrp	polygon	pixie/paths.html#polygon-procs-all	proc		633
+nimgrp	ellipse	pixie/paths.html#ellipse-procs-all	proc		608
+nimgrp	roundedrect	pixie/paths.html#roundedRect-procs-all	proc		533
 nimgrp	lineto	pixie/paths.html#lineTo-procs-all	proc		356
+nimgrp	arc	pixie/paths.html#arc-procs-all	proc		416
+nimgrp	rect	pixie/paths.html#rect-procs-all	proc		506
+nimgrp	arcto	pixie/paths.html#arcTo-procs-all	proc		461
+nimgrp	polygon	pixie/paths.html#polygon-procs-all	proc		633
+nimgrp	circle	pixie/paths.html#circle-procs-all	proc		625

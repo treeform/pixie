@@ -11,5 +11,5 @@ nim	decodeQoiDimensions	pixie/fileformats/qoi.html#decodeQoiDimensions,pointer,i
 nim	decodeQoiDimensions	pixie/fileformats/qoi.html#decodeQoiDimensions,string	proc decodeQoiDimensions(data: string): ImageDimensions		150
 nim	encodeQoi	pixie/fileformats/qoi.html#encodeQoi,Qoi	proc encodeQoi(qoi: Qoi): string		156
 nim	encodeQoi	pixie/fileformats/qoi.html#encodeQoi,Image	proc encodeQoi(image: Image): string		228
-nimgrp	decodeqoidimensions	pixie/fileformats/qoi.html#decodeQoiDimensions-procs-all	proc		138
 nimgrp	encodeqoi	pixie/fileformats/qoi.html#encodeQoi-procs-all	proc		156
+nimgrp	decodeqoidimensions	pixie/fileformats/qoi.html#decodeQoiDimensions-procs-all	proc		138

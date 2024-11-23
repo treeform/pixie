@@ -51,8 +51,8 @@ nim	readTypeface	pixie/fonts.html#readTypeface,string	proc readTypeface(filePath
 nim	readTypefaces	pixie/fonts.html#readTypefaces,string	proc readTypefaces(filePath: string): seq[Typeface]		704
 nim	name	pixie/fonts.html#name,Typeface	proc name(typeface: Typeface): string		714
 nim	readFont	pixie/fonts.html#readFont,string	proc readFont(filePath: string): Font		719
-nimgrp	filltext	pixie/fonts.html#fillText-procs-all	proc		603
-nimgrp	layoutbounds	pixie/fonts.html#layoutBounds-procs-all	proc		479
 nimgrp	scale	pixie/fonts.html#scale-procs-all	proc		57
 nimgrp	stroketext	pixie/fonts.html#strokeText-procs-all	proc		631
+nimgrp	filltext	pixie/fonts.html#fillText-procs-all	proc		603
 nimgrp	typeset	pixie/fonts.html#typeset-procs-all	proc		251
+nimgrp	layoutbounds	pixie/fonts.html#layoutBounds-procs-all	proc		479

@@ -14,5 +14,5 @@ nim	blendLineCoverageNormalAvx2	pixie/simd/avx2.html#blendLineCoverageNormalAvx2
 nim	blendLineMaskAvx2	pixie/simd/avx2.html#blendLineMaskAvx2,ptr.UncheckedArray[ColorRGBX],ColorRGBX,int	proc blendLineMaskAvx2(line: ptr UncheckedArray[ColorRGBX]; rgbx: ColorRGBX; len: int)		613
 nim	blendLineMaskAvx2	pixie/simd/avx2.html#blendLineMaskAvx2,ptr.UncheckedArray[ColorRGBX],ptr.UncheckedArray[ColorRGBX],int	proc blendLineMaskAvx2(a, b: ptr UncheckedArray[ColorRGBX]; len: int)		638
 nim	blendLineCoverageMaskAvx2	pixie/simd/avx2.html#blendLineCoverageMaskAvx2,ptr.UncheckedArray[ColorRGBX],ptr.UncheckedArray[uint8],ColorRGBX,int	proc blendLineCoverageMaskAvx2(line: ptr UncheckedArray[ColorRGBX];\n                          coverages: ptr UncheckedArray[uint8]; rgbx: ColorRGBX;\n                          len: int)		672
-nimgrp	blendlinenormalavx2	pixie/simd/avx2.html#blendLineNormalAvx2-procs-all	proc		488
 nimgrp	blendlinemaskavx2	pixie/simd/avx2.html#blendLineMaskAvx2-procs-all	proc		611
+nimgrp	blendlinenormalavx2	pixie/simd/avx2.html#blendLineNormalAvx2-procs-all	proc		488
