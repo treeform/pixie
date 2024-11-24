@@ -899,6 +899,9 @@ proc checkRestart(state: var DecoderState) =
   if state.todoBeforeRestart <= 0:
     if state.pos + 1 > state.len:
       failInvalid()
+    # Handle getting a restart marker right at the end.
+    if state.buffer[state.pos] == 0xFF and state.buffer[state.pos+1] == 0xD9:
+      return
     if state.buffer[state.pos] != 0xFF or
       state.buffer[state.pos + 1] notin 0xD0'u8 .. 0xD7'u8:
       failInvalid("did not get expected restart marker")
