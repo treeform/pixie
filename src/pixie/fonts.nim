@@ -85,6 +85,11 @@ proc lineHeight*(typeface: Typeface): float32 {.inline, raises: [].} =
   # The descent is negative number, so this is really ascent + descent + lineGap.
   typeface.ascent - typeface.descent + typeface.lineGap
 
+proc capHeight*(typeface: Typeface): float32 {.raises: [].} =
+  ## The font cap height value in font units.
+  if typeface.opentype != nil:
+    result = typeface.opentype.os2.sCapHeight.float32
+
 proc underlinePosition(typeface: Typeface): float32 =
   if typeface.opentype != nil:
     result = typeface.opentype.post.underlinePosition.float32
