@@ -107,6 +107,10 @@
   <li><a class="reference" href="#ascent%2CTypeface" title="ascent(typeface: Typeface): float32">ascent(typeface: Typeface): float32</a></li>
 
 </ul>
+<ul class="simple nested-toc-section">capHeight
+  <li><a class="reference" href="#capHeight%2CTypeface" title="capHeight(typeface: Typeface): float32">capHeight(typeface: Typeface): float32</a></li>
+
+</ul>
 <ul class="simple nested-toc-section">computeBounds
   <li><a class="reference" href="#computeBounds%2CArrangement" title="computeBounds(arrangement: Arrangement; transform = mat3()): Rect">computeBounds(arrangement: Arrangement; transform = mat3()): Rect</a></li>
 
@@ -387,6 +391,19 @@
 </div>
 
 </div>
+<div id="capHeight-procs-all">
+  <div id="capHeight,Typeface">
+  <dt><pre><span class="Keyword">proc</span> <a href="#capHeight%2CTypeface"><span class="Identifier">capHeight</span></a><span class="Other">(</span><span class="Identifier">typeface</span><span class="Other">:</span> <a href="fonts.html#Typeface"><span class="Identifier">Typeface</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">float32</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    The font cap height value in font units.
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L88" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L88" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
 <div id="computeBounds-procs-all">
   <div id="computeBounds,Arrangement">
   <dt><pre><span class="Keyword">proc</span> <a href="#computeBounds%2CArrangement"><span class="Identifier">computeBounds</span></a><span class="Other">(</span><span class="Identifier">arrangement</span><span class="Other">:</span> <a href="fonts.html#Arrangement"><span class="Identifier">Arrangement</span></a><span class="Other">;</span> <span class="Identifier">transform</span> <span class="Other">=</span> <span class="Identifier">mat3</span><span class="Other">(</span><span class="Other">)</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Rect</span> {.
@@ -394,8 +411,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L593" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L593" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L598" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L598" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -407,8 +424,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L216" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L216" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L221" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L221" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -421,8 +438,8 @@
   <dd>
     
     The default line height in pixels for the current font size.
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L184" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L184" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L189" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L189" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -448,8 +465,8 @@
   <dd>
     
     Looks through fallback typefaces to find one that has the glyph.
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L116" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L116" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L121" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L121" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -462,8 +479,8 @@
   <dd>
     
     Fills the text arrangement.
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L603" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L603" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L608" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L608" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -474,8 +491,8 @@
   <dd>
     
     Typesets and fills the text. Optional parameters: transform: translation or matrix to apply bounds: width determines wrapping and hAlign, height for vAlign hAlign: horizontal alignment of the text vAlign: vertical alignment of the text
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L615" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L615" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L620" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L620" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -488,8 +505,8 @@
   <dd>
     
     The advance for the rune in pixels.
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L145" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L145" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L150" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L150" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -502,8 +519,8 @@
   <dd>
     
     The glyph path for the rune.
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L125" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L125" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L130" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L130" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -516,8 +533,8 @@
   <dd>
     
     The kerning adjustment for the rune pair, in pixels.
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L160" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L160" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L165" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L165" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -530,8 +547,8 @@
   <dd>
     
     Returns if there is a glyph for this rune.
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L109" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L109" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L114" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L114" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -544,8 +561,8 @@
   <dd>
     
     Computes the width and height of the arrangement in pixels.
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L479" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L479" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L484" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L484" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -555,8 +572,8 @@
   <dd>
     
     Computes the width and height of the text in pixels.
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L493" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L493" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L498" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L498" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -566,8 +583,8 @@
   <dd>
     
     Computes the width and height of the spans in pixels.
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L497" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L497" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L502" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L502" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -606,8 +623,8 @@
   <dd>
     
     Returns the name of the font.
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L714" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L714" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L719" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L719" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -619,8 +636,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L208" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L208" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L213" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L213" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -633,8 +650,8 @@
   <dd>
     
     Creates a span, associating a font with the text.
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L227" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L227" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L232" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L232" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -646,8 +663,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L202" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L202" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L207" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L207" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -660,8 +677,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L205" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L205" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L210" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L210" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -674,8 +691,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L501" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L501" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L506" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L506" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -688,8 +705,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L508" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L508" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L513" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L513" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -702,8 +719,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L505" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L505" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L510" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L510" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -716,8 +733,8 @@
   <dd>
     
     Loads a font from a file.
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L719" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L719" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L724" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L724" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -730,8 +747,8 @@
   <dd>
     
     Loads a typeface from a file.
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L686" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L686" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L691" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L691" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -744,8 +761,8 @@
   <dd>
     
     Loads a OpenType Collection (.ttc).
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L704" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L704" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L709" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L709" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -757,8 +774,8 @@
   <dd>
     
     The scale factor to transform font units into pixels.
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L180" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L180" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L185" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L185" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -785,8 +802,8 @@
   <dd>
     
     Strokes the text arrangement.
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L631" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L631" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L636" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L636" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -800,8 +817,8 @@
   <dd>
     
     Typesets and strokes the text. Optional parameters: transform: translation or matrix to apply bounds: width determines wrapping and hAlign, height for vAlign hAlign: horizontal alignment of the text vAlign: vertical alignment of the text lineCap: stroke line cap shape lineJoin: stroke line join shape
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L654" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L654" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L659" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L659" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -815,8 +832,8 @@
   <dd>
     
     Lays out the character glyphs and returns the arrangement. Optional parameters: bounds: width determines wrapping and hAlign, height for vAlign hAlign: horizontal alignment of the text vAlign: vertical alignment of the text wrap: enable/disable text wrapping
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L463" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L463" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L468" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L468" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -827,8 +844,8 @@
   <dd>
     
     Lays out the character glyphs and returns the arrangement. Optional parameters: bounds: width determines wrapping and hAlign, height for vAlign hAlign: horizontal alignment of the text vAlign: vertical alignment of the text wrap: enable/disable text wrapping
-    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L251" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L251" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/pixie/tree/master/src/pixie/fonts.nim#L256" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/pixie/edit/devel/src/pixie/fonts.nim#L256" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -844,7 +861,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2025-09-06 04:27:24 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2025-09-13 15:05:21 UTC</small>
       </div>
     </div>
   </div>
