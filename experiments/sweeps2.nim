@@ -1,6 +1,6 @@
 
 import algorithm, bumpy, chroma, pixie/images, print,
-    vmath, benchy, fidget2/perf
+    vmath, benchy, fidget2/measure
 
 import pixie, pixie/paths {.all.}
 
