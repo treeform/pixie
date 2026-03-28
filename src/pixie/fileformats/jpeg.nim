@@ -508,7 +508,7 @@ proc decodeSOS(state: var DecoderState) =
   if state.progressive:
     if state.spectralStart > 63 or state.spectralEnd > 63:
       failInvalid()
-    if state.spectralEnd > state.spectralEnd:
+    if state.spectralStart > state.spectralEnd:
       failInvalid()
     if state.successiveApproxHigh > 13 or state.successiveApproxLow > 13:
       failInvalid()
@@ -715,7 +715,7 @@ proc decodeProgressiveContinuationBlock(
 
     if state.eobRun != 0:
       dec state.eobRun
-      for k in state.spectralStart ..< state.spectralEnd:
+      for k in state.spectralStart .. state.spectralEnd:
         let zig = deZigZag[k]
         if data[zig] != 0:
           if state.readBit() != 0:

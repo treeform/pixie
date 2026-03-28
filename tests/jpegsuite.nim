@@ -31,6 +31,7 @@ const jpegSuiteFiles* = [
   "tests/fileformats/jpeg/masters/exif_overrun.jpg",
   "tests/fileformats/jpeg/masters/grayscale_test.jpg",
   "tests/fileformats/jpeg/masters/progressive.jpg",
+  "tests/fileformats/jpeg/masters/chair_normal.jpg",
 
   "tests/fileformats/jpeg/masters/testimg.jpg",
   "tests/fileformats/jpeg/masters/testimgp.jpg",
