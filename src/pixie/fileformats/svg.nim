@@ -261,8 +261,8 @@ proc parseSvgProperties(node: XmlNode, inherited: SvgProperties): SvgProperties 
         m[0, 1] = parseFloat(arr[1])
         m[1, 0] = parseFloat(arr[2])
         m[1, 1] = parseFloat(arr[3])
-        m[2, 0] = parseFloat(arr[4])
-        m[2, 1] = parseFloat(arr[5])
+        m[0, 2] = parseFloat(arr[4])
+        m[1, 2] = parseFloat(arr[5])
         result.transform = result.transform * m
       elif f.startsWith("translate("):
         let

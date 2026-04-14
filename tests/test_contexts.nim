@@ -201,7 +201,7 @@ block:
 block:
   let ctx = newContext(newImage(300, 150))
 
-  ctx.setTransform(mat3(1, 0.2, 0, 0.8, 1, 0, 0, 0, 1))
+  ctx.setTransform(mat3(1, 0.8, 0, 0.2, 1, 0, 0, 0, 1))
   ctx.fillRect(0, 0, 100, 100)
 
   ctx.image.xray("tests/contexts/setTransform_1.png")
@@ -209,10 +209,10 @@ block:
 block:
   let ctx = newContext(newImage(300, 150))
 
-  ctx.setTransform(mat3(1, 0.2, 0, 0.8, 1, 0, 0, 0, 1))
+  ctx.setTransform(mat3(1, 0.8, 0, 0.2, 1, 0, 0, 0, 1))
   ctx.fillRect(0, 0, 100, 100)
 
-  ctx.image.xray("tests/contexts/resetTransform_1.png")
+  ctx.image.xray("tests/contexts/setTransform_2.png")
 
 block:
   let ctx = newContext(newImage(300, 150))
@@ -225,7 +225,7 @@ block:
 block:
   let ctx = newContext(newImage(300, 150))
 
-  ctx.transform(mat3(1, 0, 0, 1.7, 1, 0, 0, 0, 1))
+  ctx.transform(mat3(1, 1.7, 0, 0, 1, 0, 0, 0, 1))
   ctx.fillStyle = "gray"
   ctx.fillRect(40, 40, 50, 20)
   ctx.fillRect(40, 90, 50, 20)

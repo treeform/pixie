@@ -2404,9 +2404,9 @@ proc parseCompositeGlyph(opentype: OpenType, offset: int): Path =
 
     var subPath = opentype.parseGlyfGlyph(component.glyphId)
     subPath.transform(mat3(
-      component.xScale, component.scale10, 0.0,
-      component.scale01, component.yScale, 0.0,
-      component.dx, component.dy, 1.0
+      component.xScale, component.scale10, component.dx,
+      component.scale01, component.yScale, component.dy,
+      0.0, 0.0, 1.0
     ))
 
     result.addPath(subPath)

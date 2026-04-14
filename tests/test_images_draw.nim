@@ -143,7 +143,7 @@ block:
     b = newImage(50, 50)
   a.fill(rgba(255, 255, 255, 255))
   b.fill(rgbx(0, 0, 0, 255))
-  a.draw(b, translate(vec2(0, 50)) * rotate(45.toRadians))
+  a.draw(b, translate(vec2(0, 50)) * rotate(-45.toRadians))
   a.xray("tests/images/masters/smooth2.png")
 
 block:
@@ -170,7 +170,7 @@ block:
     b = newImage(10, 10)
   a.fill(rgba(255, 255, 255, 255))
   b.fill(rgbx(255, 0, 0, 255))
-  let m = translate(vec2(50, 50)) * rotate(30.toRadians)
+  let m = translate(vec2(50, 50)) * rotate(-30.toRadians)
   a.draw(b, m)
   a.xray("tests/images/masters/smooth5.png")
 
@@ -179,7 +179,7 @@ block:
     a = newImage(100, 100)
     b = readImage(&"tests/images/turtle.png")
   a.fill(rgba(255, 255, 255, 255))
-  let m = translate(vec2(50, 50)) * rotate(30.toRadians)
+  let m = translate(vec2(50, 50)) * rotate(-30.toRadians)
   a.draw(b, m)
   a.xray("tests/images/masters/smooth6.png")
 
@@ -188,7 +188,7 @@ block:
     a = newImage(100, 100)
     b = readImage(&"tests/images/turtle@10x.png")
   a.fill(rgba(255, 255, 255, 255))
-  let m = translate(vec2(50, 50)) * rotate(30.toRadians) * scale(vec2(0.1, 0.1))
+  let m = translate(vec2(50, 50)) * rotate(-30.toRadians) * scale(vec2(0.1, 0.1))
   a.draw(b, m)
   a.xray("tests/images/masters/smooth7.png")
 
@@ -225,7 +225,7 @@ block:
     b = readImage(&"tests/images/turtle.png")
   a.fill(rgba(255, 255, 255, 255))
   let m = translate(vec2(-43.29, -103.87)) *
-    rotate(-15.toRadians) *
+    rotate(15.toRadians) *
     scale(vec2(263.86/40, 263.86/40))
   a.draw(b, m)
   a.xray("tests/images/masters/smooth11.png")
@@ -235,7 +235,7 @@ block:
     a = newImage(100, 100)
     b = readImage(&"tests/images/turtle.png")
   a.fill(rgba(255, 255, 255, 255))
-  let m = translate(vec2(50, 50)) * rotate(-5.toRadians)
+  let m = translate(vec2(50, 50)) * rotate(5.toRadians)
   a.draw(b, m * translate(vec2(0, 0)))
   a.draw(b, m * translate(vec2(-40, 0)))
   a.draw(b, m * translate(vec2(-40, -40)))

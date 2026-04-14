@@ -664,18 +664,23 @@ proc draw*(
     transform = transform * scale(vec2(1/2, 1/2))
 
   let
+    translation = transform.pos
     hasRotationOrScaling = not(dx == vec2(1, 0) and dy == vec2(0, 1))
     smooth = not(
       dx.length == 1.0 and
       dy.length == 1.0 and
-      transform[2, 0].fractional == 0.0 and
-      transform[2, 1].fractional == 0.0
+      translation.x.fractional == 0.0 and
+      translation.y.fractional == 0.0
     )
 
   if hasRotationOrScaling or smooth:
     a.drawSmooth(b, transform, blendMode)
   else:
-    a.blendRect(b, ivec2(transform[2, 0].int32, transform[2, 1].int32), blendMode)
+    a.blendRect(
+      b,
+      ivec2(translation.x.int32, translation.y.int32),
+      blendMode
+    )
 
 proc drawTiled*(
   dst, src: Image, mat: Mat3, blendMode = NormalBlend
