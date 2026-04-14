@@ -1,4 +1,4 @@
-import pixie
+import pixie, common
 
 let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
@@ -12,4 +12,4 @@ let
 
 ctx.fillRect(rect(pos, wh))
 
-image.writeFile("examples/square.png")
+image.writeFile(outputPath("square.png"))

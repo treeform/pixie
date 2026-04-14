@@ -1,4 +1,4 @@
-import pixie
+import pixie, common
 
 let
   image = newImage(200, 200)
@@ -29,4 +29,4 @@ mask.fillPath(
 lines.draw(mask, blendMode = MaskBlend)
 image.draw(lines)
 
-image.writeFile("examples/masking.png")
+image.writeFile(outputPath("masking.png"))

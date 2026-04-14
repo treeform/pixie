@@ -1,4 +1,4 @@
-import pixie
+import pixie, common
 
 let
   trees = readImage("examples/data/trees.png")
@@ -19,4 +19,4 @@ blur.draw(mask, blendMode = MaskBlend)
 image.draw(trees)
 image.draw(blur)
 
-image.writeFile("examples/blur.png")
+image.writeFile(outputPath("blur.png"))

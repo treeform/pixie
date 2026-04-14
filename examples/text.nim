@@ -1,4 +1,4 @@
-import pixie
+import pixie, common
 
 let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
@@ -10,4 +10,4 @@ font.paint.color = color(1, 0, 0)
 let text = "Typesetting is the arrangement and composition of text in graphic design and publishing in both digital and traditional medias."
 
 image.fillText(font.typeset(text, vec2(180, 180)), translate(vec2(10, 10)))
-image.writeFile("examples/text.png")
+image.writeFile(outputPath("text.png"))

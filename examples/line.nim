@@ -1,4 +1,4 @@
-import pixie
+import pixie, common
 
 let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
@@ -13,4 +13,4 @@ let
 
 ctx.strokeSegment(segment(start, stop))
 
-image.writeFile("examples/line.png")
+image.writeFile(outputPath("line.png"))

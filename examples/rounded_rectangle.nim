@@ -1,4 +1,4 @@
-import pixie
+import pixie, common
 
 let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
@@ -13,4 +13,4 @@ let
 
 ctx.fillRoundedRect(rect(pos, wh), r)
 
-image.writeFile("examples/rounded_rectangle.png")
+image.writeFile(outputPath("rounded_rectangle.png"))

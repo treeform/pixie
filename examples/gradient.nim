@@ -1,4 +1,4 @@
-import pixie
+import pixie, common
 
 let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
@@ -26,4 +26,4 @@ image.fillPath(
   paint
 )
 
-image.writeFile("examples/gradient.png")
+image.writeFile(outputPath("gradient.png"))

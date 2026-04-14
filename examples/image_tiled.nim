@@ -1,4 +1,4 @@
-import pixie
+import pixie, common
 
 let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
@@ -15,4 +15,4 @@ paint.image = readImage("examples/data/mandrill.png")
 paint.imageMat = scale(vec2(0.08, 0.08))
 
 image.fillPath(path, paint)
-image.writeFile("examples/image_tiled.png")
+image.writeFile(outputPath("image_tiled.png"))

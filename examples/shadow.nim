@@ -1,4 +1,4 @@
-import pixie
+import pixie, common
 
 let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
@@ -19,4 +19,4 @@ let shadow = polygonImage.shadow(
 image.draw(shadow)
 image.draw(polygonImage)
 
-image.writeFile("examples/shadow.png")
+image.writeFile(outputPath("shadow.png"))

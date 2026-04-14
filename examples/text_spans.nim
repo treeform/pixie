@@ -1,4 +1,4 @@
-import pixie
+import pixie, common
 
 let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
@@ -20,4 +20,4 @@ let spans = @[
 ]
 
 image.fillText(typeset(spans, vec2(180, 180)), translate(vec2(10, 10)))
-image.writeFile("examples/text_spans.png")
+image.writeFile(outputPath("text_spans.png"))

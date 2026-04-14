@@ -1,4 +1,4 @@
-import pixie
+import pixie, common
 
 let image = newImage(200, 200)
 image.fill(rgba(255, 255, 255, 255))
@@ -15,4 +15,4 @@ image.fillPath(
   parseHtmlColor("#FC427B").rgba
 )
 
-image.writeFile("examples/heart.png")
+image.writeFile(outputPath("heart.png"))
