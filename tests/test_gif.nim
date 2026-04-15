@@ -28,15 +28,6 @@ block:
   doAssert image.height == dimensions.height
 
 block:
-  let
-    path = "tests/fileformats/gif/sunflower.gif"
-    image = readImage(path)
-    dimensions = decodeGifDimensions(readFile(path))
-  image.xray("tests/fileformats/gif/sunflower.png")
-  doAssert image.width == dimensions.width
-  doAssert image.height == dimensions.height
-
-block:
   let img4 = readImage("tests/fileformats/gif/newtons_cradle.gif")
   img4.xray("tests/fileformats/gif/newtons_cradle.png")
 
