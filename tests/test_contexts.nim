@@ -220,7 +220,7 @@ block:
   ctx.rotate(45 * PI / 180)
   ctx.fillRect(60, 0, 100, 30)
 
-  ctx.image.xray("tests/contexts/resetTransform_1.png")
+  ctx.image.xray("tests/contexts/rotate_simple.png")
 
 block:
   let ctx = newContext(newImage(300, 150))

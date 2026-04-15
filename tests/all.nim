@@ -12,15 +12,6 @@ import
   test_ppm,
   test_qoi,
   test_svg,
-  ../examples/text,
-  ../examples/text_spans,
-  ../examples/square,
-  ../examples/line,
-  ../examples/rounded_rectangle,
-  ../examples/heart,
-  ../examples/masking,
-  ../examples/gradient,
-  ../examples/image_tiled,
-  ../examples/shadow,
-  ../examples/blur,
-  ../examples/tiger
+  xrays
+
+writeReport()

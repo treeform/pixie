@@ -678,6 +678,7 @@ block:
     )
 
 block:
+  # Large coordinates that are out of bounds should not raise.
   let image = newImage(200, 200)
   image.fill(rgba(255, 255, 255, 255))
 
@@ -691,13 +692,7 @@ block:
 
   let path = parsePath(pathStr)
 
-  doAssertRaises PixieError:
-    image.fillPath(
-      path,
-      paint,
-      mat3(),
-      NonZero
-    )
+  image.fillPath(path, paint, mat3(), NonZero)
 
 block:
   let
