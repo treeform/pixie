@@ -839,7 +839,7 @@ proc commandsToShapes(
 
       ArcParams(
         radii: radii,
-        rotMat: rotate(-radians),
+        rotMat: rotate(radians),
         center: center,
         theta: theta,
         delta: delta

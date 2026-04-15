@@ -551,7 +551,7 @@ proc scale*(ctx: Context, x, y: float32) {.inline, raises: [].} =
 
 proc rotate*(ctx: Context, angle: float32) {.inline, raises: [].} =
   ## Adds a rotation to the transformation matrix.
-  ctx.mat = ctx.mat * rotate(-angle)
+  ctx.mat = ctx.mat * rotate(angle)
 
 proc resetTransform*(ctx: Context) {.inline, raises: [].} =
   ## Resets the current transform to the identity matrix.
