@@ -277,7 +277,7 @@ proc parseSvgProperties(node: XmlNode, inherited: SvgProperties): SvgProperties 
       elif f.startsWith("rotate("):
         let
           values = splitArgs(f[7 .. ^2])
-          angle: float32 = parseFloat(values[0]) * -PI / 180
+          angle: float32 = parseFloat(values[0]) * PI / 180
         var cx, cy: float32
         if values.len > 1:
           cx = parseFloat(values[1])
