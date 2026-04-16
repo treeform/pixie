@@ -6,7 +6,7 @@ license     = "MIT"
 srcDir = "src"
 
 requires "nim >= 1.4.8"
-requires "vmath >= 1.1.4"
+requires "vmath >= 3.0.0"
 requires "chroma >= 0.2.6"
 requires "zippy >= 0.10.3"
 requires "flatty >= 0.3.4"
