@@ -1,0 +1,3 @@
+nimTitle	imagebase64	pixie/imagebase64.html	module pixie/imagebase64		0
+nim	encodeBase64	pixie/imagebase64.html#encodeBase64,Image	proc encodeBase64(image: Image): string		43
+nim	decodeBase64	pixie/imagebase64.html#decodeBase64,string	proc decodeBase64(data: string): Image		47

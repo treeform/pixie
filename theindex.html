@@ -25,7 +25,7 @@
   <div class="document" id="documentId">
     <div class="container">
       <h1 class="title">Index</h1>
-      Modules: <a href="pixie.html">pixie</a>, <a href="pixie/blends.html">pixie/blends</a>, <a href="pixie/common.html">pixie/common</a>, <a href="pixie/contexts.html">pixie/contexts</a>, <a href="pixie/fileformats/bmp.html">pixie/fileformats/bmp</a>, <a href="pixie/fileformats/gif.html">pixie/fileformats/gif</a>, <a href="pixie/fileformats/jpeg.html">pixie/fileformats/jpeg</a>, <a href="pixie/fileformats/png.html">pixie/fileformats/png</a>, <a href="pixie/fileformats/ppm.html">pixie/fileformats/ppm</a>, <a href="pixie/fileformats/qoi.html">pixie/fileformats/qoi</a>, <a href="pixie/fileformats/svg.html">pixie/fileformats/svg</a>, <a href="pixie/fontformats/opentype.html">pixie/fontformats/opentype</a>, <a href="pixie/fontformats/svgfont.html">pixie/fontformats/svgfont</a>, <a href="pixie/fonts.html">pixie/fonts</a>, <a href="pixie/images.html">pixie/images</a>, <a href="pixie/internal.html">pixie/internal</a>, <a href="pixie/paints.html">pixie/paints</a>, <a href="pixie/paths.html">pixie/paths</a>, <a href="pixie/simd.html">pixie/simd</a>, <a href="pixie/simd/avx.html">pixie/simd/avx</a>, <a href="pixie/simd/avx2.html">pixie/simd/avx2</a>, <a href="pixie/simd/sse2.html">pixie/simd/sse2</a>.<br/><p /><h2>API symbols</h2>
+      Modules: <a href="pixie.html">pixie</a>, <a href="pixie/blends.html">pixie/blends</a>, <a href="pixie/common.html">pixie/common</a>, <a href="pixie/contexts.html">pixie/contexts</a>, <a href="pixie/fileformats/bmp.html">pixie/fileformats/bmp</a>, <a href="pixie/fileformats/gif.html">pixie/fileformats/gif</a>, <a href="pixie/fileformats/jpeg.html">pixie/fileformats/jpeg</a>, <a href="pixie/fileformats/png.html">pixie/fileformats/png</a>, <a href="pixie/fileformats/ppm.html">pixie/fileformats/ppm</a>, <a href="pixie/fileformats/qoi.html">pixie/fileformats/qoi</a>, <a href="pixie/fileformats/svg.html">pixie/fileformats/svg</a>, <a href="pixie/fontformats/opentype.html">pixie/fontformats/opentype</a>, <a href="pixie/fontformats/svgfont.html">pixie/fontformats/svgfont</a>, <a href="pixie/fonts.html">pixie/fonts</a>, <a href="pixie/imagebase64.html">pixie/imagebase64</a>, <a href="pixie/images.html">pixie/images</a>, <a href="pixie/internal.html">pixie/internal</a>, <a href="pixie/paints.html">pixie/paints</a>, <a href="pixie/paths.html">pixie/paths</a>, <a href="pixie/simd.html">pixie/simd</a>, <a href="pixie/simd/avx.html">pixie/simd/avx</a>, <a href="pixie/simd/avx2.html">pixie/simd/avx2</a>, <a href="pixie/simd/sse2.html">pixie/simd/sse2</a>.<br/><p /><h2>API symbols</h2>
 <dl><dt><a name="%60%24%60" href="#%60%24%60"><span>`$`:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="images: proc `$`(image: Image): string" href="pixie/images.html#%24%2CImage">images: proc `$`(image: Image): string</a></li>
@@ -460,6 +460,10 @@
 <li><a class="reference external"
           data-doc-search-tag="common: template dataIndex(image: Image; x, y: int): int" href="pixie/common.html#dataIndex.t%2CImage%2Cint%2Cint">common: template dataIndex(image: Image; x, y: int): int</a></li>
           </ul></dd>
+<dt><a name="decodeBase64" href="#decodeBase64"><span>decodeBase64:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="imagebase64: proc decodeBase64(data: string): Image" href="pixie/imagebase64.html#decodeBase64%2Cstring">imagebase64: proc decodeBase64(data: string): Image</a></li>
+          </ul></dd>
 <dt><a name="decodeBmp" href="#decodeBmp"><span>decodeBmp:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="bmp: proc decodeBmp(data: string): Image" href="pixie/fileformats/bmp.html#decodeBmp%2Cstring">bmp: proc decodeBmp(data: string): Image</a></li>
@@ -595,6 +599,10 @@
           data-doc-search-tag="paths: proc ellipticalArcTo(path: Path; rx, ry: float32; xAxisRotation: float32;
                 largeArcFlag, sweepFlag: bool; x, y: float32)" href="pixie/paths.html#ellipticalArcTo%2CPath%2Cfloat32%2Cfloat32%2Cfloat32%2Cbool%2Cbool%2Cfloat32%2Cfloat32">paths: proc ellipticalArcTo(path: Path; rx, ry: float32; xAxisRotation: float32;
                 largeArcFlag, sweepFlag: bool; x, y: float32)</a></li>
+          </ul></dd>
+<dt><a name="encodeBase64" href="#encodeBase64"><span>encodeBase64:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="imagebase64: proc encodeBase64(image: Image): string" href="pixie/imagebase64.html#encodeBase64%2CImage">imagebase64: proc encodeBase64(image: Image): string</a></li>
           </ul></dd>
 <dt><a name="encodeBmp" href="#encodeBmp"><span>encodeBmp:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1636,7 +1644,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-04-30 16:36:19 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-04-30 18:39:02 UTC</small>
       </div>
     </div>
   </div>
