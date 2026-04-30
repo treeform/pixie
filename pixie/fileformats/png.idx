@@ -1,4 +1,4 @@
-nimTitle	png	pixie/fileformats/png.html	module src/pixie/fileformats/png		0
+nimTitle	png	pixie/fileformats/png.html	module pixie/fileformats/png		0
 nim	pngSignature	pixie/fileformats/png.html#pngSignature	let pngSignature		7
 nim	Png	pixie/fileformats/png.html#Png	type Png		17
 nim	newImage	pixie/fileformats/png.html#newImage,Png	proc newImage(png: Png): Image		364

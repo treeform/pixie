@@ -1,4 +1,4 @@
-nimTitle	qoi	pixie/fileformats/qoi.html	module src/pixie/fileformats/qoi		0
+nimTitle	qoi	pixie/fileformats/qoi.html	module pixie/fileformats/qoi		0
 nim	qoiSignature	pixie/fileformats/qoi.html#qoiSignature	const qoiSignature		6
 nim	sRBG	pixie/fileformats/qoi.html#sRBG	Colorspace.sRBG		17
 nim	Linear	pixie/fileformats/qoi.html#Linear	Colorspace.Linear		17

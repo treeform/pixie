@@ -1,4 +1,4 @@
-nimTitle	fonts	pixie/fonts.html	module src/pixie/fonts		0
+nimTitle	fonts	pixie/fonts.html	module pixie/fonts		0
 nim	autoLineHeight	pixie/fonts.html#autoLineHeight	const autoLineHeight		6
 nim	Typeface	pixie/fonts.html#Typeface	type Typeface		11
 nim	Font	pixie/fonts.html#Font	type Font		17

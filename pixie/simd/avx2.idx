@@ -1,4 +1,4 @@
-nimTitle	avx2	pixie/simd/avx2.html	module src/pixie/simd/avx2		0
+nimTitle	avx2	pixie/simd/avx2.html	module pixie/simd/avx2		0
 nim	isOneColorAvx2	pixie/simd/avx2.html#isOneColorAvx2,Image	proc isOneColorAvx2(image: Image): bool		44
 nim	isTransparentAvx2	pixie/simd/avx2.html#isTransparentAvx2,Image	proc isTransparentAvx2(image: Image): bool		74
 nim	isOpaqueAvx2	pixie/simd/avx2.html#isOpaqueAvx2,seq[ColorRGBX],int,int	proc isOpaqueAvx2(data: var seq[ColorRGBX]; start, len: int): bool		101

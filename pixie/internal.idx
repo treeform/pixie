@@ -1,4 +1,4 @@
-nimTitle	internal	pixie/internal.html	module src/pixie/internal		0
+nimTitle	internal	pixie/internal.html	module pixie/internal		0
 nim	currentExceptionAsPixieError	pixie/internal.html#currentExceptionAsPixieError.t	template currentExceptionAsPixieError(): untyped		3
 nim	failUnsupportedBlendMode	pixie/internal.html#failUnsupportedBlendMode.t,BlendMode	template failUnsupportedBlendMode(blendMode: BlendMode)		8
 nim	gaussianKernel	pixie/internal.html#gaussianKernel,int	proc gaussianKernel(radius: int): seq[uint16]		17

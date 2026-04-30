@@ -1,4 +1,4 @@
-nimTitle	jpeg	pixie/fileformats/jpeg.html	module src/pixie/fileformats/jpeg		0
+nimTitle	jpeg	pixie/fileformats/jpeg.html	module pixie/fileformats/jpeg		0
 nim	jpegStartOfImage	pixie/fileformats/jpeg.html#jpegStartOfImage	let jpegStartOfImage		43
 nim	decodeJpeg	pixie/fileformats/jpeg.html#decodeJpeg,string	proc decodeJpeg(data: string): Image		1097
 nim	decodeJpegDimensions	pixie/fileformats/jpeg.html#decodeJpegDimensions,pointer,int	proc decodeJpegDimensions(data: pointer; len: int): ImageDimensions		1162

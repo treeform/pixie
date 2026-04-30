@@ -1,4 +1,4 @@
-nimTitle	images	pixie/images.html	module src/pixie/images		0
+nimTitle	images	pixie/images.html	module pixie/images		0
 nim	`$`	pixie/images.html#$,Image	proc `$`(image: Image): string		12
 nim	inside	pixie/images.html#inside,Image,int,int	proc inside(image: Image; x, y: int): bool		16
 nim	unsafe	pixie/images.html#unsafe.t,Image	template unsafe(src: Image): UnsafeImage		20

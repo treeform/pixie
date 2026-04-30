@@ -1,4 +1,4 @@
-nimTitle	pixie	pixie.html	module src/pixie		0
+nimTitle	pixie	pixie.html	module pixie		0
 nim	PngFormat	pixie.html#PngFormat	FileFormat.PngFormat		10
 nim	BmpFormat	pixie.html#BmpFormat	FileFormat.BmpFormat		10
 nim	JpegFormat	pixie.html#JpegFormat	FileFormat.JpegFormat		10

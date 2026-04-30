@@ -1,4 +1,4 @@
-nimTitle	ppm	pixie/fileformats/ppm.html	module src/pixie/fileformats/ppm		0
+nimTitle	ppm	pixie/fileformats/ppm.html	module pixie/fileformats/ppm		0
 nim	ppmSignatures	pixie/fileformats/ppm.html#ppmSignatures	const ppmSignatures		5
 nim	decodePpm	pixie/fileformats/ppm.html#decodePpm,string	proc decodePpm(data: string): Image		121
 nim	decodePpmDimensions	pixie/fileformats/ppm.html#decodePpmDimensions,pointer,int	proc decodePpmDimensions(data: pointer; len: int): ImageDimensions		142

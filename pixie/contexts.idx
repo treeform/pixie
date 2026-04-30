@@ -1,4 +1,4 @@
-nimTitle	contexts	pixie/contexts.html	module src/pixie/contexts		0
+nimTitle	contexts	pixie/contexts.html	module pixie/contexts		0
 nim	TopBaseline	pixie/contexts.html#TopBaseline	BaselineAlignment.TopBaseline		9
 nim	HangingBaseline	pixie/contexts.html#HangingBaseline	BaselineAlignment.HangingBaseline		9
 nim	MiddleBaseline	pixie/contexts.html#MiddleBaseline	BaselineAlignment.MiddleBaseline		9

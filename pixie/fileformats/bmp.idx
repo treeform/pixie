@@ -1,4 +1,4 @@
-nimTitle	bmp	pixie/fileformats/bmp.html	module src/pixie/fileformats/bmp		0
+nimTitle	bmp	pixie/fileformats/bmp.html	module pixie/fileformats/bmp		0
 nim	bmpSignature	pixie/fileformats/bmp.html#bmpSignature	const bmpSignature		10
 nim	decodeDib	pixie/fileformats/bmp.html#decodeDib,pointer,int	proc decodeDib(data: pointer; len: int; lpBitmapInfo = false): Image		19
 nim	decodeBmp	pixie/fileformats/bmp.html#decodeBmp,string	proc decodeBmp(data: string): Image		219

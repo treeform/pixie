@@ -1,4 +1,4 @@
-nimTitle	common	pixie/common.html	module src/pixie/common		0
+nimTitle	common	pixie/common.html	module pixie/common		0
 nim	PixieError	pixie/common.html#PixieError	object PixieError		4
 nim	NormalBlend	pixie/common.html#NormalBlend	BlendMode.NormalBlend		6
 nim	DarkenBlend	pixie/common.html#DarkenBlend	BlendMode.DarkenBlend		6

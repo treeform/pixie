@@ -1,4 +1,4 @@
-nimTitle	svgfont	pixie/fontformats/svgfont.html	module src/pixie/fontformats/svgfont		0
+nimTitle	svgfont	pixie/fontformats/svgfont.html	module pixie/fontformats/svgfont		0
 nim	SvgFont	pixie/fontformats/svgfont.html#SvgFont	type SvgFont		4
 nim	getGlyphPath	pixie/fontformats/svgfont.html#getGlyphPath,SvgFont,Rune	proc getGlyphPath(svgFont: SvgFont; rune: Rune): Path		12
 nim	hasGlyph	pixie/fontformats/svgfont.html#hasGlyph,SvgFont,Rune	proc hasGlyph(svgFont: SvgFont; rune: Rune): bool		15

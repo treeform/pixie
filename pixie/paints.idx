@@ -1,4 +1,4 @@
-nimTitle	paints	pixie/paints.html	module src/pixie/paints		0
+nimTitle	paints	pixie/paints.html	module pixie/paints		0
 nim	SolidPaint	pixie/paints.html#SolidPaint	PaintKind.SolidPaint		4
 nim	ImagePaint	pixie/paints.html#ImagePaint	PaintKind.ImagePaint		4
 nim	TiledImagePaint	pixie/paints.html#TiledImagePaint	PaintKind.TiledImagePaint		4

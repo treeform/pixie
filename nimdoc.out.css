@@ -181,7 +181,6 @@ body {
 
 .nine.columns {
   width: 75.0%;
-  margin-left: 0;
   padding-left: 1.5em; }
 
 .twelve.columns {
@@ -193,9 +192,7 @@ body {
     display: none;
   }
   .nine.columns {
-    width: 100%;
-    margin-left: 0;
-    padding-left: 0;
+    width: 98.0%;
   }
   body {
     font-size: 1em;

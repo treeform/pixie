@@ -1,4 +1,4 @@
-nimTitle	blends	pixie/blends.html	module src/pixie/blends		0
+nimTitle	blends	pixie/blends.html	module pixie/blends		0
 nim	Blender	pixie/blends.html#Blender	type Blender		9
 nim	blendAlpha	pixie/blends.html#blendAlpha,uint8,uint8	proc blendAlpha(backdrop, source: uint8): uint8		41
 nim	blendNormal	pixie/blends.html#blendNormal,ColorRGBX,ColorRGBX	proc blendNormal(backdrop, source: ColorRGBX): ColorRGBX		60

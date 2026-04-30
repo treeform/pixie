@@ -1,4 +1,4 @@
-nimTitle	sse2	pixie/simd/sse2.html	module src/pixie/simd/sse2		0
+nimTitle	sse2	pixie/simd/sse2.html	module pixie/simd/sse2		0
 nim	applyOpacity	pixie/simd/sse2.html#applyOpacity,M128,float32	proc applyOpacity(color: M128; opacity: float32): ColorRGBX		6
 nim	fillUnsafeSse2	pixie/simd/sse2.html#fillUnsafeSse2,seq[ColorRGBX],SomeColor,int,int	proc fillUnsafeSse2(data: var seq[ColorRGBX]; color: SomeColor; start, len: int)		52
 nim	isOneColorSse2	pixie/simd/sse2.html#isOneColorSse2,Image	proc isOneColorSse2(image: Image): bool		76

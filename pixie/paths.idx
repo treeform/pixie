@@ -1,4 +1,4 @@
-nimTitle	paths	pixie/paths.html	module src/pixie/paths		0
+nimTitle	paths	pixie/paths.html	module pixie/paths		0
 nim	NonZero	pixie/paths.html#NonZero	WindingRule.NonZero		5
 nim	EvenOdd	pixie/paths.html#EvenOdd	WindingRule.EvenOdd		5
 nim	WindingRule	pixie/paths.html#WindingRule	enum WindingRule		5

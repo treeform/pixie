@@ -1,4 +1,4 @@
-nimTitle	opentype	pixie/fontformats/opentype.html	module src/pixie/fontformats/opentype		0
+nimTitle	opentype	pixie/fontformats/opentype.html	module pixie/fontformats/opentype		0
 nim	EncodingRecord	pixie/fontformats/opentype.html#EncodingRecord	object EncodingRecord		9
 nim	CmapTable	pixie/fontformats/opentype.html#CmapTable	type CmapTable		14
 nim	HeadTable	pixie/fontformats/opentype.html#HeadTable	type HeadTable		21

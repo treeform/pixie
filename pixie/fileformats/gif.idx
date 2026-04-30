@@ -1,4 +1,4 @@
-nimTitle	gif	pixie/fileformats/gif.html	module src/pixie/fileformats/gif		0
+nimTitle	gif	pixie/fileformats/gif.html	module pixie/fileformats/gif		0
 nim	gifSignatures	pixie/fileformats/gif.html#gifSignatures	const gifSignatures		6
 nim	Gif	pixie/fileformats/gif.html#Gif	type Gif		9
 nim	decodeGif	pixie/fileformats/gif.html#decodeGif,string	proc decodeGif(data: string): Gif		25

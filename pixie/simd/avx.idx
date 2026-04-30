@@ -1,2 +1,2 @@
-nimTitle	avx	pixie/simd/avx.html	module src/pixie/simd/avx		0
+nimTitle	avx	pixie/simd/avx.html	module pixie/simd/avx		0
 nim	fillUnsafeAvx	pixie/simd/avx.html#fillUnsafeAvx,seq[ColorRGBX],SomeColor,int,int	proc fillUnsafeAvx(data: var seq[ColorRGBX]; color: SomeColor; start, len: int)		13
