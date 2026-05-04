@@ -1,6 +1,6 @@
 nimTitle	jpeg	pixie/fileformats/jpeg.html	module pixie/fileformats/jpeg		0
-nim	jpegStartOfImage	pixie/fileformats/jpeg.html#jpegStartOfImage	let jpegStartOfImage		43
-nim	decodeJpeg	pixie/fileformats/jpeg.html#decodeJpeg,string	proc decodeJpeg(data: string): Image		1097
-nim	decodeJpegDimensions	pixie/fileformats/jpeg.html#decodeJpegDimensions,pointer,int	proc decodeJpegDimensions(data: pointer; len: int): ImageDimensions		1162
-nim	decodeJpegDimensions	pixie/fileformats/jpeg.html#decodeJpegDimensions,string	proc decodeJpegDimensions(data: string): ImageDimensions		1223
-nimgrp	decodejpegdimensions	pixie/fileformats/jpeg.html#decodeJpegDimensions-procs-all	proc		1162
+nim	jpegStartOfImage	pixie/fileformats/jpeg.html#jpegStartOfImage	let jpegStartOfImage		45
+nim	decodeJpeg	pixie/fileformats/jpeg.html#decodeJpeg,string	proc decodeJpeg(data: string): Image		1297
+nim	decodeJpegDimensions	pixie/fileformats/jpeg.html#decodeJpegDimensions,pointer,int	proc decodeJpegDimensions(data: pointer; len: int): ImageDimensions		1368
+nim	decodeJpegDimensions	pixie/fileformats/jpeg.html#decodeJpegDimensions,string	proc decodeJpegDimensions(data: string): ImageDimensions		1432
+nimgrp	decodejpegdimensions	pixie/fileformats/jpeg.html#decodeJpegDimensions-procs-all	proc		1368

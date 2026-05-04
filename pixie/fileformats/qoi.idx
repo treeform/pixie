@@ -4,12 +4,12 @@ nim	sRBG	pixie/fileformats/qoi.html#sRBG	Colorspace.sRBG		17
 nim	Linear	pixie/fileformats/qoi.html#Linear	Colorspace.Linear		17
 nim	Colorspace	pixie/fileformats/qoi.html#Colorspace	enum Colorspace		17
 nim	Qoi	pixie/fileformats/qoi.html#Qoi	type Qoi		21
-nim	newImage	pixie/fileformats/qoi.html#newImage,Qoi	proc newImage(qoi: Qoi): Image		32
-nim	convertToImage	pixie/fileformats/qoi.html#convertToImage,Qoi	proc convertToImage(qoi: Qoi): Image		38
-nim	decodeQoi	pixie/fileformats/qoi.html#decodeQoi,string	proc decodeQoi(data: string): Qoi		52
-nim	decodeQoiDimensions	pixie/fileformats/qoi.html#decodeQoiDimensions,pointer,int	proc decodeQoiDimensions(data: pointer; len: int): ImageDimensions		138
-nim	decodeQoiDimensions	pixie/fileformats/qoi.html#decodeQoiDimensions,string	proc decodeQoiDimensions(data: string): ImageDimensions		150
-nim	encodeQoi	pixie/fileformats/qoi.html#encodeQoi,Qoi	proc encodeQoi(qoi: Qoi): string		156
-nim	encodeQoi	pixie/fileformats/qoi.html#encodeQoi,Image	proc encodeQoi(image: Image): string		228
-nimgrp	encodeqoi	pixie/fileformats/qoi.html#encodeQoi-procs-all	proc		156
-nimgrp	decodeqoidimensions	pixie/fileformats/qoi.html#decodeQoiDimensions-procs-all	proc		138
+nim	newImage	pixie/fileformats/qoi.html#newImage,Qoi	proc newImage(qoi: Qoi): Image		60
+nim	convertToImage	pixie/fileformats/qoi.html#convertToImage,Qoi	proc convertToImage(qoi: Qoi): Image		68
+nim	decodeQoi	pixie/fileformats/qoi.html#decodeQoi,string	proc decodeQoi(data: string): Qoi		84
+nim	decodeQoiDimensions	pixie/fileformats/qoi.html#decodeQoiDimensions,pointer,int	proc decodeQoiDimensions(data: pointer; len: int): ImageDimensions		170
+nim	decodeQoiDimensions	pixie/fileformats/qoi.html#decodeQoiDimensions,string	proc decodeQoiDimensions(data: string): ImageDimensions		182
+nim	encodeQoi	pixie/fileformats/qoi.html#encodeQoi,Qoi	proc encodeQoi(qoi: Qoi): string		188
+nim	encodeQoi	pixie/fileformats/qoi.html#encodeQoi,Image	proc encodeQoi(image: Image): string		261
+nimgrp	encodeqoi	pixie/fileformats/qoi.html#encodeQoi-procs-all	proc		188
+nimgrp	decodeqoidimensions	pixie/fileformats/qoi.html#decodeQoiDimensions-procs-all	proc		170

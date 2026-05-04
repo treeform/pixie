@@ -1,15 +1,17 @@
 nimTitle	png	pixie/fileformats/png.html	module pixie/fileformats/png		0
 nim	pngSignature	pixie/fileformats/png.html#pngSignature	let pngSignature		7
-nim	Png	pixie/fileformats/png.html#Png	type Png		17
-nim	newImage	pixie/fileformats/png.html#newImage,Png	proc newImage(png: Png): Image		364
-nim	convertToImage	pixie/fileformats/png.html#convertToImage,Png	proc convertToImage(png: Png): Image		370
-nim	decodePngDimensions	pixie/fileformats/png.html#decodePngDimensions,pointer,int	proc decodePngDimensions(data: pointer; len: int): ImageDimensions		383
-nim	decodePngDimensions	pixie/fileformats/png.html#decodePngDimensions,string	proc decodePngDimensions(data: string): ImageDimensions		405
-nim	decodePng	pixie/fileformats/png.html#decodePng,pointer,int	proc decodePng(data: pointer; len: int): Png		411
-nim	decodePng	pixie/fileformats/png.html#decodePng,string	proc decodePng(data: string): Png		529
-nim	encodePng	pixie/fileformats/png.html#encodePng,int,int,int,pointer,int	proc encodePng(width, height, channels: int; data: pointer; len: int): string		533
-nim	encodePng	pixie/fileformats/png.html#encodePng,Png	proc encodePng(png: Png): string		649
-nim	encodePng	pixie/fileformats/png.html#encodePng,Image	proc encodePng(image: Image): string		652
-nimgrp	decodepngdimensions	pixie/fileformats/png.html#decodePngDimensions-procs-all	proc		383
-nimgrp	encodepng	pixie/fileformats/png.html#encodePng-procs-all	proc		533
-nimgrp	decodepng	pixie/fileformats/png.html#decodePng-procs-all	proc		411
+nim	ColorRGBA16	pixie/fileformats/png.html#ColorRGBA16	object ColorRGBA16		17
+nim	Png	pixie/fileformats/png.html#Png	type Png		20
+nim	rgba16	pixie/fileformats/png.html#rgba16,uint16,uint16,uint16,uint16	proc rgba16(r, g, b, a: uint16): ColorRGBA16		248
+nim	newImage	pixie/fileformats/png.html#newImage,Png	proc newImage(png: Png): Image		584
+nim	convertToImage	pixie/fileformats/png.html#convertToImage,Png	proc convertToImage(png: Png): Image		594
+nim	decodePngDimensions	pixie/fileformats/png.html#decodePngDimensions,pointer,int	proc decodePngDimensions(data: pointer; len: int): ImageDimensions		613
+nim	decodePngDimensions	pixie/fileformats/png.html#decodePngDimensions,string	proc decodePngDimensions(data: string): ImageDimensions		635
+nim	decodePng	pixie/fileformats/png.html#decodePng,pointer,int	proc decodePng(data: pointer; len: int): Png		641
+nim	decodePng	pixie/fileformats/png.html#decodePng,string	proc decodePng(data: string): Png		757
+nim	encodePng	pixie/fileformats/png.html#encodePng,int,int,int,pointer,int	proc encodePng(width, height, channels: int; data: pointer; len: int): string		761
+nim	encodePng	pixie/fileformats/png.html#encodePng,Png	proc encodePng(png: Png): string		877
+nim	encodePng	pixie/fileformats/png.html#encodePng,Image	proc encodePng(image: Image): string		888
+nimgrp	decodepngdimensions	pixie/fileformats/png.html#decodePngDimensions-procs-all	proc		613
+nimgrp	encodepng	pixie/fileformats/png.html#encodePng-procs-all	proc		761
+nimgrp	decodepng	pixie/fileformats/png.html#decodePng-procs-all	proc		641
