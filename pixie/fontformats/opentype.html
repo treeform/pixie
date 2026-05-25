@@ -16,13 +16,16 @@
 <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAA3XAAAN1wFCKJt4AAAAB3RJTUUH4QQQEwksSS9ZWwAAAk1JREFUWMPtll2ITVEUx39nn/O7Y5qR8f05wtCUUr6ZIS++8pEnkZInPImneaCQ5METNdOkeFBKUhMPRIkHKfEuUZSUlGlKPN2TrgfncpvmnntnmlEyq1Z7t89/rf9a6+y99oZxGZf/XeIq61EdtgKXgdXA0xrYAvBjOIF1AI9zvjcC74BSpndrJPkBWDScTF8Aa4E3wDlgHbASaANmVqlcCnwHvgDvgVfAJ+AikAAvgfVZwLnSVZHZaOuKoQi3ZOMi4NkYkpe1p4J7A8BpYAD49hfIy/oqG0+hLomiKP2L5L+1ubn5115S+3OAn4EnwBlgMzCjyt6ZAnQCJ4A7wOs88iRJHvw50HoujuPBoCKwHWiosy8MdfZnAdcHk8dxXFJ3VQbQlCTJvRBCGdRbD4M6uc5glpY3eAihpN5S5w12diSEcCCEcKUO4ljdr15T76ur1FDDLIQQ3qv71EdDOe3Kxj3leRXyk+pxdWnFWod6Wt2bY3de3aSuUHcPBVimHs7mK9WrmeOF6lR1o9qnzskh2ar2qm1qizpfXaPeVGdlmGN5pb09qMxz1Xb1kLqgzn1RyH7JUXW52lr5e/Kqi9qpto7V1atuUzfnARrV7jEib1T76gG2qxdGmXyiekkt1GswPTtek0aBfJp6YySGBfWg2tPQ0FAYgf1stUfdmdcjarbYJEniKIq6gY/Aw+zWHAC+p2labGpqiorFYgGYCEzN7oQdQClN07O1/EfDyGgC0ALMBdYAi4FyK+4H3gLPsxfR1zRNi+NP7nH5J+QntnXe5B5mpfQAAAAASUVORK5CYII=">
 
 <!-- CSS -->
-<link rel="stylesheet" type="text/css" href="../../nimdoc.out.css?v=2.2.6">
+<link rel="stylesheet" type="text/css" href="../../nimdoc.out.css?v=2.2.10">
 
 <!-- JS -->
-<script type="text/javascript" src="../../dochack.js?v=2.2.6"></script>
+<script type="text/javascript" src="../../dochack.js?v=2.2.10"></script>
 </head>
 <body>
   <div class="document" id="documentId">
+    <input type="checkbox" id="nav-toggle" hidden>
+    <label for="nav-toggle" id="nav-burger">&#9776;</label>
+    <label for="nav-toggle" id="nav-overlay"></label>
     <div class="container">
       <h1 class="title">pixie/fontformats/opentype</h1>
       <div class="row">
@@ -293,10 +296,10 @@
   <h1><a class="toc-backref" href="#7">Types</a></h1>
   <dl class="item">
     <div id="CmapTable">
-  <dt><pre><a href="opentype.html#CmapTable"><span class="Identifier">CmapTable</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <dt><pre><a href="#CmapTable"><span class="Identifier">CmapTable</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">version</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">numTables</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
-  <span class="Identifier">encodingRecords</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="opentype.html#EncodingRecord"><span class="Identifier">EncodingRecord</span></a><span class="Other">]</span>
+  <span class="Identifier">encodingRecords</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="#EncodingRecord"><span class="Identifier">EncodingRecord</span></a><span class="Other">]</span>
   <span class="Identifier">runeToGlyphId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">Rune</span><span class="Other">,</span> <span class="Identifier">uint16</span><span class="Other">]</span>
   <span class="Identifier">glyphIdToRune</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">uint16</span><span class="Other">,</span> <span class="Identifier">Rune</span><span class="Other">]</span></pre></dt>
   <dd>
@@ -308,7 +311,7 @@
   </dd>
 </div>
 <div id="EncodingRecord">
-  <dt><pre><a href="opentype.html#EncodingRecord"><span class="Identifier">EncodingRecord</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <dt><pre><a href="#EncodingRecord"><span class="Identifier">EncodingRecord</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
   <span class="Identifier">platformID</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">encodingID</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">offset</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span></pre></dt>
@@ -321,7 +324,7 @@
   </dd>
 </div>
 <div id="GlyfTable">
-  <dt><pre><a href="opentype.html#GlyfTable"><span class="Identifier">GlyfTable</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <dt><pre><a href="#GlyfTable"><span class="Identifier">GlyfTable</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">offsets</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">uint32</span><span class="Other">]</span></pre></dt>
   <dd>
     
@@ -332,7 +335,7 @@
   </dd>
 </div>
 <div id="HeadTable">
-  <dt><pre><a href="opentype.html#HeadTable"><span class="Identifier">HeadTable</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <dt><pre><a href="#HeadTable"><span class="Identifier">HeadTable</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">majorVersion</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">minorVersion</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">fontRevision</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
@@ -360,7 +363,7 @@
   </dd>
 </div>
 <div id="HheaTable">
-  <dt><pre><a href="opentype.html#HheaTable"><span class="Identifier">HheaTable</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <dt><pre><a href="#HheaTable"><span class="Identifier">HheaTable</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">majorVersion</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">minorVersion</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">ascender</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int16</span>
@@ -384,8 +387,8 @@
   </dd>
 </div>
 <div id="HmtxTable">
-  <dt><pre><a href="opentype.html#HmtxTable"><span class="Identifier">HmtxTable</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
-  <span class="Identifier">hMetrics</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="opentype.html#LongHorMetricRecord"><span class="Identifier">LongHorMetricRecord</span></a><span class="Other">]</span>
+  <dt><pre><a href="#HmtxTable"><span class="Identifier">HmtxTable</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <span class="Identifier">hMetrics</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="#LongHorMetricRecord"><span class="Identifier">LongHorMetricRecord</span></a><span class="Other">]</span>
   <span class="Identifier">leftSideBearings</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">int16</span><span class="Other">]</span></pre></dt>
   <dd>
     
@@ -396,7 +399,7 @@
   </dd>
 </div>
 <div id="KernPair">
-  <dt><pre><a href="opentype.html#KernPair"><span class="Identifier">KernPair</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <dt><pre><a href="#KernPair"><span class="Identifier">KernPair</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
   <span class="Identifier">left</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">right</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">value</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int16</span></pre></dt>
@@ -409,7 +412,7 @@
   </dd>
 </div>
 <div id="KernSubTable">
-  <dt><pre><a href="opentype.html#KernSubTable"><span class="Identifier">KernSubTable</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <dt><pre><a href="#KernSubTable"><span class="Identifier">KernSubTable</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
   <span class="Identifier">version</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">length</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">coverage</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
@@ -417,7 +420,7 @@
   <span class="Identifier">searchRange</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">entrySelector</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">rangeShift</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
-  <span class="Identifier">kernPairs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="opentype.html#KernPair"><span class="Identifier">KernPair</span></a><span class="Other">]</span></pre></dt>
+  <span class="Identifier">kernPairs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="#KernPair"><span class="Identifier">KernPair</span></a><span class="Other">]</span></pre></dt>
   <dd>
     
     
@@ -427,10 +430,10 @@
   </dd>
 </div>
 <div id="KernTable">
-  <dt><pre><a href="opentype.html#KernTable"><span class="Identifier">KernTable</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <dt><pre><a href="#KernTable"><span class="Identifier">KernTable</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">version</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">nTables</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
-  <span class="Identifier">subTables</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="opentype.html#KernSubTable"><span class="Identifier">KernSubTable</span></a><span class="Other">]</span></pre></dt>
+  <span class="Identifier">subTables</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="#KernSubTable"><span class="Identifier">KernSubTable</span></a><span class="Other">]</span></pre></dt>
   <dd>
     
     
@@ -440,7 +443,7 @@
   </dd>
 </div>
 <div id="LocaTable">
-  <dt><pre><a href="opentype.html#LocaTable"><span class="Identifier">LocaTable</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <dt><pre><a href="#LocaTable"><span class="Identifier">LocaTable</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">offsets</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">uint32</span><span class="Other">]</span></pre></dt>
   <dd>
     
@@ -451,7 +454,7 @@
   </dd>
 </div>
 <div id="LongHorMetricRecord">
-  <dt><pre><a href="opentype.html#LongHorMetricRecord"><span class="Identifier">LongHorMetricRecord</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <dt><pre><a href="#LongHorMetricRecord"><span class="Identifier">LongHorMetricRecord</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
   <span class="Identifier">advanceWidth</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">leftSideBearing</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int16</span></pre></dt>
   <dd>
@@ -463,7 +466,7 @@
   </dd>
 </div>
 <div id="MaxpTable">
-  <dt><pre><a href="opentype.html#MaxpTable"><span class="Identifier">MaxpTable</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <dt><pre><a href="#MaxpTable"><span class="Identifier">MaxpTable</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">version</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
   <span class="Identifier">numGlyphs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">maxPoints</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
@@ -488,7 +491,7 @@
   </dd>
 </div>
 <div id="NameRecord">
-  <dt><pre><a href="opentype.html#NameRecord"><span class="Identifier">NameRecord</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <dt><pre><a href="#NameRecord"><span class="Identifier">NameRecord</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
   <span class="Identifier">platformID</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">encodingID</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">languageID</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
@@ -505,11 +508,11 @@
   </dd>
 </div>
 <div id="NameTable">
-  <dt><pre><a href="opentype.html#NameTable"><span class="Identifier">NameTable</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <dt><pre><a href="#NameTable"><span class="Identifier">NameTable</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">format</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">count</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">stringOffset</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
-  <span class="Identifier">nameRecords</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="opentype.html#NameRecord"><span class="Identifier">NameRecord</span></a><span class="Other">]</span></pre></dt>
+  <span class="Identifier">nameRecords</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="#NameRecord"><span class="Identifier">NameRecord</span></a><span class="Other">]</span></pre></dt>
   <dd>
     
     
@@ -519,24 +522,24 @@
   </dd>
 </div>
 <div id="OpenType">
-  <dt><pre><a href="opentype.html#OpenType"><span class="Identifier">OpenType</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <dt><pre><a href="#OpenType"><span class="Identifier">OpenType</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">buf</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
   <span class="Identifier">version</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>
   <span class="Identifier">numTables</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">searchRange</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">entrySelector</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">rangeShift</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
-  <span class="Identifier">tableRecords</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">,</span> <a href="opentype.html#TableRecord"><span class="Identifier">TableRecord</span></a><span class="Other">]</span>
-  <span class="Identifier">cmap</span><span class="Operator">*</span><span class="Other">:</span> <a href="opentype.html#CmapTable"><span class="Identifier">CmapTable</span></a>
-  <span class="Identifier">head</span><span class="Operator">*</span><span class="Other">:</span> <a href="opentype.html#HeadTable"><span class="Identifier">HeadTable</span></a>
-  <span class="Identifier">hhea</span><span class="Operator">*</span><span class="Other">:</span> <a href="opentype.html#HheaTable"><span class="Identifier">HheaTable</span></a>
-  <span class="Identifier">maxp</span><span class="Operator">*</span><span class="Other">:</span> <a href="opentype.html#MaxpTable"><span class="Identifier">MaxpTable</span></a>
-  <span class="Identifier">hmtx</span><span class="Operator">*</span><span class="Other">:</span> <a href="opentype.html#HmtxTable"><span class="Identifier">HmtxTable</span></a>
-  <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <a href="opentype.html#NameTable"><span class="Identifier">NameTable</span></a>
-  <span class="Identifier">os2</span><span class="Operator">*</span><span class="Other">:</span> <a href="opentype.html#OS2Table"><span class="Identifier">OS2Table</span></a>
-  <span class="Identifier">loca</span><span class="Operator">*</span><span class="Other">:</span> <a href="opentype.html#LocaTable"><span class="Identifier">LocaTable</span></a>
-  <span class="Identifier">glyf</span><span class="Operator">*</span><span class="Other">:</span> <a href="opentype.html#GlyfTable"><span class="Identifier">GlyfTable</span></a>
-  <span class="Identifier">kern</span><span class="Operator">*</span><span class="Other">:</span> <a href="opentype.html#KernTable"><span class="Identifier">KernTable</span></a>
+  <span class="Identifier">tableRecords</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Table</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">,</span> <a href="#TableRecord"><span class="Identifier">TableRecord</span></a><span class="Other">]</span>
+  <span class="Identifier">cmap</span><span class="Operator">*</span><span class="Other">:</span> <a href="#CmapTable"><span class="Identifier">CmapTable</span></a>
+  <span class="Identifier">head</span><span class="Operator">*</span><span class="Other">:</span> <a href="#HeadTable"><span class="Identifier">HeadTable</span></a>
+  <span class="Identifier">hhea</span><span class="Operator">*</span><span class="Other">:</span> <a href="#HheaTable"><span class="Identifier">HheaTable</span></a>
+  <span class="Identifier">maxp</span><span class="Operator">*</span><span class="Other">:</span> <a href="#MaxpTable"><span class="Identifier">MaxpTable</span></a>
+  <span class="Identifier">hmtx</span><span class="Operator">*</span><span class="Other">:</span> <a href="#HmtxTable"><span class="Identifier">HmtxTable</span></a>
+  <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <a href="#NameTable"><span class="Identifier">NameTable</span></a>
+  <span class="Identifier">os2</span><span class="Operator">*</span><span class="Other">:</span> <a href="#OS2Table"><span class="Identifier">OS2Table</span></a>
+  <span class="Identifier">loca</span><span class="Operator">*</span><span class="Other">:</span> <a href="#LocaTable"><span class="Identifier">LocaTable</span></a>
+  <span class="Identifier">glyf</span><span class="Operator">*</span><span class="Other">:</span> <a href="#GlyfTable"><span class="Identifier">GlyfTable</span></a>
+  <span class="Identifier">kern</span><span class="Operator">*</span><span class="Other">:</span> <a href="#KernTable"><span class="Identifier">KernTable</span></a>
   <span class="Identifier">gpos</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GposTable</span>
   <span class="Identifier">post</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">PostTable</span>
   <span class="Identifier">cff</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">CFFTable</span></pre></dt>
@@ -549,7 +552,7 @@
   </dd>
 </div>
 <div id="OS2Table">
-  <dt><pre><a href="opentype.html#OS2Table"><span class="Identifier">OS2Table</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <dt><pre><a href="#OS2Table"><span class="Identifier">OS2Table</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">version</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
   <span class="Identifier">xAvgCharWidth</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int16</span>
   <span class="Identifier">usWeightClass</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>
@@ -598,7 +601,7 @@
   </dd>
 </div>
 <div id="TableRecord">
-  <dt><pre><a href="opentype.html#TableRecord"><span class="Identifier">TableRecord</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <dt><pre><a href="#TableRecord"><span class="Identifier">TableRecord</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
   <span class="Identifier">tag</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
   <span class="Identifier">checksum</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>
   <span class="Identifier">offset</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>
@@ -619,7 +622,7 @@
   <dl class="item">
     <div id="fullName-procs-all">
   <div id="fullName,OpenType">
-  <dt><pre><span class="Keyword">proc</span> <a href="#fullName%2COpenType"><span class="Identifier">fullName</span></a><span class="Other">(</span><span class="Identifier">opentype</span><span class="Other">:</span> <a href="opentype.html#OpenType"><span class="Identifier">OpenType</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#fullName%2COpenType"><span class="Identifier">fullName</span></a><span class="Other">(</span><span class="Identifier">opentype</span><span class="Other">:</span> <a href="#OpenType"><span class="Identifier">OpenType</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Returns full name of the font if available.
@@ -632,7 +635,7 @@
 </div>
 <div id="getAdvance-procs-all">
   <div id="getAdvance,OpenType,Rune">
-  <dt><pre><span class="Keyword">proc</span> <a href="#getAdvance%2COpenType%2CRune"><span class="Identifier">getAdvance</span></a><span class="Other">(</span><span class="Identifier">opentype</span><span class="Other">:</span> <a href="opentype.html#OpenType"><span class="Identifier">OpenType</span></a><span class="Other">;</span> <span class="Identifier">rune</span><span class="Other">:</span> <span class="Identifier">Rune</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">float32</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#getAdvance%2COpenType%2CRune"><span class="Identifier">getAdvance</span></a><span class="Other">(</span><span class="Identifier">opentype</span><span class="Other">:</span> <a href="#OpenType"><span class="Identifier">OpenType</span></a><span class="Other">;</span> <span class="Identifier">rune</span><span class="Other">:</span> <span class="Identifier">Rune</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">float32</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
@@ -646,7 +649,7 @@
 </div>
 <div id="getGlyphPath-procs-all">
   <div id="getGlyphPath,OpenType,Rune">
-  <dt><pre><span class="Keyword">proc</span> <a href="#getGlyphPath%2COpenType%2CRune"><span class="Identifier">getGlyphPath</span></a><span class="Other">(</span><span class="Identifier">opentype</span><span class="Other">:</span> <a href="opentype.html#OpenType"><span class="Identifier">OpenType</span></a><span class="Other">;</span> <span class="Identifier">rune</span><span class="Other">:</span> <span class="Identifier">Rune</span><span class="Other">)</span><span class="Other">:</span> <a href="../paths.html#Path"><span class="Identifier">Path</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><a href="../common.html#PixieError"><span class="Identifier">PixieError</span></a><span class="Other">]</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#getGlyphPath%2COpenType%2CRune"><span class="Identifier">getGlyphPath</span></a><span class="Other">(</span><span class="Identifier">opentype</span><span class="Other">:</span> <a href="#OpenType"><span class="Identifier">OpenType</span></a><span class="Other">;</span> <span class="Identifier">rune</span><span class="Other">:</span> <span class="Identifier">Rune</span><span class="Other">)</span><span class="Other">:</span> <a href="../paths.html#Path"><span class="Identifier">Path</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><a href="../common.html#PixieError"><span class="Identifier">PixieError</span></a><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
@@ -660,7 +663,7 @@
 </div>
 <div id="getKerningAdjustment-procs-all">
   <div id="getKerningAdjustment,OpenType,Rune,Rune">
-  <dt><pre><span class="Keyword">proc</span> <a href="#getKerningAdjustment%2COpenType%2CRune%2CRune"><span class="Identifier">getKerningAdjustment</span></a><span class="Other">(</span><span class="Identifier">opentype</span><span class="Other">:</span> <a href="opentype.html#OpenType"><span class="Identifier">OpenType</span></a><span class="Other">;</span> <span class="Identifier">left</span><span class="Other">,</span> <span class="Identifier">right</span><span class="Other">:</span> <span class="Identifier">Rune</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">float32</span> {.
+  <dt><pre><span class="Keyword">proc</span> <a href="#getKerningAdjustment%2COpenType%2CRune%2CRune"><span class="Identifier">getKerningAdjustment</span></a><span class="Other">(</span><span class="Identifier">opentype</span><span class="Other">:</span> <a href="#OpenType"><span class="Identifier">OpenType</span></a><span class="Other">;</span> <span class="Identifier">left</span><span class="Other">,</span> <span class="Identifier">right</span><span class="Other">:</span> <span class="Identifier">Rune</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">float32</span> {.
     <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
@@ -674,7 +677,7 @@
 </div>
 <div id="getLeftSideBearing-procs-all">
   <div id="getLeftSideBearing,OpenType,Rune">
-  <dt><pre><span class="Keyword">proc</span> <a href="#getLeftSideBearing%2COpenType%2CRune"><span class="Identifier">getLeftSideBearing</span></a><span class="Other">(</span><span class="Identifier">opentype</span><span class="Other">:</span> <a href="opentype.html#OpenType"><span class="Identifier">OpenType</span></a><span class="Other">;</span> <span class="Identifier">rune</span><span class="Other">:</span> <span class="Identifier">Rune</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">float32</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#getLeftSideBearing%2COpenType%2CRune"><span class="Identifier">getLeftSideBearing</span></a><span class="Other">(</span><span class="Identifier">opentype</span><span class="Other">:</span> <a href="#OpenType"><span class="Identifier">OpenType</span></a><span class="Other">;</span> <span class="Identifier">rune</span><span class="Other">:</span> <span class="Identifier">Rune</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">float32</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
@@ -688,7 +691,7 @@
 </div>
 <div id="hasGlyph-procs-all">
   <div id="hasGlyph,OpenType,Rune">
-  <dt><pre><span class="Keyword">proc</span> <a href="#hasGlyph%2COpenType%2CRune"><span class="Identifier">hasGlyph</span></a><span class="Other">(</span><span class="Identifier">opentype</span><span class="Other">:</span> <a href="opentype.html#OpenType"><span class="Identifier">OpenType</span></a><span class="Other">;</span> <span class="Identifier">rune</span><span class="Other">:</span> <span class="Identifier">Rune</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#hasGlyph%2COpenType%2CRune"><span class="Identifier">hasGlyph</span></a><span class="Other">(</span><span class="Identifier">opentype</span><span class="Other">:</span> <a href="#OpenType"><span class="Identifier">OpenType</span></a><span class="Other">;</span> <span class="Identifier">rune</span><span class="Other">:</span> <span class="Identifier">Rune</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
@@ -702,7 +705,7 @@
 </div>
 <div id="isCCW-procs-all">
   <div id="isCCW,OpenType">
-  <dt><pre><span class="Keyword">proc</span> <a href="#isCCW%2COpenType"><span class="Identifier">isCCW</span></a><span class="Other">(</span><span class="Identifier">opentype</span><span class="Other">:</span> <a href="opentype.html#OpenType"><span class="Identifier">OpenType</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> {.<span class="Identifier">inline</span><span class="Other">,</span> <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#isCCW%2COpenType"><span class="Identifier">isCCW</span></a><span class="Other">(</span><span class="Identifier">opentype</span><span class="Other">:</span> <a href="#OpenType"><span class="Identifier">OpenType</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> {.<span class="Identifier">inline</span><span class="Other">,</span> <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Returns the expected winding order of a font. Gyph - false - clockwise CFF - true - counterclockwise
@@ -715,7 +718,7 @@
 </div>
 <div id="parseOpenType-procs-all">
   <div id="parseOpenType,string,int">
-  <dt><pre><span class="Keyword">proc</span> <a href="#parseOpenType%2Cstring%2Cint"><span class="Identifier">parseOpenType</span></a><span class="Other">(</span><span class="Identifier">buf</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">startLoc</span> <span class="Other">=</span> <span class="DecNumber">0</span><span class="Other">)</span><span class="Other">:</span> <a href="opentype.html#OpenType"><span class="Identifier">OpenType</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><a href="../common.html#PixieError"><span class="Identifier">PixieError</span></a><span class="Other">]</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#parseOpenType%2Cstring%2Cint"><span class="Identifier">parseOpenType</span></a><span class="Other">(</span><span class="Identifier">buf</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">startLoc</span> <span class="Other">=</span> <span class="DecNumber">0</span><span class="Other">)</span><span class="Other">:</span> <a href="#OpenType"><span class="Identifier">OpenType</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><a href="../common.html#PixieError"><span class="Identifier">PixieError</span></a><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
@@ -729,7 +732,7 @@
 </div>
 <div id="parseOpenTypeCollection-procs-all">
   <div id="parseOpenTypeCollection,string">
-  <dt><pre><span class="Keyword">proc</span> <a href="#parseOpenTypeCollection%2Cstring"><span class="Identifier">parseOpenTypeCollection</span></a><span class="Other">(</span><span class="Identifier">buf</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="opentype.html#OpenType"><span class="Identifier">OpenType</span></a><span class="Other">]</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><a href="../common.html#PixieError"><span class="Identifier">PixieError</span></a><span class="Other">]</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#parseOpenTypeCollection%2Cstring"><span class="Identifier">parseOpenTypeCollection</span></a><span class="Other">(</span><span class="Identifier">buf</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="#OpenType"><span class="Identifier">OpenType</span></a><span class="Other">]</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><a href="../common.html#PixieError"><span class="Identifier">PixieError</span></a><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
@@ -751,7 +754,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-05-04 00:39:22 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-05-25 04:03:48 UTC</small>
       </div>
     </div>
   </div>
