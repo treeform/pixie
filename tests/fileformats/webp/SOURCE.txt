@@ -1,0 +1,6 @@
+Fixtures in this directory are copied from the WebM Project libwebp test data:
+
+https://chromium.googlesource.com/webm/libwebp-test-data
+
+The two very large upstream files, bryce.webp and lossless_big_random_alpha.webp,
+are intentionally not copied into Pixie's test fixtures.
