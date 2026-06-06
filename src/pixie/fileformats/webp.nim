@@ -65,25 +65,25 @@ type
     backgroundColor*: ColorRGBA
     loopCount*, frameCount*: int
 
-  LosslessBitReader = object
+  LosslessBitReader = ref object
     data: string
     pos, endPos: int
     buffer: uint64
     nbits: int
 
-  HuffmanTree = object
+  HuffmanTree = ref object
     single: bool
     symbol: uint16
     tableMask: uint16
     primaryTable, secondaryTable: seq[uint16]
 
-  ColorCache = object
+  ColorCache = ref object
     bits: int
     colors: seq[array[4, uint8]]
 
   HuffmanCodeGroup = array[5, HuffmanTree]
 
-  HuffmanInfo = object
+  HuffmanInfo = ref object
     xsize: int
     colorCache: ColorCache
     hasColorCache: bool
@@ -97,19 +97,19 @@ type
     SubtractGreenTransform
     ColorIndexingTransform
 
-  LosslessTransform = object
+  LosslessTransform = ref object
     kind: LosslessTransformKind
     sizeBits, tableSize: int
     data: seq[uint8]
 
-  LosslessDecoder = object
+  LosslessDecoder = ref object
     bitReader: LosslessBitReader
     transforms: array[4, LosslessTransform]
     hasTransform: array[4, bool]
     transformOrder: seq[int]
     width, height: int
 
-  Vp8BoolDecoder = object
+  Vp8BoolDecoder = ref object
     data: string
     pos, endPos: int
     value: uint64
@@ -134,13 +134,13 @@ type
     bpred: array[4, int]
     complexity: array[9, uint8]
 
-  Vp8Frame = object
+  Vp8Frame = ref object
     width, height: int
     version, pixelType, filterLevel, sharpnessLevel: uint8
     forDisplay, filterType: bool
     ybuf, ubuf, vbuf: seq[uint8]
 
-  Vp8Decoder = object
+  Vp8Decoder = ref object
     b: Vp8BoolDecoder
     mbWidth, mbHeight: int
     macroblocks: seq[Vp8MacroBlock]
@@ -272,13 +272,11 @@ proc wrapByte(value: int): uint8 {.inline.} =
 proc subsampleSize(size, bits: int): int {.inline.} =
   (size + (1 shl bits) - 1) shr bits
 
-proc initBitReader(data: string, offset, size: int): LosslessBitReader =
+proc newBitReader(data: string, offset, size: int): LosslessBitReader =
   data.checkBounds(offset, size)
-  result.data = data
-  result.pos = offset
-  result.endPos = offset + size
+  LosslessBitReader(data: data, pos: offset, endPos: offset + size)
 
-proc fill(bitReader: var LosslessBitReader) =
+proc fill(bitReader: LosslessBitReader) =
   while bitReader.nbits <= 56 and bitReader.pos < bitReader.endPos:
     bitReader.buffer = bitReader.buffer or
       (bitReader.data.readUint8(bitReader.pos).uint64 shl bitReader.nbits)
@@ -291,13 +289,13 @@ proc peek(bitReader: LosslessBitReader, bits: int): uint64 {.inline.} =
   else:
     bitReader.buffer and ((1'u64 shl bits) - 1)
 
-proc consume(bitReader: var LosslessBitReader, bits: int) =
+proc consume(bitReader: LosslessBitReader, bits: int) =
   if bitReader.nbits < bits:
     failInvalid("corrupt VP8L bitstream")
   bitReader.buffer = bitReader.buffer shr bits
   bitReader.nbits -= bits
 
-proc readBits(bitReader: var LosslessBitReader, bits: int): uint32 =
+proc readBits(bitReader: LosslessBitReader, bits: int): uint32 =
   if bitReader.nbits < bits:
     bitReader.fill()
   result = bitReader.peek(bits).uint32
@@ -318,12 +316,13 @@ proc nextCodeword(codeword, tableSize: uint16): uint16 =
   return (codeword and (mask - 1)) or mask
 
 proc buildSingleNode(symbol: uint16): HuffmanTree =
-  result.single = true
-  result.symbol = symbol
+  HuffmanTree(single: true, symbol: symbol)
 
 proc buildTwoNode(zero, one: uint16): HuffmanTree =
-  result.primaryTable = @[(1'u16 shl 12) or zero, (1'u16 shl 12) or one]
-  result.tableMask = 1
+  HuffmanTree(
+    tableMask: 1,
+    primaryTable: @[(1'u16 shl 12) or zero, (1'u16 shl 12) or one]
+  )
 
 proc buildImplicit(codeLengths: seq[uint16]): HuffmanTree =
   var
@@ -362,6 +361,7 @@ proc buildImplicit(codeLengths: seq[uint16]): HuffmanTree =
   let
     tableBits = min(maxLength, MaxTableBits)
     tableSize = 1 shl tableBits
+  result = HuffmanTree()
   result.tableMask = (tableSize - 1).uint16
   result.primaryTable.setLen(tableSize)
 
@@ -423,7 +423,7 @@ proc buildImplicit(codeLengths: seq[uint16]): HuffmanTree =
         result.primaryTable[subtablePrefix] =
           ((length + 1).uint16 shl 12) or subtableStart.uint16
 
-proc readSymbol(tree: HuffmanTree, bitReader: var LosslessBitReader): uint16 =
+proc readSymbol(tree: HuffmanTree, bitReader: LosslessBitReader): uint16 =
   if tree.single:
     return tree.symbol
 
@@ -446,7 +446,7 @@ proc readSymbol(tree: HuffmanTree, bitReader: var LosslessBitReader): uint16 =
   secondaryEntry shr 4
 
 proc peekSymbol(
-  tree: HuffmanTree, bitReader: var LosslessBitReader, bits: var int,
+  tree: HuffmanTree, bitReader: LosslessBitReader, bits: var int,
   symbol: var uint16
 ): bool =
   if tree.single:
@@ -464,7 +464,7 @@ proc peekSymbol(
     symbol = entry and 0x0fff
     return true
 
-proc insert(colorCache: var ColorCache, color: array[4, uint8]) =
+proc insert(colorCache: ColorCache, color: array[4, uint8]) =
   let colorU32 =
     (color[0].uint32 shl 16) or
     (color[1].uint32 shl 8) or
@@ -480,8 +480,10 @@ proc lookup(colorCache: ColorCache, index: int): array[4, uint8] =
     failInvalid("corrupt VP8L color cache")
   colorCache.colors[index]
 
-proc getCopyDistance(bitReader: var LosslessBitReader,
-    prefixCode: uint16): int =
+proc getCopyDistance(
+  bitReader: LosslessBitReader,
+  prefixCode: uint16
+): int =
   if prefixCode < 4:
     return prefixCode.int + 1
   let
@@ -507,7 +509,7 @@ proc getHuffIndex(info: HuffmanInfo, x, y: int): int =
   info.image[position].int
 
 proc readHuffmanCodeLengths(
-  decoder: var LosslessDecoder, codeLengthCodeLengths: seq[uint16],
+  decoder: LosslessDecoder, codeLengthCodeLengths: seq[uint16],
   numSymbols: uint16
 ): seq[uint16] =
   let table = buildImplicit(codeLengthCodeLengths)
@@ -569,7 +571,7 @@ proc readHuffmanCodeLengths(
         dec repeat
 
 proc readHuffmanCode(
-  decoder: var LosslessDecoder, alphabetSize: uint16
+  decoder: LosslessDecoder, alphabetSize: uint16
 ): HuffmanTree =
   let simple = decoder.bitReader.readBits(1) == 1
 
@@ -599,8 +601,8 @@ proc readHuffmanCode(
     )
 
 proc decodeImageData(
-  decoder: var LosslessDecoder, width, height: int,
-      huffmanInfo: var HuffmanInfo,
+  decoder: LosslessDecoder, width, height: int,
+  huffmanInfo: HuffmanInfo,
   data: var seq[uint8]
 ) =
   let numValues = width * height
@@ -706,7 +708,7 @@ proc decodeImageData(
         inc index
 
 proc decodeImageStream(
-  decoder: var LosslessDecoder, xsize, ysize: int, readMeta: bool,
+  decoder: LosslessDecoder, xsize, ysize: int, readMeta: bool,
   data: var seq[uint8]
 ) =
   var
@@ -722,8 +724,10 @@ proc decodeImageStream(
     if bits notin 1 .. 11:
       failInvalid("invalid VP8L color cache")
     hasColorCache = true
-    colorCache.bits = bits
-    colorCache.colors.setLen(1 shl bits)
+    colorCache = ColorCache(
+      bits: bits,
+      colors: newSeq[array[4, uint8]](1 shl bits)
+    )
 
   if readMeta and decoder.bitReader.readBits(1) == 1:
     huffmanBits = decoder.bitReader.readBits(3).int + 2
@@ -739,14 +743,14 @@ proc decodeImageStream(
       entropyImage[i] = metaHuffCode
       numHuffGroups = max(numHuffGroups, metaHuffCode.int + 1)
 
-  var huffmanInfo: HuffmanInfo
-  huffmanInfo.xsize = huffmanXSize
-  huffmanInfo.colorCache = colorCache
-  huffmanInfo.hasColorCache = hasColorCache
-  huffmanInfo.image = entropyImage
-  huffmanInfo.bits = huffmanBits
-  huffmanInfo.mask =
-    if huffmanBits == 0: int.high else: (1 shl huffmanBits) - 1
+  let huffmanInfo = HuffmanInfo(
+    xsize: huffmanXSize,
+    colorCache: colorCache,
+    hasColorCache: hasColorCache,
+    image: entropyImage,
+    bits: huffmanBits,
+    mask: if huffmanBits == 0: int.high else: (1 shl huffmanBits) - 1
+  )
   huffmanInfo.groups.setLen(numHuffGroups)
 
   for groupIndex in 0 ..< numHuffGroups:
@@ -758,7 +762,7 @@ proc decodeImageStream(
 
   decoder.decodeImageData(xsize, ysize, huffmanInfo, data)
 
-proc readTransforms(decoder: var LosslessDecoder): int =
+proc readTransforms(decoder: LosslessDecoder): int =
   result = decoder.width
 
   while decoder.bitReader.readBits(1) == 1:
@@ -1003,8 +1007,8 @@ proc applyColorIndexingTransform(
 proc decodeLosslessData(
   data: string, offset, size, width, height: int, implicitDimensions: bool
 ): seq[uint8] =
-  var decoder = LosslessDecoder(
-    bitReader: initBitReader(data, offset, size),
+  let decoder = LosslessDecoder(
+    bitReader: newBitReader(data, offset, size),
     width: width,
     height: height
   )
@@ -1069,15 +1073,17 @@ proc newImageFromRgbaBytes(data: seq[uint8], width, height: int): Image =
       data[i * 4 + 3]
     ).rgbx()
 
-proc initVp8BoolDecoder(data: string, offset, size: int): Vp8BoolDecoder =
+proc newVp8BoolDecoder(data: string, offset, size: int): Vp8BoolDecoder =
   data.checkBounds(offset, size)
-  result.data = data
-  result.pos = offset
-  result.endPos = offset + size
-  result.range = 255
-  result.bitCount = -8
+  Vp8BoolDecoder(
+    data: data,
+    pos: offset,
+    endPos: offset + size,
+    range: 255,
+    bitCount: -8
+  )
 
-proc loadByte(decoder: var Vp8BoolDecoder) =
+proc loadByte(decoder: Vp8BoolDecoder) =
   if decoder.pos < decoder.endPos:
     decoder.value = (decoder.value shl 8) or
       decoder.data.readUint8(decoder.pos).uint64
@@ -1090,7 +1096,7 @@ proc loadByte(decoder: var Vp8BoolDecoder) =
   else:
     failInvalid("truncated VP8 bitstream")
 
-proc readBool(decoder: var Vp8BoolDecoder, probability: uint8): bool =
+proc readBool(decoder: Vp8BoolDecoder, probability: uint8): bool =
   if decoder.bitCount < 0:
     decoder.loadByte()
 
@@ -1112,16 +1118,16 @@ proc readBool(decoder: var Vp8BoolDecoder, probability: uint8): bool =
     decoder.range = decoder.range shl 1
     dec decoder.bitCount
 
-proc readFlag(decoder: var Vp8BoolDecoder): bool {.inline.} =
+proc readFlag(decoder: Vp8BoolDecoder): bool {.inline.} =
   decoder.readBool(128)
 
-proc readLiteral(decoder: var Vp8BoolDecoder, bits: int): uint8 =
+proc readLiteral(decoder: Vp8BoolDecoder, bits: int): uint8 =
   var value: uint8
   for _ in 0 ..< bits:
     value = (value shl 1) or decoder.readFlag().uint8
   return value
 
-proc readOptionalSignedValue(decoder: var Vp8BoolDecoder, bits: int): int =
+proc readOptionalSignedValue(decoder: Vp8BoolDecoder, bits: int): int =
   if not decoder.readFlag():
     return 0
   let value = decoder.readLiteral(bits).int
@@ -1130,7 +1136,7 @@ proc readOptionalSignedValue(decoder: var Vp8BoolDecoder, bits: int): int =
   return value
 
 proc readTree(
-  decoder: var Vp8BoolDecoder,
+  decoder: Vp8BoolDecoder,
   tree: openArray[int],
   probabilities: openArray[uint8],
   start = 0
@@ -1392,8 +1398,10 @@ proc predictBVePred(
     a2 = topPixel(pixels, x0, y0, stride, 2)
     a3 = topPixel(pixels, x0, y0, stride, 3)
     a4 = topPixel(pixels, x0, y0, stride, 4)
-    values = [vp8Avg3(p, a0, a1), vp8Avg3(a0, a1, a2),
-      vp8Avg3(a1, a2, a3), vp8Avg3(a2, a3, a4)]
+    values = [
+      vp8Avg3(p, a0, a1), vp8Avg3(a0, a1, a2),
+      vp8Avg3(a1, a2, a3), vp8Avg3(a2, a3, a4)
+    ]
   for y in 0 ..< 4:
     for x in 0 ..< 4:
       pixels[(y0 + y) * stride + x0 + x] = values[x]
@@ -1407,8 +1415,10 @@ proc predictBHePred(
     l1 = leftPixel(pixels, x0, y0, stride, 1)
     l2 = leftPixel(pixels, x0, y0, stride, 2)
     l3 = leftPixel(pixels, x0, y0, stride, 3)
-    values = [vp8Avg3(p, l0, l1), vp8Avg3(l0, l1, l2),
-      vp8Avg3(l1, l2, l3), vp8Avg3(l2, l3, l3)]
+    values = [
+      vp8Avg3(p, l0, l1), vp8Avg3(l0, l1, l2),
+      vp8Avg3(l1, l2, l3), vp8Avg3(l2, l3, l3)
+    ]
   for y in 0 ..< 4:
     for x in 0 ..< 4:
       pixels[(y0 + y) * stride + x0 + x] = values[y]
@@ -1754,13 +1764,16 @@ proc macroblockFilterHorizontal(
     else:
       discard pixels.commonAdjustHorizontal(start, true)
 
-proc initVp8Decoder(): Vp8Decoder =
-  result.numPartitions = 1
-  result.segmentProbs = [255.uint8, 255, 255]
-  result.tokenProbs = Vp8CoeffProbs
+proc newVp8Decoder(): Vp8Decoder =
+  Vp8Decoder(
+    frame: Vp8Frame(),
+    numPartitions: 1,
+    segmentProbs: [255.uint8, 255, 255],
+    tokenProbs: Vp8CoeffProbs
+  )
 
 proc initPartitions(
-  decoder: var Vp8Decoder, data: string, offset, endPos, n: int
+  decoder: Vp8Decoder, data: string, offset, endPos, n: int
 ) =
   if n < 1 or n > 8:
     failInvalid("invalid VP8 partition count")
@@ -1776,14 +1789,14 @@ proc initPartitions(
     for i in 0 ..< n - 1:
       if sizes[i] > endPos - pos:
         failInvalid("truncated VP8 partition")
-      decoder.partitions[i] = initVp8BoolDecoder(data, pos, sizes[i])
+      decoder.partitions[i] = newVp8BoolDecoder(data, pos, sizes[i])
       pos += sizes[i]
 
   if pos > endPos:
     failInvalid("truncated VP8 partition")
-  decoder.partitions[n - 1] = initVp8BoolDecoder(data, pos, endPos - pos)
+  decoder.partitions[n - 1] = newVp8BoolDecoder(data, pos, endPos - pos)
 
-proc updateTokenProbabilities(decoder: var Vp8Decoder) =
+proc updateTokenProbabilities(decoder: Vp8Decoder) =
   for i in 0 ..< 4:
     for j in 0 ..< 8:
       for k in 0 ..< 3:
@@ -1794,7 +1807,7 @@ proc updateTokenProbabilities(decoder: var Vp8Decoder) =
 proc clampQuantIndex(value: int): int {.inline.} =
   max(0, min(127, value))
 
-proc readQuantizationIndices(decoder: var Vp8Decoder) =
+proc readQuantizationIndices(decoder: Vp8Decoder) =
   let
     yacAbs = decoder.b.readLiteral(7).int
     ydcDelta = decoder.b.readOptionalSignedValue(4)
@@ -1827,14 +1840,14 @@ proc readQuantizationIndices(decoder: var Vp8Decoder) =
     if decoder.segments[i].uvdc > 132:
       decoder.segments[i].uvdc = 132
 
-proc readLoopFilterAdjustments(decoder: var Vp8Decoder) =
+proc readLoopFilterAdjustments(decoder: Vp8Decoder) =
   if decoder.b.readFlag():
     for i in 0 ..< 4:
       decoder.refDelta[i] = decoder.b.readOptionalSignedValue(6)
     for i in 0 ..< 4:
       decoder.modeDelta[i] = decoder.b.readOptionalSignedValue(6)
 
-proc readSegmentUpdates(decoder: var Vp8Decoder) =
+proc readSegmentUpdates(decoder: Vp8Decoder) =
   decoder.segmentsUpdateMap = decoder.b.readFlag()
   let updateSegmentFeatureData = decoder.b.readFlag()
 
@@ -1864,7 +1877,7 @@ proc lumaModeToIntra(mode: int): int =
   else: -1
 
 proc readMacroblockHeader(
-  decoder: var Vp8Decoder, mbx: int
+  decoder: Vp8Decoder, mbx: int
 ): Vp8MacroBlock =
   if decoder.segmentsEnabled and decoder.segmentsUpdateMap:
     result.segmentId = decoder.b.readTree(
@@ -1912,13 +1925,13 @@ proc readMacroblockHeader(
     decoder.top[mbx].bpred[i] = result.bpred[12 + i]
 
 proc readCoefficients(
-  decoder: var Vp8Decoder,
+  decoder: Vp8Decoder,
   coeffBlock: var array[16, int],
   partitionIndex, plane, complexity: int,
   dcq, acq: int16
 ): bool =
+  let partition = decoder.partitions[partitionIndex]
   var
-    partition = decoder.partitions[partitionIndex]
     complexityState = complexity
     skip = false
   let firstCoeff = if plane == 0: 1 else: 0
@@ -1966,13 +1979,14 @@ proc readCoefficients(
     coeffBlock[zigzag] = absValue * (if zigzag > 0: acq.int else: dcq.int)
     result = true
 
-  decoder.partitions[partitionIndex] = partition
-
 proc readResidualData(
-  decoder: var Vp8Decoder, mb: var Vp8MacroBlock, mbx, partitionIndex: int
-): array[384, int] =
+  decoder: Vp8Decoder, mb: Vp8MacroBlock, mbx, partitionIndex: int
+): tuple[residue: array[384, int], nonZeroDct: bool] =
   let segmentIndex = mb.segmentId.int
-  var plane = if mb.lumaMode == Vp8BPred: 3 else: 1
+  var
+    plane = if mb.lumaMode == Vp8BPred: 3 else: 1
+    residue: array[384, int]
+    nonZeroDct = false
 
   if plane == 1:
     let
@@ -1988,7 +2002,7 @@ proc readResidualData(
     decoder.top[mbx].complexity[0] = hasCoefficients.uint8
     coeffBlock.iwht4x4()
     for k in 0 ..< 16:
-      result[16 * k] = coeffBlock[k]
+      residue[16 * k] = coeffBlock[k]
     plane = 0
 
   for y in 0 ..< 4:
@@ -2000,17 +2014,17 @@ proc readResidualData(
         dcq = decoder.segments[segmentIndex].ydc
         acq = decoder.segments[segmentIndex].yac
       var coeffBlock: array[16, int]
-      coeffBlock[0] = result[i * 16]
+      coeffBlock[0] = residue[i * 16]
       let hasCoefficients = decoder.readCoefficients(
         coeffBlock, partitionIndex, plane, complexity, dcq, acq
       )
       if coeffBlock[0] != 0 or hasCoefficients:
-        mb.nonZeroDct = true
+        nonZeroDct = true
         coeffBlock.idct4x4()
       left = hasCoefficients.uint8
       decoder.top[mbx].complexity[x + 1] = hasCoefficients.uint8
       for k in 0 ..< 16:
-        result[i * 16 + k] = coeffBlock[k]
+        residue[i * 16 + k] = coeffBlock[k]
     decoder.left.complexity[y + 1] = left
 
   plane = 2
@@ -2028,13 +2042,15 @@ proc readResidualData(
           coeffBlock, partitionIndex, plane, complexity, dcq, acq
         )
         if coeffBlock[0] != 0 or hasCoefficients:
-          mb.nonZeroDct = true
+          nonZeroDct = true
           coeffBlock.idct4x4()
         left = hasCoefficients.uint8
         decoder.top[mbx].complexity[x + j] = hasCoefficients.uint8
         for k in 0 ..< 16:
-          result[i * 16 + k] = coeffBlock[k]
+          residue[i * 16 + k] = coeffBlock[k]
       decoder.left.complexity[y + j] = left
+
+  return (residue, nonZeroDct)
 
 proc setChromaBorder(
   leftBorder, topBorder: var seq[uint8],
@@ -2048,7 +2064,7 @@ proc setChromaBorder(
     topBorder[mbx * 8 + i] = chromaBlock[8 * Vp8ChromaStride + 1 + i]
 
 proc intraPredictLuma(
-  decoder: var Vp8Decoder,
+  decoder: Vp8Decoder,
   mbx, mby: int,
   mb: Vp8MacroBlock,
   residue: openArray[int]
@@ -2089,7 +2105,7 @@ proc intraPredictLuma(
       decoder.frame.ybuf[dst + x] = ws[src + x]
 
 proc intraPredictChroma(
-  decoder: var Vp8Decoder,
+  decoder: Vp8Decoder,
   mbx, mby: int,
   mb: Vp8MacroBlock,
   residue: openArray[int]
@@ -2174,7 +2190,7 @@ proc calculateFilterParameters(
 
   (filterLevel.uint8, interiorLimit.uint8, hevThreshold.uint8)
 
-proc loopFilter(decoder: var Vp8Decoder, mbx, mby: int, mb: Vp8MacroBlock) =
+proc loopFilter(decoder: Vp8Decoder, mbx, mby: int, mb: Vp8MacroBlock) =
   let
     lumaWidth = decoder.mbWidth * 16
     chromaWidth = decoder.mbWidth * 8
@@ -2286,8 +2302,9 @@ proc loopFilter(decoder: var Vp8Decoder, mbx, mby: int, mb: Vp8MacroBlock) =
           point, chromaWidth
         )
 
-proc decodeVp8Frame(data: string, offset, size: int, width,
-    height: int): Vp8Frame =
+proc decodeVp8Frame(
+  data: string, offset, size: int, width, height: int
+): Vp8Frame =
   if size < 10:
     failInvalid("truncated VP8 header")
 
@@ -2311,7 +2328,7 @@ proc decodeVp8Frame(data: string, offset, size: int, width,
   if firstPartitionSize > size - 10:
     failInvalid("truncated VP8 first partition")
 
-  var decoder = initVp8Decoder()
+  let decoder = newVp8Decoder()
   decoder.frame.width = frameWidth
   decoder.frame.height = frameHeight
   decoder.frame.version = ((frameTag shr 1) and 7).uint8
@@ -2347,7 +2364,7 @@ proc decodeVp8Frame(data: string, offset, size: int, width,
     firstPartitionOffset = offset + 10
     tokenPartitionOffset = firstPartitionOffset + firstPartitionSize
     chunkEnd = offset + size
-  decoder.b = initVp8BoolDecoder(data, firstPartitionOffset, firstPartitionSize)
+  decoder.b = newVp8BoolDecoder(data, firstPartitionOffset, firstPartitionSize)
 
   let colorSpace = decoder.b.readLiteral(1)
   decoder.frame.pixelType = decoder.b.readLiteral(1)
@@ -2366,8 +2383,9 @@ proc decodeVp8Frame(data: string, offset, size: int, width,
     decoder.readLoopFilterAdjustments()
 
   decoder.numPartitions = 1 shl decoder.b.readLiteral(2).int
-  decoder.initPartitions(data, tokenPartitionOffset, chunkEnd,
-      decoder.numPartitions)
+  decoder.initPartitions(
+    data, tokenPartitionOffset, chunkEnd, decoder.numPartitions
+  )
   decoder.readQuantizationIndices()
   discard decoder.b.readLiteral(1)
   decoder.updateTokenProbabilities()
@@ -2383,7 +2401,9 @@ proc decodeVp8Frame(data: string, offset, size: int, width,
       var mb = decoder.readMacroblockHeader(mbx)
       let residue =
         if not mb.coeffsSkipped:
-          decoder.readResidualData(mb, mbx, partitionIndex)
+          let residual = decoder.readResidualData(mb, mbx, partitionIndex)
+          mb.nonZeroDct = residual.nonZeroDct
+          residual.residue
         else:
           if mb.lumaMode != Vp8BPred:
             decoder.left.complexity[0] = 0
