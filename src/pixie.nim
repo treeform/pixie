@@ -2,14 +2,15 @@ import
   std/[os, strutils],
   bumpy, chroma, flatty/binny, vmath,
   pixie/[common, contexts, fonts, imagebase64, images, internal, paints, paths],
-  pixie/fileformats/[bmp, gif, jpeg, png, ppm, qoi, svg]
+  pixie/fileformats/[bmp, gif, jpeg, png, ppm, qoi, svg, webp]
 
 export bumpy, chroma, common, contexts, fonts, imagebase64, images, paints,
     paths, vmath
 
 type
   FileFormat* = enum
-    PngFormat, BmpFormat, JpegFormat, GifFormat, QoiFormat, PpmFormat
+    PngFormat, BmpFormat, JpegFormat, GifFormat, QoiFormat, PpmFormat,
+    WebpFormat
 
 converter autoStraightAlpha*(c: ColorRGBX): ColorRGBA {.inline, raises: [].} =
   ## Convert a premultiplied alpha RGBA to a straight alpha RGBA.
@@ -41,6 +42,10 @@ proc decodeImageDimensions*(
     equalMem(data, ppmSignatures[1].cstring, 2)
   ):
     decodePpmDimensions(data, len)
+  elif len > 12 and
+      equalMem(data, WebpRiffSignature.cstring, 4) and
+      equalMem(cast[pointer](cast[uint](data) + 8), WebpSignature.cstring, 4):
+    decodeWebpDimensions(data, len)
   else:
     raise newException(PixieError, "Unsupported image file format")
 
@@ -67,6 +72,9 @@ proc decodeImage*(data: string): Image {.raises: [PixieError].} =
     decodeQoi(data).convertToImage()
   elif data.len > 9 and data.readStr(0, 2) in ppmSignatures:
     decodePpm(data)
+  elif data.len > 12 and data.readStr(0, 4) == WebpRiffSignature and
+      data.readStr(8, 4) == WebpSignature:
+    decodeWebp(data)
   else:
     raise newException(PixieError, "Unsupported image file format")
 
@@ -103,6 +111,8 @@ proc encodeImage*(
     raise newException(PixieError, "Unsupported file format")
   of PpmFormat:
     image.encodePpm()
+  of WebpFormat:
+    raise newException(PixieError, "Unsupported file format")
 
 proc writeFile*(image: Image, filePath: string) {.raises: [PixieError].} =
   ## Writes an image to a file.
@@ -112,6 +122,7 @@ proc writeFile*(image: Image, filePath: string) {.raises: [PixieError].} =
     of ".jpg", ".jpeg": JpegFormat
     of ".qoi": QoiFormat
     of ".ppm": PpmFormat
+    of ".webp": WebpFormat
     else:
       raise newException(PixieError, "Unsupported file extension")
 

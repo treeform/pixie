@@ -25,5 +25,7 @@ bindings/generated
 dump.txt
 tests/fileformats/jpeg/generated
 tests/fileformats/jpeg/diffs
+tests/fileformats/webp/generated
+tests/fileformats/webp/diffs
 *.dylib
 tmp/
