@@ -1,0 +1,37 @@
+nimTitle	webp	pixie/fileformats/webp.html	module pixie/fileformats/webp		0
+nim	WebpRiffSignature	pixie/fileformats/webp.html#WebpRiffSignature	const WebpRiffSignature		7
+nim	WebpSignature	pixie/fileformats/webp.html#WebpSignature	const WebpSignature		8
+nim	WebpVp8Signature	pixie/fileformats/webp.html#WebpVp8Signature	const WebpVp8Signature		9
+nim	WebpVp8LSignature	pixie/fileformats/webp.html#WebpVp8LSignature	const WebpVp8LSignature		10
+nim	WebpVp8XSignature	pixie/fileformats/webp.html#WebpVp8XSignature	const WebpVp8XSignature		11
+nim	WebpAlphaSignature	pixie/fileformats/webp.html#WebpAlphaSignature	const WebpAlphaSignature		12
+nim	WebpAnimSignature	pixie/fileformats/webp.html#WebpAnimSignature	const WebpAnimSignature		13
+nim	WebpAnimFrameSignature	pixie/fileformats/webp.html#WebpAnimFrameSignature	const WebpAnimFrameSignature		14
+nim	WebpIccpSignature	pixie/fileformats/webp.html#WebpIccpSignature	const WebpIccpSignature		15
+nim	WebpExifSignature	pixie/fileformats/webp.html#WebpExifSignature	const WebpExifSignature		16
+nim	WebpXmpSignature	pixie/fileformats/webp.html#WebpXmpSignature	const WebpXmpSignature		17
+nim	UnknownWebpCompression	pixie/fileformats/webp.html#UnknownWebpCompression	WebpCompression.UnknownWebpCompression		20
+nim	LossyWebp	pixie/fileformats/webp.html#LossyWebp	WebpCompression.LossyWebp		20
+nim	LosslessWebp	pixie/fileformats/webp.html#LosslessWebp	WebpCompression.LosslessWebp		20
+nim	WebpCompression	pixie/fileformats/webp.html#WebpCompression	enum WebpCompression		20
+nim	UnknownWebpChunk	pixie/fileformats/webp.html#UnknownWebpChunk	WebpChunkKind.UnknownWebpChunk		25
+nim	Vp8Chunk	pixie/fileformats/webp.html#Vp8Chunk	WebpChunkKind.Vp8Chunk		25
+nim	Vp8LChunk	pixie/fileformats/webp.html#Vp8LChunk	WebpChunkKind.Vp8LChunk		25
+nim	Vp8XChunk	pixie/fileformats/webp.html#Vp8XChunk	WebpChunkKind.Vp8XChunk		25
+nim	AlphaChunk	pixie/fileformats/webp.html#AlphaChunk	WebpChunkKind.AlphaChunk		25
+nim	AnimChunk	pixie/fileformats/webp.html#AnimChunk	WebpChunkKind.AnimChunk		25
+nim	AnimFrameChunk	pixie/fileformats/webp.html#AnimFrameChunk	WebpChunkKind.AnimFrameChunk		25
+nim	IccpChunk	pixie/fileformats/webp.html#IccpChunk	WebpChunkKind.IccpChunk		25
+nim	ExifChunk	pixie/fileformats/webp.html#ExifChunk	WebpChunkKind.ExifChunk		25
+nim	XmpChunk	pixie/fileformats/webp.html#XmpChunk	WebpChunkKind.XmpChunk		25
+nim	WebpChunkKind	pixie/fileformats/webp.html#WebpChunkKind	enum WebpChunkKind		25
+nim	WebpAlphaInfo	pixie/fileformats/webp.html#WebpAlphaInfo	object WebpAlphaInfo		37
+nim	WebpChunkInfo	pixie/fileformats/webp.html#WebpChunkInfo	object WebpChunkInfo		40
+nim	WebpInfo	pixie/fileformats/webp.html#WebpInfo	type WebpInfo		45
+nim	decodeWebpInfo	pixie/fileformats/webp.html#decodeWebpInfo,string	proc decodeWebpInfo(data: string): WebpInfo		2713
+nim	decodeWebpInfo	pixie/fileformats/webp.html#decodeWebpInfo,pointer,int	proc decodeWebpInfo(data: pointer; len: int): WebpInfo		2795
+nim	decodeWebpDimensions	pixie/fileformats/webp.html#decodeWebpDimensions,string	proc decodeWebpDimensions(data: string): ImageDimensions		2805
+nim	decodeWebpDimensions	pixie/fileformats/webp.html#decodeWebpDimensions,pointer,int	proc decodeWebpDimensions(data: pointer; len: int): ImageDimensions		2813
+nim	decodeWebp	pixie/fileformats/webp.html#decodeWebp,string	proc decodeWebp(data: string): Image		2821
+nimgrp	decodewebpinfo	pixie/fileformats/webp.html#decodeWebpInfo-procs-all	proc		2713
+nimgrp	decodewebpdimensions	pixie/fileformats/webp.html#decodeWebpDimensions-procs-all	proc		2805

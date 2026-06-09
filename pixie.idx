@@ -5,15 +5,16 @@ nim	JpegFormat	pixie.html#JpegFormat	FileFormat.JpegFormat		11
 nim	GifFormat	pixie.html#GifFormat	FileFormat.GifFormat		11
 nim	QoiFormat	pixie.html#QoiFormat	FileFormat.QoiFormat		11
 nim	PpmFormat	pixie.html#PpmFormat	FileFormat.PpmFormat		11
+nim	WebpFormat	pixie.html#WebpFormat	FileFormat.WebpFormat		11
 nim	FileFormat	pixie.html#FileFormat	enum FileFormat		11
-nim	autoStraightAlpha	pixie.html#autoStraightAlpha.c,ColorRGBX	converter autoStraightAlpha(c: ColorRGBX): ColorRGBA		14
-nim	autoPremultipliedAlpha	pixie.html#autoPremultipliedAlpha.c,ColorRGBA	converter autoPremultipliedAlpha(c: ColorRGBA): ColorRGBX		18
-nim	decodeImageDimensions	pixie.html#decodeImageDimensions,pointer,int	proc decodeImageDimensions(data: pointer; len: int): ImageDimensions		22
-nim	decodeImageDimensions	pixie.html#decodeImageDimensions,string	proc decodeImageDimensions(data: string): ImageDimensions		47
-nim	decodeImage	pixie.html#decodeImage,string	proc decodeImage(data: string): Image		53
-nim	readImageDimensions	pixie.html#readImageDimensions,string	proc readImageDimensions(filePath: string): ImageDimensions		73
-nim	readImage	pixie.html#readImage,string	proc readImage(filePath: string): Image		82
-nim	encodeImage	pixie.html#encodeImage,Image,FileFormat	proc encodeImage(image: Image; fileFormat: FileFormat): string		89
-nim	writeFile	pixie.html#writeFile,Image,string	proc writeFile(image: Image; filePath: string)		107
-nim	fill	pixie.html#fill,Image,Paint	proc fill(image: Image; paint: Paint)		123
-nimgrp	decodeimagedimensions	pixie.html#decodeImageDimensions-procs-all	proc		22
+nim	autoStraightAlpha	pixie.html#autoStraightAlpha.c,ColorRGBX	converter autoStraightAlpha(c: ColorRGBX): ColorRGBA		15
+nim	autoPremultipliedAlpha	pixie.html#autoPremultipliedAlpha.c,ColorRGBA	converter autoPremultipliedAlpha(c: ColorRGBA): ColorRGBX		19
+nim	decodeImageDimensions	pixie.html#decodeImageDimensions,pointer,int	proc decodeImageDimensions(data: pointer; len: int): ImageDimensions		23
+nim	decodeImageDimensions	pixie.html#decodeImageDimensions,string	proc decodeImageDimensions(data: string): ImageDimensions		52
+nim	decodeImage	pixie.html#decodeImage,string	proc decodeImage(data: string): Image		58
+nim	readImageDimensions	pixie.html#readImageDimensions,string	proc readImageDimensions(filePath: string): ImageDimensions		81
+nim	readImage	pixie.html#readImage,string	proc readImage(filePath: string): Image		90
+nim	encodeImage	pixie.html#encodeImage,Image,FileFormat	proc encodeImage(image: Image; fileFormat: FileFormat): string		97
+nim	writeFile	pixie.html#writeFile,Image,string	proc writeFile(image: Image; filePath: string)		117
+nim	fill	pixie.html#fill,Image,Paint	proc fill(image: Image; paint: Paint)		134
+nimgrp	decodeimagedimensions	pixie.html#decodeImageDimensions-procs-all	proc		23
