@@ -507,13 +507,37 @@ proc parseSvg*(
     if root.tag != "svg":
       failInvalid()
 
-    let
-      viewBox = root.attr("viewBox")
-      box = viewBox.split(" ")
-      viewBoxMinX = parseInt(box[0])
-      viewBoxMinY = parseInt(box[1])
-      viewBoxWidth = parseInt(box[2])
-      viewBoxHeight = parseInt(box[3])
+    proc parseLen(s: string): int =
+      ## Parses an SVG length, tolerating decimals and unit suffixes such as
+      ## "px" (e.g. "230", "230.0", "230px" -> 230). Returns 0 for an empty or
+      ## unparseable value.
+      var i = 0
+      while i < s.len and s[i] in {'0' .. '9', '.', '-', '+'}:
+        inc i
+      if i == 0:
+        return 0
+      try:
+        result = parseFloat(s[0 ..< i]).int
+      except ValueError:
+        result = 0
+
+    var viewBoxMinX, viewBoxMinY, viewBoxWidth, viewBoxHeight: int
+    let viewBox = root.attr("viewBox").strip()
+    if viewBox.len > 0:
+      let box = viewBox.replace(',', ' ').splitWhitespace()
+      if box.len != 4:
+        failInvalid()
+      viewBoxMinX = parseLen(box[0])
+      viewBoxMinY = parseLen(box[1])
+      viewBoxWidth = parseLen(box[2])
+      viewBoxHeight = parseLen(box[3])
+    else:
+      # No viewBox: fall back to the width/height attributes (valid SVG).
+      viewBoxWidth = parseLen(root.attr("width"))
+      viewBoxHeight = parseLen(root.attr("height"))
+      if viewBoxWidth == 0 or viewBoxHeight == 0:
+        raise newException(PixieError,
+          "SVG has neither a viewBox nor usable width/height attributes")
 
     var rootProps = initSvgProperties()
     rootProps = root.parseSvgProperties(rootProps)

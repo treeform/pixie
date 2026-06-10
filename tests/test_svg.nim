@@ -38,3 +38,19 @@ block:
       xmlNode,
       512, 512
     )
+
+block:
+  # parseSvg accepts an SVG with width/height but no viewBox
+  let svg = parseSvg(
+    """<svg xmlns="http://www.w3.org/2000/svg" width="64" height="48"></svg>"""
+  )
+  doAssert svg.width == 64
+  doAssert svg.height == 48
+
+block:
+  # viewBox values may be comma-separated, decimal or carry a unit
+  let svg = parseSvg(
+    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0,0 64.0,48px"></svg>"""
+  )
+  doAssert svg.width == 64
+  doAssert svg.height == 48
