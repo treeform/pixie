@@ -578,6 +578,97 @@ proc parseSvg*(data: string, width = 0, height = 0): Svg {.raises: [PixieError].
   except:
     raise currentExceptionAsPixieError()
 
+proc newSvg*(width, height: int): Svg {.raises: [].} =
+  ## Creates an empty SVG scene for programmatic construction.
+  Svg(width: width, height: height)
+
+proc addShape*(
+  svg: Svg, path: Path, fill: string, fillRule = NonZero,
+  fillOpacity: float32 = 1.0
+) {.raises: [].} =
+  ## Appends a filled path to the scene. `fill` is any CSS color string
+  ## (e.g. "#ff0000").
+  var props = initSvgProperties()
+  props.fill = fill
+  props.fillRule = fillRule
+  props.fillOpacity = fillOpacity
+  svg.elements.add((path, props))
+
+proc toSvgColor(c: ColorRGBX): string =
+  let c = c.rgba() # Premultiplied alpha back to straight alpha
+  result = "#"
+  result.add toHex(c.r.int, 2)
+  result.add toHex(c.g.int, 2)
+  result.add toHex(c.b.int, 2)
+  if c.a != 255:
+    result.add toHex(c.a.int, 2)
+
+proc fmtNum(v: float32): string =
+  if floor(v) == v: $v.int else: $v
+
+proc toSvgTransform(m: Mat3): string =
+  if m == mat3():
+    return ""
+  "matrix(" &
+    fmtNum(m[0, 0]) & "," & fmtNum(m[0, 1]) & "," &
+    fmtNum(m[1, 0]) & "," & fmtNum(m[1, 1]) & "," &
+    fmtNum(m[2, 0]) & "," & fmtNum(m[2, 1]) & ")"
+
+proc toSvgString*(svg: Svg): string {.raises: [PixieError].} =
+  ## Serializes an Svg scene to SVG markup. Gradient fills are not supported.
+  result = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+  result.add "<svg xmlns=\"http://www.w3.org/2000/svg\""
+  result.add " width=\"" & $svg.width & "\""
+  result.add " height=\"" & $svg.height & "\""
+  result.add " viewBox=\"0 0 " & $svg.width & " " & $svg.height & "\">\n"
+  for (path, props) in svg.elements:
+    if not props.display:
+      continue
+    if props.fill.startsWith("url("):
+      raise newException(
+        PixieError, "toSvgString: gradient fills cannot be serialized"
+      )
+    result.add "  <path d=\"" & $path & "\""
+    if props.fill == "none":
+      result.add " fill=\"none\""
+    else:
+      result.add " fill=\"" & props.fill & "\""
+      if props.fillRule == EvenOdd:
+        result.add " fill-rule=\"evenodd\""
+      if props.fillOpacity < 1.0:
+        result.add " fill-opacity=\"" & $props.fillOpacity & "\""
+    if props.stroke != rgbx(0, 0, 0, 0) and props.strokeWidth > 0:
+      result.add " stroke=\"" & toSvgColor(props.stroke) & "\""
+      result.add " stroke-width=\"" & fmtNum(props.strokeWidth) & "\""
+      if props.strokeLineCap != ButtCap:
+        result.add " stroke-linecap=\"" &
+          (case props.strokeLineCap
+          of ButtCap: "butt"
+          of RoundCap: "round"
+          of SquareCap: "square") & "\""
+      if props.strokeLineJoin != MiterJoin:
+        result.add " stroke-linejoin=\"" &
+          (case props.strokeLineJoin
+          of MiterJoin: "miter"
+          of RoundJoin: "round"
+          of BevelJoin: "bevel") & "\""
+      if props.strokeMiterLimit != defaultMiterLimit:
+        result.add " stroke-miterlimit=\"" & fmtNum(props.strokeMiterLimit) & "\""
+      if props.strokeDashArray.len > 0:
+        var dashes: seq[string]
+        for value in props.strokeDashArray:
+          dashes.add fmtNum(value)
+        result.add " stroke-dasharray=\"" & dashes.join(" ") & "\""
+      if props.strokeOpacity < 1.0:
+        result.add " stroke-opacity=\"" & $props.strokeOpacity & "\""
+    if props.opacity < 1.0:
+      result.add " opacity=\"" & $props.opacity & "\""
+    let transform = toSvgTransform(props.transform)
+    if transform.len > 0:
+      result.add " transform=\"" & transform & "\""
+    result.add "/>\n"
+  result.add "</svg>\n"
+
 proc newImage*(svg: Svg): Image {.raises: [PixieError].} =
   ## Render SVG and return the image.
   result = newImage(svg.width, svg.height)
