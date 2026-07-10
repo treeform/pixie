@@ -14,18 +14,22 @@ type
   Svg* = ref object
     width*, height*: int
     elements: seq[(Path, SvgProperties)]
+    prepared: bool
     linearGradients: Table[string, LinearGradient]
 
   SvgProperties = object
     display: bool
     fillRule: WindingRule
     fill: string
+    fillColor: ColorRGBX
+    fillPrepared: PreparedShapes
     stroke: ColorRGBX
     strokeWidth: float32
     strokeLineCap: LineCap
     strokeLineJoin: LineJoin
     strokeMiterLimit: float32
     strokeDashArray: seq[float32]
+    strokePrepared: PreparedShapes
     transform: Mat3
     opacity, fillOpacity, strokeOpacity: float32
 
@@ -554,8 +558,50 @@ proc parseSvg*(data: string, width = 0, height = 0): Svg {.raises: [PixieError].
   except:
     raise currentExceptionAsPixieError()
 
+proc prepareDraws(svg: Svg) {.raises: [PixieError].} =
+  ## Tessellates SVG paths once so repeated renders reuse polygons.
+  if svg.prepared:
+    return
+
+  try:
+    for i in 0 ..< svg.elements.len:
+      let
+        path = svg.elements[i][0]
+        props = svg.elements[i][1].addr
+      if not props.display or props.opacity <= 0:
+        continue
+
+      if props.fill != "none" and not props.fill.startsWith("url("):
+        props.fillColor =
+          parseHtmlColor(props.fill).rgbx * (props.fillOpacity * props.opacity)
+        if props.fillColor.a > 0:
+          props.fillPrepared = path.polygonsForFill(props.transform).prepareShapes(
+            svg.width, svg.height
+          )
+
+      if props.stroke != rgbx(0, 0, 0, 0) and props.strokeWidth > 0:
+        let strokeColor =
+          props.stroke * (props.opacity * props.strokeOpacity)
+        if strokeColor.a > 0:
+          props.stroke = strokeColor
+          props.strokePrepared = path.polygonsForStroke(
+            props.transform,
+            props.strokeWidth,
+            props.strokeLineCap,
+            props.strokeLineJoin,
+            props.strokeMiterLimit,
+            props.strokeDashArray
+          ).prepareShapes(svg.width, svg.height)
+  except PixieError as e:
+    raise e
+  except:
+    raise currentExceptionAsPixieError()
+
+  svg.prepared = true
+
 proc newImage*(svg: Svg): Image {.raises: [PixieError].} =
   ## Render SVG and return the image.
+  svg.prepareDraws()
   result = newImage(svg.width, svg.height)
 
   try:
@@ -563,7 +609,6 @@ proc newImage*(svg: Svg): Image {.raises: [PixieError].} =
     for (path, props) in svg.elements:
       if props.display and props.opacity > 0:
         if props.fill != "none":
-          var paint: Paint
           if props.fill.startsWith("url("):
             let closingParen = props.fill.find(")", 5)
             if closingParen == -1:
@@ -571,36 +616,33 @@ proc newImage*(svg: Svg): Image {.raises: [PixieError].} =
             let id = props.fill[5 .. closingParen - 1]
             if id in svg.linearGradients:
               let linearGradient = svg.linearGradients[id]
-              paint = newPaint(LinearGradientPaint)
+              var paint = newPaint(LinearGradientPaint)
               paint.gradientHandlePositions = @[
                 props.transform * vec2(linearGradient.x1, linearGradient.y1),
                 props.transform * vec2(linearGradient.x2, linearGradient.y2)
               ]
               paint.gradientStops = linearGradient.stops
+              paint.opacity = props.fillOpacity * props.opacity
+              paint.blendMode = blendMode
+              result.fillPath(path, paint, props.transform, props.fillRule)
             else:
               raise newException(PixieError, "Missing SVG resource " & id)
-          else:
-            paint = parseHtmlColor(props.fill).rgbx
-
-          paint.opacity = props.fillOpacity * props.opacity
-          paint.blendMode = blendMode
-
-          result.fillPath(path, paint, props.transform, props.fillRule)
+          elif props.fillPrepared != nil:
+            result.fillPreparedShapes(
+              props.fillPrepared,
+              props.fillColor,
+              props.fillRule,
+              blendMode
+            )
 
         blendMode = NormalBlend # Switch to normal when compositing multiple paths
 
-        if props.stroke != rgbx(0, 0, 0, 0) and props.strokeWidth > 0:
-          let paint = props.stroke.copy()
-          paint.color.a *= (props.opacity * props.strokeOpacity)
-          result.strokePath(
-            path,
-            paint,
-            props.transform,
-            props.strokeWidth,
-            props.strokeLineCap,
-            props.strokeLineJoin,
-            miterLimit = props.strokeMiterLimit,
-            dashes = props.strokeDashArray
+        if props.strokePrepared != nil:
+          result.fillPreparedShapes(
+            props.strokePrepared,
+            props.stroke,
+            NonZero,
+            blendMode
           )
   except PixieError as e:
     raise e

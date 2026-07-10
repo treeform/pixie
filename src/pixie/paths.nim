@@ -38,6 +38,12 @@ type
     requiresAntiAliasing, twoNonintersectingSpanningSegments: bool
     top, bottom: int
 
+  PreparedShapes* = ref object
+    ## Cached scanline partitions for repeated solid fills of the same shapes.
+    partitions: seq[Partition]
+    startX*, startY*, pathWidth*, pathHeight*: int
+    maxEntryCount: int
+
   Fixed32 = int32 ## 24.8 fixed point
 
 const
@@ -1261,7 +1267,7 @@ proc partitionSegments(
           if entry0.midpointX > entry1.midpointX:
             swap partition.entries[1], partition.entries[0]
 
-proc maxEntryCount(partitions: var seq[Partition]): int =
+proc maxEntryCount(partitions: seq[Partition]): int =
   for i in 0 ..< partitions.len:
     result = max(result, partitions[i].entries.len)
 
@@ -1353,7 +1359,7 @@ proc computeCoverage(
   numHits: var int,
   width: int,
   y, startX: int,
-  partitions: var seq[Partition],
+  partitions: seq[Partition],
   partitionIndex: int,
   entryIndices: seq[int],
   numEntryIndices: int,
@@ -1590,38 +1596,75 @@ proc fillHits(
         image.data[dataIndex] = blender(backdrop, rgbx)
         inc dataIndex
 
-proc fillShapes(
+proc prepareShapes*(
+  shapes: seq[Polygon],
+  imageWidth, imageHeight: int
+): PreparedShapes {.raises: [PixieError].} =
+  ## Builds cached partitions for shapes in image space.
+  result = PreparedShapes()
+  let
+    segments = shapes.shapesToSegments()
+    bounds = computeBounds(segments).snapToPixels()
+  result.startX = max(0, bounds.x.int)
+  result.startY = max(0, bounds.y.int)
+  result.pathWidth =
+    if result.startX < imageWidth:
+      min(bounds.w.int, imageWidth - result.startX)
+    else:
+      0
+  result.pathHeight = min(imageHeight, (bounds.y + bounds.h).int)
+
+  if result.pathWidth == 0:
+    return
+
+  if result.pathWidth < 0:
+    raise newException(PixieError, "Path int overflow detected")
+
+  result.partitions = partitionSegments(
+    segments,
+    result.startY,
+    result.pathHeight - result.startY
+  )
+  result.maxEntryCount = result.partitions.maxEntryCount
+
+proc fillShapes*(
   image: Image,
   shapes: seq[Polygon],
   color: SomeColor,
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
+  image.fillPreparedShapes(
+    shapes.prepareShapes(image.width, image.height),
+    color,
+    windingRule,
+    blendMode
+  )
+
+proc fillPreparedShapes*(
+  image: Image,
+  prepared: PreparedShapes,
+  color: SomeColor,
+  windingRule: WindingRule,
+  blendMode: BlendMode
+) =
+  ## Fills previously prepared shapes.
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
   let
     rgbx = color.asRgbx()
-    segments = shapes.shapesToSegments()
-    bounds = computeBounds(segments).snapToPixels()
-    startX = max(0, bounds.x.int)
-    startY = max(0, bounds.y.int)
-    pathWidth =
-      if startX < image.width:
-        min(bounds.w.int, image.width - startX)
-      else:
-        0
-    pathHeight = min(image.height, (bounds.y + bounds.h).int)
+    startX = prepared.startX
+    startY = prepared.startY
+    pathWidth = prepared.pathWidth
+    pathHeight = prepared.pathHeight
 
   if pathWidth == 0:
     return
 
-  if pathWidth < 0:
-    raise newException(PixieError, "Path int overflow detected")
-
+  let partitions = prepared.partitions
   var
-    partitions = partitionSegments(segments, startY, pathHeight - startY)
     partitionIndex: int
-    entryIndices = newSeq[int](partitions.maxEntryCount)
+    entryIndices = newSeq[int](prepared.maxEntryCount)
     numEntryIndices: int
     trapezoidSegments = newSeq[Segment](entryIndices.len)
     coverages = newSeq[uint8](pathWidth)
@@ -2089,6 +2132,34 @@ proc parseSomePath(
     parsePath(path).commandsToShapes(closeSubpaths, pixelScale)
   elif type(path) is Path:
     path.commandsToShapes(closeSubpaths, pixelScale)
+
+proc polygonsForFill*(
+  path: Path, transform = mat3()
+): seq[Polygon] {.raises: [PixieError].} =
+  ## Tessellates a path into fill polygons in transform space.
+  result = parseSomePath(path, true, transform.pixelScale())
+  result.transform(transform)
+
+proc polygonsForStroke*(
+  path: Path,
+  transform = mat3(),
+  strokeWidth: float32 = 1.0,
+  lineCap = ButtCap,
+  lineJoin = MiterJoin,
+  miterLimit = defaultMiterLimit,
+  dashes: seq[float32] = @[]
+): seq[Polygon] {.raises: [PixieError].} =
+  ## Tessellates a stroked path into fill polygons in transform space.
+  result = strokeShapes(
+    parseSomePath(path, false, transform.pixelScale()),
+    strokeWidth,
+    lineCap,
+    lineJoin,
+    miterLimit,
+    dashes,
+    pixelScale(transform)
+  )
+  result.transform(transform)
 
 proc fillPath*(
   image: Image,
