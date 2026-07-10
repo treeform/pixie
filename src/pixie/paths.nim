@@ -30,7 +30,7 @@ type
 
   PartitionEntry = object
     segment: Segment
-    m, b: float32
+    m, inverseM, b: float32 # Line slope, reciprocal slope, and intercept.
     winding: int16
 
   Partition = object
@@ -1132,13 +1132,14 @@ proc initPartitionEntry(segment: Segment, winding: int16): PartitionEntry =
     result.b = segment.at.x # Leave m = 0, store the x we want in b
   else:
     result.m = (segment.at.y - segment.to.y) / d
+    result.inverseM = 1 / result.m
     result.b = segment.at.y - result.m * segment.at.x
 
 proc solveX(entry: PartitionEntry, y: float32): float32 {.inline.} =
   if entry.m == 0:
     entry.b
   else:
-    (y - entry.b) / entry.m
+    (y - entry.b) * entry.inverseM
 
 proc solveY(entry: PartitionEntry, x: float32): float32 {.inline.} =
   entry.m * x + entry.b
@@ -1192,16 +1193,16 @@ proc partitionSegments(
   result[^1].bottom = top + height
 
   var entries = newSeq[PartitionEntry](segments.len)
-  for i, (segment, winding) in segments:
-    entries[i] = initPartitionEntry(segment, winding)
-
   if numPartitions == 1:
+    for i, (segment, winding) in segments:
+      entries[i] = initPartitionEntry(segment, winding)
     result[0].entries = move entries
   else:
-    iterator partitionRange(
-      segment: Segment,
-      numPartitions, startY, partitionHeight: uint32
-    ): uint32 =
+    var
+      entryCounts = newSeq[int](numPartitions)
+      partitionRanges = newSeq[(uint32, uint32)](segments.len)
+    for i, (segment, winding) in segments:
+      entries[i] = initPartitionEntry(segment, winding)
       var
         atPartition = max(0, segment.at.y - startY.float32).uint32
         toPartition = max(0, segment.to.y - startY.float32).uint32
@@ -1209,26 +1210,19 @@ proc partitionSegments(
       toPartition = toPartition div partitionHeight
       atPartition = min(atPartition, numPartitions - 1)
       toPartition = min(toPartition, numPartitions - 1)
+      partitionRanges[i] = (atPartition, toPartition)
       for partitionIndex in atPartition .. toPartition:
-        yield partitionIndex
-
-    var entryCounts = newSeq[int](numPartitions)
-    for (segment, _) in segments:
-      for partitionIndex in segment.partitionRange(
-        numPartitions, startY, partitionHeight
-      ):
         inc entryCounts[partitionIndex]
 
-    for partitionIndex, entryCounts in entryCounts:
-      result[partitionIndex].entries.setLen(entryCounts)
+    for partitionIndex in 0 ..< entryCounts.len:
+      result[partitionIndex].entries.setLen(entryCounts[partitionIndex])
+      entryCounts[partitionIndex] = 0
 
-    var indexes = newSeq[int](numPartitions)
-    for i, (segment, winding) in segments:
-      for partitionIndex in segment.partitionRange(
-        numPartitions, startY, partitionHeight
-      ):
-        result[partitionIndex].entries[indexes[partitionIndex]] = entries[i]
-        inc indexes[partitionIndex]
+    for i in 0 ..< entries.len:
+      let (atPartition, toPartition) = partitionRanges[i]
+      for partitionIndex in atPartition .. toPartition:
+        result[partitionIndex].entries[entryCounts[partitionIndex]] = entries[i]
+        inc entryCounts[partitionIndex]
 
   for partition in result.mitems:
     partition.requiresAntiAliasing = requiresAntiAliasing(partition.entries)
@@ -1353,14 +1347,13 @@ proc computeCoverage(
   numHits: var int,
   width: int,
   y, startX: int,
-  partitions: var seq[Partition],
-  partitionIndex: int,
+  partition: ptr Partition,
   entryIndices: seq[int],
   numEntryIndices: int,
   windingRule: WindingRule
 ) {.inline.} =
   let
-    aa = partitions[partitionIndex].requiresAntiAliasing
+    aa = partition.requiresAntiAliasing
     quality = if aa: 5 else: 1 # Must divide 255 cleanly (1, 3, 5, 15, 17, 51, 85)
     sampleCoverage = (255 div quality).uint8
     offset = 1 / quality.float32
@@ -1373,13 +1366,13 @@ proc computeCoverage(
     for i in 0 ..< numEntryIndices:
       let
         entryIndex = entryIndices[i]
-        entry = partitions[partitionIndex].entries[entryIndex].addr
+        entry = partition.entries[entryIndex].addr
       if entry.segment.at.y <= yLine and entry.segment.to.y >= yLine:
         let x =
           if entry.m == 0:
             entry.b
           else:
-            (yLine - entry.b) / entry.m
+            (yLine - entry.b) * entry.inverseM
 
         hits[numHits] = (min(x, width.float32).fixed32, entry.winding)
         inc numHits
@@ -1878,14 +1871,13 @@ proc fillShapes(
       image.width,
       y,
       startX,
-      partitions,
-      partitionIndex,
+      partition,
       entryIndices,
       numEntryIndices,
       windingRule
     )
 
-    if partitions[partitionIndex].requiresAntiAliasing:
+    if partition.requiresAntiAliasing:
       image.fillCoverage(
         rgbx,
         startX,
