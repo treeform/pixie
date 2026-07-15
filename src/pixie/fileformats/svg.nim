@@ -492,12 +492,15 @@ proc parseSvgElement(
           position: parseFloat(child.attr("offset"))
         ))
       else:
-        raise newException(PixieError, "Unexpected SVG tag: " & child.tag)
+        when defined(pixieDebugSvg):
+          echo "Skipping unexpected SVG tag: ", child.tag
 
     svg.linearGradients[id] = linearGradient
 
   else:
-    raise newException(PixieError, "Unsupported SVG tag: " & node.tag)
+    ## Skip unsupported tags (mask, filter, text, etc.) and continue.
+    when defined(pixieDebugSvg):
+      echo "Skipping unsupported SVG tag: ", node.tag
 
 proc parseSvg*(
   root: XmlNode, width = 0, height = 0
