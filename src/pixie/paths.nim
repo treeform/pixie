@@ -1604,15 +1604,20 @@ proc fillShapes(
     segments = shapes.shapesToSegments()
     bounds = computeBounds(segments).snapToPixels()
     startX = max(0, bounds.x.int)
-    startY = max(0, bounds.y.int)
+    startY = clamp(bounds.y.int, 0, image.height)
     pathWidth =
       if startX < image.width:
         min(bounds.w.int, image.width - startX)
       else:
         0
-    pathHeight = min(image.height, (bounds.y + bounds.h).int)
+    pathHeight = clamp((bounds.y + bounds.h).int, 0, image.height)
 
   if pathWidth == 0:
+    if blendMode == MaskBlend:
+      # The path is entirely outside the image horizontally.
+      # A mask fill still needs to record that, otherwise the
+      # previous mask survives and the new clip has no effect.
+      image.clearUnsafe(0, 0, 0, image.height)
     return
 
   if pathWidth < 0:

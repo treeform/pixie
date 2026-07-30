@@ -675,3 +675,38 @@ block:
     ctx.fillText("Abcdefghijklmnop (" & $baseline & ")", 0, y)
 
   ctx.image.xray("tests/contexts/textBaseline_1.png")
+
+block:
+  # Regression: a clip region outside the image must not write outside the image.
+  const
+    width = 420
+    height = 460
+
+  proc paintedUnderClip(clipRect: Rect): int =
+    ## Pixels painted by a full-canvas fill under `clipRect`.
+    let
+      image = newImage(width, height)
+      ctx = image.newContext()
+      first = newPath()
+    first.rect(0, 0, width.float32, height.float32)
+    ctx.clip(first) # mask == nil, so this one takes the OverwriteBlend path
+
+    let second = newPath()
+    second.rect(clipRect)
+    ctx.clip(second) # mask != nil, so this one takes the MaskBlend path
+
+    ctx.fillStyle = rgba(255, 0, 0, 255)
+    ctx.fillRect(rect(0, 0, width.float32, height.float32))
+
+    for px in image.data:
+      if px.a != 0:
+        inc result
+
+  # a clip region off each edge excludes everything
+  doAssert paintedUnderClip(rect(0, 500, 200, 100)) == 0    # below
+  doAssert paintedUnderClip(rect(0, -600, 200, 100)) == 0   # above
+  doAssert paintedUnderClip(rect(500, 0, 100, 200)) == 0    # right
+  doAssert paintedUnderClip(rect(-600, 0, 100, 200)) == 0   # left
+
+  # a clip region on the canvas is unaffected
+  doAssert paintedUnderClip(rect(10, 10, 30, 30)) == 900
