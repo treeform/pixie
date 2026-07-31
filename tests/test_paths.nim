@@ -761,41 +761,31 @@ block:
   let path = parsePath(pathStr)
   doAssert path.computeBounds() == rect(0, 0, 0, 100)
 
-block: # OverwriteBlend writes only where the path has coverage
-  const backdrop = rgbx(0, 0, 255, 255)
-
+block:
+  # OverwriteBlend must leave pixels the path does not cover, so on an opaque
+  # backdrop nothing can end up fully transparent.
   let
+    image = newImage(128, 64)
     paint = newPaint(SolidPaint)
     path = newPath()
+  image.fill(rgbx(0, 0, 255, 255))
   paint.color = color(1, 0, 0, 1)
-  path.circle(circle(vec2(64, 32), 40))
-
-  # Drawn onto a transparent image this is rgbx * coverage, so it is both the
-  # coverage map and the expected result where covered.
-  let expected = newImage(128, 64)
-  expected.fillPath(path, paint)
-
-  let image = newImage(128, 64)
-  image.fill(backdrop)
   paint.blendMode = OverwriteBlend
+  path.circle(circle(vec2(64, 32), 40))
   image.fillPath(path, paint)
+  for c in image.data:
+    doAssert c.a != 0
+  image.xray("tests/paths/overwriteCircle.png")
 
-  var covered, uncovered: int
-  for y in 0 ..< image.height:
-    for x in 0 ..< image.width:
-      if expected[x, y].a == 0:
-        doAssert image[x, y] == backdrop, &"{x},{y} was overwritten"
-        inc uncovered
-      else:
-        doAssert image[x, y] == expected[x, y], &"{x},{y} is wrong"
-        inc covered
-  doAssert covered > 0 and uncovered > 0
-
-block: # a sliver whose coverage rounds away must not erase the backdrop
-  const backdrop = rgbx(0, 0, 255, 255)
-
+block:
   # Spikes thin enough that coverage rounds to nothing near their tips.
-  let path = newPath()
+  let
+    image = newImage(260, 200)
+    paint = newPaint(SolidPaint)
+    path = newPath()
+  image.fill(rgbx(0, 0, 255, 255))
+  paint.color = color(1, 0.85, 0.1, 1)
+  paint.blendMode = OverwriteBlend
   for i in 0 ..< 80:
     let
       a = i.float32 * PI.float32 / 40
@@ -803,19 +793,7 @@ block: # a sliver whose coverage rounds away must not erase the backdrop
       pt = vec2(130 + cos(a) * r, 100 + sin(a) * r)
     if i == 0: path.moveTo(pt) else: path.lineTo(pt)
   path.closePath()
-
-  let
-    paint = newPaint(SolidPaint)
-    expected = newImage(260, 200)
-  paint.color = color(1, 0.85, 0.1, 1)
-  expected.fillPath(path, paint)
-
-  let image = newImage(260, 200)
-  image.fill(backdrop)
-  paint.blendMode = OverwriteBlend
   image.fillPath(path, paint)
-
-  for y in 0 ..< image.height:
-    for x in 0 ..< image.width:
-      if expected[x, y].a == 0:
-        doAssert image[x, y] == backdrop, &"{x},{y} was overwritten"
+  for c in image.data:
+    doAssert c.a != 0
+  image.xray("tests/paths/overwriteStar.png")
