@@ -1,4 +1,4 @@
-import chroma, pixie, pixie/fileformats/png, strformat, xrays
+import chroma, pixie, std/math, pixie/fileformats/png, strformat, xrays
 
 block:
   let pathStr = """
@@ -790,3 +790,32 @@ block: # OverwriteBlend writes only where the path has coverage
         doAssert image[x, y] == expected[x, y], &"{x},{y} is wrong"
         inc covered
   doAssert covered > 0 and uncovered > 0
+
+block: # a sliver whose coverage rounds away must not erase the backdrop
+  const backdrop = rgbx(0, 0, 255, 255)
+
+  # Spikes thin enough that coverage rounds to nothing near their tips.
+  let path = newPath()
+  for i in 0 ..< 80:
+    let
+      a = i.float32 * PI.float32 / 40
+      r = if (i and 1) == 0: 42.0 else: 92.0
+      pt = vec2(130 + cos(a) * r, 100 + sin(a) * r)
+    if i == 0: path.moveTo(pt) else: path.lineTo(pt)
+  path.closePath()
+
+  let
+    paint = newPaint(SolidPaint)
+    expected = newImage(260, 200)
+  paint.color = color(1, 0.85, 0.1, 1)
+  expected.fillPath(path, paint)
+
+  let image = newImage(260, 200)
+  image.fill(backdrop)
+  paint.blendMode = OverwriteBlend
+  image.fillPath(path, paint)
+
+  for y in 0 ..< image.height:
+    for x in 0 ..< image.width:
+      if expected[x, y].a == 0:
+        doAssert image[x, y] == backdrop, &"{x},{y} was overwritten"
