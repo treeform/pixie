@@ -554,10 +554,24 @@ proc blendLineCoverageOverwriteSse2*(
         mm_store_si128(line[i].addr, rgbxVec)
         i += 4
     else:
-      var coverage = coverage
+      var
+        coverage = coverage
+        eqZero = eqZero
       for _ in 0 ..< 4:
-        mm_store_si128(line[i].addr, rgbxVec.applyCoverage(coverage))
+        var preserve = mm_unpacklo_epi8(eqZero, eqZero)
+        preserve = mm_unpacklo_epi16(preserve, preserve)
+        let
+          source = rgbxVec.applyCoverage(coverage)
+          backdrop = mm_load_si128(line[i].addr)
+        mm_store_si128(
+          line[i].addr,
+          mm_or_si128(
+            mm_and_si128(preserve, backdrop),
+            mm_andnot_si128(preserve, source)
+          )
+        )
         coverage = mm_srli_si128(coverage, 4)
+        eqZero = mm_srli_si128(eqZero, 4)
         i += 4
 
   for i in i ..< len:

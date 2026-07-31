@@ -760,3 +760,33 @@ block:
   """
   let path = parsePath(pathStr)
   doAssert path.computeBounds() == rect(0, 0, 0, 100)
+
+block: # OverwriteBlend writes only where the path has coverage
+  const backdrop = rgbx(0, 0, 255, 255)
+
+  let
+    paint = newPaint(SolidPaint)
+    path = newPath()
+  paint.color = color(1, 0, 0, 1)
+  path.circle(circle(vec2(64, 32), 40))
+
+  # Drawn onto a transparent image this is rgbx * coverage, so it is both the
+  # coverage map and the expected result where covered.
+  let expected = newImage(128, 64)
+  expected.fillPath(path, paint)
+
+  let image = newImage(128, 64)
+  image.fill(backdrop)
+  paint.blendMode = OverwriteBlend
+  image.fillPath(path, paint)
+
+  var covered, uncovered: int
+  for y in 0 ..< image.height:
+    for x in 0 ..< image.width:
+      if expected[x, y].a == 0:
+        doAssert image[x, y] == backdrop, &"{x},{y} was overwritten"
+        inc uncovered
+      else:
+        doAssert image[x, y] == expected[x, y], &"{x},{y} is wrong"
+        inc covered
+  doAssert covered > 0 and uncovered > 0

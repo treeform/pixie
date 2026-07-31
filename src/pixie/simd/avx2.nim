@@ -477,7 +477,19 @@ proc blendLineCoverageOverwriteAvx2*(
           mm_srli_si128(coverageHi, 8),
         ]
       for j in 0 ..< 4:
-        mm256_store_si256(line[i].addr, rgbxVec.applyCoverage(coverages[j]))
+        let
+          preserve = mm256_cmpeq_epi32(
+            mm256_cvtepu8_epi32(coverages[j]), vecZero
+          )
+          source = rgbxVec.applyCoverage(coverages[j])
+          backdrop = mm256_load_si256(line[i].addr)
+        mm256_store_si256(
+          line[i].addr,
+          mm256_or_si256(
+            mm256_and_si256(preserve, backdrop),
+            mm256_andnot_si256(preserve, source)
+          )
+        )
         i += 8
 
   for i in i ..< len:
