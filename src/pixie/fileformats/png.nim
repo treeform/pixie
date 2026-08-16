@@ -225,8 +225,11 @@ proc decodeImageData(
       of 4: 2
       of 6: 4
       else: 0 # Not possible, parseHeader validates
-    valuesPerByte = 8 div header.bitDepth.int
-    rowBytes = ceil((header.width.int * valuesPerPixel) / valuesPerByte).int
+    bytesPerValue = if header.bitDepth == 16: 2 else: 1
+    valuesPerByte = if header.bitDepth == 16: 1 else: 8 div header.bitDepth.int
+    rowBytes = ceil(
+      (header.width.int * valuesPerPixel * bytesPerValue) / valuesPerByte
+    ).int
     totalBytes = rowBytes * header.height.int
 
   # Uncompressed image data should be the total bytes of pixel data plus
@@ -234,13 +237,31 @@ proc decodeImageData(
   if uncompressed.len != totalBytes + header.height.int:
     failInvalid()
 
-  let unfiltered = unfilter(
-    uncompressed.cstring,
-    uncompressed.len,
-    header.height,
-    rowBytes,
-    max(valuesPerPixel div valuesPerByte, 1)
-  )
+  var
+    unfiltered = unfilter(
+      uncompressed.cstring,
+      uncompressed.len,
+      header.height,
+      rowBytes,
+      max(valuesPerPixel * bytesPerValue div valuesPerByte, 1)
+    )
+    bitDepth = header.bitDepth
+    transparency = transparency
+
+  if bitDepth == 16:
+    # Samples are big-endian 16 bit; keeping the high byte of each turns the
+    # rows (and any tRNS colour key) into the 8 bit layout the paths below
+    # read, which is all an 8 bit per channel image can hold anyway.
+    var reduced = newSeq[uint8](unfiltered.len div 2)
+    for i in 0 ..< reduced.len:
+      reduced[i] = unfiltered[i * 2]
+    unfiltered = move reduced
+    var reducedTransparency: string
+    for i in countup(0, transparency.high, 2):
+      reducedTransparency.add('\0')
+      reducedTransparency.add(transparency[i])
+    transparency = reducedTransparency
+    bitDepth = 8
 
   case header.colorType:
   of 0:
@@ -249,7 +270,7 @@ proc decodeImageData(
     for y in 0 ..< header.height:
       for x in 0 ..< header.width:
         var value = unfiltered[bytePos]
-        case header.bitDepth:
+        case bitDepth:
         of 1:
           value = (value shr (7 - bitPos)) and 1
           value *= 255
@@ -313,7 +334,7 @@ proc decodeImageData(
     for y in 0 ..< header.height:
       for x in 0 ..< header.width:
         var value = unfiltered[bytePos]
-        case header.bitDepth:
+        case bitDepth:
         of 1:
           value = (value shr (7 - bitPos)) and 1
           inc bitPos
@@ -444,8 +465,6 @@ proc decodePng*(data: pointer, len: int): Png {.raises: [PixieError].} =
   inc(pos, 4) # CRC
 
   # Not yet supported:
-  if header.bitDepth == 16:
-    raise newException(PixieError, "PNG 16 bit depth not supported yet")
   if header.interlaceMethod != 0:
     raise newException(PixieError, "Interlaced PNG not supported yet")
 

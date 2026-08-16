@@ -7,17 +7,17 @@ const
     "basn0g02", # 2 bit (4 level) grayscale
     "basn0g04", # 4 bit (16 level) grayscale
     "basn0g08", # 8 bit (256 level) grayscale
-    # "basn0g16", # 16 bit (64k level) grayscale
+    "basn0g16", # 16 bit (64k level) grayscale
     "basn2c08", # 3x8 bits rgb color
-    # "basn2c16", # 3x16 bits rgb color
+    "basn2c16", # 3x16 bits rgb color
     "basn3p01", # 1 bit (2 color) paletted
     "basn3p02", # 2 bit (4 color) paletted
     "basn3p04", # 4 bit (16 color) paletted
     "basn3p08", # 8 bit (256 color) paletted
     "basn4a08", # 8 bit grayscale + 8 bit alpha-channel
-    # "basn4a16", # 16 bit grayscale + 16 bit alpha-channel
+    "basn4a16", # 16 bit grayscale + 16 bit alpha-channel
     "basn6a08", # 3x8 bits rgb color + 8 bit alpha-channel
-    # "basn6a16", # 3x16 bits rgb color + 16 bit alpha-channel
+    "basn6a16", # 3x16 bits rgb color + 16 bit alpha-channel
 
     # Interlaced
     # "basi0g01", # black & white
@@ -77,19 +77,19 @@ const
     # "bgai4a08", # 8 bit grayscale, alpha, no background chunk, interlaced
     # "bgai4a16", # 16 bit grayscale, alpha, no background chunk, interlaced
     "bgan6a08", # 3x8 bits rgb color, alpha, no background chunk
-    # "bgan6a16", # 3x16 bits rgb color, alpha, no background chunk
+    "bgan6a16", # 3x16 bits rgb color, alpha, no background chunk
     "bgbn4a08", # 8 bit grayscale, alpha, black background chunk
-    # "bggn4a16", # 16 bit grayscale, alpha, gray background chunk
+    "bggn4a16", # 16 bit grayscale, alpha, gray background chunk
     "bgwn6a08", # 3x8 bits rgb color, alpha, white background chunk
-    # "bgyn6a16", # 3x16 bits rgb color, alpha, yellow background chunk
+    "bgyn6a16", # 3x16 bits rgb color, alpha, yellow background chunk
 
     # "tbbn0g04", # transparent, black background chunk
-    # # "tbbn2c16", # transparent, blue background chunk
+    "tbbn2c16", # transparent, blue background chunk
     "tbbn3p08", # transparent, black background chunk
-    # # "tbgn2c16", # transparent, green background chunk
+    "tbgn2c16", # transparent, green background chunk
     "tbgn3p08", # transparent, light-gray background chunk
     "tbrn2c08", # transparent, red background chunk
-    # # "tbwn0g16", # transparent, white background chunk
+    "tbwn0g16", # transparent, white background chunk
     "tbwn3p08", # transparent, white background chunk
     "tbyn3p08", # transparent, yellow background chunk
     "tp0n0g08", # not transparent for reference (logo on gray)
