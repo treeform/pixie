@@ -1,4 +1,4 @@
-import chroma, pixie, pixie/fileformats/png, strformat, xrays
+import chroma, pixie, std/math, pixie/fileformats/png, strformat, xrays
 
 block:
   let pathStr = """
@@ -760,3 +760,40 @@ block:
   """
   let path = parsePath(pathStr)
   doAssert path.computeBounds() == rect(0, 0, 0, 100)
+
+block:
+  # OverwriteBlend must leave pixels the path does not cover, so on an opaque
+  # backdrop nothing can end up fully transparent.
+  let
+    image = newImage(128, 64)
+    paint = newPaint(SolidPaint)
+    path = newPath()
+  image.fill(rgbx(0, 0, 255, 255))
+  paint.color = color(1, 0, 0, 1)
+  paint.blendMode = OverwriteBlend
+  path.circle(circle(vec2(64, 32), 40))
+  image.fillPath(path, paint)
+  for c in image.data:
+    doAssert c.a != 0
+  image.xray("tests/paths/overwriteCircle.png")
+
+block:
+  # Spikes thin enough that coverage rounds to nothing near their tips.
+  let
+    image = newImage(260, 200)
+    paint = newPaint(SolidPaint)
+    path = newPath()
+  image.fill(rgbx(0, 0, 255, 255))
+  paint.color = color(1, 0.85, 0.1, 1)
+  paint.blendMode = OverwriteBlend
+  for i in 0 ..< 80:
+    let
+      a = i.float32 * PI.float32 / 40
+      r = if (i and 1) == 0: 42.0 else: 92.0
+      pt = vec2(130 + cos(a) * r, 100 + sin(a) * r)
+    if i == 0: path.moveTo(pt) else: path.lineTo(pt)
+  path.closePath()
+  image.fillPath(path, paint)
+  for c in image.data:
+    doAssert c.a != 0
+  image.xray("tests/paths/overwriteStar.png")

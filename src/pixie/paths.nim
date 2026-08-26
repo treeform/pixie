@@ -1601,6 +1601,7 @@ proc fillShapes(
   # rasterize only within the total bounds
   let
     rgbx = color.asRgbx()
+    clearsUncovered = blendMode == MaskBlend
     segments = shapes.shapesToSegments()
     bounds = computeBounds(segments).snapToPixels()
     startX = max(0, bounds.x.int)
@@ -1806,7 +1807,8 @@ proc fillShapes(
                       applyOpacity(vecRgbx, area)
                     else:
                       rgbx * area
-                image.data[dataIndex] = blender(backdrop, source)
+                if source.a != 0 or clearsUncovered:
+                  image.data[dataIndex] = blender(backdrop, source)
 
             block: # Right-side partial coverage
               let
@@ -1844,7 +1846,8 @@ proc fillShapes(
                       applyOpacity(vecRgbx, area)
                     else:
                       rgbx * area
-                image.data[dataIndex] = blender(backdrop, source)
+                if source.a != 0 or clearsUncovered:
+                  image.data[dataIndex] = blender(backdrop, source)
 
             let
               fillBegin = leftCoverEnd.clamp(0, image.width)
