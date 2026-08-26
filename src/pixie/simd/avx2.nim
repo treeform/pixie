@@ -695,7 +695,7 @@ proc blendLineCoverageMaskAvx2*(
       15, -1, 15, -1, 11, -1, 11, -1, 7, -1, 7, -1, 3, -1, 3, -1,
       15, -1, 15, -1, 11, -1, 11, -1, 7, -1, 7, -1, 3, -1, 3, -1
     )
-  while i < len - 16:
+  while i < len - 32:
     let
       coverage = mm256_loadu_si256(coverages[i].addr)
       eqZero = mm256_cmpeq_epi8(coverage, vecZero)
