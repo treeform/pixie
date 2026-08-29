@@ -5,7 +5,7 @@ import
   pixie/fileformats/[bmp, gif, jpeg, png, ppm, qoi, svg, webp]
 
 export bumpy, chroma, common, contexts, fonts, imagebase64, images, paints,
-    paths, vmath
+    paths, svg, vmath
 
 type
   FileFormat* = enum
