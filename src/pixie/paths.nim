@@ -30,11 +30,12 @@ type
 
   PartitionEntry = object
     segment: Segment
-    m, b: float32
+    m, b, invM: float32
     winding: int16
 
   Partition = object
     entries: seq[PartitionEntry]
+    numEntries: int
     requiresAntiAliasing, twoNonintersectingSpanningSegments: bool
     top, bottom: int
 
@@ -1058,8 +1059,9 @@ proc commandsToShapes(
 
 proc shapesToSegments(
   shapes: seq[Polygon],
+  segments: var seq[(Segment, int16)],
   skipHorizontal = true
-): seq[(Segment, int16)] =
+) =
   ## Converts the shapes into a set of filtered segments with winding value.
 
   # Quantize the segment to prevent leaks
@@ -1087,7 +1089,13 @@ proc shapesToSegments(
         swap(segment.at, segment.to)
         winding = -1
 
-      result.add((segment, winding))
+      segments.add((segment, winding))
+
+proc shapesToSegments(
+  shapes: seq[Polygon],
+  skipHorizontal = true
+): seq[(Segment, int16)] =
+  shapesToSegments(shapes, result, skipHorizontal)
 
 proc transform(shapes: var seq[Polygon], transform: Mat3) =
   if transform != mat3():
@@ -1133,12 +1141,13 @@ proc initPartitionEntry(segment: Segment, winding: int16): PartitionEntry =
   else:
     result.m = (segment.at.y - segment.to.y) / d
     result.b = segment.at.y - result.m * segment.at.x
+    result.invM = 1 / result.m
 
 proc solveX(entry: PartitionEntry, y: float32): float32 {.inline.} =
   if entry.m == 0:
     entry.b
   else:
-    (y - entry.b) / entry.m
+    (y - entry.b) * entry.invM
 
 proc solveY(entry: PartitionEntry, x: float32): float32 {.inline.} =
   entry.m * x + entry.b
@@ -1159,44 +1168,54 @@ proc requiresAntiAliasing(segment: Segment): bool {.inline.} =
     # AA is required if all segments are not vertical or have fractional > 0
     return true
 
-proc requiresAntiAliasing(entries: var seq[PartitionEntry]): bool =
+proc requiresAntiAliasing(
+  entries: var seq[PartitionEntry], numEntries: int
+): bool =
   ## Returns true if the fill requires antialiasing.
-  for entry in entries:
-    if entry.segment.requiresAntiAliasing:
+  for i in 0 ..< numEntries:
+    if entries[i].segment.requiresAntiAliasing:
       return true
 
+template ensureLen[T](s: var seq[T], n: int) =
+  # Grow-only scratch resize, keeps capacity when shrinking is not needed
+  if s.len < n:
+    s.setLen(n)
+
 proc partitionSegments(
-  segments: seq[(Segment, int16)], top, height: int
-): seq[Partition] =
+  segments: seq[(Segment, int16)], top, height: int,
+  partitions: var seq[Partition]
+): int =
   ## Puts segments into the height partitions they intersect with.
+  ## Returns the number of partitions used, reusing partitions storage.
   let
     maxPartitions = max(1, height div 4).uint32
     numPartitions = min(maxPartitions, max(1, segments.len div 2).uint32)
 
-  result.setLen(numPartitions)
+  result = numPartitions.int
+  if partitions.len < result:
+    partitions.setLen(result)
 
   let
     startY = top.uint32
     partitionHeight = height.uint32 div numPartitions
 
   # Set the bottom values for the partitions (y value where this partition ends)
-  result[0].top = top
-  result[0].bottom = top + partitionHeight.int
-  for i in 1 ..< result.len:
-    result[i].top = result[i - 1].bottom
-    result[i].bottom = result[i - 1].bottom + partitionHeight.int
+  partitions[0].top = top
+  partitions[0].bottom = top + partitionHeight.int
+  for i in 1 ..< result:
+    partitions[i].top = partitions[i - 1].bottom
+    partitions[i].bottom = partitions[i - 1].bottom + partitionHeight.int
 
   # Ensure the final partition goes to the actual bottom
   # This is needed since the final partition includes
   # height - (height div numPartitions) * numPartitions
-  result[^1].bottom = top + height
-
-  var entries = newSeq[PartitionEntry](segments.len)
-  for i, (segment, winding) in segments:
-    entries[i] = initPartitionEntry(segment, winding)
+  partitions[result - 1].bottom = top + height
 
   if numPartitions == 1:
-    result[0].entries = move entries
+    partitions[0].entries.ensureLen(segments.len)
+    for i, (segment, winding) in segments:
+      partitions[0].entries[i] = initPartitionEntry(segment, winding)
+    partitions[0].numEntries = segments.len
   else:
     iterator partitionRange(
       segment: Segment,
@@ -1212,42 +1231,46 @@ proc partitionSegments(
       for partitionIndex in atPartition .. toPartition:
         yield partitionIndex
 
-    var entryCounts = newSeq[int](numPartitions)
+    for i in 0 ..< result:
+      partitions[i].numEntries = 0
+
     for (segment, _) in segments:
       for partitionIndex in segment.partitionRange(
         numPartitions, startY, partitionHeight
       ):
-        inc entryCounts[partitionIndex]
+        inc partitions[partitionIndex].numEntries
 
-    for partitionIndex, entryCounts in entryCounts:
-      result[partitionIndex].entries.setLen(entryCounts)
+    for i in 0 ..< result:
+      partitions[i].entries.ensureLen(partitions[i].numEntries)
+      partitions[i].numEntries = 0 # Reused as the write index below
 
-    var indexes = newSeq[int](numPartitions)
-    for i, (segment, winding) in segments:
+    for (segment, winding) in segments:
+      let entry = initPartitionEntry(segment, winding)
       for partitionIndex in segment.partitionRange(
         numPartitions, startY, partitionHeight
       ):
-        result[partitionIndex].entries[indexes[partitionIndex]] = entries[i]
-        inc indexes[partitionIndex]
+        partitions[partitionIndex].entries[
+          partitions[partitionIndex].numEntries
+        ] = entry
+        inc partitions[partitionIndex].numEntries
 
-  for partition in result.mitems:
-    partition.requiresAntiAliasing = requiresAntiAliasing(partition.entries)
+  for p in 0 ..< result:
+    template partition: untyped = partitions[p]
+    partition.requiresAntiAliasing =
+      requiresAntiAliasing(partition.entries, partition.numEntries)
+    partition.twoNonintersectingSpanningSegments = false
 
     # Clip the entries to the parition bounds
     let
       top = partition.top.float32
       bottom = partition.bottom.float32
-      topLine = line(vec2(0, top), vec2(1000, top))
-      bottomLine = line(vec2(0, bottom), vec2(1000, bottom))
-    for entry in partition.entries.mitems:
+    for i in 0 ..< partition.numEntries:
+      template entry: untyped = partition.entries[i]
       if entry.segment.at.y <= top and entry.segment.to.y >= bottom:
-        var at: Vec2
-        discard intersects(entry.segment, topLine, at)
-        entry.segment.at = at
-        discard intersects(entry.segment, bottomLine, at)
-        entry.segment.to = at
+        entry.segment.at = vec2(entry.solveX(top), top)
+        entry.segment.to = vec2(entry.solveX(bottom), bottom)
 
-    if partition.entries.len == 2:
+    if partition.numEntries == 2:
       let
         entry0 = partition.entries[0].segment
         entry1 = partition.entries[1].segment
@@ -1261,9 +1284,15 @@ proc partitionSegments(
           if entry0.midpointX > entry1.midpointX:
             swap partition.entries[1], partition.entries[0]
 
-proc maxEntryCount(partitions: var seq[Partition]): int =
-  for i in 0 ..< partitions.len:
-    result = max(result, partitions[i].entries.len)
+proc maxEntryCount(partitions: var seq[Partition], numPartitions: int): int =
+  for i in 0 ..< numPartitions:
+    result = max(result, partitions[i].numEntries)
+
+when allowSimd and defined(arm64):
+  {.push header: "arm_neon.h".}
+  func vextq_u16(a, b: uint16x8, n: int32): uint16x8 {.importc.}
+  func vmovn_u16(a: uint16x8): uint8x8 {.importc.}
+  {.pop.}
 
 proc fixed32(f: float32): Fixed32 {.inline.} =
   Fixed32(f * 256)
@@ -1274,16 +1303,19 @@ proc integer(p: Fixed32): int {.inline.} =
 proc trunc(p: Fixed32): Fixed32 {.inline.} =
   (p div 256) * 256
 
-proc sortHits(hits: var seq[(Fixed32, int16)], len: int) {.inline.} =
+proc sortHits(hits: var seq[(Fixed32, int16)], first, len: int) {.inline.} =
   ## Insertion sort
   for i in 1 ..< len:
     var
       j = i - 1
       k = i
-    while j >= 0 and hits[j][0] > hits[k][0]:
-      swap(hits[j + 1], hits[j])
+    while j >= 0 and hits[first + j][0] > hits[first + k][0]:
+      swap(hits[first + j + 1], hits[first + j])
       dec j
       dec k
+
+proc sortHits(hits: var seq[(Fixed32, int16)], len: int) {.inline.} =
+  sortHits(hits, 0, len)
 
 proc shouldFill(
   windingRule: WindingRule, count: int
@@ -1296,7 +1328,7 @@ proc shouldFill(
     count mod 2 != 0
 
 iterator walk(
-  hits: seq[(Fixed32, int16)],
+  hits: openArray[(Fixed32, int16)],
   numHits: int,
   windingRule: WindingRule,
   y: int,
@@ -1349,47 +1381,120 @@ iterator walkInteger(
 
 proc computeCoverage(
   coverages: ptr UncheckedArray[uint8],
+  deltas: ptr UncheckedArray[int16],
+  coverageLen: int,
   hits: var seq[(Fixed32, int16)],
   numHits: var int,
+  bucketHits: var seq[(Fixed32, int16)],
+  bucketStride: int,
   width: int,
   y, startX: int,
   partitions: var seq[Partition],
   partitionIndex: int,
   entryIndices: seq[int],
   numEntryIndices: int,
-  windingRule: WindingRule
-) {.inline.} =
+  windingRule: WindingRule,
+  regions: var seq[(int32, int32)],
+  numRegions: var int
+) =
   let
     aa = partitions[partitionIndex].requiresAntiAliasing
     quality = if aa: 5 else: 1 # Must divide 255 cleanly (1, 3, 5, 15, 17, 51, 85)
     sampleCoverage = (255 div quality).uint8
     offset = 1 / quality.float32
     initialOffset = offset / 2 + epsilon
+    entries = cast[ptr UncheckedArray[PartitionEntry]](
+      if partitions[partitionIndex].entries.len > 0:
+        partitions[partitionIndex].entries[0].addr
+      else:
+        nil
+    )
 
-  var yLine = y.float32 + initialOffset - offset
-  for m in 0 ..< quality:
+  numRegions = 0
+
+  if not aa:
+    # A single centered sample, the caller fills the sorted hits directly
+    var yLine = y.float32 + initialOffset - offset
     yLine += offset
     numHits = 0
     for i in 0 ..< numEntryIndices:
-      let
-        entryIndex = entryIndices[i]
-        entry = partitions[partitionIndex].entries[entryIndex].addr
+      let entry = entries[entryIndices[i]].addr
       if entry.segment.at.y <= yLine and entry.segment.to.y >= yLine:
         let x =
           if entry.m == 0:
             entry.b
           else:
-            (yLine - entry.b) / entry.m
+            (yLine - entry.b) * entry.invM
 
         hits[numHits] = (min(x, width.float32).fixed32, entry.winding)
         inc numHits
 
     if numHits > 0:
       sortHits(hits, numHits)
+    return
 
-    if aa:
-      for (prevAt, at, count) in hits.walk(numHits, windingRule, y, width):
+  # Antialiased: gather the hits for all subsample lines in a single pass
+  # over the entries so each entry is only loaded once
+  var yLines: array[5, float32]
+  block:
+    var yLine = y.float32 + initialOffset - offset
+    for m in 0 ..< quality:
+      yLine += offset
+      yLines[m] = yLine
+
+  var bucketCounts: array[5, int]
+  for i in 0 ..< numEntryIndices:
+    let
+      entry = entries[entryIndices[i]].addr
+      atY = entry.segment.at.y
+      toY = entry.segment.to.y
+      winding = entry.winding
+    if entry.m == 0:
+      let xf = min(entry.b, width.float32).fixed32
+      for m in 0 ..< quality:
+        if atY <= yLines[m] and toY >= yLines[m]:
+          bucketHits[m * bucketStride + bucketCounts[m]] = (xf, winding)
+          inc bucketCounts[m]
+    else:
+      let
+        b = entry.b
+        invM = entry.invM
+      for m in 0 ..< quality:
+        if atY <= yLines[m] and toY >= yLines[m]:
+          let x = (yLines[m] - b) * invM
+          bucketHits[m * bucketStride + bucketCounts[m]] =
+            (min(x, width.float32).fixed32, winding)
+          inc bucketCounts[m]
+
+  for m in 0 ..< quality:
+    let cnt = bucketCounts[m]
+    if cnt == 0:
+      continue
+
+    let
+      base = m * bucketStride
+      firstRegion = numRegions
+    sortHits(bucketHits, base, cnt)
+
+    block:
+      # Instead of adding sample coverage to every covered pixel, accumulate
+      # deltas (+coverage at span start, -coverage after span end) and convert
+      # them to coverage bytes with a single prefix-sum pass afterwards.
+      for (prevAt, at, count) in walk(
+        bucketHits.toOpenArray(base, base + cnt - 1), cnt, windingRule, y, width
+      ):
         var fillStart = prevAt.integer
+
+        block: # Record the covered region, pre-merged within this subsample
+          let
+            regionStart = (prevAt.integer - startX).int32
+            regionEnd = (at.integer + 1 - startX).int32
+          if numRegions > firstRegion and regions[numRegions - 1][1] >= regionStart:
+            # Regions ascend within a subsample, only the end can grow
+            regions[numRegions - 1][1] = max(regions[numRegions - 1][1], regionEnd)
+          else:
+            regions[numRegions] = (regionStart, regionEnd)
+            inc numRegions
 
         let
           pixelCrossed = at.integer != prevAt.integer
@@ -1400,35 +1505,78 @@ proc computeCoverage(
               at - prevAt
         if leftCover != 0:
           inc fillStart
-          coverages[prevAt.integer - startX] +=
-            (leftCover * sampleCoverage.int32).integer.uint8
+          let lc = (leftCover * sampleCoverage.int32).integer.int16
+          deltas[prevAt.integer - startX] += lc
+          deltas[prevAt.integer - startX + 1] -= lc
 
         if pixelCrossed:
           let rightCover = at - at.trunc
           if rightCover > 0:
-            coverages[at.integer - startX] +=
-              (rightCover * sampleCoverage.int32).integer.uint8
+            let rc = (rightCover * sampleCoverage.int32).integer.int16
+            deltas[at.integer - startX] += rc
+            deltas[at.integer - startX + 1] -= rc
 
         let fillLen = at.integer - fillStart
         if fillLen > 0:
-          var i = fillStart
-          when allowSimd:
-            when defined(amd64):
-              let sampleCoverageVec = mm_set1_epi8(sampleCoverage)
-              for _ in 0 ..< fillLen div 16:
-                var coverageVec = mm_loadu_si128(coverages[i - startX].addr)
-                coverageVec = mm_add_epi8(coverageVec, sampleCoverageVec)
-                mm_storeu_si128(coverages[i - startX].addr, coverageVec)
-                i += 16
-            elif defined(arm64):
-              let sampleCoverageVec = vmovq_n_u8(sampleCoverage)
-              for _ in 0 ..< fillLen div 16:
-                var coverageVec = vld1q_u8(coverages[i - startX].addr)
-                coverageVec = vaddq_u8(coverageVec, sampleCoverageVec)
-                vst1q_u8(coverages[i - startX].addr, coverageVec)
-                i += 16
-          for j in i ..< fillStart + fillLen:
-            coverages[j - startX] += sampleCoverage
+          deltas[fillStart - startX] += sampleCoverage.int16
+          deltas[fillStart - startX + fillLen] -= sampleCoverage.int16
+
+  if aa and numRegions > 0:
+    # Sort the regions (ascending per subsample, subsample lists appended,
+    # so mostly sorted) and merge overlapping or adjacent ones
+    for i in 1 ..< numRegions:
+      var
+        j = i - 1
+        k = i
+      while j >= 0 and regions[j][0] > regions[k][0]:
+        swap(regions[j + 1], regions[j])
+        dec j
+        dec k
+
+    # Fuse regions separated by small gaps: the prefix sum writes zero
+    # coverage across the gap, which is cheaper than a separate blend call
+    const regionGapFuse = 64
+
+    var merged = 0
+    for i in 1 ..< numRegions:
+      if regions[i][0] <= regions[merged][1] + regionGapFuse:
+        regions[merged][1] = max(regions[merged][1], regions[i][1])
+      else:
+        inc merged
+        regions[merged] = regions[i]
+    numRegions = merged + 1
+
+    # Convert the deltas to coverage bytes, one prefix sum per region
+    for r in 0 ..< numRegions:
+      let
+        covStart = regions[r][0].int
+        covEnd = min(regions[r][1].int, coverageLen)
+      var
+        acc: int32
+        j = covStart
+      when allowSimd and defined(arm64):
+        # Vectorized prefix sum: scan 8 deltas at a time, carry across chunks
+        if covEnd - j >= 8:
+          let zeroVec = vmovq_n_u16(0)
+          while j + 8 <= covEnd:
+            var v = vld1q_u16(deltas[j].addr)
+            v = vaddq_u16(v, vextq_u16(zeroVec, v, 7))
+            v = vaddq_u16(v, vextq_u16(zeroVec, v, 6))
+            v = vaddq_u16(v, vextq_u16(zeroVec, v, 4))
+            v = vaddq_u16(v, vmovq_n_u16(cast[uint16](acc.int16)))
+            vst1q_u16(deltas[j].addr, zeroVec)
+            vst1_u8(coverages[j].addr, vmovn_u16(v))
+            acc = vgetq_lane_u16(v, 7).int32
+            j += 8
+      for j in j ..< covEnd:
+        acc += deltas[j]
+        deltas[j] = 0
+        coverages[j] = cast[uint8](acc)
+      deltas[covEnd] = 0 # The final -delta lands one past the region
+      if regions[r][1].int > covEnd:
+        # Region was clamped to the buffer, clear the out-of-range delta too
+        deltas[covEnd + 1] = 0
+      regions[r][1] = covEnd.int32
 
 proc clearUnsafe(image: Image, startX, startY, toX, toY: int) =
   ## Clears data from [start, to).
@@ -1481,6 +1629,7 @@ proc fillCoverage(
   rgbx: ColorRGBX,
   startX, y: int,
   coverages: seq[uint8],
+  offset, len: int,
   blendMode: BlendMode
 ) =
   var
@@ -1490,18 +1639,18 @@ proc fillCoverage(
   case blendMode:
   of OverwriteBlend:
     blendLineCoverageOverwrite(
-      image.getUncheckedArray(startX, y),
-      cast[ptr UncheckedArray[uint8]](coverages[0].unsafeAddr),
+      image.getUncheckedArray(startX + offset, y),
+      cast[ptr UncheckedArray[uint8]](coverages[offset].unsafeAddr),
       rgbx,
-      coverages.len
+      len
     )
 
   of NormalBlend:
     blendLineCoverageNormal(
-      image.getUncheckedArray(startX, y),
-      cast[ptr UncheckedArray[uint8]](coverages[0].unsafeAddr),
+      image.getUncheckedArray(startX + offset, y),
+      cast[ptr UncheckedArray[uint8]](coverages[offset].unsafeAddr),
       rgbx,
-      coverages.len
+      len
     )
 
   of MaskBlend:
@@ -1510,15 +1659,15 @@ proc fillCoverage(
       image.getUncheckedArray(startX, y),
       cast[ptr UncheckedArray[uint8]](coverages[0].unsafeAddr),
       rgbx,
-      coverages.len
+      offset + len
     )
 
     image.clearUnsafe(0, y, startX, y)
-    image.clearUnsafe(startX + coverages.len, y, image.width, y)
+    image.clearUnsafe(startX + offset + len, y, image.width, y)
 
   else:
     let blender = blendMode.blender()
-    for x in x ..< startX + coverages.len:
+    for x in x ..< startX + offset + len:
       let coverage = coverages[x - startX]
       if coverage != 0:
         let backdrop = image.data[dataIndex]
@@ -1590,6 +1739,19 @@ proc fillHits(
         image.data[dataIndex] = blender(backdrop, rgbx)
         inc dataIndex
 
+type FillScratch = object
+  segments: seq[(Segment, int16)]
+  partitions: seq[Partition]
+  entryIndices: seq[int]
+  trapezoidSegments: seq[Segment]
+  coverages: seq[uint8]
+  coverageDeltas: seq[int16]
+  hits: seq[(Fixed32, int16)]
+  bucketHits: seq[(Fixed32, int16)]
+  coverageRegions: seq[(int32, int32)]
+
+var fillScratch {.threadvar.}: FillScratch
+
 proc fillShapes(
   image: Image,
   shapes: seq[Polygon],
@@ -1599,9 +1761,13 @@ proc fillShapes(
 ) =
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
+  fillScratch.segments.setLen(0)
+  shapes.shapesToSegments(fillScratch.segments)
+
+  template segments: untyped = fillScratch.segments
+
   let
     rgbx = color.asRgbx()
-    segments = shapes.shapesToSegments()
     bounds = computeBounds(segments).snapToPixels()
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
@@ -1619,14 +1785,38 @@ proc fillShapes(
     raise newException(PixieError, "Path int overflow detected")
 
   var
-    partitions = partitionSegments(segments, startY, pathHeight - startY)
     partitionIndex: int
-    entryIndices = newSeq[int](partitions.maxEntryCount)
     numEntryIndices: int
-    trapezoidSegments = newSeq[Segment](entryIndices.len)
-    coverages = newSeq[uint8](pathWidth)
-    hits = newSeq[(Fixed32, int16)](entryIndices.len)
     numHits: int
+    numCoverageRegions: int
+
+  template partitions: untyped = fillScratch.partitions
+
+  let
+    numPartitions = partitionSegments(
+      segments, startY, pathHeight - startY, partitions
+    )
+    maxEntries = partitions.maxEntryCount(numPartitions)
+  fillScratch.entryIndices.ensureLen(maxEntries)
+  fillScratch.trapezoidSegments.ensureLen(maxEntries)
+  fillScratch.hits.ensureLen(maxEntries)
+  fillScratch.bucketHits.ensureLen(maxEntries * 5)
+  fillScratch.coverageRegions.ensureLen((maxEntries + 1) * 5)
+  # coverages can stay dirty between calls: reads always follow same-scanline
+  # writes. The deltas buffer is guaranteed zeroed again after each scanline.
+  fillScratch.coverages.ensureLen(pathWidth)
+  fillScratch.coverageDeltas.ensureLen(pathWidth + 2)
+  if blendMode != OverwriteBlend and blendMode != NormalBlend:
+    # These blends read the full coverage row, it must start zeroed
+    zeroMem(fillScratch.coverages[0].addr, pathWidth)
+
+  template entryIndices: untyped = fillScratch.entryIndices
+  template trapezoidSegments: untyped = fillScratch.trapezoidSegments
+  template coverages: untyped = fillScratch.coverages
+  template coverageDeltas: untyped = fillScratch.coverageDeltas
+  template hits: untyped = fillScratch.hits
+  template bucketHits: untyped = fillScratch.bucketHits
+  template coverageRegions: untyped = fillScratch.coverageRegions
 
   var y = startY
   while y < pathHeight:
@@ -1678,7 +1868,7 @@ proc fillShapes(
       entryIndices[0] = 0
       entryIndices[1] = 1
     else:
-      for i in 0 ..< partition.entries.len:
+      for i in 0 ..< partition.numEntries:
         if partition.entries[i].segment.to.y <= scanTop or
           partition.entries[i].segment.at.y >= scanBottom:
           continue
@@ -1744,6 +1934,7 @@ proc fillShapes(
           i += 2
 
         if onlySimpleFillPairs:
+          let blender = blendMode.blender()
           var i, filledTo: int
           while i < numEntryIndices:
             let
@@ -1767,7 +1958,6 @@ proc fillShapes(
               rightMinX = min(trapRight.at.x, trapRight.to.x)
               leftCoverEnd = leftMaxX.ceil.int
               rightCoverBegin = rightMinX.trunc.int
-              blender = blendMode.blender()
 
             block: # Left-side partial coverage
               let
@@ -1806,7 +1996,11 @@ proc fillShapes(
                       applyOpacity(vecRgbx, area)
                     else:
                       rgbx * area
-                image.data[dataIndex] = blender(backdrop, source)
+                image.data[dataIndex] =
+                  if blendMode == NormalBlend:
+                    blendNormal(backdrop, source)
+                  else:
+                    blender(backdrop, source)
 
             block: # Right-side partial coverage
               let
@@ -1844,7 +2038,11 @@ proc fillShapes(
                       applyOpacity(vecRgbx, area)
                     else:
                       rgbx * area
-                image.data[dataIndex] = blender(backdrop, source)
+                image.data[dataIndex] =
+                  if blendMode == NormalBlend:
+                    blendNormal(backdrop, source)
+                  else:
+                    blender(backdrop, source)
 
             let
               fillBegin = leftCoverEnd.clamp(0, image.width)
@@ -1873,8 +2071,12 @@ proc fillShapes(
 
     computeCoverage(
       cast[ptr UncheckedArray[uint8]](coverages[0].addr),
+      cast[ptr UncheckedArray[int16]](coverageDeltas[0].addr),
+      pathWidth,
       hits,
       numHits,
+      bucketHits,
+      maxEntries,
       image.width,
       y,
       startX,
@@ -1882,18 +2084,39 @@ proc fillShapes(
       partitionIndex,
       entryIndices,
       numEntryIndices,
-      windingRule
+      windingRule,
+      coverageRegions,
+      numCoverageRegions
     )
 
     if partitions[partitionIndex].requiresAntiAliasing:
-      image.fillCoverage(
-        rgbx,
-        startX,
-        y,
-        coverages,
-        blendMode
-      )
-      zeroMem(coverages[0].addr, coverages.len)
+      if blendMode == OverwriteBlend or blendMode == NormalBlend:
+        # Only the covered regions need blending, gaps are never read
+        for r in 0 ..< numCoverageRegions:
+          let
+            regionStart = max(0, coverageRegions[r][0].int)
+            regionLen = coverageRegions[r][1].int - regionStart
+          if regionLen > 0:
+            image.fillCoverage(
+              rgbx,
+              startX,
+              y,
+              coverages,
+              regionStart,
+              regionLen,
+              blendMode
+            )
+      else:
+        image.fillCoverage(
+          rgbx,
+          startX,
+          y,
+          coverages,
+          0,
+          pathWidth,
+          blendMode
+        )
+        zeroMem(coverages[0].addr, pathWidth)
     else:
       image.fillHits(
         rgbx,
