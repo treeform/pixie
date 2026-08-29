@@ -30,7 +30,7 @@ type
 
   PartitionEntry = object
     segment: Segment
-    m, b: float32
+    m, invM, b: float32
     winding: int16
 
   Partition = object
@@ -40,13 +40,29 @@ type
 
   Fixed32 = int32 ## 24.8 fixed point
 
+  FillScratch = object
+    ## Reused per-thread scratch for fillShapes within a render.
+    segments: seq[(Segment, int16)]
+    partitions: seq[Partition]
+    entryIndices: seq[int]
+    trapezoidSegments: seq[Segment]
+    coverages: seq[uint8]
+    hits: seq[(Fixed32, int16)]
+
 const
   epsilon: float32 = 0.0001 * PI ## Tiny value used for some computations.
   pixelErrorMargin: float32 = 0.2
   defaultMiterLimit*: float32 = 4
 
+var fillScratch {.threadvar.}: FillScratch
+
 when defined(release):
   {.push checks: off.}
+
+template ensureLen[T](s: var seq[T], n: int) =
+  ## Grows a seq only when needed, keeping capacity.
+  if s.len < n:
+    s.setLen(n)
 
 proc newPath*(): Path {.raises: [].} =
   ## Create a new Path.
@@ -1058,9 +1074,11 @@ proc commandsToShapes(
 
 proc shapesToSegments(
   shapes: seq[Polygon],
+  segments: var seq[(Segment, int16)],
   skipHorizontal = true
-): seq[(Segment, int16)] =
-  ## Converts the shapes into a set of filtered segments with winding value.
+) =
+  ## Converts the shapes into filtered segments, reusing segments storage.
+  segments.setLen(0)
 
   # Quantize the segment to prevent leaks
   template quantizeY(v: Vec2): Vec2 =
@@ -1087,7 +1105,14 @@ proc shapesToSegments(
         swap(segment.at, segment.to)
         winding = -1
 
-      result.add((segment, winding))
+      segments.add((segment, winding))
+
+proc shapesToSegments(
+  shapes: seq[Polygon],
+  skipHorizontal = true
+): seq[(Segment, int16)] =
+  ## Converts the shapes into a set of filtered segments with winding value.
+  shapesToSegments(shapes, result, skipHorizontal)
 
 proc transform(shapes: var seq[Polygon], transform: Mat3) =
   if transform != mat3():
@@ -1132,13 +1157,14 @@ proc initPartitionEntry(segment: Segment, winding: int16): PartitionEntry =
     result.b = segment.at.x # Leave m = 0, store the x we want in b
   else:
     result.m = (segment.at.y - segment.to.y) / d
+    result.invM = 1 / result.m
     result.b = segment.at.y - result.m * segment.at.x
 
 proc solveX(entry: PartitionEntry, y: float32): float32 {.inline.} =
   if entry.m == 0:
     entry.b
   else:
-    (y - entry.b) / entry.m
+    (y - entry.b) * entry.invM
 
 proc solveY(entry: PartitionEntry, x: float32): float32 {.inline.} =
   entry.m * x + entry.b
@@ -1166,42 +1192,45 @@ proc requiresAntiAliasing(entries: var seq[PartitionEntry]): bool =
       return true
 
 proc partitionSegments(
-  segments: seq[(Segment, int16)], top, height: int
-): seq[Partition] =
-  ## Puts segments into the height partitions they intersect with.
+  segments: seq[(Segment, int16)],
+  top, height: int,
+  partitions: var seq[Partition]
+): int =
+  ## Puts segments into height partitions. Returns partition count used.
   let
     maxPartitions = max(1, height div 4).uint32
     numPartitions = min(maxPartitions, max(1, segments.len div 2).uint32)
 
-  result.setLen(numPartitions)
+  result = numPartitions.int
+  ensureLen(partitions, result)
 
   let
     startY = top.uint32
     partitionHeight = height.uint32 div numPartitions
 
   # Set the bottom values for the partitions (y value where this partition ends)
-  result[0].top = top
-  result[0].bottom = top + partitionHeight.int
-  for i in 1 ..< result.len:
-    result[i].top = result[i - 1].bottom
-    result[i].bottom = result[i - 1].bottom + partitionHeight.int
+  partitions[0].top = top
+  partitions[0].bottom = top + partitionHeight.int
+  for i in 1 ..< result:
+    partitions[i].top = partitions[i - 1].bottom
+    partitions[i].bottom = partitions[i - 1].bottom + partitionHeight.int
 
   # Ensure the final partition goes to the actual bottom
   # This is needed since the final partition includes
   # height - (height div numPartitions) * numPartitions
-  result[^1].bottom = top + height
-
-  var entries = newSeq[PartitionEntry](segments.len)
-  for i, (segment, winding) in segments:
-    entries[i] = initPartitionEntry(segment, winding)
+  partitions[result - 1].bottom = top + height
 
   if numPartitions == 1:
-    result[0].entries = move entries
+    partitions[0].entries.setLen(segments.len)
+    for i, (segment, winding) in segments:
+      partitions[0].entries[i] = initPartitionEntry(segment, winding)
   else:
-    iterator partitionRange(
-      segment: Segment,
-      numPartitions, startY, partitionHeight: uint32
-    ): uint32 =
+    var
+      entryCounts = newSeq[int](numPartitions)
+      partitionRanges = newSeq[(uint32, uint32)](segments.len)
+      entries = newSeq[PartitionEntry](segments.len)
+    for i, (segment, winding) in segments:
+      entries[i] = initPartitionEntry(segment, winding)
       var
         atPartition = max(0, segment.at.y - startY.float32).uint32
         toPartition = max(0, segment.to.y - startY.float32).uint32
@@ -1209,43 +1238,34 @@ proc partitionSegments(
       toPartition = toPartition div partitionHeight
       atPartition = min(atPartition, numPartitions - 1)
       toPartition = min(toPartition, numPartitions - 1)
+      partitionRanges[i] = (atPartition, toPartition)
       for partitionIndex in atPartition .. toPartition:
-        yield partitionIndex
-
-    var entryCounts = newSeq[int](numPartitions)
-    for (segment, _) in segments:
-      for partitionIndex in segment.partitionRange(
-        numPartitions, startY, partitionHeight
-      ):
         inc entryCounts[partitionIndex]
 
-    for partitionIndex, entryCounts in entryCounts:
-      result[partitionIndex].entries.setLen(entryCounts)
+    for partitionIndex in 0 ..< entryCounts.len:
+      partitions[partitionIndex].entries.setLen(entryCounts[partitionIndex])
+      entryCounts[partitionIndex] = 0
 
-    var indexes = newSeq[int](numPartitions)
-    for i, (segment, winding) in segments:
-      for partitionIndex in segment.partitionRange(
-        numPartitions, startY, partitionHeight
-      ):
-        result[partitionIndex].entries[indexes[partitionIndex]] = entries[i]
-        inc indexes[partitionIndex]
+    for i in 0 ..< entries.len:
+      let (atPartition, toPartition) = partitionRanges[i]
+      for partitionIndex in atPartition .. toPartition:
+        partitions[partitionIndex].entries[entryCounts[partitionIndex]] =
+          entries[i]
+        inc entryCounts[partitionIndex]
 
-  for partition in result.mitems:
+  for p in 0 ..< result:
+    template partition: untyped = partitions[p]
     partition.requiresAntiAliasing = requiresAntiAliasing(partition.entries)
+    partition.twoNonintersectingSpanningSegments = false
 
-    # Clip the entries to the parition bounds
+    # Clip the entries to the partition bounds
     let
       top = partition.top.float32
       bottom = partition.bottom.float32
-      topLine = line(vec2(0, top), vec2(1000, top))
-      bottomLine = line(vec2(0, bottom), vec2(1000, bottom))
     for entry in partition.entries.mitems:
       if entry.segment.at.y <= top and entry.segment.to.y >= bottom:
-        var at: Vec2
-        discard intersects(entry.segment, topLine, at)
-        entry.segment.at = at
-        discard intersects(entry.segment, bottomLine, at)
-        entry.segment.to = at
+        entry.segment.at = vec2(entry.solveX(top), top)
+        entry.segment.to = vec2(entry.solveX(bottom), bottom)
 
     if partition.entries.len == 2:
       let
@@ -1261,8 +1281,8 @@ proc partitionSegments(
           if entry0.midpointX > entry1.midpointX:
             swap partition.entries[1], partition.entries[0]
 
-proc maxEntryCount(partitions: var seq[Partition]): int =
-  for i in 0 ..< partitions.len:
+proc maxEntryCount(partitions: var seq[Partition], numPartitions: int): int =
+  for i in 0 ..< numPartitions:
     result = max(result, partitions[i].entries.len)
 
 proc fixed32(f: float32): Fixed32 {.inline.} =
@@ -1353,7 +1373,7 @@ proc computeCoverage(
   numHits: var int,
   width: int,
   y, startX: int,
-  partitions: var seq[Partition],
+  partitions: seq[Partition],
   partitionIndex: int,
   entryIndices: seq[int],
   numEntryIndices: int,
@@ -1379,7 +1399,7 @@ proc computeCoverage(
           if entry.m == 0:
             entry.b
           else:
-            (yLine - entry.b) / entry.m
+            (yLine - entry.b) * entry.invM
 
         hits[numHits] = (min(x, width.float32).fixed32, entry.winding)
         inc numHits
@@ -1590,7 +1610,7 @@ proc fillHits(
         image.data[dataIndex] = blender(backdrop, rgbx)
         inc dataIndex
 
-proc fillShapes(
+proc fillShapes*(
   image: Image,
   shapes: seq[Polygon],
   color: SomeColor,
@@ -1599,9 +1619,10 @@ proc fillShapes(
 ) =
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
+  let rgbx = color.asRgbx()
+  shapes.shapesToSegments(fillScratch.segments)
   let
-    rgbx = color.asRgbx()
-    segments = shapes.shapesToSegments()
+    segments = fillScratch.segments
     bounds = computeBounds(segments).snapToPixels()
     startX = max(0, bounds.x.int)
     startY = max(0, bounds.y.int)
@@ -1618,14 +1639,29 @@ proc fillShapes(
   if pathWidth < 0:
     raise newException(PixieError, "Path int overflow detected")
 
+  let numPartitions = partitionSegments(
+    segments,
+    startY,
+    pathHeight - startY,
+    fillScratch.partitions
+  )
+  let maxEntries = fillScratch.partitions.maxEntryCount(numPartitions)
+  ensureLen(fillScratch.entryIndices, maxEntries)
+  ensureLen(fillScratch.trapezoidSegments, maxEntries)
+  ensureLen(fillScratch.hits, maxEntries)
+  ensureLen(fillScratch.coverages, pathWidth)
+  if pathWidth > 0:
+    zeroMem(fillScratch.coverages[0].addr, pathWidth)
+
+  template partitions: untyped = fillScratch.partitions
+  template entryIndices: untyped = fillScratch.entryIndices
+  template trapezoidSegments: untyped = fillScratch.trapezoidSegments
+  template coverages: untyped = fillScratch.coverages
+  template hits: untyped = fillScratch.hits
+
   var
-    partitions = partitionSegments(segments, startY, pathHeight - startY)
     partitionIndex: int
-    entryIndices = newSeq[int](partitions.maxEntryCount)
     numEntryIndices: int
-    trapezoidSegments = newSeq[Segment](entryIndices.len)
-    coverages = newSeq[uint8](pathWidth)
-    hits = newSeq[(Fixed32, int16)](entryIndices.len)
     numHits: int
 
   var y = startY
@@ -2093,6 +2129,21 @@ proc parseSomePath(
 proc fillPath*(
   image: Image,
   path: SomePath,
+  color: SomeColor,
+  transform = mat3(),
+  windingRule = NonZero,
+  blendMode = NormalBlend
+) {.raises: [PixieError].} =
+  ## Fills a path with a solid color, without allocating a Paint.
+  var color = color.color()
+  if color.a > 0 or blendMode == OverwriteBlend:
+    var shapes = parseSomePath(path, true, transform.pixelScale())
+    shapes.transform(transform)
+    image.fillShapes(shapes, color, windingRule, blendMode)
+
+proc fillPath*(
+  image: Image,
+  path: SomePath,
   paint: Paint,
   transform = mat3(),
   windingRule = NonZero
@@ -2104,12 +2155,9 @@ proc fillPath*(
     return
 
   if paint.kind == SolidPaint:
-    if paint.color.a > 0 or paint.blendMode == OverwriteBlend:
-      var shapes = parseSomePath(path, true, transform.pixelScale())
-      shapes.transform(transform)
-      var color = paint.color
-      color.a *= paint.opacity
-      image.fillShapes(shapes, color, windingRule, paint.blendMode)
+    var color = paint.color
+    color.a *= paint.opacity
+    image.fillPath(path, color, transform, windingRule, paint.blendMode)
     return
 
   let
@@ -2144,6 +2192,33 @@ proc fillPath*(
 proc strokePath*(
   image: Image,
   path: SomePath,
+  color: SomeColor,
+  transform = mat3(),
+  strokeWidth: float32 = 1.0,
+  lineCap = ButtCap,
+  lineJoin = MiterJoin,
+  miterLimit = defaultMiterLimit,
+  dashes: seq[float32] = @[],
+  blendMode = NormalBlend
+) {.raises: [PixieError].} =
+  ## Strokes a path with a solid color, without allocating a Paint.
+  var color = color.color()
+  if color.a > 0 or blendMode == OverwriteBlend:
+    var strokeShapes = strokeShapes(
+      parseSomePath(path, false, transform.pixelScale()),
+      strokeWidth,
+      lineCap,
+      lineJoin,
+      miterLimit,
+      dashes,
+      pixelScale(transform)
+    )
+    strokeShapes.transform(transform)
+    image.fillShapes(strokeShapes, color, NonZero, blendMode)
+
+proc strokePath*(
+  image: Image,
+  path: SomePath,
   paint: Paint,
   transform = mat3(),
   strokeWidth: float32 = 1.0,
@@ -2159,20 +2234,19 @@ proc strokePath*(
     return
 
   if paint.kind == SolidPaint:
-    if paint.color.a > 0 or paint.blendMode == OverwriteBlend:
-      var strokeShapes = strokeShapes(
-        parseSomePath(path, false, transform.pixelScale()),
-        strokeWidth,
-        lineCap,
-        lineJoin,
-        miterLimit,
-        dashes,
-        pixelScale(transform)
-      )
-      strokeShapes.transform(transform)
-      var color = paint.color
-      color.a *= paint.opacity
-      image.fillShapes(strokeShapes, color, NonZero, paint.blendMode)
+    var color = paint.color
+    color.a *= paint.opacity
+    image.strokePath(
+      path,
+      color,
+      transform,
+      strokeWidth,
+      lineCap,
+      lineJoin,
+      miterLimit,
+      dashes,
+      paint.blendMode
+    )
     return
 
   let

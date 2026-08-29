@@ -566,7 +566,6 @@ proc newImage*(svg: Svg): Image {.raises: [PixieError].} =
     for (path, props) in svg.elements:
       if props.display and props.opacity > 0:
         if props.fill != "none":
-          var paint: Paint
           if props.fill.startsWith("url("):
             let closingParen = props.fill.find(")", 5)
             if closingParen == -1:
@@ -574,30 +573,33 @@ proc newImage*(svg: Svg): Image {.raises: [PixieError].} =
             let id = props.fill[5 .. closingParen - 1]
             if id in svg.linearGradients:
               let linearGradient = svg.linearGradients[id]
-              paint = newPaint(LinearGradientPaint)
+              var paint = newPaint(LinearGradientPaint)
               paint.gradientHandlePositions = @[
                 props.transform * vec2(linearGradient.x1, linearGradient.y1),
                 props.transform * vec2(linearGradient.x2, linearGradient.y2)
               ]
               paint.gradientStops = linearGradient.stops
+              paint.opacity = props.fillOpacity * props.opacity
+              paint.blendMode = blendMode
+              result.fillPath(path, paint, props.transform, props.fillRule)
             else:
               raise newException(PixieError, "Missing SVG resource " & id)
           else:
-            paint = parseHtmlColor(props.fill).rgbx
-
-          paint.opacity = props.fillOpacity * props.opacity
-          paint.blendMode = blendMode
-
-          result.fillPath(path, paint, props.transform, props.fillRule)
+            # Solid fills skip Paint allocation.
+            var color = parseHtmlColor(props.fill)
+            color.a *= props.fillOpacity * props.opacity
+            result.fillPath(
+              path, color, props.transform, props.fillRule, blendMode
+            )
 
         blendMode = NormalBlend # Switch to normal when compositing multiple paths
 
         if props.stroke != rgbx(0, 0, 0, 0) and props.strokeWidth > 0:
-          let paint = props.stroke.copy()
-          paint.color.a *= (props.opacity * props.strokeOpacity)
+          var color = props.stroke.color()
+          color.a *= props.opacity * props.strokeOpacity
           result.strokePath(
             path,
-            paint,
+            color,
             props.transform,
             props.strokeWidth,
             props.strokeLineCap,
