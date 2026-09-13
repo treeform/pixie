@@ -514,7 +514,7 @@ proc parseSvgFont*(buf: string): Typeface {.raises: [PixieError].} =
   result = Typeface()
   result.svgFont = svgfont.parseSvgFont(buf)
 
-proc computePaths(arrangement: Arrangement): seq[Path] =
+proc computePaths*(arrangement: Arrangement): seq[Path] =
   ## Takes an Arrangement and computes Paths for drawing.
   ## Returns a seq of paths that match the seq of Spans in the arrangement.
   ## If you only have one Span you will only get one Path.
