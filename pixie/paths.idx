@@ -44,12 +44,12 @@ nim	circle	pixie/paths.html#circle,Path,Circle	proc circle(path: Path; circle: C
 nim	polygon	pixie/paths.html#polygon,Path,float32,float32,float32,int	proc polygon(path: Path; x, y, size: float32; sides: int)		633
 nim	polygon	pixie/paths.html#polygon,Path,Vec2,float32,int	proc polygon(path: Path; pos: Vec2; size: float32; sides: int)		648
 nim	computeBounds	pixie/paths.html#computeBounds,Path	proc computeBounds(path: Path; transform = mat3()): Rect		1119
-nim	miterLimitToAngle	pixie/paths.html#miterLimitToAngle,float32	proc miterLimitToAngle(limit: float32): float32		1914
-nim	angleToMiterLimit	pixie/paths.html#angleToMiterLimit,float32	proc angleToMiterLimit(angle: float32): float32		1918
-nim	fillPath	pixie/paths.html#fillPath,Image,SomePath,Paint	proc fillPath(image: Image; path: SomePath; paint: Paint; transform = mat3();\n         windingRule = NonZero)		2093
-nim	strokePath	pixie/paths.html#strokePath,Image,SomePath,Paint,float32,seq[float32]	proc strokePath(image: Image; path: SomePath; paint: Paint; transform = mat3();\n           strokeWidth: float32 = 1.0; lineCap = ButtCap; lineJoin = MiterJoin;\n           miterLimit = defaultMiterLimit; dashes: seq[float32] = @[])		2144
-nim	fillOverlaps	pixie/paths.html#fillOverlaps,Path,Vec2	proc fillOverlaps(path: Path; test: Vec2; transform = mat3(); ## Applied to the path, not the test point.\n             windingRule = NonZero): bool		2243
-nim	strokeOverlaps	pixie/paths.html#strokeOverlaps,Path,Vec2,float32,seq[float32]	proc strokeOverlaps(path: Path; test: Vec2; transform = mat3(); ## Applied to the path, not the test point.\n               strokeWidth: float32 = 1.0; lineCap = ButtCap;\n               lineJoin = MiterJoin; miterLimit = defaultMiterLimit;\n               dashes: seq[float32] = @[]): bool		2254
+nim	miterLimitToAngle	pixie/paths.html#miterLimitToAngle,float32	proc miterLimitToAngle(limit: float32): float32		1919
+nim	angleToMiterLimit	pixie/paths.html#angleToMiterLimit,float32	proc angleToMiterLimit(angle: float32): float32		1923
+nim	fillPath	pixie/paths.html#fillPath,Image,SomePath,Paint	proc fillPath(image: Image; path: SomePath; paint: Paint; transform = mat3();\n         windingRule = NonZero)		2098
+nim	strokePath	pixie/paths.html#strokePath,Image,SomePath,Paint,float32,seq[float32]	proc strokePath(image: Image; path: SomePath; paint: Paint; transform = mat3();\n           strokeWidth: float32 = 1.0; lineCap = ButtCap; lineJoin = MiterJoin;\n           miterLimit = defaultMiterLimit; dashes: seq[float32] = @[])		2149
+nim	fillOverlaps	pixie/paths.html#fillOverlaps,Path,Vec2	proc fillOverlaps(path: Path; test: Vec2; transform = mat3(); ## Applied to the path, not the test point.\n             windingRule = NonZero): bool		2248
+nim	strokeOverlaps	pixie/paths.html#strokeOverlaps,Path,Vec2,float32,seq[float32]	proc strokeOverlaps(path: Path; test: Vec2; transform = mat3(); ## Applied to the path, not the test point.\n               strokeWidth: float32 = 1.0; lineCap = ButtCap;\n               lineJoin = MiterJoin; miterLimit = defaultMiterLimit;\n               dashes: seq[float32] = @[]): bool		2259
 nimgrp	beziercurveto	pixie/paths.html#bezierCurveTo-procs-all	proc		367
 nimgrp	quadraticcurveto	pixie/paths.html#quadraticCurveTo-procs-all	proc		382
 nimgrp	moveto	pixie/paths.html#moveTo-procs-all	proc		346
