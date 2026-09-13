@@ -13,6 +13,7 @@ import
   test_png,
   test_ppm,
   test_qoi,
+  test_simd,
   test_webp,
   test_svg,
   xrays
