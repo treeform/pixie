@@ -1597,6 +1597,14 @@ proc fillShapes(
   windingRule: WindingRule,
   blendMode: BlendMode
 ) =
+  template hasCoverage(area: float32): bool =
+    # Quantize geometry independently of paint alpha, using the same rounding
+    # as the color conversion on this backend.
+    when allowSimd and defined(amd64):
+      mm_cvtss_si32(mm_set_ss(area * 255)) != 0
+    else:
+      round(area * 255) != 0
+
   # Figure out the total bounds of all the shapes,
   # rasterize only within the total bounds
   let
@@ -1807,7 +1815,7 @@ proc fillShapes(
                       applyOpacity(vecRgbx, area)
                     else:
                       rgbx * area
-                if source.a != 0 or clearsUncovered:
+                if hasCoverage(area) or clearsUncovered:
                   image.data[dataIndex] = blender(backdrop, source)
 
             block: # Right-side partial coverage
@@ -1846,7 +1854,7 @@ proc fillShapes(
                       applyOpacity(vecRgbx, area)
                     else:
                       rgbx * area
-                if source.a != 0 or clearsUncovered:
+                if hasCoverage(area) or clearsUncovered:
                   image.data[dataIndex] = blender(backdrop, source)
 
             let
