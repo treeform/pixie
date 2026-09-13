@@ -25,10 +25,10 @@ nim	invert	pixie/images.html#invert,Image	proc invert(image: Image)		279
 nim	ceil	pixie/images.html#ceil,Image	proc ceil(image: Image)		294
 nim	blur	pixie/images.html#blur,Image,float32,SomeColor	proc blur(image: Image; radius: float32; outOfBounds: SomeColor = color(0, 0, 0, 0))		304
 nim	getRgbaSmooth	pixie/images.html#getRgbaSmooth,Image,float32,float32	proc getRgbaSmooth(image: Image; x, y: float32; wrapped = false): ColorRGBX		367
-nim	draw	pixie/images.html#draw,Image,Image	proc draw(a, b: Image; transform = mat3(); blendMode = NormalBlend)		636
-nim	drawTiled	pixie/images.html#drawTiled,Image,Image,Mat3	proc drawTiled(dst, src: Image; mat: Mat3; blendMode = NormalBlend)		680
-nim	resize	pixie/images.html#resize,Image,int,int	proc resize(srcImage: Image; width, height: int): Image		685
-nim	shadow	pixie/images.html#shadow,Image,Vec2,float32,float32,SomeColor	proc shadow(image: Image; offset: Vec2; spread, blur: float32; color: SomeColor): Image		760
-nim	superImage	pixie/images.html#superImage,Image,int,int,int,int	proc superImage(image: Image; x, y, w, h: int): Image		778
-nim	opaqueBounds	pixie/images.html#opaqueBounds,Image	proc opaqueBounds(image: Image): Rect		789
+nim	draw	pixie/images.html#draw,Image,Image	proc draw(a, b: Image; transform = mat3(); blendMode = NormalBlend)		652
+nim	drawTiled	pixie/images.html#drawTiled,Image,Image,Mat3	proc drawTiled(dst, src: Image; mat: Mat3; blendMode = NormalBlend)		696
+nim	resize	pixie/images.html#resize,Image,int,int	proc resize(srcImage: Image; width, height: int): Image		701
+nim	shadow	pixie/images.html#shadow,Image,Vec2,float32,float32,SomeColor	proc shadow(image: Image; offset: Vec2; spread, blur: float32; color: SomeColor): Image		776
+nim	superImage	pixie/images.html#superImage,Image,int,int,int,int	proc superImage(image: Image; x, y, w, h: int): Image		794
+nim	opaqueBounds	pixie/images.html#opaqueBounds,Image	proc opaqueBounds(image: Image): Rect		805
 nimgrp	subimage	pixie/images.html#subImage-procs-all	proc		111
