@@ -10,6 +10,7 @@ import
   test_jpeg,
   test_paints,
   test_paths,
+  test_paths_overwrite,
   test_png,
   test_ppm,
   test_qoi,

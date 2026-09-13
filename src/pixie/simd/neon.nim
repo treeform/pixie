@@ -462,11 +462,20 @@ proc blendLineCoverageOverwriteNeon*(
     elif mask255 == uint64.high:
       vst4q_u8(line[i].addr, vecRgbx)
     else:
+      let backdrop = vld4q_u8(line[i].addr)
       var source: uint8x16x4
-      source.val[0] = multiplyDiv255(vecRgbx.val[0], coverage)
-      source.val[1] = multiplyDiv255(vecRgbx.val[1], coverage)
-      source.val[2] = multiplyDiv255(vecRgbx.val[2], coverage)
-      source.val[3] = multiplyDiv255(vecRgbx.val[3], coverage)
+      source.val[0] = vbslq_u8(
+        eqZero, backdrop.val[0], multiplyDiv255(vecRgbx.val[0], coverage)
+      )
+      source.val[1] = vbslq_u8(
+        eqZero, backdrop.val[1], multiplyDiv255(vecRgbx.val[1], coverage)
+      )
+      source.val[2] = vbslq_u8(
+        eqZero, backdrop.val[2], multiplyDiv255(vecRgbx.val[2], coverage)
+      )
+      source.val[3] = vbslq_u8(
+        eqZero, backdrop.val[3], multiplyDiv255(vecRgbx.val[3], coverage)
+      )
       vst4q_u8(line[i].addr, source)
 
     i += 16
