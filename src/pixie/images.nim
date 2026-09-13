@@ -379,12 +379,22 @@ proc getRgbaSmooth*(
 
   var x0y0, x1y0, x0y1, x1y1: ColorRGBX
   if wrapped:
-    # Euclidean modulo also wraps negative coordinates into the image.
+    template wrapCoordinate(value, size: int): int =
+      # Image dimensions are positive. Expand here to avoid a function call
+      # for every coordinate in the sampling loop.
+      block:
+        let extent = size
+        var coordinate = value mod extent
+        if coordinate < 0:
+          coordinate += extent
+        coordinate
+
+    # Adjacent samples need only a boundary check, not another division.
     let
-      x0 = x0.euclMod(image.width)
-      x1 = x1.euclMod(image.width)
-      y0 = y0.euclMod(image.height)
-      y1 = y1.euclMod(image.height)
+      x0 = wrapCoordinate(x0, image.width)
+      x1 = if x0 + 1 < image.width: x0 + 1 else: 0
+      y0 = wrapCoordinate(y0, image.height)
+      y1 = if y0 + 1 < image.height: y0 + 1 else: 0
     x0y0 = image.unsafe[x0, y0]
     x1y0 = image.unsafe[x1, y0]
     x0y1 = image.unsafe[x0, y1]
