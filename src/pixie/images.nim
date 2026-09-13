@@ -367,8 +367,8 @@ proc blur*(
 proc getRgbaSmooth*(
   image: Image, x, y: float32, wrapped = false
 ): ColorRGBX {.raises: [].} =
-  ## Gets a interpolated color with float point coordinates.
-  ## Pixels outside the image are transparent.
+  ## Gets an interpolated color with floating point coordinates.
+  ## Pixels outside the image are transparent unless wrapped is true.
   let
     x0 = x.floor.int
     y0 = y.floor.int
@@ -379,10 +379,16 @@ proc getRgbaSmooth*(
 
   var x0y0, x1y0, x0y1, x1y1: ColorRGBX
   if wrapped:
-    x0y0 = image.unsafe[x0 mod image.width, y0 mod image.height]
-    x1y0 = image.unsafe[x1 mod image.width, y0 mod image.height]
-    x0y1 = image.unsafe[x0 mod image.width, y1 mod image.height]
-    x1y1 = image.unsafe[x1 mod image.width, y1 mod image.height]
+    # Euclidean modulo also wraps negative coordinates into the image.
+    let
+      x0 = x0.euclMod(image.width)
+      x1 = x1.euclMod(image.width)
+      y0 = y0.euclMod(image.height)
+      y1 = y1.euclMod(image.height)
+    x0y0 = image.unsafe[x0, y0]
+    x1y0 = image.unsafe[x1, y0]
+    x0y1 = image.unsafe[x0, y1]
+    x1y1 = image.unsafe[x1, y1]
   else:
     x0y0 = image[x0, y0]
     x1y0 = image[x1, y0]

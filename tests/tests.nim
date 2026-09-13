@@ -6,6 +6,7 @@ import
   test_gif,
   test_images,
   test_images_draw,
+  test_images_tiled,
   test_jpeg,
   test_paints,
   test_paths,
