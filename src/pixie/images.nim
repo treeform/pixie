@@ -56,20 +56,36 @@ proc fill*(image: Image, color: SomeColor) {.inline, raises: [].} =
   ## Fills the image with the color.
   fillUnsafe(image.data, color, 0, image.data.len)
 
-proc isOneColor*(image: Image): bool {.hasSimd, raises: [].} =
+proc isOneColor*(image: Image): bool {.raises: [].} =
   ## Checks if the entire image is the same color.
-  result = true
-  let color = cast[uint32](image.data[0])
-  for i in 0 ..< image.data.len:
-    if cast[uint32](image.data[i]) != color:
-      return false
+  when allowAvx:
+    if cpuHasAvx2:
+      return isOneColorAvx2(image)
+  when allowSse2:
+    return isOneColorSse2(image)
+  elif allowNeon:
+    return isOneColorNeon(image)
+  else:
+    result = true
+    let color = cast[uint32](image.data[0])
+    for i in 0 ..< image.data.len:
+      if cast[uint32](image.data[i]) != color:
+        return false
 
-proc isTransparent*(image: Image): bool {.hasSimd, raises: [].} =
+proc isTransparent*(image: Image): bool {.raises: [].} =
   ## Checks if this image is fully transparent or not.
-  result = true
-  for i in 0 ..< image.data.len:
-    if image.data[i].a != 0:
-      return false
+  when allowAvx:
+    if cpuHasAvx2:
+      return isTransparentAvx2(image)
+  when allowSse2:
+    return isTransparentSse2(image)
+  elif allowNeon:
+    return isTransparentNeon(image)
+  else:
+    result = true
+    for i in 0 ..< image.data.len:
+      if image.data[i].a != 0:
+        return false
 
 proc isOpaque*(image: Image): bool {.raises: [].} =
   ## Checks if the entire image is opaque (alpha values are all 255).
@@ -167,139 +183,179 @@ proc diff*(master, image: Image): (float32, Image) {.raises: [PixieError].} =
 
 proc minifyBy2*(
   image: Image, power = 1
-): Image {.hasSimd, raises: [PixieError].} =
+): Image {.raises: [PixieError].} =
   ## Scales the image down by an integer scale.
-  if power < 0:
-    raise newException(PixieError, "Cannot minifyBy2 with negative power")
-  if power == 0:
-    return image.copy()
+  when allowAvx:
+    if cpuHasAvx2:
+      return minifyBy2Avx2(image, power)
+  when allowSse2:
+    return minifyBy2Sse2(image, power)
+  elif allowNeon:
+    return minifyBy2Neon(image, power)
+  else:
+    if power < 0:
+      raise newException(PixieError, "Cannot minifyBy2 with negative power")
+    if power == 0:
+      return image.copy()
 
-  var src = image
-  for _ in 1 .. power:
-    # When minifying an image of odd size, round the result image size up
-    # so a 99 x 99 src image returns a 50 x 50 image.
-    let
-      srcWidthIsOdd = (src.width mod 2) != 0
-      srcHeightIsOdd = (src.height mod 2) != 0
-      resultEvenWidth = src.width div 2
-      resultEvenHeight = src.height div 2
-    result = newImage(
-      if srcWidthIsOdd: resultEvenWidth + 1 else: resultEvenWidth,
-      if srcHeightIsOdd: resultEvenHeight + 1 else: resultEvenHeight
-    )
-    for y in 0 ..< resultEvenHeight:
+    var src = image
+    for _ in 1 .. power:
+      # When minifying an image of odd size, round the result image size up
+      # so a 99 x 99 src image returns a 50 x 50 image.
       let
-        topRowStart = src.dataIndex(0, y * 2)
-        bottomRowStart = src.dataIndex(0, y * 2 + 1)
-      for x in 0 ..< resultEvenWidth:
+        srcWidthIsOdd = (src.width mod 2) != 0
+        srcHeightIsOdd = (src.height mod 2) != 0
+        resultEvenWidth = src.width div 2
+        resultEvenHeight = src.height div 2
+      result = newImage(
+        if srcWidthIsOdd: resultEvenWidth + 1 else: resultEvenWidth,
+        if srcHeightIsOdd: resultEvenHeight + 1 else: resultEvenHeight
+      )
+      for y in 0 ..< resultEvenHeight:
         let
-          a = src.data[topRowStart + x * 2]
-          b = src.data[topRowStart + x * 2 + 1]
-          c = src.data[bottomRowStart + x * 2 + 1]
-          d = src.data[bottomRowStart + x * 2]
-          mixed = rgbx(
-            ((a.r.uint32 + b.r + c.r + d.r + 2) div 4).uint8,
-            ((a.g.uint32 + b.g + c.g + d.g + 2) div 4).uint8,
-            ((a.b.uint32 + b.b + c.b + d.b + 2) div 4).uint8,
-            ((a.a.uint32 + b.a + c.a + d.a + 2) div 4).uint8
-          )
-        result.data[result.dataIndex(x, y)] = mixed
+          topRowStart = src.dataIndex(0, y * 2)
+          bottomRowStart = src.dataIndex(0, y * 2 + 1)
+        for x in 0 ..< resultEvenWidth:
+          let
+            a = src.data[topRowStart + x * 2]
+            b = src.data[topRowStart + x * 2 + 1]
+            c = src.data[bottomRowStart + x * 2 + 1]
+            d = src.data[bottomRowStart + x * 2]
+            mixed = rgbx(
+              ((a.r.uint32 + b.r + c.r + d.r + 2) div 4).uint8,
+              ((a.g.uint32 + b.g + c.g + d.g + 2) div 4).uint8,
+              ((a.b.uint32 + b.b + c.b + d.b + 2) div 4).uint8,
+              ((a.a.uint32 + b.a + c.a + d.a + 2) div 4).uint8
+            )
+          result.data[result.dataIndex(x, y)] = mixed
 
-      if srcWidthIsOdd:
-        let rgbx = mix(
-          src.data[src.dataIndex(src.width - 1, y * 2 + 0)],
-          src.data[src.dataIndex(src.width - 1, y * 2 + 1)],
-          0.5
-        ) * 0.5
-        result.data[result.dataIndex(result.width - 1, y)] = rgbx
+        if srcWidthIsOdd:
+          let rgbx = mix(
+            src.data[src.dataIndex(src.width - 1, y * 2 + 0)],
+            src.data[src.dataIndex(src.width - 1, y * 2 + 1)],
+            0.5
+          ) * 0.5
+          result.data[result.dataIndex(result.width - 1, y)] = rgbx
 
-    if srcHeightIsOdd:
-      for x in 0 ..< resultEvenWidth:
-        let rgbx = mix(
-          src.data[src.dataIndex(x * 2 + 0, src.height - 1)],
-          src.data[src.dataIndex(x * 2 + 1, src.height - 1)],
-          0.5
-        ) * 0.5
-        result.data[result.dataIndex(x, result.height - 1)] = rgbx
+      if srcHeightIsOdd:
+        for x in 0 ..< resultEvenWidth:
+          let rgbx = mix(
+            src.data[src.dataIndex(x * 2 + 0, src.height - 1)],
+            src.data[src.dataIndex(x * 2 + 1, src.height - 1)],
+            0.5
+          ) * 0.5
+          result.data[result.dataIndex(x, result.height - 1)] = rgbx
 
-      if srcWidthIsOdd:
-        result.data[result.dataIndex(result.width - 1, result.height - 1)] =
-          src.data[src.dataIndex(src.width - 1, src.height - 1)] * 0.25
+        if srcWidthIsOdd:
+          result.data[result.dataIndex(result.width - 1, result.height - 1)] =
+            src.data[src.dataIndex(src.width - 1, src.height - 1)] * 0.25
 
-    # Set src as this result for if we do another power
-    src = result
+      # Set src as this result for if we do another power
+      src = result
 
 proc magnifyBy2*(
   image: Image, power = 1
-): Image {.hasSimd, raises: [PixieError].} =
+): Image {.raises: [PixieError].} =
   ## Scales image up by 2 ^ power.
-  if power < 0:
-    raise newException(PixieError, "Cannot magnifyBy2 with negative power")
+  when allowSse2:
+    return magnifyBy2Sse2(image, power)
+  elif allowNeon:
+    return magnifyBy2Neon(image, power)
+  else:
+    if power < 0:
+      raise newException(PixieError, "Cannot magnifyBy2 with negative power")
 
-  let scale = 2 ^ power
-  result = newImage(image.width * scale, image.height * scale)
+    let scale = 2 ^ power
+    result = newImage(image.width * scale, image.height * scale)
 
-  for y in 0 ..< image.height:
-    # Write one row of pixels duplicated by scale
-    let
-      sourceRowStart = image.dataIndex(0, y)
-      resultRowStart = result.dataIndex(0, y * scale)
-    for x in 0 ..< image.width:
+    for y in 0 ..< image.height:
+      # Write one row of pixels duplicated by scale
       let
-        rgbx = image.data[sourceRowStart + x]
-        resultIdx = resultRowStart + x * scale
-      for i in 0 ..< scale:
-        result.data[resultIdx + i] = rgbx
-    # Copy that row of pixels into (scale - 1) more rows
-    for i in 1 ..< scale:
-      copyMem(
-        result.data[resultRowStart + result.width * i].addr,
-        result.data[resultRowStart].addr,
-        result.width * 4
-      )
+        sourceRowStart = image.dataIndex(0, y)
+        resultRowStart = result.dataIndex(0, y * scale)
+      for x in 0 ..< image.width:
+        let
+          rgbx = image.data[sourceRowStart + x]
+          resultIdx = resultRowStart + x * scale
+        for i in 0 ..< scale:
+          result.data[resultIdx + i] = rgbx
+      # Copy that row of pixels into (scale - 1) more rows
+      for i in 1 ..< scale:
+        copyMem(
+          result.data[resultRowStart + result.width * i].addr,
+          result.data[resultRowStart].addr,
+          result.width * 4
+        )
 
-proc applyOpacity*(image: Image, opacity: float32) {.hasSimd, raises: [].} =
+proc applyOpacity*(image: Image, opacity: float32) {.raises: [].} =
   ## Multiplies alpha of the image by opacity.
-  let opacity = round(255 * opacity).uint16
-  if opacity == 255:
-    return
+  when allowAvx:
+    if cpuHasAvx2:
+      applyOpacityAvx2(image, opacity)
+      return
+  when allowSse2:
+    applyOpacitySse2(image, opacity)
+  elif allowNeon:
+    applyOpacityNeon(image, opacity)
+  else:
+    let opacity = round(255 * opacity).uint16
+    if opacity == 255:
+      return
 
-  if opacity == 0:
-    image.fill(rgbx(0, 0, 0, 0))
-    return
+    if opacity == 0:
+      image.fill(rgbx(0, 0, 0, 0))
+      return
 
-  for i in 0 ..< image.data.len:
-    var rgbx = image.data[i]
-    rgbx.r = ((rgbx.r * opacity) div 255).uint8
-    rgbx.g = ((rgbx.g * opacity) div 255).uint8
-    rgbx.b = ((rgbx.b * opacity) div 255).uint8
-    rgbx.a = ((rgbx.a * opacity) div 255).uint8
-    image.data[i] = rgbx
+    for i in 0 ..< image.data.len:
+      var rgbx = image.data[i]
+      rgbx.r = ((rgbx.r * opacity) div 255).uint8
+      rgbx.g = ((rgbx.g * opacity) div 255).uint8
+      rgbx.b = ((rgbx.b * opacity) div 255).uint8
+      rgbx.a = ((rgbx.a * opacity) div 255).uint8
+      image.data[i] = rgbx
 
-proc invert*(image: Image) {.hasSimd, raises: [].} =
+proc invert*(image: Image) {.raises: [].} =
   ## Inverts all of the colors and alpha.
-  for i in 0 ..< image.data.len:
-    var rgbx = image.data[i]
-    rgbx.r = 255 - rgbx.r
-    rgbx.g = 255 - rgbx.g
-    rgbx.b = 255 - rgbx.b
-    rgbx.a = 255 - rgbx.a
-    image.data[i] = rgbx
+  when allowAvx:
+    if cpuHasAvx2:
+      invertAvx2(image)
+      return
+  when allowSse2:
+    invertSse2(image)
+  elif allowNeon:
+    invertNeon(image)
+  else:
+    for i in 0 ..< image.data.len:
+      var rgbx = image.data[i]
+      rgbx.r = 255 - rgbx.r
+      rgbx.g = 255 - rgbx.g
+      rgbx.b = 255 - rgbx.b
+      rgbx.a = 255 - rgbx.a
+      image.data[i] = rgbx
 
-  # Inverting rgbx(50, 100, 150, 200) becomes rgbx(205, 155, 105, 55). This
-  # is not a valid premultiplied alpha color.
-  # We need to convert back to premultiplied alpha after inverting.
-  image.data.toPremultipliedAlpha()
+    # Inverting rgbx(50, 100, 150, 200) becomes rgbx(205, 155, 105, 55). This
+    # is not a valid premultiplied alpha color.
+    # We need to convert back to premultiplied alpha after inverting.
+    image.data.toPremultipliedAlpha()
 
-proc ceil*(image: Image) {.hasSimd, raises: [].} =
+proc ceil*(image: Image) {.raises: [].} =
   ## A value of 0 stays 0. Anything else turns into 255.
-  for i in 0 ..< image.data.len:
-    var rgbx = image.data[i]
-    rgbx.r = if rgbx.r == 0: 0 else: 255
-    rgbx.g = if rgbx.g == 0: 0 else: 255
-    rgbx.b = if rgbx.b == 0: 0 else: 255
-    rgbx.a = if rgbx.a == 0: 0 else: 255
-    image.data[i] = rgbx
+  when allowAvx:
+    if cpuHasAvx2:
+      ceilAvx2(image)
+      return
+  when allowSse2:
+    ceilSse2(image)
+  elif allowNeon:
+    ceilNeon(image)
+  else:
+    for i in 0 ..< image.data.len:
+      var rgbx = image.data[i]
+      rgbx.r = if rgbx.r == 0: 0 else: 255
+      rgbx.g = if rgbx.g == 0: 0 else: 255
+      rgbx.b = if rgbx.b == 0: 0 else: 255
+      rgbx.a = if rgbx.a == 0: 0 else: 255
+      image.data[i] = rgbx
 
 proc blur*(
   image: Image, radius: float32, outOfBounds: SomeColor = color(0, 0, 0, 0)
@@ -473,13 +529,31 @@ proc blendLineOverwrite(
 
 proc blendLineNormal(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
-) {.hasSimd.} =
-  for i in 0 ..< len:
-    a[i] = blendNormal(a[i], b[i])
+) =
+  when allowAvx:
+    if cpuHasAvx2:
+      blendLineNormalAvx2(a, b, len)
+      return
+  when allowSse2:
+    blendLineNormalSse2(a, b, len)
+  elif allowNeon:
+    blendLineNormalNeon(a, b, len)
+  else:
+    for i in 0 ..< len:
+      a[i] = blendNormal(a[i], b[i])
 
-proc blendLineMask(a, b: ptr UncheckedArray[ColorRGBX], len: int) {.hasSimd.} =
-  for i in 0 ..< len:
-    a[i] = blendMask(a[i], b[i])
+proc blendLineMask(a, b: ptr UncheckedArray[ColorRGBX], len: int) =
+  when allowAvx:
+    if cpuHasAvx2:
+      blendLineMaskAvx2(a, b, len)
+      return
+  when allowSse2:
+    blendLineMaskSse2(a, b, len)
+  elif allowNeon:
+    blendLineMaskNeon(a, b, len)
+  else:
+    for i in 0 ..< len:
+      a[i] = blendMask(a[i], b[i])
 
 proc blendRect(a, b: Image, pos: Ivec2, blendMode: BlendMode) =
   let
