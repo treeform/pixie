@@ -2054,6 +2054,9 @@ proc strokeShapes(
       if d <= 0.0:
         raise newException(PixieError, "Invalid line dash value")
 
+    var
+      dashIndex = 0
+      dashRemaining = if dashes.len > 0: dashes[0] else: 0.float32
     for i in 1 ..< shape.len:
       let
         pos = shape[i]
@@ -2063,16 +2066,16 @@ proc strokeShapes(
         var distance = dist(prevPos, pos)
         let dir = dir(pos, prevPos)
         var currPos = prevPos
-        block dashLoop:
-          while true:
-            for i, d in dashes:
-              if i mod 2 == 0:
-                let d = min(distance, d)
-                shapeStroke.add(makeRect(currPos, currPos + dir * d))
-              currPos += dir * d
-              distance -= d
-              if distance <= 0:
-                break dashLoop
+        while distance > 0:
+          let d = min(distance, dashRemaining)
+          if dashIndex mod 2 == 0:
+            shapeStroke.add(makeRect(currPos, currPos + dir * d))
+          currPos += dir * d
+          distance -= d
+          dashRemaining -= d
+          if dashRemaining <= 0:
+            dashIndex = (dashIndex + 1) mod dashes.len
+            dashRemaining = dashes[dashIndex]
       else:
         shapeStroke.add(makeRect(prevPos, pos))
 

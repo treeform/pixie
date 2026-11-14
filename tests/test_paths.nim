@@ -288,6 +288,13 @@ block:
   image.xray("tests/paths/dashes.png")
 
 block:
+  # The dash pattern continues across segments instead of restarting.
+  let path = parsePath("M 0 0 L 3 0 L 6 0 L 9 0 L 12 0")
+
+  doAssert path.strokeOverlaps(vec2(2, 0), dashes = @[4.float32, 4])
+  doAssert not path.strokeOverlaps(vec2(5, 0), dashes = @[4.float32, 4])
+
+block:
   proc miterTest(angle, limit: float32) =
     let
       image = newImage(60, 60)
