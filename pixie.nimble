@@ -17,7 +17,11 @@ requires "crunchy >= 0.1.11"
 task bindings, "Generate bindings":
 
   proc compile(libName: string, flags = "") =
-    exec "nim c -f " & flags & " -d:release --app:lib --gc:arc --tlsEmulation:off --out:" & libName & " --outdir:bindings/generated bindings/bindings.nim"
+    exec "nim c -f " & flags &
+      " -d:gennyNim -d:gennyPython -d:gennyNode" &
+      " -d:gennyC -d:gennyCpp -d:gennyZig" &
+      " -d:release --app:lib --gc:arc --tlsEmulation:off --out:" &
+      libName & " --outdir:bindings/generated bindings/bindings.nim"
 
   when defined(windows):
     compile "pixie.dll"
