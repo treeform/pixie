@@ -54,16 +54,25 @@ template getUncheckedArray*(
 
 proc fillUnsafe*(
   data: var seq[ColorRGBX], color: SomeColor, start, len: int
-) {.hasSimd, raises: [].} =
+) {.raises: [].} =
   ## Fills the image data with the color starting at index start and
   ## continuing for len indices.
-  let rgbx = color.asRgbx()
-  # Use memset when every byte has the same value
-  if rgbx.r == rgbx.g and rgbx.r == rgbx.b and rgbx.r == rgbx.a:
-    nimSetMem(data[start].addr, rgbx.r.cint, len * 4)
+  when allowAvx:
+    if cpuHasAvx:
+      fillUnsafeAvx(data, color, start, len)
+      return
+  when allowSse2:
+    fillUnsafeSse2(data, color, start, len)
+  elif allowNeon:
+    fillUnsafeNeon(data, color, start, len)
   else:
-    for i in start ..< start + len:
-      data[i] = rgbx
+    let rgbx = color.asRgbx()
+    # Use memset when every byte has the same value
+    if rgbx.r == rgbx.g and rgbx.r == rgbx.b and rgbx.r == rgbx.a:
+      nimSetMem(data[start].addr, rgbx.r.cint, len * 4)
+    else:
+      for i in start ..< start + len:
+        data[i] = rgbx
 
 const straightAlphaTable = block:
   var table: array[256, array[256, uint8]]
@@ -85,21 +94,38 @@ proc toStraightAlpha*(data: var seq[ColorRGBA | ColorRGBX]) {.raises: [].} =
 
 proc toPremultipliedAlpha*(
   data: var seq[ColorRGBA | ColorRGBX]
-) {.hasSimd, raises: [].} =
+) {.raises: [].} =
   ## Converts an image to premultiplied alpha from straight alpha.
-  for i in 0 ..< data.len:
-    var c = data[i]
-    if c.a != 255:
-      c.r = ((c.r.uint32 * c.a + 127) div 255).uint8
-      c.g = ((c.g.uint32 * c.a + 127) div 255).uint8
-      c.b = ((c.b.uint32 * c.a + 127) div 255).uint8
-      data[i] = c
+  when allowAvx:
+    if cpuHasAvx2:
+      toPremultipliedAlphaAvx2(data)
+      return
+  when allowSse2:
+    toPremultipliedAlphaSse2(data)
+  elif allowNeon:
+    toPremultipliedAlphaNeon(data)
+  else:
+    for i in 0 ..< data.len:
+      var c = data[i]
+      if c.a != 255:
+        c.r = ((c.r.uint32 * c.a + 127) div 255).uint8
+        c.g = ((c.g.uint32 * c.a + 127) div 255).uint8
+        c.b = ((c.b.uint32 * c.a + 127) div 255).uint8
+        data[i] = c
 
-proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool {.hasSimd.} =
-  result = true
-  for i in start ..< start + len:
-    if data[i].a != 255:
-      return false
+proc isOpaque*(data: var seq[ColorRGBX], start, len: int): bool =
+  when allowAvx:
+    if cpuHasAvx2:
+      return isOpaqueAvx2(data, start, len)
+  when allowSse2:
+    return isOpaqueSse2(data, start, len)
+  elif allowNeon:
+    return isOpaqueNeon(data, start, len)
+  else:
+    result = true
+    for i in start ..< start + len:
+      if data[i].a != 255:
+        return false
 
 when defined(release):
   {.pop.}

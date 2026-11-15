@@ -1,4 +1,4 @@
-import chroma, nimsimd/hassimd, nimsimd/sse2, ../blends, ../common, vmath
+import chroma, nimsimd/sse2, ../blends, ../common, vmath
 
 when defined(release):
   {.push checks: off.}
@@ -49,7 +49,7 @@ proc fillUnsafeSse2*(
   data: var seq[ColorRGBX],
   color: SomeColor,
   start, len: int
-) {.simd.} =
+) =
   let rgbx = color.asRgbx()
 
   var
@@ -73,7 +73,7 @@ proc fillUnsafeSse2*(
   for i in i ..< start + len:
     data[i] = rgbx
 
-proc isOneColorSse2*(image: Image): bool {.simd.} =
+proc isOneColorSse2*(image: Image): bool =
   result = true
 
   let color = image.data[0]
@@ -111,7 +111,7 @@ proc isOneColorSse2*(image: Image): bool {.simd.} =
     if image.data[i] != color:
       return false
 
-proc isTransparentSse2*(image: Image): bool {.simd.} =
+proc isTransparentSse2*(image: Image): bool =
   var
     i: int
     p = cast[uint](image.data[0].addr)
@@ -145,7 +145,7 @@ proc isTransparentSse2*(image: Image): bool {.simd.} =
     if image.data[i].a != 0:
       return false
 
-proc isOpaqueSse2*(data: var seq[ColorRGBX], start, len: int): bool {.simd.} =
+proc isOpaqueSse2*(data: var seq[ColorRGBX], start, len: int): bool =
   result = true
 
   var
@@ -180,7 +180,7 @@ proc isOpaqueSse2*(data: var seq[ColorRGBX], start, len: int): bool {.simd.} =
     if data[i].a != 255:
       return false
 
-proc toPremultipliedAlphaSse2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
+proc toPremultipliedAlphaSse2*(data: var seq[ColorRGBA | ColorRGBX]) =
   var i: int
 
   # Not worth aligning
@@ -225,7 +225,7 @@ proc toPremultipliedAlphaSse2*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
       rgbx.b = ((rgbx.b.uint32 * rgbx.a + 127) div 255).uint8
       data[i] = rgbx
 
-proc invertSse2*(image: Image) {.simd.} =
+proc invertSse2*(image: Image) =
   var
     i: int
     p = cast[uint](image.data[0].addr)
@@ -266,7 +266,7 @@ proc invertSse2*(image: Image) {.simd.} =
 
   toPremultipliedAlphaSse2(image.data)
 
-proc applyOpacitySse2*(image: Image, opacity: float32) {.simd.} =
+proc applyOpacitySse2*(image: Image, opacity: float32) =
   let opacity = round(255 * opacity).uint16
   if opacity == 255:
     return
@@ -320,7 +320,7 @@ proc applyOpacitySse2*(image: Image, opacity: float32) {.simd.} =
     rgbx.a = ((rgbx.a * opacity) div 255).uint8
     image.data[i] = rgbx
 
-proc ceilSse2*(image: Image) {.simd.} =
+proc ceilSse2*(image: Image) =
   var
     i: int
     p = cast[uint](image.data[0].addr)
@@ -360,7 +360,7 @@ proc ceilSse2*(image: Image) {.simd.} =
     rgbx.a = if rgbx.a == 0: 0 else: 255
     image.data[i] = rgbx
 
-proc minifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
+proc minifyBy2Sse2*(image: Image, power = 1): Image =
   ## Scales the image down by an integer scale.
   if power < 0:
     raise newException(PixieError, "Cannot minifyBy2 with negative power")
@@ -467,7 +467,7 @@ proc minifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
     # Set src as this result for if we do another power
     src = result
 
-proc magnifyBy2Sse2*(image: Image, power = 1): Image {.simd.} =
+proc magnifyBy2Sse2*(image: Image, power = 1): Image =
   ## Scales image up by 2 ^ power.
   if power < 0:
     raise newException(PixieError, "Cannot magnifyBy2 with negative power")
@@ -528,7 +528,7 @@ proc blendLineCoverageOverwriteSse2*(
   coverages: ptr UncheckedArray[uint8],
   rgbx: ColorRGBX,
   len: int
-) {.simd.} =
+) =
   var i: int
   while i < len and (cast[uint](line[i].addr) and 15) != 0:
     let coverage = coverages[i]
@@ -581,7 +581,7 @@ proc blendLineCoverageOverwriteSse2*(
 
 proc blendLineNormalSse2*(
   line: ptr UncheckedArray[ColorRGBX], rgbx: ColorRGBX, len: int
-) {.simd.} =
+) =
   var i: int
   while i < len and (cast[uint](line[i].addr) and 15) != 0:
     line[i] = blendNormal(line[i], rgbx)
@@ -603,7 +603,7 @@ proc blendLineNormalSse2*(
 
 proc blendLineNormalSse2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
-) {.simd.} =
+) =
   var i: int
   while i < len and (cast[uint](a[i].addr) and 15) != 0:
     a[i] = blendNormal(a[i], b[i])
@@ -634,7 +634,7 @@ proc blendLineCoverageNormalSse2*(
   coverages: ptr UncheckedArray[uint8],
   rgbx: ColorRGBX,
   len: int
-) {.simd.} =
+) =
   var i: int
   while i < len and (cast[uint](line[i].addr) and 15) != 0:
     let coverage = coverages[i]
@@ -682,7 +682,7 @@ proc blendLineCoverageNormalSse2*(
 
 proc blendLineMaskSse2*(
   line: ptr UncheckedArray[ColorRGBX], rgbx: ColorRGBX, len: int
-) {.simd.} =
+) =
   var i: int
   while i < len and (cast[uint](line[i].addr) and 15) != 0:
     line[i] = blendMask(line[i], rgbx)
@@ -703,7 +703,7 @@ proc blendLineMaskSse2*(
 
 proc blendLineMaskSse2*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
-) {.simd.} =
+) =
   var i: int
   while i < len and (cast[uint](a[i].addr) and 15) != 0:
     a[i] = blendMask(a[i], b[i])
@@ -733,7 +733,7 @@ proc blendLineCoverageMaskSse2*(
   coverages: ptr UncheckedArray[uint8],
   rgbx: ColorRGBX,
   len: int
-) {.simd.} =
+) =
   var i: int
   while i < len and (cast[uint](line[i].addr) and 15) != 0:
     let coverage = coverages[i]

@@ -1,4 +1,4 @@
-import chroma, nimsimd/hassimd, nimsimd/avx
+import chroma, nimsimd/avx
 
 when defined(gcc) or defined(clang):
   {.localPassC: "-mavx".}
@@ -10,7 +10,7 @@ proc fillUnsafeAvx*(
   data: var seq[ColorRGBX],
   color: SomeColor,
   start, len: int
-) {.simd.} =
+) =
   let rgbx = color.asRgbx()
 
   var

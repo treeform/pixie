@@ -1444,37 +1444,64 @@ proc blendLineCoverageOverwrite(
   coverages: ptr UncheckedArray[uint8],
   rgbx: ColorRGBX,
   len: int
- ) {.hasSimd.} =
-  for i in 0 ..< len:
-    let coverage = coverages[i]
-    if coverage != 0:
-      line[i] = rgbx * coverage
+) =
+  when allowAvx:
+    if cpuHasAvx2:
+      blendLineCoverageOverwriteAvx2(line, coverages, rgbx, len)
+      return
+  when allowSse2:
+    blendLineCoverageOverwriteSse2(line, coverages, rgbx, len)
+  elif allowNeon:
+    blendLineCoverageOverwriteNeon(line, coverages, rgbx, len)
+  else:
+    for i in 0 ..< len:
+      let coverage = coverages[i]
+      if coverage != 0:
+        line[i] = rgbx * coverage
 
 proc blendLineCoverageNormal(
   line: ptr UncheckedArray[ColorRGBX],
   coverages: ptr UncheckedArray[uint8],
   rgbx: ColorRGBX,
   len: int
-) {.hasSimd.} =
-  for i in 0 ..< len:
-    let coverage = coverages[i]
-    if coverage == 0:
-      discard
-    else:
-      line[i] = blendNormal(line[i], rgbx * coverage)
+) =
+  when allowAvx:
+    if cpuHasAvx2:
+      blendLineCoverageNormalAvx2(line, coverages, rgbx, len)
+      return
+  when allowSse2:
+    blendLineCoverageNormalSse2(line, coverages, rgbx, len)
+  elif allowNeon:
+    blendLineCoverageNormalNeon(line, coverages, rgbx, len)
+  else:
+    for i in 0 ..< len:
+      let coverage = coverages[i]
+      if coverage == 0:
+        discard
+      else:
+        line[i] = blendNormal(line[i], rgbx * coverage)
 
 proc blendLineCoverageMask(
   line: ptr UncheckedArray[ColorRGBX],
   coverages: ptr UncheckedArray[uint8],
   rgbx: ColorRGBX,
   len: int
-) {.hasSimd.} =
-  for i in 0 ..< len:
-    let coverage = coverages[i]
-    if coverage == 255:
-      discard
-    else:
-      line[i] = blendMask(line[i], rgbx * coverage)
+) =
+  when allowAvx:
+    if cpuHasAvx2:
+      blendLineCoverageMaskAvx2(line, coverages, rgbx, len)
+      return
+  when allowSse2:
+    blendLineCoverageMaskSse2(line, coverages, rgbx, len)
+  elif allowNeon:
+    blendLineCoverageMaskNeon(line, coverages, rgbx, len)
+  else:
+    for i in 0 ..< len:
+      let coverage = coverages[i]
+      if coverage == 255:
+        discard
+      else:
+        line[i] = blendMask(line[i], rgbx * coverage)
 
 proc fillCoverage(
   image: Image,
@@ -1527,15 +1554,33 @@ proc fillCoverage(
 
 proc blendLineNormal(
   line: ptr UncheckedArray[ColorRGBX], rgbx: ColorRGBX, len: int
-) {.hasSimd.} =
-  for i in 0 ..< len:
-    line[i] = blendNormal(line[i], rgbx)
+) =
+  when allowAvx:
+    if cpuHasAvx2:
+      blendLineNormalAvx2(line, rgbx, len)
+      return
+  when allowSse2:
+    blendLineNormalSse2(line, rgbx, len)
+  elif allowNeon:
+    blendLineNormalNeon(line, rgbx, len)
+  else:
+    for i in 0 ..< len:
+      line[i] = blendNormal(line[i], rgbx)
 
 proc blendLineMask(
   line: ptr UncheckedArray[ColorRGBX], rgbx: ColorRGBX, len: int
-) {.hasSimd.} =
-  for i in 0 ..< len:
-    line[i] = blendMask(line[i], rgbx)
+) =
+  when allowAvx:
+    if cpuHasAvx2:
+      blendLineMaskAvx2(line, rgbx, len)
+      return
+  when allowSse2:
+    blendLineMaskSse2(line, rgbx, len)
+  elif allowNeon:
+    blendLineMaskNeon(line, rgbx, len)
+  else:
+    for i in 0 ..< len:
+      line[i] = blendMask(line[i], rgbx)
 
 proc fillHits(
   image: Image,

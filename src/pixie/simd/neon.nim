@@ -1,4 +1,4 @@
-import chroma, nimsimd/hassimd, nimsimd/neon, ../blends, ../common, vmath
+import chroma, nimsimd/neon, ../blends, ../common, vmath
 
 when defined(release):
   {.push checks: off.}
@@ -31,7 +31,7 @@ proc fillUnsafeNeon*(
   data: var seq[ColorRGBX],
   color: SomeColor,
   start, len: int
-) {.simd.} =
+) =
   let rgbx = color.asRgbx()
 
   var
@@ -54,7 +54,7 @@ proc fillUnsafeNeon*(
   for i in i ..< start + len:
     data[i] = rgbx
 
-proc isOneColorNeon*(image: Image): bool {.simd.} =
+proc isOneColorNeon*(image: Image): bool =
   result = true
 
   let color = image.data[0]
@@ -93,7 +93,7 @@ proc isOneColorNeon*(image: Image): bool {.simd.} =
     if image.data[i] != color:
       return false
 
-proc isTransparentNeon*(image: Image): bool {.simd.} =
+proc isTransparentNeon*(image: Image): bool =
   var
     i: int
     p = cast[uint](image.data[0].addr)
@@ -124,7 +124,7 @@ proc isTransparentNeon*(image: Image): bool {.simd.} =
     if image.data[i].a != 0:
       return false
 
-proc isOpaqueNeon*(data: var seq[ColorRGBX], start, len: int): bool {.simd.} =
+proc isOpaqueNeon*(data: var seq[ColorRGBX], start, len: int): bool =
   result = true
 
   var
@@ -155,7 +155,7 @@ proc isOpaqueNeon*(data: var seq[ColorRGBX], start, len: int): bool {.simd.} =
     if data[i].a != 255:
       return false
 
-proc toPremultipliedAlphaNeon*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
+proc toPremultipliedAlphaNeon*(data: var seq[ColorRGBA | ColorRGBX]) =
   var
     i: int
     p = cast[uint](data[0].addr)
@@ -188,7 +188,7 @@ proc toPremultipliedAlphaNeon*(data: var seq[ColorRGBA | ColorRGBX]) {.simd.} =
       c.b = ((c.b.uint32 * c.a + 127) div 255).uint8
       data[i] = c
 
-proc invertNeon*(image: Image) {.simd.} =
+proc invertNeon*(image: Image) =
   var
     i: int
     p = cast[uint](image.data[0].addr)
@@ -226,7 +226,7 @@ proc invertNeon*(image: Image) {.simd.} =
 
   toPremultipliedAlphaNeon(image.data)
 
-proc applyOpacityNeon*(image: Image, opacity: float32) {.simd.} =
+proc applyOpacityNeon*(image: Image, opacity: float32) =
   let opacity = round(255 * opacity).uint8
   if opacity == 255:
     return
@@ -260,7 +260,7 @@ proc applyOpacityNeon*(image: Image, opacity: float32) {.simd.} =
     rgbx.a = ((rgbx.a * opacity) div 255).uint8
     image.data[i] = rgbx
 
-proc ceilNeon*(image: Image) {.simd.} =
+proc ceilNeon*(image: Image) =
   var
     i: int
     p = cast[uint](image.data[0].addr)
@@ -285,7 +285,7 @@ proc ceilNeon*(image: Image) {.simd.} =
     rgbx.a = if rgbx.a == 0: 0 else: 255
     image.data[i] = rgbx
 
-proc minifyBy2Neon*(image: Image, power = 1): Image {.simd.} =
+proc minifyBy2Neon*(image: Image, power = 1): Image =
   ## Scales the image down by an integer scale.
   if power < 0:
     raise newException(PixieError, "Cannot minifyBy2 with negative power")
@@ -383,7 +383,7 @@ proc minifyBy2Neon*(image: Image, power = 1): Image {.simd.} =
     # Set src as this result for if we do another power
     src = result
 
-proc magnifyBy2Neon*(image: Image, power = 1): Image {.simd.} =
+proc magnifyBy2Neon*(image: Image, power = 1): Image =
   ## Scales image up by 2 ^ power.
   if power < 0:
     raise newException(PixieError, "Cannot magnifyBy2 with negative power")
@@ -429,7 +429,7 @@ proc blendLineCoverageOverwriteNeon*(
   coverages: ptr UncheckedArray[uint8],
   rgbx: ColorRGBX,
   len: int
-) {.simd.} =
+) =
   var i: int
   while i < len and (cast[uint](line[i].addr) and 15) != 0:
     let coverage = coverages[i]
@@ -487,7 +487,7 @@ proc blendLineCoverageOverwriteNeon*(
 
 proc blendLineNormalNeon*(
   line: ptr UncheckedArray[ColorRGBX], rgbx: ColorRGBX, len: int
-) {.simd.} =
+) =
   var i: int
   while i < len and (cast[uint](line[i].addr) and 15) != 0:
     line[i] = blendNormal(line[i], rgbx)
@@ -510,7 +510,7 @@ proc blendLineNormalNeon*(
 
 proc blendLineNormalNeon*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
-) {.simd.} =
+) =
   var i: int
   while i < len and (cast[uint](a[i].addr) and 15) != 0:
     a[i] = blendNormal(a[i], b[i])
@@ -540,7 +540,7 @@ proc blendLineCoverageNormalNeon*(
   coverages: ptr UncheckedArray[uint8],
   rgbx: ColorRGBX,
   len: int
-) {.simd.} =
+) =
   var i: int
   while i < len and (cast[uint](line[i].addr) and 15) != 0:
     let coverage = coverages[i]
@@ -595,7 +595,7 @@ proc blendLineCoverageNormalNeon*(
 
 proc blendLineMaskNeon*(
   line: ptr UncheckedArray[ColorRGBX], rgbx: ColorRGBX, len: int
-) {.simd.} =
+) =
   var i: int
   while i < len and (cast[uint](line[i].addr) and 15) != 0:
     line[i] = blendMask(line[i], rgbx)
@@ -617,7 +617,7 @@ proc blendLineMaskNeon*(
 
 proc blendLineMaskNeon*(
   a, b: ptr UncheckedArray[ColorRGBX], len: int
-) {.simd.} =
+) =
   var i: int
   while i < len and (cast[uint](a[i].addr) and 15) != 0:
     a[i] = blendMask(a[i], b[i])
@@ -652,7 +652,7 @@ proc blendLineCoverageMaskNeon*(
   coverages: ptr UncheckedArray[uint8],
   rgbx: ColorRGBX,
   len: int
-) {.simd.} =
+) =
   var i: int
   while i < len and (cast[uint](line[i].addr) and 15) != 0:
     let coverage = coverages[i]

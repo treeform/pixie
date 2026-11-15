@@ -1,28 +1,35 @@
-import nimsimd/hassimd
+const
+  allowSimd* = not defined(pixieNoSimd) and not defined(tcc)
+  allowSse2* = allowSimd and defined(amd64)
+  allowAvx* = allowSse2 and not defined(pixieNoAvx)
+  allowNeon* = allowSimd and defined(arm64)
 
-export hassimd
+when allowSse2:
+  import simd/sse2
+  export sse2
 
-const allowSimd* = not defined(pixieNoSimd) and not defined(tcc)
+  import nimsimd/sse2 as nimsimdsse2
+  export nimsimdsse2
 
-when allowSimd:
-  when defined(amd64):
-    import simd/sse2
-    export sse2
+when allowAvx:
+  import simd/avx, simd/avx2
+  export avx, avx2
 
-    when not defined(pixieNoAvx):
-      import nimsimd/runtimecheck, simd/avx, simd/avx2
-      export avx, avx2
+  when defined(pixieAvx2):
+    # The target CPU is known to have AVX2, skip the runtime check.
+    const
+      cpuHasAvx* = true
+      cpuHasAvx2* = true
+  else:
+    import nimsimd/runtimecheck
 
-      let
-        cpuHasAvx* = checkInstructionSets({AVX})
-        cpuHasAvx2* = checkInstructionSets({AVX, AVX2})
+    let
+      cpuHasAvx* = checkInstructionSets({AVX})
+      cpuHasAvx2* = checkInstructionSets({AVX, AVX2})
 
-    import nimsimd/sse2 as nimsimdsse2
-    export nimsimdsse2
+when allowNeon:
+  import simd/neon
+  export neon
 
-  elif defined(arm64):
-    import simd/neon
-    export neon
-
-    import nimsimd/neon as nimsimdneon
-    export nimsimdneon
+  import nimsimd/neon as nimsimdneon
+  export nimsimdneon
