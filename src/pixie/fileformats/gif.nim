@@ -163,6 +163,7 @@ proc decodeGif*(data: string): Gif {.raises: [PixieError].} =
       let
         clearCode = 1 shl minCodeSize
         endCode = clearCode + 1
+        pixelCount = imageWidth * imageHeight
 
       var
         b = BitStreamReader(
@@ -194,26 +195,34 @@ proc decodeGif*(data: string): Gif {.raises: [PixieError].} =
         let start = colorIndexes.len
         if code < table.len: # If we have seen the code before
           if code < clearCode:
+            if colorIndexes.len >= pixelCount:
+              failInvalid()
             colorIndexes.add(code)
-            if prev.len > 0:
+            if prev.len > 0 and table.len < 4096:
               table.add((prev.offset, prev.len + 1))
             prev = (start, 1)
           else:
             let (offset, len) = table[code]
+            if len > pixelCount - colorIndexes.len:
+              failInvalid()
             for i in 0 ..< len:
               colorIndexes.add(colorIndexes[offset + i])
-            table.add((prev.offset, prev.len + 1))
+            if table.len < 4096:
+              table.add((prev.offset, prev.len + 1))
             prev = (start, len)
         else:
           if prev[1] == 0:
             failInvalid()
+          if prev.len >= pixelCount - colorIndexes.len:
+            failInvalid()
           for i in 0 ..< prev[1]:
             colorIndexes.add(colorIndexes[prev[0] + i])
           colorIndexes.add(colorIndexes[prev[0]])
-          table.add((start, prev.len + 1))
+          if table.len < 4096:
+            table.add((start, prev.len + 1))
           prev = (start, prev.len + 1)
 
-      if colorIndexes.len != imageWidth * imageHeight:
+      if colorIndexes.len != pixelCount:
         failInvalid()
 
       let image = newImage(imageWidth, imageHeight)
