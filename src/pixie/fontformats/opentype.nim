@@ -450,8 +450,8 @@ proc parseCmapTable(buf: string, offset: int): CmapTable =
     encodingRecord.offset = buf.readUint32(i + 4).swap()
     i += 8
 
-    if encodingRecord.platformID == 3:
-      # Windows
+    if encodingRecord.platformID in [0'u16, 3'u16]:
+      # Unicode or Windows
       var i = offset + encodingRecord.offset.int
       buf.eofCheck(i + 2)
 
@@ -563,7 +563,7 @@ proc parseCmapTable(buf: string, offset: int): CmapTable =
         # TODO implement other windows formats
         discard
     else:
-      # TODO implement other cmap platformIDs
+      # TODO implement legacy cmap platform IDs.
       discard
 
 proc parseHeadTable(buf: string, offset: int): HeadTable =

@@ -5,6 +5,21 @@ proc wh(image: Image): Vec2 =
   vec2(image.width.float32, image.height.float32)
 
 block:
+  var data = readFile("tests/fonts/Ubuntu-Regular_1.ttf")
+  let
+    original = parseOpenType(data)
+    cmapOffset = original.tableRecords["cmap"].offset.int
+    encodingCount = data[cmapOffset + 2].ord shl 8 or data[cmapOffset + 3].ord
+
+  for index in 0 ..< encodingCount:
+    let recordOffset = cmapOffset + 4 + index * 8
+    data[recordOffset] = '\0'
+    data[recordOffset + 1] = '\0'
+
+  let unicodeOnly = parseOpenType(data)
+  doAssert unicodeOnly.hasGlyph('A'.Rune)
+
+block:
   var font = readFont("tests/fonts/NotoEmoji.otf")
   font.size = 26
   let image = newImage(800, 300)
