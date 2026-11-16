@@ -8,6 +8,7 @@ import
   test_images_draw,
   test_images_tiled,
   test_jpeg,
+  test_kerning,
   test_paints,
   test_paths,
   test_paths_overwrite,

@@ -2087,6 +2087,7 @@ proc parsePairPos(buf: string, offset: int): PairPos =
 proc parseLookup(
   buf: string, offset: int, pairPosTables: var seq[PairPos]
 ): Lookup =
+  ## Reads pair positioning directly or through an extension lookup.
   var i = offset
 
   buf.eofCheck(i + 6)
@@ -2106,10 +2107,26 @@ proc parseLookup(
     result.markFilteringSet = buf.readUint16(i).swap()
 
   for subTableOffset in result.subTableOffsets:
-    if result.lookupType == 2:
-      let pairPos = parsePairPos(buf, offset + subTableOffset.int)
-      if pairPos.glyphPairAdjustments.len > 0 or
-        pairPos.classPairAdjustments.len > 0:
+    var subTablePosition = offset + subTableOffset.int
+    case result.lookupType:
+    of 2:
+      discard
+    of 9:
+      buf.eofCheck(subTablePosition + 8)
+      if buf.readUint16(subTablePosition).swap() != 1:
+        failUnsupported("positioning extension format")
+      if buf.readUint16(subTablePosition + 2).swap() != 2:
+        continue
+      let extensionOffset = buf.readUint32(subTablePosition + 4).swap()
+      if extensionOffset < 8 or
+        extensionOffset.uint64 > (buf.len - subTablePosition).uint64:
+          failUnsupported("positioning extension offset")
+      subTablePosition += extensionOffset.int
+    else:
+      continue
+    let pairPos = parsePairPos(buf, subTablePosition)
+    if pairPos.glyphPairAdjustments.len > 0 or
+      pairPos.classPairAdjustments.len > 0:
         pairPosTables.add(pairPos)
 
 proc parseLookupList(buf: string, offset: int): LookupList =
