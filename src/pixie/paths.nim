@@ -1471,7 +1471,7 @@ proc blendLineCoverageMask(
 ) {.hasSimd.} =
   for i in 0 ..< len:
     let coverage = coverages[i]
-    if coverage == 255:
+    if coverage == 255 and rgbx.a == 255:
       discard
     else:
       line[i] = blendMask(line[i], rgbx * coverage)

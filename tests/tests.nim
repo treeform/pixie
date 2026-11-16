@@ -11,6 +11,7 @@ import
   test_kerning,
   test_paints,
   test_paths,
+  test_paths_mask,
   test_paths_overwrite,
   test_png,
   test_ppm,

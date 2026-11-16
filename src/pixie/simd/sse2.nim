@@ -518,6 +518,9 @@ template applyCoverage(rgbxVec, coverage: M128i): M128i =
     rgbxOdd = mm_and_si128(rgbxVec, oddMask)
   rgbxEven = mm_mulhi_epu16(rgbxEven, unpacked)
   rgbxOdd = mm_mulhi_epu16(rgbxOdd, unpacked)
+  # Match scalar coverage rounding before dividing by 255.
+  rgbxEven = mm_add_epi16(rgbxEven, mm_set1_epi16(127))
+  rgbxOdd = mm_add_epi16(rgbxOdd, mm_set1_epi16(127))
   rgbxEven = mm_srli_epi16(mm_mulhi_epu16(rgbxEven, div255), 7)
   rgbxOdd = mm_srli_epi16(mm_mulhi_epu16(rgbxOdd, div255), 7)
 
@@ -739,7 +742,7 @@ proc blendLineCoverageMaskSse2*(
     let coverage = coverages[i]
     if coverage == 0:
       line[i] = rgbx(0, 0, 0, 0)
-    elif coverage == 255:
+    elif coverage == 255 and rgbx.a == 255:
       discard
     else:
       line[i] = blendMask(line[i], rgbx * coverage)
@@ -777,7 +780,7 @@ proc blendLineCoverageMaskSse2*(
     let coverage = coverages[i]
     if coverage == 0:
       line[i] = rgbx(0, 0, 0, 0)
-    elif coverage == 255:
+    elif coverage == 255 and rgbx.a == 255:
       discard
     else:
       line[i] = blendMask(line[i], rgbx * coverage)
