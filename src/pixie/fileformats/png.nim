@@ -1,5 +1,5 @@
 import chroma, flatty/binny, ../common, ../images, ../internal,
-    ../simd, zippy, crunchy
+    ../simd, zippy, zippy/inflate, crunchy
 
 # See http://www.libpng.org/pub/png/spec/1.2/PNG-Contents.html
 
@@ -416,21 +416,77 @@ proc writePixels16(
       else:
         discard # 16-bit paletted PNG is not a valid color/bit-depth combo.
 
+proc filteredSize(header: PngHeader): int {.raises: [PixieError].} =
+  ## Computes the exact filtered byte count before decompressing image data.
+  var size = 0
+  proc addPass(width, height: int) {.raises: [PixieError].} =
+    ## Adds one nonempty scanline pass without overflowing the output bound.
+    if width == 0 or height == 0:
+      return
+    let rowBytes =
+      (width.int64 * header.valuesPerPixel * header.bitDepth.int + 7) div 8 + 1
+    if rowBytes > int.high - 16 or
+      height.int64 > (int.high - 16 - size).int64 div rowBytes:
+        failInvalid()
+    size += rowBytes.int * height
+  if header.interlaceMethod == 0:
+    addPass(header.width, header.height)
+  else:
+    const
+      StartXs = [0, 4, 0, 2, 0, 1, 0]
+      StartYs = [0, 0, 4, 0, 2, 0, 1]
+      StepXs = [8, 8, 4, 4, 2, 2, 1]
+      StepYs = [8, 8, 8, 4, 4, 2, 2]
+    for pass in 0 ..< 7:
+      addPass(
+        adam7Size(header.width, StartXs[pass], StepXs[pass]),
+        adam7Size(header.height, StartYs[pass], StepYs[pass])
+      )
+  size
+
+proc uncompressZlib(
+  data: ptr UncheckedArray[uint8],
+  len, expected: int
+): string {.raises: [PixieError].} =
+  ## Validates zlib framing and bounds inflation to the declared PNG pixels.
+  if len < 6:
+    failInvalid()
+  let
+    cmf = data[0]
+    flg = data[1]
+  if (cmf and 15) != 8 or (cmf shr 4) > 7 or
+    (cmf.uint16 * 256 + flg.uint16) mod 31 != 0 or (flg and 32) != 0:
+      failInvalid()
+  try:
+    inflate(result, data, len, 2, expected)
+    if result.len != expected or
+      adler32(result) != data.readUint32(len - 4).swap:
+        failInvalid()
+  except ZippyError, CrunchyError:
+    failInvalid()
+
 proc uncompressIdats(
-  data: ptr UncheckedArray[uint8], idats: seq[(int, int)]
-): string =
+  data: ptr UncheckedArray[uint8],
+  idats: seq[(int, int)],
+  expected: int
+): string {.raises: [PixieError].} =
+  ## Combines IDAT chunks and inflates no more than the declared pixel data.
   if idats.len > 1:
     var imageData: string
     for (start, len) in idats:
       let op = imageData.len
       imageData.setLen(imageData.len + len)
       copyMem(imageData[op].addr, data[start].addr, len)
-    result = try: uncompress(imageData) except ZippyError: failInvalid()
+    result = uncompressZlib(
+      cast[ptr UncheckedArray[uint8]](imageData.cstring),
+      imageData.len,
+      expected
+    )
   else:
     let
       (start, len) = idats[0]
       p = data[start].unsafeAddr
-    result = try: uncompress(p, len) except ZippyError: failInvalid()
+    result = uncompressZlib(cast[ptr UncheckedArray[uint8]](p), len, expected)
 
 proc decodeImageData(
   data: ptr UncheckedArray[uint8],
@@ -442,9 +498,9 @@ proc decodeImageData(
   if idats.len == 0:
     failInvalid()
 
-  result.setLen(header.width * header.height)
+  let uncompressed = uncompressIdats(data, idats, header.filteredSize)
 
-  let uncompressed = uncompressIdats(data, idats)
+  result.setLen(header.width * header.height)
 
   if header.interlaceMethod == 0:
     let
@@ -516,9 +572,9 @@ proc decodeImageData16(
   if idats.len == 0:
     failInvalid()
 
-  result.setLen(header.width * header.height)
+  let uncompressed = uncompressIdats(data, idats, header.filteredSize)
 
-  let uncompressed = uncompressIdats(data, idats)
+  result.setLen(header.width * header.height)
 
   if header.interlaceMethod == 0:
     let
