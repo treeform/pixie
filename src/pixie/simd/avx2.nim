@@ -690,7 +690,7 @@ proc blendLineCoverageMaskAvx2*(
     let coverage = coverages[i]
     if coverage == 0:
       line[i] = rgbx(0, 0, 0, 0)
-    elif coverage == 255:
+    elif coverage == 255 and rgbx.a == 255:
       discard
     else:
       line[i] = blendMask(line[i], rgbx * coverage)
@@ -742,7 +742,7 @@ proc blendLineCoverageMaskAvx2*(
     let coverage = coverages[i]
     if coverage == 0:
       line[i] = rgbx(0, 0, 0, 0)
-    elif coverage == 255:
+    elif coverage == 255 and rgbx.a == 255:
       discard
     else:
       line[i] = blendMask(line[i], rgbx * coverage)
